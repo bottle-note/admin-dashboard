@@ -1,0 +1,66 @@
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+docs/product-api.html
+
+### Production application.yml ###
+src/main/resources/application-dev.yml
+src/main/resources/application-prod.yml
+src/main/resources/secrets/monitoring.yml
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+/.env
+
+# Ignore Gradle build output directory
+build
+/src/test/resources/application-dev.yml
+/src/main/resources/fcm/service_account_credentials.json
+/src/main/resources/META-INF/additional-spring-configuration-metadata.json
+/docs/product-api.html
+/logs/
+# QueryDSL generated files
+**/src/main/generated/
+**/build/generated/
+/.secrets
+
+CLAUDE.personal.md
+
+# macOS
+.DS_Store
+
+# .env files
+.env
+/prod.env
+http_old/
+settings.local.json
