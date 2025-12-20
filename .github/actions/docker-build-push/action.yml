@@ -1,0 +1,188 @@
+name: 'Docker Build and Push'
+description: 'Docker 이미지를 빌드하고 Private Registry에 푸시하는 Composite Action'
+
+inputs:
+  registry-url:
+    description: '레지스트리 URL'
+    required: true
+  registry-username:
+    description: '레지스트리 사용자명'
+    required: true
+  registry-password:
+    description: '레지스트리 비밀번호'
+    required: true
+  image-name:
+    description: '이미지 이름'
+    required: true
+  dockerfile:
+    description: 'Dockerfile 경로'
+    required: false
+    default: 'Dockerfile'
+  context:
+    description: 'Docker build context 경로'
+    required: false
+    default: '.'
+  platforms:
+    description: '빌드 타겟 플랫폼'
+    required: false
+    default: 'linux/arm64'
+  image-tag:
+    description: '메인 이미지 태그'
+    required: true
+  additional-tags:
+    description: '추가 태그들 (쉼표로 구분)'
+    required: false
+    default: ''
+  cache-scope:
+    description: 'GHA 캐시 scope'
+    required: true
+  build-args:
+    description: '추가 Docker build arguments'
+    required: false
+    default: ''
+  image-title:
+    description: '이미지 제목'
+    required: false
+    default: ''
+  image-description:
+    description: '이미지 설명'
+    required: false
+    default: ''
+  image-vendor:
+    description: '벤더/회사명'
+    required: false
+    default: 'BottleNote'
+  image-authors:
+    description: '작성자'
+    required: false
+    default: ''
+  image-licenses:
+    description: '라이선스'
+    required: false
+    default: ''
+  image-documentation:
+    description: '문서 URL'
+    required: false
+    default: ''
+  sign-image:
+    description: 'cosign으로 이미지 서명 여부'
+    required: false
+    default: 'false'
+  cosign-key-path:
+    description: 'cosign 비밀키 파일 경로'
+    required: false
+    default: ''
+  cosign-password:
+    description: 'cosign 키 패스워드'
+    required: false
+    default: ''
+
+outputs:
+  image-digest:
+    description: '푸시된 이미지의 digest'
+    value: ${{ steps.build-push.outputs.digest }}
+  image-uri:
+    description: '푸시된 이미지의 전체 URI'
+    value: ${{ steps.tags.outputs.primary }}
+  image-tags:
+    description: '생성된 전체 이미지 태그 목록'
+    value: ${{ steps.tags.outputs.tags }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Login to Private Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.registry-url }}
+        username: ${{ inputs.registry-username }}
+        password: ${{ inputs.registry-password }}
+    - name: Setup Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver: docker-container
+    - name: Generate build timestamp
+      id: build-time
+      shell: bash
+      run: echo "time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+    - name: Prepare image tags
+      id: tags
+      shell: bash
+      run: |
+        REGISTRY="${{ inputs.registry-url }}"
+        IMAGE="${{ inputs.image-name }}"
+        MAIN_TAG="${{ inputs.image-tag }}"
+        PRIMARY="${REGISTRY}/${IMAGE}:${MAIN_TAG}"
+        echo "primary=${PRIMARY}" >> $GITHUB_OUTPUT
+        TAGS="${PRIMARY}"
+        if [ -n "${{ inputs.additional-tags }}" ]; then
+          IFS=',' read -ra EXTRA_TAGS <<< "${{ inputs.additional-tags }}"
+          for tag in "${EXTRA_TAGS[@]}"; do
+            tag=$(echo "$tag" | xargs)
+            TAGS="${TAGS}
+        ${REGISTRY}/${IMAGE}:${tag}"
+          done
+        fi
+        echo "tags<<EOF" >> $GITHUB_OUTPUT
+        echo "$TAGS" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Docker metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ inputs.registry-url }}/${{ inputs.image-name }}
+        tags: |
+          type=raw,value=${{ inputs.image-tag }}
+        labels: |
+          org.opencontainers.image.title=${{ inputs.image-title || inputs.image-name }}
+          org.opencontainers.image.description=${{ inputs.image-description }}
+          org.opencontainers.image.vendor=${{ inputs.image-vendor }}
+          org.opencontainers.image.authors=${{ inputs.image-authors }}
+          org.opencontainers.image.licenses=${{ inputs.image-licenses }}
+          org.opencontainers.image.documentation=${{ inputs.image-documentation }}
+        annotations: |
+          org.opencontainers.image.title=${{ inputs.image-title || inputs.image-name }}
+          org.opencontainers.image.description=${{ inputs.image-description }}
+          org.opencontainers.image.vendor=${{ inputs.image-vendor }}
+          org.opencontainers.image.authors=${{ inputs.image-authors }}
+          org.opencontainers.image.licenses=${{ inputs.image-licenses }}
+          org.opencontainers.image.documentation=${{ inputs.image-documentation }}
+      env:
+        DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+
+    - name: Build and push Docker image
+      id: build-push
+      uses: docker/build-push-action@v6
+      with:
+        context: ${{ inputs.context }}
+        file: ${{ inputs.dockerfile }}
+        platforms: ${{ inputs.platforms }}
+        push: true
+        tags: ${{ steps.tags.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        annotations: ${{ steps.meta.outputs.annotations }}
+        build-args: |
+          GIT_COMMIT=${{ github.sha }}
+          GIT_BRANCH=${{ github.ref_name }}
+          BUILD_TIME=${{ steps.build-time.outputs.time }}
+          ${{ inputs.build-args }}
+        cache-from: type=gha,scope=${{ inputs.cache-scope }}
+        cache-to: type=gha,scope=${{ inputs.cache-scope }},mode=max
+
+    - name: Install Cosign
+      if: inputs.sign-image == 'true'
+      uses: sigstore/cosign-installer@v3
+      with:
+        cosign-release: 'v2.2.4'
+
+    - name: Sign Image with Cosign
+      if: inputs.sign-image == 'true'
+      shell: bash
+      env:
+        COSIGN_PASSWORD: ${{ inputs.cosign-password }}
+      run: |
+        cosign sign --key "${{ github.workspace }}/${{ inputs.cosign-key-path }}" \
+          --tlog-upload=false \
+          "${{ inputs.registry-url }}/${{ inputs.image-name }}@${{ steps.build-push.outputs.digest }}"
