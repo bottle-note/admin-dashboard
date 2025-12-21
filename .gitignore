@@ -1,66 +1,42 @@
-.gradle
-build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
-docs/product-api.html
+# Dependencies
+node_modules
 
-### Production application.yml ###
-src/main/resources/application-dev.yml
-src/main/resources/application-prod.yml
-src/main/resources/secrets/monitoring.yml
+# Build output
+dist
+dist-ssr
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
-
-### IntelliJ IDEA ###
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
 .idea
-*.iws
-*.iml
-*.ipr
-out/
-!**/src/main/**/out/
-!**/src/test/**/out/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
+# OS files
+.DS_Store
+Thumbs.db
 
-### VS Code ###
-.vscode/
-/.env
+# Environment files
+.env
+.env.local
+.env.*.local
+prod.env
 
-# Ignore Gradle build output directory
-build
-/src/test/resources/application-dev.yml
-/src/main/resources/fcm/service_account_credentials.json
-/src/main/resources/META-INF/additional-spring-configuration-metadata.json
-/docs/product-api.html
-/logs/
-# QueryDSL generated files
-**/src/main/generated/
-**/build/generated/
-/.secrets
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
+# TypeScript
+*.tsbuildinfo
+
+# Local settings
+settings.local.json
 CLAUDE.personal.md
 
-# macOS
-.DS_Store
-
-# .env files
-.env
-/prod.env
-http_old/
-settings.local.json
+# Secrets
+.secrets
