@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment (Docker에서 ARG로 주입)
+.env
+.env.*
+!.env.example
+
+# Misc
+README.md
+.DS_Store
