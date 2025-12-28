@@ -23,7 +23,8 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
-prod.env
+.env.dev
+.env.prod
 
 # Debug logs
 npm-debug.log*
