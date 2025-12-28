@@ -73,8 +73,9 @@ api.interceptors.response.use(
       _retry?: boolean;
     };
 
-    // 401 에러가 아니거나 이미 재시도한 경우 에러 반환
-    if (error.response?.status !== 401 || originalRequest._retry) {
+    // 401(잘못된 토큰) 또는 403(만료된 토큰)이 아니거나 이미 재시도한 경우 에러 반환
+    const isTokenError = error.response?.status === 401 || error.response?.status === 403;
+    if (!isTokenError || originalRequest._retry) {
       return Promise.reject(error);
     }
 
