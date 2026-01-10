@@ -4,8 +4,12 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite --mode dev",
-    "dev:prod": "vite --mode prod",
+    "setenv:local": "git submodule update --remote && shx cp git.environment-variables/admin.vite/env.local .env.local",
+    "setenv:dev": "git submodule update --remote && shx cp git.environment-variables/admin.vite/env.dev .env.dev",
+    "setenv:prod": "git submodule update --remote && shx cp git.environment-variables/admin.vite/env.prod .env.prod",
+    "dev:local": "pnpm run setenv:local && vite",
+    "dev": "pnpm run setenv:dev && vite --mode dev",
+    "dev:prod": "pnpm run setenv:prod && vite --mode prod",
     "build": "tsc -b && vite build --mode prod",
     "build:dev": "tsc -b && vite build --mode dev",
     "preview": "vite preview",
@@ -49,6 +53,7 @@
     "globals": "^16.5.0",
     "prettier": "^3.7.4",
     "prettier-plugin-tailwindcss": "^0.7.2",
+    "shx": "^0.4.0",
     "typescript": "~5.7.2",
     "vite": "^6.0.5"
   }

@@ -36,7 +36,7 @@ jobs:
 
       - name: prepare env file
         run: |
-          cp git.environment-variables/application.next-js/.env.dev .env
+          cp git.environment-variables/admin.vite/env.dev .env
 
       - name: build and push to registry
         id: build
@@ -82,7 +82,7 @@ jobs:
 
       - name: prepare env file
         run: |
-          cp git.environment-variables/application.next-js/.env.prod .env
+          cp git.environment-variables/admin.vite/env.prod .env
 
       - name: build and push to registry
         id: build
