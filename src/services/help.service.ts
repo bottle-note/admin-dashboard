@@ -51,6 +51,7 @@ export const helpService = {
         pageSize: params?.pageSize ?? 20,
         hasNext: false,
       },
+      totalCount: data.content?.totalCount ?? 0,
     };
   },
 

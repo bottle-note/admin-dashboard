@@ -105,6 +105,8 @@ export interface ApiResponse<T> {
 export interface PaginatedData<T> {
   items: T[];
   pageable: Pageable;
+  /** 전체 아이템 수 (선택) */
+  totalCount?: number;
 }
 
 /**
