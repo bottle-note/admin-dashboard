@@ -1,7 +1,7 @@
 {
   "name": "bottlenote-admin",
   "private": true,
-  "version": "0.0.1",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "env:sync": "git submodule update --remote",
@@ -19,7 +19,12 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
+    "version:bump": "./scripts/bump-version.sh",
+    "version:major": "./scripts/bump-version.sh --major",
+    "version:minor": "./scripts/bump-version.sh --minor",
+    "version:patch": "./scripts/bump-version.sh --patch",
+    "version:build": "./scripts/bump-version.sh --build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
