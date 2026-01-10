@@ -68,9 +68,7 @@ export function AppRoutes() {
         </Route>
 
         {/* Inquiries */}
-        <Route path="inquiries">
-          <Route path="whisky" element={<InquiryListPage />} />
-        </Route>
+        <Route path="inquiries" element={<InquiryListPage />} />
 
         {/* Policies */}
         <Route path="policies" element={<PolicyListPage />} />

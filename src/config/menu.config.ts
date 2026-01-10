@@ -98,10 +98,10 @@ export const menuConfig: MenuGroup[] = [
         icon: MessageSquare,
         children: [
           {
-            id: 'whisky-inquiry-list',
-            label: '위스키 목록',
+            id: 'inquiry-list',
+            label: '문의 목록',
             icon: List,
-            path: '/inquiries/whisky',
+            path: '/inquiries',
           },
         ],
       },

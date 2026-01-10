@@ -40,14 +40,18 @@ export const helpService = {
    */
   getList: async (params?: HelpListParams): Promise<HelpListResponse> => {
     const response = await apiClient.getWithMeta<{
-      totalCount: number;
-      helpList: HelpListItem[];
-      cursorPageable: HelpListMeta;
+      content: {
+        totalCount: number;
+        helpList: HelpListItem[];
+        cursorPageable: HelpListMeta;
+      };
     }>(HelpApi.list.endpoint, { params });
 
+    const content = response.data.content;
+
     return {
-      items: response.data.helpList ?? [],
-      meta: response.data.cursorPageable ?? {
+      items: content?.helpList ?? [],
+      meta: content?.cursorPageable ?? {
         currentCursor: 0,
         cursor: 0,
         pageSize: params?.pageSize ?? 20,
