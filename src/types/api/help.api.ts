@@ -76,7 +76,7 @@ export interface HelpApiTypes {
       /** 문의 상태 */
       status: HelpStatus;
       /** 생성일시 */
-      createdAt: string;
+      createAt: string;
     };
     /** 커서 기반 페이지네이션 메타 */
     meta: {

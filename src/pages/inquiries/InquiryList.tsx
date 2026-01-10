@@ -76,6 +76,7 @@ export function InquiryListPage() {
   const [searchParams, setSearchParams] = useState<HelpListParams>({
     pageSize: 20,
   });
+  const [cursorHistory, setCursorHistory] = useState<(number | undefined)[]>([]);
   const [selectedHelpId, setSelectedHelpId] = useState<number | null>(null);
   const [responseContent, setResponseContent] = useState('');
   const [answerStatus, setAnswerStatus] = useState<'SUCCESS' | 'REJECT'>('SUCCESS');
@@ -85,6 +86,7 @@ export function InquiryListPage() {
   const answerMutation = useHelpAnswer();
 
   const handleStatusChange = (value: string) => {
+    setCursorHistory([]);
     setSearchParams((prev) => ({
       ...prev,
       status: value === 'ALL' ? undefined : (value as HelpStatus),
@@ -93,6 +95,7 @@ export function InquiryListPage() {
   };
 
   const handleTypeChange = (value: string) => {
+    setCursorHistory([]);
     setSearchParams((prev) => ({
       ...prev,
       type: value === 'ALL' ? undefined : (value as HelpType),
@@ -101,10 +104,11 @@ export function InquiryListPage() {
   };
 
   const handlePageSizeChange = (size: number) => {
+    setCursorHistory([]);
     setSearchParams((prev) => ({
       ...prev,
       pageSize: size,
-      cursor: undefined, // 페이지 크기 변경 시 처음부터
+      cursor: undefined,
     }));
   };
 
@@ -140,9 +144,22 @@ export function InquiryListPage() {
 
   const handleNextPage = () => {
     if (data?.meta.hasNext) {
+      setCursorHistory((prev) => [...prev, searchParams.cursor]);
       setSearchParams((prev) => ({
         ...prev,
         cursor: data.meta.cursor,
+      }));
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (cursorHistory.length > 0) {
+      const newHistory = [...cursorHistory];
+      const previousCursor = newHistory.pop();
+      setCursorHistory(newHistory);
+      setSearchParams((prev) => ({
+        ...prev,
+        cursor: previousCursor,
       }));
     }
   };
@@ -243,7 +260,7 @@ export function InquiryListPage() {
                     {item.userNickname}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {new Date(item.createdAt).toLocaleDateString('ko-KR')}
+                    {new Date(item.createAt).toLocaleDateString('ko-KR')}
                   </TableCell>
                 </TableRow>
               ))
@@ -258,7 +275,9 @@ export function InquiryListPage() {
           pageSize={searchParams.pageSize ?? 20}
           currentItemCount={data.items.length}
           hasNext={data.meta.hasNext}
+          hasPrevious={cursorHistory.length > 0}
           onNextPage={handleNextPage}
+          onPreviousPage={handlePreviousPage}
           onPageSizeChange={handlePageSizeChange}
         />
       )}

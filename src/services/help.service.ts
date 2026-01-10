@@ -43,15 +43,15 @@ export const helpService = {
       content: {
         totalCount: number;
         helpList: HelpListItem[];
-        cursorPageable: HelpListMeta;
       };
+      cursorPageable: HelpListMeta;
     }>(HelpApi.list.endpoint, { params });
 
-    const content = response.data.content;
+    const data = response.data;
 
     return {
-      items: content?.helpList ?? [],
-      meta: content?.cursorPageable ?? {
+      items: data.content?.helpList ?? [],
+      meta: data.cursorPageable ?? {
         currentCursor: 0,
         cursor: 0,
         pageSize: params?.pageSize ?? 20,
