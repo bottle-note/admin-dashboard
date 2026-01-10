@@ -17,7 +17,6 @@ import type { RefreshTokenResponse } from '@/types/auth';
 // ============================================
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -114,12 +113,9 @@ api.interceptors.response.use(
     }
 
     try {
-      // 리프레시 토큰으로 새 토큰 발급
-      const baseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
-      const refreshUrl = `${baseUrl}/admin/api/v1/auth/refresh`;
-
+      // 리프레시 토큰으로 새 토큰 발급 (상대 경로 - nginx/vite proxy 사용)
       const response: AxiosResponse<ApiResponse<RefreshTokenResponse>> =
-        await axios.post(refreshUrl, { refreshToken }, {
+        await axios.post('/admin/api/v1/auth/refresh', { refreshToken }, {
           headers: { 'Content-Type': 'application/json' },
         });
 
