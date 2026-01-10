@@ -18,10 +18,14 @@ dist
 npm-debug.log*
 pnpm-debug.log*
 
-# Environment (Docker에서 ARG로 주입)
-.env
-.env.*
-!.env.example
+# Environment
+# .env 파일은 GitHub Actions에서 생성하므로 포함
+# .env.example, .env.local 등은 제외
+.env.example
+.env.local
+.env.dev
+.env.prod
+.env.*.local
 
 # Misc
 README.md
