@@ -25,6 +25,7 @@ pnpm-debug.log*
 .env.local
 .env.dev
 .env.prod
+.env.test
 .env.*.local
 
 # Misc

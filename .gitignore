@@ -25,6 +25,8 @@ Thumbs.db
 .env.*.local
 .env.dev
 .env.prod
+.env.test
+.env.example
 .env.development
 .env.production
 
