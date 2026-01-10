@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -22,6 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Pagination } from '@/components/common/Pagination';
 import { useAdminAlcoholList } from '@/hooks/useAdminAlcohols';
 import type { AlcoholSearchParams, AlcoholCategory } from '@/types/api';
 
@@ -71,6 +72,14 @@ export function WhiskyListPage() {
     setSearchParams((prev) => ({
       ...prev,
       page: newPage,
+    }));
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setSearchParams((prev) => ({
+      ...prev,
+      size,
+      page: 0, // 페이지 크기 변경 시 첫 페이지로
     }));
   };
 
@@ -170,36 +179,16 @@ export function WhiskyListPage() {
 
       {/* 페이지네이션 */}
       {data && data.items.length > 0 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            총 {data.meta.totalElements}개 중 {data.meta.page * data.meta.size + 1}-
-            {Math.min(
-              (data.meta.page + 1) * data.meta.size,
-              data.meta.totalElements
-            )}
-            개 표시
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(data.meta.page - 1)}
-              disabled={data.meta.page === 0}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              이전
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(data.meta.page + 1)}
-              disabled={!data.meta.hasNext}
-            >
-              다음
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <Pagination
+          currentPage={data.meta.page}
+          totalPages={data.meta.totalPages}
+          totalElements={data.meta.totalElements}
+          pageSize={searchParams.size ?? 20}
+          currentItemCount={data.items.length}
+          hasNext={data.meta.hasNext}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
       )}
     </div>
   );

@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react';
-import { MessageSquare, ChevronRight } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -30,6 +30,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Pagination } from '@/components/common/Pagination';
 import { useHelpList, useHelpDetail, useHelpAnswer } from '@/hooks/useHelps';
 import type { HelpListParams, HelpStatus, HelpType } from '@/types/api';
 
@@ -99,6 +100,14 @@ export function InquiryListPage() {
     }));
   };
 
+  const handlePageSizeChange = (size: number) => {
+    setSearchParams((prev) => ({
+      ...prev,
+      pageSize: size,
+      cursor: undefined, // 페이지 크기 변경 시 처음부터
+    }));
+  };
+
   const handleRowClick = (helpId: number) => {
     setSelectedHelpId(helpId);
     setResponseContent('');
@@ -129,7 +138,7 @@ export function InquiryListPage() {
     );
   };
 
-  const handleLoadMore = () => {
+  const handleNextPage = () => {
     if (data?.meta.hasNext) {
       setSearchParams((prev) => ({
         ...prev,
@@ -243,14 +252,15 @@ export function InquiryListPage() {
         </Table>
       </div>
 
-      {/* 더보기 */}
-      {data?.meta.hasNext && (
-        <div className="flex justify-center">
-          <Button variant="outline" onClick={handleLoadMore}>
-            더보기
-            <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+      {/* 페이지네이션 */}
+      {data && data.items.length > 0 && (
+        <Pagination
+          pageSize={searchParams.pageSize ?? 20}
+          currentItemCount={data.items.length}
+          hasNext={data.meta.hasNext}
+          onNextPage={handleNextPage}
+          onPageSizeChange={handlePageSizeChange}
+        />
       )}
 
       {/* 상세/답변 다이얼로그 */}

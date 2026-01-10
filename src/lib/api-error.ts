@@ -138,7 +138,7 @@ export function normalizeError(error: unknown): ApiError | Error {
         meta: {
           serverVersion: '',
           serverEncoding: '',
-          serverResponseTime: [],
+          serverResponseTime: '',
           serverPathVersion: '',
         },
       });
@@ -154,7 +154,7 @@ export function normalizeError(error: unknown): ApiError | Error {
         meta: {
           serverVersion: '',
           serverEncoding: '',
-          serverResponseTime: [],
+          serverResponseTime: '',
           serverPathVersion: '',
         },
       });
@@ -178,7 +178,7 @@ export function normalizeError(error: unknown): ApiError | Error {
       meta: {
         serverVersion: '',
         serverEncoding: '',
-        serverResponseTime: [],
+        serverResponseTime: '',
         serverPathVersion: '',
       },
     });

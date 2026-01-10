@@ -33,7 +33,7 @@ export interface AlcoholListResponse {
 export const adminAlcoholService = {
   /**
    * 술 목록 조회
-   * 페이지 기반 페이지네이션
+   * 페이지 기반 페이지네이션 (meta에 페이지 정보 포함)
    */
   search: async (params?: AlcoholSearchParams): Promise<AlcoholListResponse> => {
     const response = await apiClient.getWithMeta<AlcoholListItem[]>(
@@ -41,17 +41,15 @@ export const adminAlcoholService = {
       { params }
     );
 
-    // API 응답의 meta.pageable에서 페이지네이션 정보 추출
-    const pageable = response.meta?.pageable;
-
+    // data는 배열, meta에 페이지 정보 직접 포함
     return {
-      items: response.data,
+      items: response.data ?? [],
       meta: {
-        page: pageable?.currentCursor ?? 0,
-        size: pageable?.pageSize ?? 20,
-        totalElements: 0, // API 응답에서 제공되면 업데이트
-        totalPages: 0,
-        hasNext: pageable?.hasNext ?? false,
+        page: response.meta.page ?? params?.page ?? 0,
+        size: response.meta.size ?? params?.size ?? 20,
+        totalElements: response.meta.totalElements ?? 0,
+        totalPages: response.meta.totalPages ?? 0,
+        hasNext: response.meta.hasNext ?? false,
       },
     };
   },
