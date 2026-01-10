@@ -1,7 +1,7 @@
 {
   "name": "bottlenote-admin",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "scripts": {
     "env:sync": "git submodule update --remote",
@@ -23,8 +23,7 @@
     "version:bump": "./scripts/bump-version.sh",
     "version:major": "./scripts/bump-version.sh --major",
     "version:minor": "./scripts/bump-version.sh --minor",
-    "version:patch": "./scripts/bump-version.sh --patch",
-    "version:build": "./scripts/bump-version.sh --build"
+    "version:patch": "./scripts/bump-version.sh --patch"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
