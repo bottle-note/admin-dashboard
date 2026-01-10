@@ -143,11 +143,11 @@ export function InquiryListPage() {
   };
 
   const handleNextPage = () => {
-    if (data?.meta.hasNext) {
+    if (data?.pageable.hasNext) {
       setCursorHistory((prev) => [...prev, searchParams.cursor]);
       setSearchParams((prev) => ({
         ...prev,
-        cursor: data.meta.cursor,
+        cursor: data.pageable.cursor,
       }));
     }
   };
@@ -274,7 +274,7 @@ export function InquiryListPage() {
         <Pagination
           pageSize={searchParams.pageSize ?? 20}
           currentItemCount={data.items.length}
-          hasNext={data.meta.hasNext}
+          hasNext={data.pageable.hasNext}
           hasPrevious={cursorHistory.length > 0}
           onNextPage={handleNextPage}
           onPreviousPage={handlePreviousPage}

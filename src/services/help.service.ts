@@ -8,10 +8,11 @@ import {
   HelpApi,
   type HelpListParams,
   type HelpListItem,
-  type HelpListMeta,
   type HelpDetail,
   type HelpAnswerRequest,
   type HelpAnswerResponse,
+  type PaginatedData,
+  type Pageable,
 } from '@/types/api';
 
 // ============================================
@@ -19,15 +20,6 @@ import {
 // ============================================
 
 export const helpKeys = createQueryKeys('helps');
-
-// ============================================
-// 응답 타입 (커서 페이지네이션 포함)
-// ============================================
-
-export interface HelpListResponse {
-  items: HelpListItem[];
-  meta: HelpListMeta;
-}
 
 // ============================================
 // Service
@@ -38,20 +30,22 @@ export const helpService = {
    * 문의 목록 조회
    * 커서 기반 페이지네이션
    */
-  getList: async (params?: HelpListParams): Promise<HelpListResponse> => {
+  getList: async (
+    params?: HelpListParams
+  ): Promise<PaginatedData<HelpListItem>> => {
     const response = await apiClient.getWithMeta<{
       content: {
         totalCount: number;
         helpList: HelpListItem[];
       };
-      cursorPageable: HelpListMeta;
+      cursorPageable: Pageable;
     }>(HelpApi.list.endpoint, { params });
 
     const data = response.data;
 
     return {
       items: data.content?.helpList ?? [],
-      meta: data.cursorPageable ?? {
+      pageable: data.cursorPageable ?? {
         currentCursor: 0,
         cursor: 0,
         pageSize: params?.pageSize ?? 20,
