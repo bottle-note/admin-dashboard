@@ -16,10 +16,8 @@ COPY . .
 COPY ${ENV_FILE}* .env
 RUN pnpm build
 
-# Generate nginx.conf from template using env file
-RUN apk add --no-cache gettext && \
-    export $(grep -v '^#' .env | xargs) && \
-    envsubst '${VITE_API_BASE_URL}' < nginx.conf.template > nginx.conf
+# Copy nginx config (no longer needs envsubst since API calls go directly to backend)
+RUN cp nginx.conf.template nginx.conf
 
 FROM nginx:alpine AS runner
 COPY --from=builder /app/dist /usr/share/nginx/html
