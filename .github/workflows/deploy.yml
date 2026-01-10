@@ -35,12 +35,7 @@ jobs:
           echo "image-tag=dashboard_${VERSION}_development" >> $GITHUB_OUTPUT
 
       - name: prepare env file
-        run: |
-          cp git.environment-variables/admin.vite/env.dev .env
-          echo "=== env.dev content ==="
-          cat git.environment-variables/admin.vite/env.dev
-          echo "=== .env content ==="
-          cat .env
+        run: cp git.environment-variables/admin.vite/env.dev .env
 
       - name: build and push to registry
         id: build
@@ -85,12 +80,7 @@ jobs:
           echo "image-tag=dashboard_${VERSION}" >> $GITHUB_OUTPUT
 
       - name: prepare env file
-        run: |
-          cp git.environment-variables/admin.vite/env.prod .env
-          echo "=== env.prod content ==="
-          cat git.environment-variables/admin.vite/env.prod
-          echo "=== .env content ==="
-          cat .env
+        run: cp git.environment-variables/admin.vite/env.prod .env
 
       - name: build and push to registry
         id: build
