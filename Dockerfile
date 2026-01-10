@@ -17,7 +17,8 @@ COPY ${ENV_FILE}* .env
 RUN pnpm build
 
 # Generate nginx.conf from template using env file
-RUN export $(grep -v '^#' .env | xargs) && \
+RUN apk add --no-cache gettext && \
+    export $(grep -v '^#' .env | xargs) && \
     envsubst '${VITE_API_BASE_URL}' < nginx.conf.template > nginx.conf
 
 FROM nginx:alpine AS runner
