@@ -39,8 +39,7 @@ jobs:
           echo "image-tag=dashboard_${VERSION}" >> $GITHUB_OUTPUT
 
       - name: prepare env file
-        run: |
-          cp git.environment-variables/application.next-js/.env.prod .env
+        run: cp git.environment-variables/admin.vite/env.prod .env
 
       - name: build and push to registry
         id: build

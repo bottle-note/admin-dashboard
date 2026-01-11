@@ -1,6 +1,6 @@
 ARG ENV_FILE=.env
 FROM node:22-alpine AS base
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat gettext
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
@@ -16,8 +16,14 @@ COPY . .
 COPY ${ENV_FILE}* .env
 RUN pnpm build
 
+# Generate nginx config with envsubst
+# Read VITE_API_BASE_URL from .env and use it as API_BASE_URL for nginx proxy
+RUN export $(grep -v '^#' .env | xargs) && \
+    export API_BASE_URL="${VITE_API_BASE_URL}" && \
+    envsubst '${API_BASE_URL}' < nginx.conf.template > nginx.conf
+
 FROM nginx:alpine AS runner
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 3000
 CMD ["nginx", "-g", "daemon off;"]

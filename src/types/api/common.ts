@@ -70,10 +70,17 @@ export type PaginatedSortParams<TSortField extends string = string> =
 export interface ApiMeta {
   serverVersion: string;
   serverEncoding: string;
-  serverResponseTime: number[];
+  serverResponseTime: string;
   serverPathVersion: string;
+  /** 커서 기반 페이지네이션 (일부 API) */
   pageable?: Pageable;
   searchParameters?: Record<string, unknown>;
+  /** 페이지 기반 페이지네이션 필드 */
+  page?: number;
+  size?: number;
+  totalElements?: number;
+  totalPages?: number;
+  hasNext?: boolean;
 }
 
 /**
@@ -98,6 +105,8 @@ export interface ApiResponse<T> {
 export interface PaginatedData<T> {
   items: T[];
   pageable: Pageable;
+  /** 전체 아이템 수 (선택) */
+  totalCount?: number;
 }
 
 /**
