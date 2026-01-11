@@ -34,6 +34,7 @@ export const menuConfig: MenuGroup[] = [
         id: 'whisky-tasting-menu',
         label: '위스키/테이스팅 태그',
         icon: Wine,
+        roles: ['ROOT_ADMIN'],
         children: [
           {
             id: 'whisky-management',
@@ -72,6 +73,7 @@ export const menuConfig: MenuGroup[] = [
         id: 'banner-management',
         label: '배너 관리',
         icon: Image,
+        roles: ['ROOT_ADMIN'],
         children: [
           {
             id: 'banner-create',
@@ -96,6 +98,7 @@ export const menuConfig: MenuGroup[] = [
         id: 'inquiry-management',
         label: '문의 관리',
         icon: MessageSquare,
+        roles: ['ROOT_ADMIN'],
         children: [
           {
             id: 'inquiry-list',
@@ -115,6 +118,7 @@ export const menuConfig: MenuGroup[] = [
         label: '정책/방침 관리',
         icon: FileText,
         path: '/policies',
+        roles: ['ROOT_ADMIN'],
       },
     ],
   },

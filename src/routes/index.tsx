@@ -51,27 +51,79 @@ export function AppRoutes() {
         {/* Dashboard */}
         <Route index element={<DashboardPage />} />
 
-        {/* Whisky */}
-        <Route path="whisky">
-          <Route index element={<WhiskyListPage />} />
-          <Route path=":id" element={<WhiskyDetailPage />} />
-        </Route>
+        {/* Whisky - ROOT_ADMIN only */}
+        <Route
+          path="whisky"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <WhiskyListPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="whisky/:id"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <WhiskyDetailPage />
+            </RoleProtectedRoute>
+          }
+        />
 
-        {/* Tasting Tags */}
-        <Route path="tasting-tags" element={<TastingTagListPage />} />
+        {/* Tasting Tags - ROOT_ADMIN only */}
+        <Route
+          path="tasting-tags"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <TastingTagListPage />
+            </RoleProtectedRoute>
+          }
+        />
 
-        {/* Banners */}
-        <Route path="banners">
-          <Route index element={<BannerListPage />} />
-          <Route path="new" element={<BannerCreatePage />} />
-          <Route path=":id" element={<BannerDetailPage />} />
-        </Route>
+        {/* Banners - ROOT_ADMIN only */}
+        <Route
+          path="banners"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <BannerListPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="banners/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <BannerCreatePage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="banners/:id"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <BannerDetailPage />
+            </RoleProtectedRoute>
+          }
+        />
 
-        {/* Inquiries */}
-        <Route path="inquiries" element={<InquiryListPage />} />
+        {/* Inquiries - ROOT_ADMIN only */}
+        <Route
+          path="inquiries"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <InquiryListPage />
+            </RoleProtectedRoute>
+          }
+        />
 
-        {/* Policies */}
-        <Route path="policies" element={<PolicyListPage />} />
+        {/* Policies - ROOT_ADMIN only */}
+        <Route
+          path="policies"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <PolicyListPage />
+            </RoleProtectedRoute>
+          }
+        />
 
         {/* Users - ROOT_ADMIN only */}
         <Route
