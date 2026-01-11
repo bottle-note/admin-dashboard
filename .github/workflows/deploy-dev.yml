@@ -1,24 +1,21 @@
-name: deploy admin dashboard
+name: deploy admin dashboard (development)
 
 on:
-  workflow_dispatch:
-  pull_request:
-    types: [closed]
-    branches:
-      - 'release/dashboard'
+  workflow_run:
+    workflows: ["ci planet scale"]
+    types: [completed]
+    branches: [main]
 
 concurrency:
-  group: "deploy-admin-dashboard"
+  group: "deploy-admin-dashboard-dev"
   cancel-in-progress: true
 
 env:
   IMAGE_NAME: bottlenote-admin-dashboard
 
 jobs:
-  build-production:
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+  build-development:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04-arm
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -36,10 +33,10 @@ jobs:
         run: |
           VERSION=$(cat VERSION | tr -d '[:space:]')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "image-tag=dashboard_${VERSION}" >> $GITHUB_OUTPUT
+          echo "image-tag=dashboard_${VERSION}_development" >> $GITHUB_OUTPUT
 
       - name: prepare env file
-        run: cp git.environment-variables/admin.vite/env.prod .env
+        run: cp git.environment-variables/admin.vite/env.dev .env
 
       - name: build and push to registry
         id: build
@@ -49,13 +46,13 @@ jobs:
           registry-username: ${{ secrets.REGISTRY_USERNAME }}
           registry-password: ${{ secrets.REGISTRY_PASSWORD }}
           image-name: ${{ env.IMAGE_NAME }}
-          image-tag: dashboard_${{ steps.version.outputs.version }}
-          additional-tags: dashboard_latest
+          image-tag: dashboard_${{ steps.version.outputs.version }}_development
+          additional-tags: dashboard_latest_development
           dockerfile: Dockerfile
           context: .
           platforms: linux/arm64
-          cache-scope: dashboard-prod
-          image-title: "BottleNote Admin Dashboard"
+          cache-scope: dashboard-dev
+          image-title: "BottleNote Admin Dashboard (Development)"
           image-description: "BottleNote Admin Dashboard Frontend"
           image-vendor: "BottleNote"
           image-authors: "BottleNote Team"
@@ -63,8 +60,8 @@ jobs:
           cosign-key-path: 'git.environment-variables/storage/docker-registry/cosign.key'
           cosign-password: ${{ secrets.COSIGN_PASSWORD }}
 
-  update-production:
-    needs: build-production
+  update-development:
+    needs: build-development
     runs-on: ubuntu-latest
     steps:
       - name: checkout code with submodules
@@ -78,15 +75,15 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: update production image tag
+      - name: update development image tag
         run: |
-          IMAGE_TAG="${{ needs.build-production.outputs.image-tag }}"
+          IMAGE_TAG="${{ needs.build-development.outputs.image-tag }}"
           REGISTRY="${{ secrets.REGISTRY_ADDRESS }}"
 
           cd git.environment-variables
           git checkout main
 
-          cd deploy/overlays/production
+          cd deploy/overlays/development
           kustomize edit set image \
             bottlenote-admin-dashboard=${REGISTRY}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}
 
@@ -97,14 +94,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add deploy/overlays/production/kustomization.yaml
+          git add deploy/overlays/development/kustomization.yaml
 
           if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0
           fi
 
-          git commit -m "chore(dashboard): update production image tag to ${{ needs.build-production.outputs.image-tag }}
+          git commit -m "chore(dashboard): update development image tag to ${{ needs.build-development.outputs.image-tag }}
 
           Updated by GitHub Actions
           Commit: ${{ github.sha }}
