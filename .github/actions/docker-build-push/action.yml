@@ -76,6 +76,10 @@ inputs:
     description: 'cosign 키 패스워드'
     required: false
     default: ''
+  build-secrets:
+    description: 'Docker BuildKit secrets'
+    required: false
+    default: ''
 
 outputs:
   image-digest:
@@ -170,6 +174,7 @@ runs:
           ${{ inputs.build-args }}
         cache-from: type=gha,scope=${{ inputs.cache-scope }}
         cache-to: type=gha,scope=${{ inputs.cache-scope }},mode=max
+        secrets: ${{ inputs.build-secrets }}
 
     - name: Install Cosign
       if: inputs.sign-image == 'true'
