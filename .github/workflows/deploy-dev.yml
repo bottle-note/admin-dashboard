@@ -38,11 +38,6 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "image-tag=dashboard_${VERSION}_development" >> $GITHUB_OUTPUT
 
-      - name: prepare age key
-        run: |
-          echo "${{ secrets.SOPS_AGE_SECRET_KEY }}" > /tmp/age.key
-          chmod 600 /tmp/age.key
-
       - name: build and push to registry
         id: build
         uses: ./.github/actions/docker-build-push
@@ -64,14 +59,10 @@ jobs:
           build-args: |
             ENV_FILE=git.environment-variables/application.vite/dev.sops.env
           build-secrets: |
-            age_key=/tmp/age.key
+            age_key=${{ secrets.SOPS_AGE_SECRET_KEY }}
           sign-image: 'true'
           cosign-key-path: 'git.environment-variables/storage/docker-registry/cosign.key'
           cosign-password: ${{ secrets.COSIGN_PASSWORD }}
-
-      - name: cleanup age key
-        if: always()
-        run: rm -f /tmp/age.key
 
   update-development:
     needs: build-development

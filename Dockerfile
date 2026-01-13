@@ -24,9 +24,8 @@ RUN apk add --no-cache curl && \
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# BuildKit secret으로 age 키를 받아 복호화
-RUN --mount=type=secret,id=age_key \
-    SOPS_AGE_KEY_FILE=/run/secrets/age_key \
+# BuildKit secret으로 age 키를 환경변수로 주입하여 복호화
+RUN --mount=type=secret,id=age_key,env=SOPS_AGE_KEY \
     sops -d ${ENV_FILE} > .env
 
 RUN pnpm build
