@@ -61,6 +61,14 @@ export function AppRoutes() {
           }
         />
         <Route
+          path="whisky/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <WhiskyDetailPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
           path="whisky/:id"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>

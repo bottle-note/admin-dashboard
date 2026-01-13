@@ -54,6 +54,7 @@ export const MOCK_REGIONS: Region[] = [
   { id: 7, korName: '테네시', engName: 'Tennessee' },
   { id: 8, korName: '아일랜드', engName: 'Ireland' },
   { id: 9, korName: '일본', engName: 'Japan' },
+  { id: 10, korName: '스코틀랜드', engName: 'Scotland' },
 ];
 
 /** 카테고리 옵션 */
@@ -157,6 +158,27 @@ export const MOCK_WHISKY_DETAIL: Record<string, WhiskyDetailMock> = {
     rating: 4.3,
     totalRatingsCount: 980,
     alcoholsTastingTags: ['캐러멜', '바닐라', '토피', '오크'],
+  },
+  '7094': {
+    alcoholId: 7094,
+    alcoholUrlImg:
+      'https://d1e2y5wc27crnp.cloudfront.net/media/smartorder_reservation/product/thumbnail/81098283-fbd4-4e11-9934-2f38c37c2bb6.webp',
+    korName: '100 파이퍼스',
+    engName: '100 Pipers',
+    korCategory: '블렌디드',
+    engCategory: 'Blend',
+    category: 'BLEND',
+    korRegion: '스코틀랜드',
+    engRegion: 'Scotland',
+    regionId: 10,
+    cask: null,
+    abv: '40',
+    korDistillery: null,
+    engDistillery: null,
+    description: '부드럽고 가벼운 스코틀랜드 블렌디드 위스키.',
+    rating: 3.8,
+    totalRatingsCount: 120,
+    alcoholsTastingTags: ['부드러운', '바닐라', '꿀'],
   },
 };
 
