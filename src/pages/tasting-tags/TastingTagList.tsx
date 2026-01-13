@@ -1,13 +1,13 @@
 /**
  * 테이스팅 태그 목록 페이지
  * - Badge 형태로 태그 목록 표시
- * - 태그 클릭 시 인라인 편집
+ * - 태그 클릭 시 편집 모달
  * - X 버튼으로 삭제
  * - API 연동 전 Mock 데이터로 동작
  */
 
-import { useState, useRef, useEffect } from 'react';
-import { Plus, X, Search } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, X, Search, Pencil } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/useToast';
 
 // Mock 테이스팅 태그 데이터 (단순 문자열 배열)
@@ -51,19 +59,16 @@ export function TastingTagListPage() {
   // 상태 관리
   const [tags, setTags] = useState<string[]>(MOCK_TASTING_TAGS);
   const [newTag, setNewTag] = useState('');
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editValue, setEditValue] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
 
-  const editInputRef = useRef<HTMLInputElement>(null);
+  // 편집 모달 상태
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState('');
 
-  // 편집 모드일 때 input에 포커스
-  useEffect(() => {
-    if (editingIndex !== null && editInputRef.current) {
-      editInputRef.current.focus();
-      editInputRef.current.select();
-    }
-  }, [editingIndex]);
+  // 삭제 확인 모달 상태
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
 
   // 필터링된 태그
   const filteredTags = searchKeyword
@@ -93,16 +98,31 @@ export function TastingTagListPage() {
     }
   };
 
-  // 태그 삭제
-  const handleDelete = (index: number) => {
-    const tagName = tags[index];
-    setTags((prev) => prev.filter((_, i) => i !== index));
+  // 삭제 모달 열기
+  const openDeleteModal = (index: number) => {
+    setDeletingIndex(index);
+    setIsDeleteModalOpen(true);
+  };
+
+  // 삭제 모달 닫기
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setDeletingIndex(null);
+  };
+
+  // 삭제 확인
+  const confirmDelete = () => {
+    if (deletingIndex === null) return;
+
+    const tagName = tags[deletingIndex];
+    setTags((prev) => prev.filter((_, i) => i !== deletingIndex));
+    closeDeleteModal();
     showToast({ type: 'info', message: `"${tagName}" 태그가 삭제되었습니다.` });
   };
 
-  // 편집 시작
-  const startEdit = (index: number) => {
-    const tag = filteredTags[index];
+  // 편집 모달 열기
+  const openEditModal = (filteredIndex: number) => {
+    const tag = filteredTags[filteredIndex];
     if (!tag) return;
 
     // 검색 중일 때는 원본 인덱스 찾기
@@ -111,10 +131,18 @@ export function TastingTagListPage() {
 
     setEditingIndex(originalIndex);
     setEditValue(tag);
+    setIsEditModalOpen(true);
   };
 
-  // 편집 완료
-  const handleEditComplete = () => {
+  // 편집 모달 닫기
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingIndex(null);
+    setEditValue('');
+  };
+
+  // 편집 저장
+  const handleEditSave = () => {
     if (editingIndex === null) return;
 
     const trimmed = editValue.trim();
@@ -131,29 +159,15 @@ export function TastingTagListPage() {
     }
 
     setTags((prev) => prev.map((tag, i) => (i === editingIndex ? trimmed : tag)));
-    setEditingIndex(null);
-    setEditValue('');
+    closeEditModal();
     showToast({ type: 'success', message: '태그가 수정되었습니다.' });
   };
 
   const handleEditKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      handleEditComplete();
-    } else if (e.key === 'Escape') {
-      setEditingIndex(null);
-      setEditValue('');
+      handleEditSave();
     }
-  };
-
-  // 편집 취소 (외부 클릭)
-  const handleEditBlur = () => {
-    // 약간의 딜레이를 줘서 클릭 이벤트가 먼저 처리되도록
-    setTimeout(() => {
-      if (editingIndex !== null) {
-        handleEditComplete();
-      }
-    }, 100);
   };
 
   return (
@@ -219,31 +233,21 @@ export function TastingTagListPage() {
             <div className="flex flex-wrap gap-2">
               {filteredTags.map((tag, index) => {
                 const originalIndex = tags.indexOf(tag);
-                const isEditing = editingIndex === originalIndex;
 
-                return isEditing ? (
-                  <Input
-                    key={`edit-${originalIndex}`}
-                    ref={editInputRef}
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    onKeyDown={handleEditKeyDown}
-                    onBlur={handleEditBlur}
-                    className="h-7 w-32 px-2 text-sm"
-                  />
-                ) : (
+                return (
                   <Badge
                     key={`tag-${originalIndex}`}
                     variant="secondary"
                     className="cursor-pointer gap-1 pr-1 text-sm hover:bg-secondary/80"
-                    onClick={() => startEdit(index)}
+                    onClick={() => openEditModal(index)}
                   >
+                    <Pencil className="mr-0.5 h-3 w-3 opacity-50" />
                     {tag}
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete(originalIndex);
+                        openDeleteModal(originalIndex);
                       }}
                       className="ml-1 rounded-full p-0.5 hover:bg-destructive/20"
                     >
@@ -256,6 +260,51 @@ export function TastingTagListPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* 편집 모달 */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>태그 수정</DialogTitle>
+            <DialogDescription>태그명을 수정합니다.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="태그명 입력..."
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleEditKeyDown}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeEditModal}>
+              취소
+            </Button>
+            <Button onClick={handleEditSave}>저장</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 삭제 확인 모달 */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>태그 삭제</DialogTitle>
+            <DialogDescription>
+              "{deletingIndex !== null ? tags[deletingIndex] : ''}" 태그를 삭제하시겠습니까?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDeleteModal}>
+              취소
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
