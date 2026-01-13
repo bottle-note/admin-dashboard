@@ -47,6 +47,12 @@ export const menuConfig: MenuGroup[] = [
                 icon: List,
                 path: '/whisky',
               },
+              {
+                id: 'whisky-create',
+                label: '위스키 추가',
+                icon: Plus,
+                path: '/whisky/new',
+              },
             ],
           },
           {
