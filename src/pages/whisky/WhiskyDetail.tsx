@@ -23,6 +23,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/useToast';
 
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
@@ -113,6 +123,7 @@ export function WhiskyDetailPage() {
   const [tastingTags, setTastingTags] = useState<string[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // React Hook Form 설정
   const form = useForm<WhiskyFormValues>({
@@ -163,14 +174,13 @@ export function WhiskyDetailPage() {
     }
   };
 
-  const handleDelete = () => {
-    if (confirm('정말 삭제하시겠습니까?')) {
-      showToast({
-        type: 'error',
-        message: '위스키가 삭제되었습니다.',
-      });
-      navigate('/whisky');
-    }
+  const handleDeleteConfirm = () => {
+    // TODO: API 연동 시 delete mutation 호출
+    showToast({
+      type: 'error',
+      message: '위스키가 삭제되었습니다.',
+    });
+    navigate('/whisky');
   };
 
   const handleBack = () => navigate('/whisky');
@@ -185,7 +195,7 @@ export function WhiskyDetailPage() {
         actions={
           <>
             {whiskyData && (
-              <Button variant="destructive" onClick={handleDelete}>
+              <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 삭제
               </Button>
@@ -343,6 +353,22 @@ export function WhiskyDetailPage() {
           </Card>
         </div>
       )}
+
+      {/* 삭제 확인 다이얼로그 */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>위스키 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              정말 이 위스키를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>삭제</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
