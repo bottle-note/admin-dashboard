@@ -109,7 +109,7 @@ export function WhiskyDetailPage() {
   const isNewMode = id === 'new';
 
   // 상태
-  const [isLoading, setIsLoading] = useState(!!whiskyData);
+  const [isLoading, setIsLoading] = useState(false);
   const [tastingTags, setTastingTags] = useState<string[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -123,6 +123,8 @@ export function WhiskyDetailPage() {
   // Mock 데이터 로드 (수정 모드일 때만)
   useEffect(() => {
     if (whiskyData) {
+      setIsLoading(true);
+      // 실제 API 연동 시 TanStack Query로 교체
       setTimeout(() => {
         form.reset({
           korName: whiskyData.korName,
