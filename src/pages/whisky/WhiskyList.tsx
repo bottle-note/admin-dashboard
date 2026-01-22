@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Search } from 'lucide-react';
+import { Search, ImageOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -130,23 +130,24 @@ export function WhiskyListPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[80px]">ID</TableHead>
+              <TableHead className="w-[60px]">ID</TableHead>
+              <TableHead className="w-[60px]">이미지</TableHead>
               <TableHead>한글명</TableHead>
               <TableHead>영문명</TableHead>
-              <TableHead>카테고리</TableHead>
-              <TableHead className="w-[120px]">수정일</TableHead>
+              <TableHead className="w-[100px]">카테고리</TableHead>
+              <TableHead className="w-[100px]">수정일</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   <span className="text-muted-foreground">로딩 중...</span>
                 </TableCell>
               </TableRow>
             ) : data?.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   <span className="text-muted-foreground">
                     검색 결과가 없습니다.
                   </span>
@@ -161,6 +162,19 @@ export function WhiskyListPage() {
                 >
                   <TableCell className="font-mono text-sm">
                     {item.alcoholId}
+                  </TableCell>
+                  <TableCell>
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.korName}
+                        className="h-10 w-10 rounded object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded bg-muted">
+                        <ImageOff className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="font-medium">{item.korName}</TableCell>
                   <TableCell className="text-muted-foreground">
