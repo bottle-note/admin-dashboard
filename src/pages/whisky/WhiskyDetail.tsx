@@ -17,6 +17,7 @@ import {
   WhiskyImageCard,
   WhiskyStatsCard,
   WhiskyTastingTagCard,
+  WhiskyRelatedKeywordsCard,
 } from './components';
 import { useWhiskyDetailForm } from './useWhiskyDetailForm';
 
@@ -42,6 +43,7 @@ export function WhiskyDetailPage() {
 
   // 로컬 상태
   const [tastingTags, setTastingTags] = useState<AlcoholTastingTag[]>([]);
+  const [relatedKeywords, setRelatedKeywords] = useState<string[]>([]);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -50,6 +52,8 @@ export function WhiskyDetailPage() {
     if (whiskyData) {
       setTastingTags(whiskyData.tastingTags);
       setImagePreviewUrl(whiskyData.imageUrl);
+      // TODO: API에 relatedKeywords 필드 추가 시 아래 주석 해제
+      // setRelatedKeywords(whiskyData.relatedKeywords ?? []);
     }
   }, [whiskyData]);
 
@@ -61,7 +65,7 @@ export function WhiskyDetailPage() {
   };
 
   const handleSubmit = form.handleSubmit((data) => {
-    onSubmit(data, { tastingTags, imagePreviewUrl });
+    onSubmit(data, { tastingTags, relatedKeywords, imagePreviewUrl });
   });
 
   const handleDeleteConfirm = () => {
@@ -126,6 +130,9 @@ export function WhiskyDetailPage() {
 
           {/* 테이스팅 태그 섹션 */}
           <WhiskyTastingTagCard tastingTags={tastingTags} onTagsChange={setTastingTags} />
+
+          {/* 연관 키워드 섹션 */}
+          <WhiskyRelatedKeywordsCard keywords={relatedKeywords} onKeywordsChange={setRelatedKeywords} />
         </div>
       )}
 

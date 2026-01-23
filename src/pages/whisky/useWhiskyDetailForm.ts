@@ -54,7 +54,7 @@ export interface UseWhiskyDetailFormReturn {
   distilleries: Array<{ id: number; korName: string }>;
   onSubmit: (
     data: WhiskyFormValues,
-    options: { tastingTags: AlcoholTastingTag[]; imagePreviewUrl: string | null }
+    options: { tastingTags: AlcoholTastingTag[]; relatedKeywords: string[]; imagePreviewUrl: string | null }
   ) => void;
   handleBack: () => void;
   handleDelete: () => void;
@@ -127,8 +127,10 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
 
   const onSubmit = (
     data: WhiskyFormValues,
-    { imagePreviewUrl }: { tastingTags: AlcoholTastingTag[]; imagePreviewUrl: string | null }
+    { relatedKeywords, imagePreviewUrl }: { tastingTags: AlcoholTastingTag[]; relatedKeywords: string[]; imagePreviewUrl: string | null }
   ) => {
+    // TODO: API에 relatedKeywords 필드 추가 시 요청 데이터에 포함
+    console.log('Related Keywords:', relatedKeywords);
     if (isNewMode) {
       const createData: AlcoholCreateRequest = {
         korName: data.korName,

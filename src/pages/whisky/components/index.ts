@@ -6,8 +6,10 @@ export { WhiskyBasicInfoCard } from './WhiskyBasicInfoCard';
 export { WhiskyImageCard } from './WhiskyImageCard';
 export { WhiskyStatsCard } from './WhiskyStatsCard';
 export { WhiskyTastingTagCard } from './WhiskyTastingTagCard';
+export { WhiskyRelatedKeywordsCard } from './WhiskyRelatedKeywordsCard';
 
 export type { WhiskyBasicInfoCardProps } from './WhiskyBasicInfoCard';
 export type { WhiskyImageCardProps } from './WhiskyImageCard';
 export type { WhiskyStatsCardProps } from './WhiskyStatsCard';
 export type { WhiskyTastingTagCardProps } from './WhiskyTastingTagCard';
+export type { WhiskyRelatedKeywordsCardProps } from './WhiskyRelatedKeywordsCard';
