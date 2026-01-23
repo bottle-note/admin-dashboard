@@ -13,6 +13,7 @@ import { DashboardPage } from '@/pages/Dashboard';
 import { WhiskyListPage } from '@/pages/whisky/WhiskyList';
 import { WhiskyDetailPage } from '@/pages/whisky/WhiskyDetail';
 import { TastingTagListPage } from '@/pages/tasting-tags/TastingTagList';
+import { TastingTagDetailPage } from '@/pages/tasting-tags/TastingTagDetail';
 import { BannerListPage } from '@/pages/banners/BannerList';
 import { BannerDetailPage } from '@/pages/banners/BannerDetail';
 import { BannerCreatePage } from '@/pages/banners/BannerCreate';
@@ -83,6 +84,22 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
               <TastingTagListPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="tasting-tags/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <TastingTagDetailPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="tasting-tags/:id"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <TastingTagDetailPage />
             </RoleProtectedRoute>
           }
         />

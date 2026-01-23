@@ -26,6 +26,7 @@ import {
  * @param warningMessage - 경고 메시지 (선택)
  * @param confirmText - 확인 버튼 텍스트
  * @param cancelText - 취소 버튼 텍스트
+ * @param isPending - 삭제 진행 중 상태 (버튼 비활성화)
  */
 export interface DeleteConfirmDialogProps {
   open: boolean;
@@ -36,6 +37,7 @@ export interface DeleteConfirmDialogProps {
   warningMessage?: string;
   confirmText?: string;
   cancelText?: string;
+  isPending?: boolean;
 }
 
 export function DeleteConfirmDialog({
@@ -47,6 +49,7 @@ export function DeleteConfirmDialog({
   warningMessage,
   confirmText = '삭제',
   cancelText = '취소',
+  isPending = false,
 }: DeleteConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -67,7 +70,9 @@ export function DeleteConfirmDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{cancelText}</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>{confirmText}</AlertDialogAction>
+          <AlertDialogAction onClick={onConfirm} disabled={isPending}>
+            {isPending ? '삭제 중...' : confirmText}
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
