@@ -3,19 +3,14 @@
  * - 한글명, 영문명, 카테고리, 지역, 도수, 증류소 등 기본 정보 폼
  */
 
+import { useMemo } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField } from '@/components/common/FormField';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 import type { WhiskyFormValues } from '../whisky.schema';
 import type { CategoryReference } from '@/types/api';
@@ -42,6 +37,22 @@ export function WhiskyBasicInfoCard({
 }: WhiskyBasicInfoCardProps) {
   const { register, watch, setValue, formState } = form;
   const { errors } = formState;
+
+  // 옵션 목록 변환
+  const categoryOptions = useMemo(
+    () => categories.map((cat) => ({ value: cat.korCategory, label: cat.korCategory })),
+    [categories]
+  );
+
+  const regionOptions = useMemo(
+    () => regions.map((region) => ({ value: String(region.id), label: region.korName })),
+    [regions]
+  );
+
+  const distilleryOptions = useMemo(
+    () => distilleries.map((distillery) => ({ value: String(distillery.id), label: distillery.korName })),
+    [distilleries]
+  );
 
   // 카테고리 선택 시 korCategory, engCategory, categoryGroup을 함께 저장
   const handleCategoryChange = (korCategory: string) => {
@@ -72,55 +83,37 @@ export function WhiskyBasicInfoCard({
 
         {/* 카테고리 */}
         <FormField label="카테고리" required error={errors.korCategory?.message}>
-          <Select value={watch('korCategory')} onValueChange={handleCategoryChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="카테고리 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((cat) => (
-                <SelectItem key={cat.korCategory} value={cat.korCategory}>
-                  {cat.korCategory}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={watch('korCategory')}
+            onChange={handleCategoryChange}
+            options={categoryOptions}
+            placeholder="카테고리 선택"
+            searchPlaceholder="카테고리 검색..."
+            emptyMessage="카테고리를 찾을 수 없습니다."
+          />
         </FormField>
 
         {/* 지역 / 증류소 */}
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="지역" required error={errors.regionId?.message}>
-            <Select
+            <SearchableSelect
               value={String(watch('regionId') || '')}
-              onValueChange={(v) => setValue('regionId', Number(v))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="지역 선택" />
-              </SelectTrigger>
-              <SelectContent>
-                {regions.map((region) => (
-                  <SelectItem key={region.id} value={String(region.id)}>
-                    {region.korName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(v) => setValue('regionId', Number(v))}
+              options={regionOptions}
+              placeholder="지역 선택"
+              searchPlaceholder="지역 검색..."
+              emptyMessage="지역을 찾을 수 없습니다."
+            />
           </FormField>
           <FormField label="증류소" required error={errors.distilleryId?.message}>
-            <Select
+            <SearchableSelect
               value={String(watch('distilleryId') || '')}
-              onValueChange={(v) => setValue('distilleryId', v ? Number(v) : 0)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="증류소 선택" />
-              </SelectTrigger>
-              <SelectContent>
-                {distilleries.map((distillery) => (
-                  <SelectItem key={distillery.id} value={String(distillery.id)}>
-                    {distillery.korName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(v) => setValue('distilleryId', v ? Number(v) : 0)}
+              options={distilleryOptions}
+              placeholder="증류소 선택"
+              searchPlaceholder="증류소 검색..."
+              emptyMessage="증류소를 찾을 수 없습니다."
+            />
           </FormField>
         </div>
 
