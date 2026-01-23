@@ -28,6 +28,16 @@ export const AlcoholApi = {
     endpoint: '/admin/api/v1/alcohols/categories/reference',
     method: 'GET',
   },
+  /** 술 삭제 */
+  delete: {
+    endpoint: '/admin/api/v1/alcohols/:alcoholId',
+    method: 'DELETE',
+  },
+  /** 술 수정 */
+  update: {
+    endpoint: '/admin/api/v1/alcohols/:alcoholId',
+    method: 'PUT',
+  },
 } as const;
 
 // ============================================
@@ -232,6 +242,65 @@ export interface AlcoholApiTypes {
       responseAt: string;
     };
   };
+  /** 술 삭제 */
+  delete: {
+    /** 응답 데이터 */
+    response: {
+      /** 결과 코드 */
+      code: string;
+      /** 결과 메시지 */
+      message: string;
+      /** 삭제된 술 ID */
+      targetId: number;
+      /** 응답 시간 */
+      responseAt: string;
+    };
+  };
+  /** 술 수정 */
+  update: {
+    /** 요청 데이터 */
+    request: {
+      /** 한글 이름 */
+      korName: string;
+      /** 영문 이름 */
+      engName: string;
+      /** 도수 (예: "40%") */
+      abv: string;
+      /** 술 타입 */
+      type: AlcoholType;
+      /** 카테고리 한글명 */
+      korCategory: string;
+      /** 카테고리 영문명 */
+      engCategory: string;
+      /** 카테고리 그룹 */
+      categoryGroup: AlcoholCategory;
+      /** 지역 ID */
+      regionId: number;
+      /** 증류소 ID */
+      distilleryId: number;
+      /** 숙성년도 */
+      age: string;
+      /** 캐스크 타입 */
+      cask: string;
+      /** 이미지 URL */
+      imageUrl: string;
+      /** 설명 */
+      description: string;
+      /** 용량 (예: "700ml") */
+      volume: string;
+    };
+    /** 응답 데이터 */
+    response: {
+      /** 결과 코드 */
+      code: string;
+      /** 결과 메시지 */
+      message: string;
+      /** 수정된 술 ID */
+      targetId: number;
+      /** 응답 시간 */
+      responseAt: string;
+    };
+  };
 }
 
 // ============================================
@@ -258,6 +327,15 @@ export type AlcoholCreateRequest = AlcoholApiTypes['create']['request'];
 
 /** 술 생성 응답 데이터 */
 export type AlcoholCreateResponse = AlcoholApiTypes['create']['response'];
+
+/** 술 삭제 응답 데이터 */
+export type AlcoholDeleteResponse = AlcoholApiTypes['delete']['response'];
+
+/** 술 수정 요청 데이터 */
+export type AlcoholUpdateRequest = AlcoholApiTypes['update']['request'];
+
+/** 술 수정 응답 데이터 */
+export type AlcoholUpdateResponse = AlcoholApiTypes['update']['response'];
 
 // ============================================
 // 카테고리 레퍼런스 타입

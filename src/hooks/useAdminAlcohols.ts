@@ -15,6 +15,9 @@ import type {
   AlcoholDetail,
   AlcoholCreateRequest,
   AlcoholCreateResponse,
+  AlcoholDeleteResponse,
+  AlcoholUpdateRequest,
+  AlcoholUpdateResponse,
   CategoryReference,
 } from '@/types/api';
 
@@ -132,6 +135,102 @@ export function useCategoryReferences() {
     () => adminAlcoholService.getCategoryReferences(),
     {
       staleTime: 1000 * 60 * 5, // 5분 (카테고리는 자주 변경되지 않음)
+    }
+  );
+}
+
+/**
+ * 술 삭제 훅
+ * 소프트 삭제로 처리되며, 리뷰/평점이 있는 술은 삭제 불가
+ *
+ * @example
+ * ```tsx
+ * const deleteMutation = useAdminAlcoholDelete({
+ *   onSuccess: () => {
+ *     navigate('/whisky');
+ *   },
+ * });
+ *
+ * deleteMutation.mutate(alcoholId);
+ * ```
+ */
+export function useAdminAlcoholDelete(
+  options?: Omit<UseApiMutationOptions<AlcoholDeleteResponse, number>, 'successMessage'>
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...restOptions } = options ?? {};
+
+  return useApiMutation<AlcoholDeleteResponse, number>(
+    adminAlcoholService.delete,
+    {
+      successMessage: '위스키가 삭제되었습니다.',
+      ...restOptions,
+      onSuccess: (data, variables, context) => {
+        // 목록 캐시 무효화
+        queryClient.invalidateQueries({ queryKey: adminAlcoholKeys.lists() });
+        // 상세 캐시 무효화
+        queryClient.invalidateQueries({ queryKey: adminAlcoholKeys.detail(variables) });
+        // 원래 onSuccess 콜백 호출
+        if (onSuccess) {
+          (onSuccess as (data: AlcoholDeleteResponse, variables: number, context: unknown) => void)(data, variables, context);
+        }
+      },
+    }
+  );
+}
+
+/**
+ * 술 수정 mutation 변수 타입
+ */
+export interface AlcoholUpdateVariables {
+  alcoholId: number;
+  data: AlcoholUpdateRequest;
+}
+
+/**
+ * 술 수정 훅
+ * 전체 수정(PUT)이므로 모든 필드를 전달해야 함
+ * 이미 삭제된 술은 수정 불가
+ *
+ * @example
+ * ```tsx
+ * const updateMutation = useAdminAlcoholUpdate({
+ *   onSuccess: () => {
+ *     console.log('수정 완료');
+ *   },
+ * });
+ *
+ * updateMutation.mutate({
+ *   alcoholId: 1,
+ *   data: {
+ *     korName: '수정된 위스키',
+ *     engName: 'Updated Whisky',
+ *     // ...
+ *   },
+ * });
+ * ```
+ */
+export function useAdminAlcoholUpdate(
+  options?: Omit<UseApiMutationOptions<AlcoholUpdateResponse, AlcoholUpdateVariables>, 'successMessage'>
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...restOptions } = options ?? {};
+
+  return useApiMutation<AlcoholUpdateResponse, AlcoholUpdateVariables>(
+    ({ alcoholId, data }) => adminAlcoholService.update(alcoholId, data),
+    {
+      successMessage: '위스키가 수정되었습니다.',
+      ...restOptions,
+      onSuccess: (data, variables, context) => {
+        // 목록 캐시 무효화
+        queryClient.invalidateQueries({ queryKey: adminAlcoholKeys.lists() });
+        // 상세 캐시 무효화
+        queryClient.invalidateQueries({ queryKey: adminAlcoholKeys.detail(variables.alcoholId) });
+        // 원래 onSuccess 콜백 호출
+        if (onSuccess) {
+          (onSuccess as (data: AlcoholUpdateResponse, variables: AlcoholUpdateVariables, context: unknown) => void)(data, variables, context);
+        }
+      },
     }
   );
 }

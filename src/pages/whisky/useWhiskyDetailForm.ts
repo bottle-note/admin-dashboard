@@ -9,10 +9,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router';
 
-import { useToast } from '@/hooks/useToast';
 import {
   useAdminAlcoholDetail,
   useAdminAlcoholCreate,
+  useAdminAlcoholDelete,
+  useAdminAlcoholUpdate,
   useCategoryReferences,
 } from '@/hooks/useAdminAlcohols';
 import { useRegionList } from '@/hooks/useRegions';
@@ -20,7 +21,7 @@ import { useDistilleryList } from '@/hooks/useDistilleries';
 
 import { whiskyFormSchema } from './whisky.schema';
 import type { WhiskyFormValues } from './whisky.schema';
-import type { AlcoholCreateRequest, AlcoholTastingTag, CategoryReference } from '@/types/api';
+import type { AlcoholCreateRequest, AlcoholUpdateRequest, AlcoholTastingTag, CategoryReference } from '@/types/api';
 
 /** 신규 등록용 폼 기본값 */
 const DEFAULT_WHISKY_FORM: WhiskyFormValues = {
@@ -65,7 +66,6 @@ export interface UseWhiskyDetailFormReturn {
  */
 export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailFormReturn {
   const navigate = useNavigate();
-  const { showToast } = useToast();
 
   const isNewMode = id === 'new' || id === undefined;
   const alcoholId = !isNewMode && id ? parseInt(id, 10) : undefined;
@@ -93,6 +93,16 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
       navigate(`/whisky/${data.targetId}`);
     },
   });
+
+  // 삭제 mutation
+  const deleteMutation = useAdminAlcoholDelete({
+    onSuccess: () => {
+      navigate('/whisky');
+    },
+  });
+
+  // 수정 mutation
+  const updateMutation = useAdminAlcoholUpdate();
 
   // API 데이터를 폼에 반영
   useEffect(() => {
@@ -137,32 +147,40 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
         volume: data.volume ?? '',
       };
       createMutation.mutate(createData);
-    } else {
-      // TODO: 수정 API 연동
-      console.log('Update:', data);
-      showToast({
-        type: 'success',
-        message: '위스키 정보가 저장되었습니다.',
-      });
+    } else if (alcoholId) {
+      const updateData: AlcoholUpdateRequest = {
+        korName: data.korName,
+        engName: data.engName,
+        abv: `${data.abv}%`,
+        type: 'WHISKY',
+        korCategory: data.korCategory,
+        engCategory: data.engCategory,
+        categoryGroup: data.categoryGroup,
+        regionId: data.regionId,
+        distilleryId: data.distilleryId,
+        age: data.age ?? '',
+        cask: data.cask ?? '',
+        imageUrl: data.imageUrl ?? imagePreviewUrl ?? '',
+        description: data.description ?? '',
+        volume: data.volume ?? '',
+      };
+      updateMutation.mutate({ alcoholId, data: updateData });
     }
   };
 
   const handleBack = () => navigate('/whisky');
 
   const handleDelete = () => {
-    // TODO: API 연동 시 delete mutation 호출
-    showToast({
-      type: 'error',
-      message: '위스키가 삭제되었습니다.',
-    });
-    navigate('/whisky');
+    if (alcoholId) {
+      deleteMutation.mutate(alcoholId);
+    }
   };
 
   return {
     form,
     isLoading,
     isNewMode,
-    isPending: createMutation.isPending,
+    isPending: createMutation.isPending || deleteMutation.isPending || updateMutation.isPending,
     whiskyData,
     categories: categoryData ?? [],
     regions: regionData?.items ?? [],

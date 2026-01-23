@@ -12,6 +12,9 @@ import {
   type AlcoholDetail,
   type AlcoholCreateRequest,
   type AlcoholCreateResponse,
+  type AlcoholDeleteResponse,
+  type AlcoholUpdateRequest,
+  type AlcoholUpdateResponse,
   type CategoryReference,
 } from '@/types/api';
 
@@ -82,5 +85,24 @@ export const adminAlcoholService = {
    */
   getCategoryReferences: async (): Promise<CategoryReference[]> => {
     return apiClient.get<CategoryReference[]>(AlcoholApi.categoryReference.endpoint);
+  },
+
+  /**
+   * 술 삭제
+   * 소프트 삭제로 처리되며, 리뷰/평점이 있는 술은 삭제 불가
+   */
+  delete: async (alcoholId: number): Promise<AlcoholDeleteResponse> => {
+    const endpoint = AlcoholApi.delete.endpoint.replace(':alcoholId', String(alcoholId));
+    return apiClient.delete<AlcoholDeleteResponse>(endpoint);
+  },
+
+  /**
+   * 술 수정
+   * 전체 수정(PUT)이므로 모든 필드를 전달해야 함
+   * 이미 삭제된 술은 수정 불가
+   */
+  update: async (alcoholId: number, data: AlcoholUpdateRequest): Promise<AlcoholUpdateResponse> => {
+    const endpoint = AlcoholApi.update.endpoint.replace(':alcoholId', String(alcoholId));
+    return apiClient.put<AlcoholUpdateResponse, AlcoholUpdateRequest>(endpoint, data);
   },
 };
