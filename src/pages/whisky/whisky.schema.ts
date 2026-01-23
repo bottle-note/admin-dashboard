@@ -1,19 +1,8 @@
 /**
- * 위스키 상세 페이지 폼 스키마 및 상수
+ * 위스키 상세 페이지 폼 스키마
  */
 
 import { z } from 'zod';
-import type { AlcoholCategory } from '@/types/api';
-
-/** 카테고리 그룹 옵션 */
-export const CATEGORY_GROUP_OPTIONS: { value: AlcoholCategory; label: string }[] = [
-  { value: 'SINGLE_MALT', label: '싱글몰트 위스키' },
-  { value: 'BLEND', label: '블렌디드 위스키' },
-  { value: 'BLENDED_MALT', label: '블렌디드 몰트 위스키' },
-  { value: 'BOURBON', label: '버번 위스키' },
-  { value: 'RYE', label: '라이 위스키' },
-  { value: 'OTHER', label: '기타 위스키' },
-];
 
 /** 위스키 폼 Zod 스키마 */
 export const whiskyFormSchema = z.object({

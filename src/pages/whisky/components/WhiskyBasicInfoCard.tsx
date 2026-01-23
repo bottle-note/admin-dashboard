@@ -18,8 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { FormField } from '@/components/common/FormField';
 
 import type { WhiskyFormValues } from '../whisky.schema';
-import { CATEGORY_GROUP_OPTIONS } from '../whisky.schema';
-import type { CategoryReference, AlcoholCategory } from '@/types/api';
+import type { CategoryReference } from '@/types/api';
 
 /**
  * WhiskyBasicInfoCard 컴포넌트의 props
@@ -44,12 +43,13 @@ export function WhiskyBasicInfoCard({
   const { register, watch, setValue, formState } = form;
   const { errors } = formState;
 
-  // 카테고리 선택 시 korCategory와 engCategory를 함께 저장
+  // 카테고리 선택 시 korCategory, engCategory, categoryGroup을 함께 저장
   const handleCategoryChange = (korCategory: string) => {
     const selected = categories.find((c) => c.korCategory === korCategory);
     if (selected) {
       setValue('korCategory', selected.korCategory);
       setValue('engCategory', selected.engCategory);
+      setValue('categoryGroup', selected.categoryGroup);
     }
   };
 
@@ -70,40 +70,21 @@ export function WhiskyBasicInfoCard({
           </FormField>
         </div>
 
-        {/* 카테고리 / 카테고리 그룹 */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="카테고리" required error={errors.korCategory?.message}>
-            <Select value={watch('korCategory')} onValueChange={handleCategoryChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="카테고리 선택" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.korCategory} value={cat.korCategory}>
-                    {cat.korCategory}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-          <FormField label="카테고리 그룹" required error={errors.categoryGroup?.message}>
-            <Select
-              value={watch('categoryGroup')}
-              onValueChange={(v) => setValue('categoryGroup', v as AlcoholCategory)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="카테고리 그룹 선택" />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORY_GROUP_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-        </div>
+        {/* 카테고리 */}
+        <FormField label="카테고리" required error={errors.korCategory?.message}>
+          <Select value={watch('korCategory')} onValueChange={handleCategoryChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="카테고리 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((cat) => (
+                <SelectItem key={cat.korCategory} value={cat.korCategory}>
+                  {cat.korCategory}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
 
         {/* 지역 / 증류소 */}
         <div className="grid gap-4 sm:grid-cols-2">

@@ -347,4 +347,6 @@ export interface CategoryReference {
   korCategory: string;
   /** 영문 카테고리 */
   engCategory: string;
+  /** 카테고리 그룹 */
+  categoryGroup: AlcoholCategory;
 }
