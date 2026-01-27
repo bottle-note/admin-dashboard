@@ -3,7 +3,6 @@
  */
 
 import { Wine, MessageSquare, Tag, Image } from 'lucide-react';
-import { useAuthStore } from '@/stores/auth';
 import { useAdminAlcoholList } from '@/hooks/useAdminAlcohols';
 import { useHelpList } from '@/hooks/useHelps';
 
@@ -33,8 +32,6 @@ function StatCard({ title, value, icon, isLoading }: StatCardProps) {
 }
 
 export function DashboardPage() {
-  const user = useAuthStore((state) => state.user);
-
   // 통계 데이터 조회 (최소 데이터만 요청)
   const { data: alcoholData, isLoading: isAlcoholLoading } = useAdminAlcoholList({
     size: 1,
@@ -48,7 +45,7 @@ export function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold">대시보드</h1>
         <p className="text-muted-foreground">
-          안녕하세요, {user?.name || '관리자'}님! BottleNote Admin에 오신 것을 환영합니다.
+          안녕하세요! BottleNote Admin에 오신 것을 환영합니다.
         </p>
       </div>
 
