@@ -26,6 +26,7 @@ export interface TagSelectorProps {
 export function TagSelector({ selectedTags, availableTags, onTagsChange }: TagSelectorProps) {
   const [customTag, setCustomTag] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [isComposing, setIsComposing] = useState(false);
 
   // 선택되지 않은 태그만 필터링
   const unselectedTags = availableTags.filter((tag) => !selectedTags.includes(tag));
@@ -54,7 +55,8 @@ export function TagSelector({ selectedTags, availableTags, onTagsChange }: TagSe
   };
 
   const handleCustomTagKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    // 한글 IME 조합 중에는 Enter 무시 (글자 중복 방지)
+    if (e.key === 'Enter' && !isComposing) {
       e.preventDefault();
       handleAddCustomTag();
     }
@@ -94,6 +96,8 @@ export function TagSelector({ selectedTags, availableTags, onTagsChange }: TagSe
             value={customTag}
             onChange={(e) => setCustomTag(e.target.value)}
             onKeyDown={handleCustomTagKeyDown}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => setIsComposing(false)}
             className="h-8 flex-1"
           />
           <Button

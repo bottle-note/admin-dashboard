@@ -26,8 +26,8 @@ export function UserMenu() {
     navigate('/login');
   };
 
-  // 이름의 첫 글자를 아바타에 표시
-  const initials = user?.name?.charAt(0).toUpperCase() || 'A';
+  // 이메일의 첫 글자를 아바타에 표시
+  const initials = user?.email?.charAt(0).toUpperCase() || 'A';
 
   return (
     <DropdownMenu>
@@ -39,14 +39,14 @@ export function UserMenu() {
             </AvatarFallback>
           </Avatar>
           <span className="hidden sm:inline-block text-sm font-medium">
-            {user?.name || '관리자'}
+            {user?.email?.split('@')[0] || '관리자'}
           </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium">{user?.name || '관리자'}</p>
+            <p className="text-sm font-medium">{user?.email?.split('@')[0] || '관리자'}</p>
             <p className="text-xs text-muted-foreground">{user?.email}</p>
           </div>
         </DropdownMenuLabel>

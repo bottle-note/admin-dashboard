@@ -2,188 +2,101 @@
  * 위스키 상세 페이지
  * - 신규 등록 (id가 'new'인 경우)
  * - 상세 조회 및 수정 (id가 숫자인 경우)
- * - API 연동 전 Mock 데이터로 동작
  */
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useParams } from 'react-router';
 import { Save, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { useToast } from '@/hooks/useToast';
-
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
-import { ImageUpload } from '@/components/common/ImageUpload';
-import { TagSelector } from '@/components/common/TagSelector';
+import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
 
-import type { WhiskyCategory } from '@/types/api';
 import {
-  MOCK_WHISKY_DETAIL,
-  MOCK_REGIONS,
-  WHISKY_CATEGORY_OPTIONS,
-  DEFAULT_WHISKY_FORM,
-} from '@/data/mock/whisky.mock';
+  WhiskyBasicInfoCard,
+  WhiskyImageCard,
+  WhiskyStatsCard,
+  WhiskyTastingTagCard,
+  WhiskyRelatedKeywordsCard,
+} from './components';
+import { useWhiskyDetailForm } from './useWhiskyDetailForm';
+import { useImageUpload, S3UploadPath } from '@/hooks/useImageUpload';
 
-// Mock 테이스팅 태그 목록 (실제로는 API에서 조회)
-const AVAILABLE_TASTING_TAGS: string[] = [
-  '바닐라',
-  '꿀',
-  '캐러멜',
-  '오크',
-  '스모키',
-  '피트',
-  '과일향',
-  '시트러스',
-  '꽃향',
-  '스파이시',
-  '초콜릿',
-  '견과류',
-  '토피',
-  '바다향',
-  '요오드',
-  '후추',
-  '부드러운',
-  '드라이',
-  '복합적인',
-  '균형잡힌',
-  '셰리',
-];
-
-// Zod 스키마 정의
-const whiskyFormSchema = z.object({
-  korName: z.string().min(1, '한글명은 필수입니다'),
-  engName: z.string().min(1, '영문명은 필수입니다'),
-  category: z.enum(['SINGLE_MALT', 'BLEND', 'BLENDED_MALT', 'BOURBON', 'RYE', 'OTHER'], {
-    message: '카테고리는 필수입니다',
-  }),
-  regionId: z.number().min(1, '지역은 필수입니다'),
-  abv: z.number().min(0, '도수는 0 이상이어야 합니다').max(100, '도수는 100 이하여야 합니다'),
-  description: z.string().optional(),
-  distillery: z.string().optional(),
-  cask: z.string().optional(),
-});
-
-type WhiskyFormValues = z.infer<typeof whiskyFormSchema>;
-
-// 폼 필드 래퍼 컴포넌트
-interface FormFieldProps {
-  label: string;
-  required?: boolean;
-  error?: string;
-  children: React.ReactNode;
-}
-
-function FormField({ label, required, error, children }: FormFieldProps) {
-  return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium">
-        {label}
-        {required && <span className="ml-1 text-destructive">*</span>}
-      </label>
-      {children}
-      {error && <p className="text-sm text-destructive">{error}</p>}
-    </div>
-  );
-}
+import type { AlcoholTastingTag } from '@/types/api';
 
 export function WhiskyDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { showToast } = useToast();
 
-  // 데이터 조회 (신규 등록 시 null)
-  const whiskyData = id && id !== 'new' ? MOCK_WHISKY_DETAIL[id] ?? null : null;
-  const isNewMode = id === 'new';
+  // 폼 관련 로직을 커스텀 훅으로 분리
+  const {
+    form,
+    isLoading,
+    isNewMode,
+    isPending,
+    whiskyData,
+    categories,
+    regions,
+    distilleries,
+    onSubmit,
+    handleBack,
+    handleDelete,
+  } = useWhiskyDetailForm(id);
 
-  // 상태
-  const [isLoading, setIsLoading] = useState(false);
-  const [tastingTags, setTastingTags] = useState<string[]>([]);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  // 이미지 업로드 훅
+  const { upload: uploadImage, isUploading: isImageUploading } = useImageUpload({
+    rootPath: S3UploadPath.ALCOHOL,
+  });
+
+  // 로컬 상태
+  const [tastingTags, setTastingTags] = useState<AlcoholTastingTag[]>([]);
+  const [relatedKeywords, setRelatedKeywords] = useState<string[]>([]);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // React Hook Form 설정
-  const form = useForm<WhiskyFormValues>({
-    resolver: zodResolver(whiskyFormSchema),
-    defaultValues: DEFAULT_WHISKY_FORM,
-  });
-
-  // Mock 데이터 로드 (수정 모드일 때만)
+  // whiskyData 변경 시 로컬 상태 동기화
   useEffect(() => {
     if (whiskyData) {
-      setIsLoading(true);
-      // 실제 API 연동 시 TanStack Query로 교체
-      setTimeout(() => {
-        form.reset({
-          korName: whiskyData.korName,
-          engName: whiskyData.engName,
-          category: whiskyData.category,
-          regionId: whiskyData.regionId,
-          abv: parseFloat(whiskyData.abv),
-          description: whiskyData.description || '',
-          distillery: whiskyData.korDistillery ?? '',
-          cask: whiskyData.cask ?? '',
-        });
-        setTastingTags(whiskyData.alcoholsTastingTags);
-        setImagePreviewUrl(whiskyData.alcoholUrlImg);
-        setIsLoading(false);
-      }, 300);
+      setTastingTags(whiskyData.tastingTags);
+      setImagePreviewUrl(whiskyData.imageUrl);
+      // TODO: API에 relatedKeywords 필드 추가 시 아래 주석 해제
+      // setRelatedKeywords(whiskyData.relatedKeywords ?? []);
     }
-  }, [whiskyData, form]);
+  }, [whiskyData]);
 
-  const handleImageChange = (file: File | null, previewUrl: string | null) => {
-    setImageFile(file);
+  const handleImageChange = async (file: File | null, previewUrl: string | null) => {
+    // 즉시 프리뷰 표시
     setImagePreviewUrl(previewUrl);
+
     if (file) {
-      console.log('Image file selected:', file.name, file.size);
+      // S3에 업로드하고 CDN URL 획득
+      const viewUrl = await uploadImage(file);
+      if (viewUrl) {
+        // 업로드 성공 시 CDN URL로 업데이트
+        form.setValue('imageUrl', viewUrl);
+      } else {
+        // 업로드 실패 시 프리뷰 URL 유지 (에러는 훅에서 처리)
+        form.setValue('imageUrl', previewUrl ?? '');
+      }
+    } else {
+      // 이미지 삭제 시
+      form.setValue('imageUrl', previewUrl ?? '');
     }
   };
 
-  const onSubmit = (data: WhiskyFormValues) => {
-    console.log('Submit:', { ...data, tastingTags, imageFile, isNew: isNewMode });
-    showToast({
-      type: 'success',
-      message: isNewMode ? '위스키가 등록되었습니다.' : '위스키 정보가 저장되었습니다.',
-    });
-
-    if (isNewMode) {
-      navigate('/whisky');
+  const handleSubmit = form.handleSubmit(
+    (data) => {
+      console.log('[DEBUG] handleSubmit callback called', data);
+      onSubmit(data, { tastingTags, relatedKeywords, imagePreviewUrl });
+    },
+    (errors) => {
+      console.log('[DEBUG] handleSubmit validation errors', errors);
     }
-  };
+  );
 
   const handleDeleteConfirm = () => {
-    // TODO: API 연동 시 delete mutation 호출
-    showToast({
-      type: 'error',
-      message: '위스키가 삭제되었습니다.',
-    });
-    navigate('/whisky');
+    handleDelete();
+    setIsDeleteDialogOpen(false);
   };
-
-  const handleBack = () => navigate('/whisky');
 
   return (
     <div className="space-y-6">
@@ -200,9 +113,9 @@ export function WhiskyDetailPage() {
                 삭제
               </Button>
             )}
-            <Button onClick={form.handleSubmit(onSubmit)}>
+            <Button onClick={() => { console.log('[DEBUG] Button clicked, isPending:', isPending); handleSubmit(); }} disabled={isPending}>
               <Save className="mr-2 h-4 w-4" />
-              {isNewMode ? '등록' : '저장'}
+              {isPending ? '등록 중...' : isNewMode ? '등록' : '저장'}
             </Button>
           </>
         }
@@ -214,161 +127,49 @@ export function WhiskyDetailPage() {
         <div className="space-y-6">
           {/* 기본 정보 + 이미지 섹션 */}
           <div className="flex flex-col gap-6 lg:flex-row">
-            {/* 기본 정보 카드 */}
-            <Card className="flex-[2]">
-              <CardHeader>
-                <CardTitle>기본 정보</CardTitle>
-                <CardDescription>위스키의 기본 정보를 입력합니다.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* 한글명 / 영문명 */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField label="한글명" required error={form.formState.errors.korName?.message}>
-                    <Input {...form.register('korName')} placeholder="예: 글렌피딕 12년" />
-                  </FormField>
-                  <FormField label="영문명" required error={form.formState.errors.engName?.message}>
-                    <Input {...form.register('engName')} placeholder="예: Glenfiddich 12 Years" />
-                  </FormField>
-                </div>
-
-                {/* 카테고리 / 지역 */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField label="카테고리" required>
-                    <Select
-                      value={form.watch('category')}
-                      onValueChange={(v) => form.setValue('category', v as WhiskyCategory)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="카테고리 선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {WHISKY_CATEGORY_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormField>
-                  <FormField label="지역" required>
-                    <Select
-                      value={String(form.watch('regionId'))}
-                      onValueChange={(v) => form.setValue('regionId', Number(v))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="지역 선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MOCK_REGIONS.map((region) => (
-                          <SelectItem key={region.id} value={String(region.id)}>
-                            {region.korName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormField>
-                </div>
-
-                {/* 도수 / 증류소 */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField label="도수 (ABV %)" required error={form.formState.errors.abv?.message}>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      {...form.register('abv', { valueAsNumber: true })}
-                      placeholder="예: 40"
-                    />
-                  </FormField>
-                  <FormField label="증류소">
-                    <Input {...form.register('distillery')} placeholder="예: 글렌피딕 증류소" />
-                  </FormField>
-                </div>
-
-                {/* 캐스크 */}
-                <FormField label="캐스크">
-                  <Input {...form.register('cask')} placeholder="예: 아메리칸 오크 & 스패니시 셰리" />
-                </FormField>
-
-                {/* 설명 */}
-                <FormField label="설명">
-                  <Textarea
-                    {...form.register('description')}
-                    placeholder="위스키에 대한 설명을 입력하세요..."
-                    rows={4}
-                  />
-                </FormField>
-              </CardContent>
-            </Card>
+            <WhiskyBasicInfoCard
+              form={form}
+              categories={categories}
+              regions={regions}
+              distilleries={distilleries}
+            />
 
             {/* 이미지 + 통계 카드 */}
             <div className="flex flex-1 flex-col gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>이미지</CardTitle>
-                  <CardDescription>이미지를 드래그하거나 클릭하여 업로드합니다.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ImageUpload imageUrl={imagePreviewUrl} onImageChange={handleImageChange} />
-                </CardContent>
-              </Card>
+              <WhiskyImageCard
+                imageUrl={imagePreviewUrl}
+                onImageChange={handleImageChange}
+                error={form.formState.errors.imageUrl?.message}
+                isUploading={isImageUploading}
+              />
 
-              {/* 통계 카드 (수정 모드만) */}
               {whiskyData && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>통계</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">평균 평점</span>
-                      <span className="font-medium">{whiskyData.rating.toFixed(1)} / 5.0</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">리뷰 수</span>
-                      <span className="font-medium">
-                        {whiskyData.totalRatingsCount.toLocaleString()}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+                <WhiskyStatsCard
+                  avgRating={whiskyData.avgRating}
+                  totalRatingsCount={whiskyData.totalRatingsCount}
+                  reviewCount={whiskyData.reviewCount}
+                  pickCount={whiskyData.pickCount}
+                />
               )}
             </div>
           </div>
 
           {/* 테이스팅 태그 섹션 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>테이스팅 태그</CardTitle>
-              <CardDescription>
-                이 위스키의 테이스팅 노트를 선택하거나 직접 추가할 수 있습니다.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TagSelector
-                selectedTags={tastingTags}
-                availableTags={AVAILABLE_TASTING_TAGS}
-                onTagsChange={setTastingTags}
-              />
-            </CardContent>
-          </Card>
+          <WhiskyTastingTagCard tastingTags={tastingTags} onTagsChange={setTastingTags} />
+
+          {/* 연관 키워드 섹션 */}
+          <WhiskyRelatedKeywordsCard keywords={relatedKeywords} onKeywordsChange={setRelatedKeywords} />
         </div>
       )}
 
       {/* 삭제 확인 다이얼로그 */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>위스키 삭제</AlertDialogTitle>
-            <AlertDialogDescription>
-              정말 이 위스키를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>삭제</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="위스키 삭제"
+        description="정말 이 위스키를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+      />
     </div>
   );
 }

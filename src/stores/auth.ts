@@ -13,7 +13,6 @@ import type { AdminRole } from '@/types/auth';
 export interface AdminUser {
   adminId: number;
   email: string;
-  name: string;
   roles: AdminRole[];
 }
 

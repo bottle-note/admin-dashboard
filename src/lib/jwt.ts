@@ -12,7 +12,6 @@ import type { AdminRole } from '@/types/auth';
 export interface JwtPayload {
   sub: string; // adminId
   email: string;
-  name: string;
   roles: AdminRole[];
   iat: number;
   exp: number;
@@ -72,7 +71,6 @@ export function getUserFromToken(token: string) {
   return {
     adminId: Number(payload.sub),
     email: payload.email,
-    name: payload.name,
     roles: payload.roles,
   };
 }

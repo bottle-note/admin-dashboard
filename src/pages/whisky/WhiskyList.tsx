@@ -1,10 +1,12 @@
 /**
  * 위스키 목록 페이지
+ * - URL 쿼리파라미터로 검색/필터/페이지네이션 상태 관리
+ * - 새로고침/뒤로가기 시 상태 유지
  */
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { Search } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
+import { Search, ImageOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -38,20 +40,56 @@ const CATEGORY_OPTIONS: { value: AlcoholCategory | 'ALL'; label: string }[] = [
 
 export function WhiskyListPage() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useState<AlcoholSearchParams>({
-    page: 0,
-    size: 20,
-  });
-  const [keyword, setKeyword] = useState('');
+  const [urlParams, setUrlParams] = useSearchParams();
+
+  // URL에서 검색 파라미터 읽기
+  const keyword = urlParams.get('keyword') ?? '';
+  const category = urlParams.get('category') as AlcoholCategory | null;
+  const page = Number(urlParams.get('page')) || 0;
+  const size = Number(urlParams.get('size')) || 20;
+
+  // 검색 입력 필드용 로컬 상태 (Enter/버튼 클릭 시에만 URL 반영)
+  const [keywordInput, setKeywordInput] = useState(keyword);
+
+  // URL의 keyword가 변경되면 입력 필드도 동기화
+  useEffect(() => {
+    setKeywordInput(keyword);
+  }, [keyword]);
+
+  // API 요청용 파라미터
+  const searchParams: AlcoholSearchParams = {
+    keyword: keyword || undefined,
+    category: category || undefined,
+    page,
+    size,
+  };
 
   const { data, isLoading } = useAdminAlcoholList(searchParams);
 
+  // URL 파라미터 업데이트 헬퍼
+  const updateUrlParams = (updates: Record<string, string | undefined>) => {
+    const newParams = new URLSearchParams(urlParams);
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === undefined || value === '') {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, value);
+      }
+    });
+
+    // 기본값은 URL에서 제거 (깔끔한 URL 유지)
+    if (newParams.get('page') === '0') newParams.delete('page');
+    if (newParams.get('size') === '20') newParams.delete('size');
+
+    setUrlParams(newParams);
+  };
+
   const handleSearch = () => {
-    setSearchParams((prev) => ({
-      ...prev,
-      keyword: keyword || undefined,
-      page: 0,
-    }));
+    updateUrlParams({
+      keyword: keywordInput || undefined,
+      page: '0', // 검색 시 첫 페이지로
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -61,26 +99,23 @@ export function WhiskyListPage() {
   };
 
   const handleCategoryChange = (value: string) => {
-    setSearchParams((prev) => ({
-      ...prev,
-      category: value === 'ALL' ? undefined : (value as AlcoholCategory),
-      page: 0,
-    }));
+    updateUrlParams({
+      category: value === 'ALL' ? undefined : value,
+      page: '0', // 카테고리 변경 시 첫 페이지로
+    });
   };
 
   const handlePageChange = (newPage: number) => {
-    setSearchParams((prev) => ({
-      ...prev,
-      page: newPage,
-    }));
+    updateUrlParams({
+      page: String(newPage),
+    });
   };
 
-  const handlePageSizeChange = (size: number) => {
-    setSearchParams((prev) => ({
-      ...prev,
-      size,
-      page: 0, // 페이지 크기 변경 시 첫 페이지로
-    }));
+  const handlePageSizeChange = (newSize: number) => {
+    updateUrlParams({
+      size: String(newSize),
+      page: '0', // 페이지 크기 변경 시 첫 페이지로
+    });
   };
 
   const handleRowClick = (alcoholId: number) => {
@@ -101,14 +136,14 @@ export function WhiskyListPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="위스키 이름으로 검색..."
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+            value={keywordInput}
+            onChange={(e) => setKeywordInput(e.target.value)}
             onKeyDown={handleKeyDown}
             className="pl-9"
           />
         </div>
         <Select
-          value={searchParams.category ?? 'ALL'}
+          value={category ?? 'ALL'}
           onValueChange={handleCategoryChange}
         >
           <SelectTrigger className="w-full sm:w-[180px]">
@@ -130,23 +165,24 @@ export function WhiskyListPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[80px]">ID</TableHead>
+              <TableHead className="w-[60px]">ID</TableHead>
+              <TableHead className="w-[60px]">이미지</TableHead>
               <TableHead>한글명</TableHead>
               <TableHead>영문명</TableHead>
-              <TableHead>카테고리</TableHead>
-              <TableHead className="w-[120px]">수정일</TableHead>
+              <TableHead className="w-[100px]">카테고리</TableHead>
+              <TableHead className="w-[100px]">수정일</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   <span className="text-muted-foreground">로딩 중...</span>
                 </TableCell>
               </TableRow>
             ) : data?.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   <span className="text-muted-foreground">
                     검색 결과가 없습니다.
                   </span>
@@ -161,6 +197,19 @@ export function WhiskyListPage() {
                 >
                   <TableCell className="font-mono text-sm">
                     {item.alcoholId}
+                  </TableCell>
+                  <TableCell>
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.korName}
+                        className="h-10 w-10 rounded object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded bg-muted">
+                        <ImageOff className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="font-medium">{item.korName}</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -183,7 +232,7 @@ export function WhiskyListPage() {
           currentPage={data.meta.page}
           totalPages={data.meta.totalPages}
           totalElements={data.meta.totalElements}
-          pageSize={searchParams.size ?? 20}
+          pageSize={size}
           currentItemCount={data.items.length}
           hasNext={data.meta.hasNext}
           onPageChange={handlePageChange}

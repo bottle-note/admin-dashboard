@@ -66,6 +66,12 @@ export const menuConfig: MenuGroup[] = [
                 icon: List,
                 path: '/tasting-tags',
               },
+              {
+                id: 'tasting-tag-create',
+                label: '태그 추가',
+                icon: Plus,
+                path: '/tasting-tags/new',
+              },
             ],
           },
         ],
