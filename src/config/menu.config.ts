@@ -88,16 +88,16 @@ export const menuConfig: MenuGroup[] = [
         roles: ['ROOT_ADMIN'],
         children: [
           {
-            id: 'banner-create',
-            label: '배너 등록',
-            icon: Plus,
-            path: '/banners/new',
-          },
-          {
             id: 'banner-list',
-            label: '배너 조회',
+            label: '배너 목록',
             icon: List,
             path: '/banners',
+          },
+          {
+            id: 'banner-create',
+            label: '배너 추가',
+            icon: Plus,
+            path: '/banners/new',
           },
         ],
       },

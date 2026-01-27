@@ -9,3 +9,4 @@ export * from './tasting-tag.api';
 export * from './region.api';
 export * from './distillery.api';
 export * from './s3.api';
+export * from './banner.api';
