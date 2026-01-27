@@ -11,7 +11,7 @@ import type { BannerDetail, BannerListItem } from '@/types/api';
 export const mockBannerList: BannerListItem[] = [
   {
     id: 1,
-    name: '신규 위스키 출시 이벤트',
+    name: '봄 추천 위스키 큐레이션',
     bannerType: 'CURATION',
     imageUrl: 'https://cdn.bottle-note.com/banners/event1.jpg',
     sortOrder: 0,
@@ -113,14 +113,14 @@ export const mockBannerList: BannerListItem[] = [
 export const mockBannerDetails: Record<number, BannerDetail> = {
   1: {
     id: 1,
-    name: '신규 위스키 출시 이벤트',
+    name: '봄 추천 위스키 큐레이션',
     nameFontColor: 'ffffff',
-    descriptionA: '신규 위스키 출시 기념',
-    descriptionB: '특별 이벤트를 진행합니다.',
+    descriptionA: '봄에 어울리는',
+    descriptionB: '상쾌한 위스키 추천',
     descriptionFontColor: 'ffffff',
     imageUrl: 'https://cdn.bottle-note.com/banners/event1.jpg',
     textPosition: 'LB',
-    targetUrl: '/events/new-whiskey',
+    targetUrl: '/alcohols/search?curationId=1',
     isExternalUrl: false,
     bannerType: 'CURATION',
     sortOrder: 0,
@@ -196,7 +196,7 @@ export const mockBannerDetails: Record<number, BannerDetail> = {
     descriptionFontColor: 'ffffff',
     imageUrl: 'https://cdn.bottle-note.com/banners/summer-curation.jpg',
     textPosition: 'RB',
-    targetUrl: '/curation/summer-2025',
+    targetUrl: '/alcohols/search?curationId=9',
     isExternalUrl: false,
     bannerType: 'CURATION',
     sortOrder: 4,

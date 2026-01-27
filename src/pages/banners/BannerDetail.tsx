@@ -27,6 +27,7 @@ import { ImageUpload } from '@/components/common/ImageUpload';
 
 import { useBannerDetailForm } from './useBannerDetailForm';
 import { useImageUpload, S3UploadPath } from '@/hooks/useImageUpload';
+import { useCurationList, curationService } from '@/hooks/useCurations';
 import { BANNER_TYPE_LABELS, TEXT_POSITION_LABELS, type BannerType, type TextPosition } from '@/types/api';
 
 export function BannerDetailPage() {
@@ -48,6 +49,9 @@ export function BannerDetailPage() {
   const { upload: uploadImage, isUploading: isImageUploading } = useImageUpload({
     rootPath: S3UploadPath.BANNER,
   });
+
+  // 큐레이션 목록 조회 (CURATION 타입일 때 사용)
+  const { data: curations = [] } = useCurationList();
 
   // 로컬 상태
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -98,6 +102,22 @@ export function BannerDetailPage() {
   const isAlwaysVisible = form.watch('isAlwaysVisible');
   const isActive = form.watch('isActive');
   const isExternalUrl = form.watch('isExternalUrl');
+  const bannerType = form.watch('bannerType');
+  const curationId = form.watch('curationId');
+
+  // CURATION 타입 여부
+  const isCurationType = bannerType === 'CURATION';
+
+  // 큐레이션 선택 시 URL 자동 생성
+  const handleCurationChange = (value: string) => {
+    const id = parseInt(value, 10);
+    form.setValue('curationId', id);
+    // URL 자동 생성
+    const generatedUrl = curationService.generateCurationUrl(id);
+    form.setValue('targetUrl', generatedUrl);
+    // 큐레이션은 항상 내부 URL
+    form.setValue('isExternalUrl', false);
+  };
 
   return (
     <div className="space-y-6">
@@ -152,7 +172,18 @@ export function BannerDetailPage() {
                   <Label htmlFor="bannerType">배너 타입 *</Label>
                   <Select
                     value={form.watch('bannerType')}
-                    onValueChange={(value) => form.setValue('bannerType', value as BannerType)}
+                    onValueChange={(value) => {
+                      const newType = value as BannerType;
+                      form.setValue('bannerType', newType);
+                      // 타입 변경 시 관련 필드 초기화
+                      if (newType === 'CURATION') {
+                        // CURATION으로 변경 시 외부 URL 해제
+                        form.setValue('isExternalUrl', false);
+                      } else {
+                        // CURATION이 아닌 타입으로 변경 시 큐레이션 ID 초기화
+                        form.setValue('curationId', null);
+                      }
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="배너 타입 선택" />
@@ -273,8 +304,37 @@ export function BannerDetailPage() {
                 <CardTitle>링크 설정</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* CURATION 타입: 큐레이션 선택 드롭다운 */}
+                {isCurationType && (
+                  <div className="space-y-2">
+                    <Label htmlFor="curationId">큐레이션 선택 *</Label>
+                    <Select
+                      value={curationId?.toString() ?? ''}
+                      onValueChange={handleCurationChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="큐레이션을 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {curations.map((curation) => (
+                          <SelectItem key={curation.id} value={curation.id.toString()}>
+                            {curation.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.curationId && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.curationId.message}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  <Label htmlFor="targetUrl">이동 URL</Label>
+                  <Label htmlFor="targetUrl">
+                    이동 URL {isCurationType && <span className="text-muted-foreground">(자동 생성)</span>}
+                  </Label>
                   <div className="relative">
                     {isExternalUrl ? (
                       <ExternalLink className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -285,19 +345,28 @@ export function BannerDetailPage() {
                       id="targetUrl"
                       {...form.register('targetUrl')}
                       placeholder={isExternalUrl ? 'https://example.com' : '/path/to/page'}
-                      className="pl-9"
+                      className={`pl-9 ${isCurationType ? 'bg-muted' : ''}`}
+                      readOnly={isCurationType}
                     />
                   </div>
+                  {isCurationType && (
+                    <p className="text-xs text-muted-foreground">
+                      큐레이션 선택 시 URL이 자동으로 생성됩니다.
+                    </p>
+                  )}
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="isExternalUrl"
-                    checked={isExternalUrl}
-                    onCheckedChange={(checked) => form.setValue('isExternalUrl', !!checked)}
-                  />
-                  <Label htmlFor="isExternalUrl">외부 URL (새 탭에서 열기)</Label>
-                </div>
+                {/* CURATION 타입이 아닐 때만 외부 URL 옵션 표시 */}
+                {!isCurationType && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isExternalUrl"
+                      checked={isExternalUrl}
+                      onCheckedChange={(checked) => form.setValue('isExternalUrl', !!checked)}
+                    />
+                    <Label htmlFor="isExternalUrl">외부 URL (새 탭에서 열기)</Label>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

@@ -21,6 +21,17 @@ import type { BannerFormValues } from './banner.schema';
 import type { BannerCreateRequest, BannerUpdateRequest, BannerDetail } from '@/types/api';
 
 /**
+ * 큐레이션 URL에서 curationId 추출
+ * @param url - /alcohols/search?curationId=123 형태의 URL
+ * @returns curationId 또는 null
+ */
+function parseCurationIdFromUrl(url: string | null | undefined): number | null {
+  if (!url) return null;
+  const match = url.match(/curationId=(\d+)/);
+  return match && match[1] ? parseInt(match[1], 10) : null;
+}
+
+/**
  * useBannerDetailForm 훅의 반환 타입
  */
 export interface UseBannerDetailFormReturn {
@@ -78,6 +89,12 @@ export function useBannerDetailForm(id: string | undefined): UseBannerDetailForm
     if (bannerData) {
       const isAlwaysVisible = !bannerData.startDate && !bannerData.endDate;
 
+      // CURATION 타입인 경우 URL에서 curationId 추출
+      const curationId =
+        bannerData.bannerType === 'CURATION'
+          ? parseCurationIdFromUrl(bannerData.targetUrl)
+          : null;
+
       form.reset({
         name: bannerData.name,
         bannerType: bannerData.bannerType,
@@ -93,6 +110,7 @@ export function useBannerDetailForm(id: string | undefined): UseBannerDetailForm
         isAlwaysVisible,
         startDate: bannerData.startDate,
         endDate: bannerData.endDate,
+        curationId,
       });
     }
   }, [bannerData, form]);

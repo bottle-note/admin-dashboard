@@ -24,6 +24,8 @@ export const bannerFormSchema = z.object({
   isAlwaysVisible: z.boolean(),
   startDate: z.string().nullable(),
   endDate: z.string().nullable(),
+  /** 큐레이션 ID (CURATION 타입인 경우에만 사용) */
+  curationId: z.number().nullable(),
 }).refine(
   (data) => {
     // 상시 노출이 아닌 경우 시작일/종료일 필수
@@ -35,6 +37,18 @@ export const bannerFormSchema = z.object({
   {
     message: '노출 기간을 설정해주세요',
     path: ['startDate'],
+  }
+).refine(
+  (data) => {
+    // CURATION 타입인 경우 큐레이션 선택 필수
+    if (data.bannerType === 'CURATION') {
+      return data.curationId !== null;
+    }
+    return true;
+  },
+  {
+    message: '큐레이션을 선택해주세요',
+    path: ['curationId'],
   }
 );
 
@@ -57,4 +71,5 @@ export const DEFAULT_BANNER_FORM: BannerFormValues = {
   isAlwaysVisible: false,
   startDate: null,
   endDate: null,
+  curationId: null,
 };
