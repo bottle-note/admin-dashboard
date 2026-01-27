@@ -1,0 +1,163 @@
+/**
+ * 배너 상세 페이지 폼 관리 훅
+ * - 폼 초기화 및 데이터 동기화
+ * - 생성/수정 로직 처리
+ */
+
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useNavigate } from 'react-router';
+
+import {
+  useBannerDetail,
+  useBannerCreate,
+  useBannerDelete,
+  useBannerUpdate,
+} from '@/hooks/useBanners';
+
+import { bannerFormSchema, DEFAULT_BANNER_FORM } from './banner.schema';
+import type { BannerFormValues } from './banner.schema';
+import type { BannerCreateRequest, BannerUpdateRequest, BannerDetail } from '@/types/api';
+
+/**
+ * useBannerDetailForm 훅의 반환 타입
+ */
+export interface UseBannerDetailFormReturn {
+  form: ReturnType<typeof useForm<BannerFormValues>>;
+  isLoading: boolean;
+  isNewMode: boolean;
+  isPending: boolean;
+  bannerData: BannerDetail | undefined;
+  onSubmit: (data: BannerFormValues, options?: { imagePreviewUrl: string | null }) => void;
+  handleBack: () => void;
+  handleDelete: () => void;
+}
+
+/**
+ * 배너 상세 페이지 폼 관리 훅
+ * @param id - URL 파라미터의 ID (new이면 신규 등록)
+ */
+export function useBannerDetailForm(id: string | undefined): UseBannerDetailFormReturn {
+  const navigate = useNavigate();
+
+  const isNewMode = id === 'new' || id === undefined;
+  const bannerId = !isNewMode && id ? parseInt(id, 10) : undefined;
+
+  // API로 데이터 조회
+  const { data: bannerData, isLoading } = useBannerDetail(bannerId);
+
+  // React Hook Form 설정
+  const form = useForm<BannerFormValues>({
+    resolver: zodResolver(bannerFormSchema),
+    defaultValues: DEFAULT_BANNER_FORM,
+  });
+
+  // 생성 mutation
+  const createMutation = useBannerCreate({
+    onSuccess: (data) => {
+      // 폼 초기화
+      form.reset(DEFAULT_BANNER_FORM);
+      // 생성된 배너 상세 페이지로 이동
+      navigate(`/banners/${data.targetId}`);
+    },
+  });
+
+  // 삭제 mutation
+  const deleteMutation = useBannerDelete({
+    onSuccess: () => {
+      navigate('/banners');
+    },
+  });
+
+  // 수정 mutation
+  const updateMutation = useBannerUpdate();
+
+  // API 데이터를 폼에 반영
+  useEffect(() => {
+    if (bannerData) {
+      const isAlwaysVisible = !bannerData.startDate && !bannerData.endDate;
+
+      form.reset({
+        name: bannerData.name,
+        bannerType: bannerData.bannerType,
+        isActive: bannerData.isActive,
+        imageUrl: bannerData.imageUrl,
+        descriptionA: bannerData.descriptionA ?? '',
+        descriptionB: bannerData.descriptionB ?? '',
+        textPosition: bannerData.textPosition,
+        nameFontColor: bannerData.nameFontColor,
+        descriptionFontColor: bannerData.descriptionFontColor,
+        targetUrl: bannerData.targetUrl ?? '',
+        isExternalUrl: bannerData.isExternalUrl,
+        isAlwaysVisible,
+        startDate: bannerData.startDate,
+        endDate: bannerData.endDate,
+      });
+    }
+  }, [bannerData, form]);
+
+  const onSubmit = (
+    data: BannerFormValues,
+    options?: { imagePreviewUrl: string | null }
+  ) => {
+    // 상시 노출인 경우 날짜를 null로 설정
+    const startDate = data.isAlwaysVisible ? null : data.startDate;
+    const endDate = data.isAlwaysVisible ? null : data.endDate;
+
+    if (isNewMode) {
+      const createData: BannerCreateRequest = {
+        name: data.name,
+        bannerType: data.bannerType,
+        isActive: data.isActive,
+        imageUrl: data.imageUrl || options?.imagePreviewUrl || '',
+        descriptionA: data.descriptionA ?? '',
+        descriptionB: data.descriptionB ?? '',
+        textPosition: data.textPosition,
+        nameFontColor: data.nameFontColor,
+        descriptionFontColor: data.descriptionFontColor,
+        targetUrl: data.targetUrl ?? '',
+        isExternalUrl: data.isExternalUrl,
+        startDate,
+        endDate,
+      };
+      createMutation.mutate(createData);
+    } else if (bannerId) {
+      const updateData: BannerUpdateRequest = {
+        name: data.name,
+        bannerType: data.bannerType,
+        isActive: data.isActive,
+        imageUrl: data.imageUrl || options?.imagePreviewUrl || '',
+        descriptionA: data.descriptionA ?? '',
+        descriptionB: data.descriptionB ?? '',
+        textPosition: data.textPosition,
+        nameFontColor: data.nameFontColor,
+        descriptionFontColor: data.descriptionFontColor,
+        targetUrl: data.targetUrl ?? '',
+        isExternalUrl: data.isExternalUrl,
+        startDate,
+        endDate,
+      };
+      updateMutation.mutate({ bannerId, data: updateData });
+    }
+  };
+
+  const handleBack = () => navigate('/banners');
+
+  const handleDelete = () => {
+    if (bannerId) {
+      deleteMutation.mutate(bannerId);
+    }
+  };
+
+  return {
+    form,
+    isLoading,
+    isNewMode,
+    isPending: createMutation.isPending || deleteMutation.isPending || updateMutation.isPending,
+    bannerData,
+    onSubmit,
+    handleBack,
+    handleDelete,
+  };
+}
