@@ -20,6 +20,7 @@ import {
   WhiskyRelatedKeywordsCard,
 } from './components';
 import { useWhiskyDetailForm } from './useWhiskyDetailForm';
+import { useImageUpload, S3UploadPath } from '@/hooks/useImageUpload';
 
 import type { AlcoholTastingTag } from '@/types/api';
 
@@ -41,6 +42,11 @@ export function WhiskyDetailPage() {
     handleDelete,
   } = useWhiskyDetailForm(id);
 
+  // 이미지 업로드 훅
+  const { upload: uploadImage, isUploading: isImageUploading } = useImageUpload({
+    rootPath: S3UploadPath.ALCOHOL,
+  });
+
   // 로컬 상태
   const [tastingTags, setTastingTags] = useState<AlcoholTastingTag[]>([]);
   const [relatedKeywords, setRelatedKeywords] = useState<string[]>([]);
@@ -57,16 +63,35 @@ export function WhiskyDetailPage() {
     }
   }, [whiskyData]);
 
-  const handleImageChange = (_file: File | null, previewUrl: string | null) => {
+  const handleImageChange = async (file: File | null, previewUrl: string | null) => {
+    // 즉시 프리뷰 표시
     setImagePreviewUrl(previewUrl);
-    // form의 imageUrl도 업데이트하여 validation 통과하도록 함
-    form.setValue('imageUrl', previewUrl ?? '');
-    // TODO: 이미지 업로드 API 연동 시 file 사용
+
+    if (file) {
+      // S3에 업로드하고 CDN URL 획득
+      const viewUrl = await uploadImage(file);
+      if (viewUrl) {
+        // 업로드 성공 시 CDN URL로 업데이트
+        form.setValue('imageUrl', viewUrl);
+      } else {
+        // 업로드 실패 시 프리뷰 URL 유지 (에러는 훅에서 처리)
+        form.setValue('imageUrl', previewUrl ?? '');
+      }
+    } else {
+      // 이미지 삭제 시
+      form.setValue('imageUrl', previewUrl ?? '');
+    }
   };
 
-  const handleSubmit = form.handleSubmit((data) => {
-    onSubmit(data, { tastingTags, relatedKeywords, imagePreviewUrl });
-  });
+  const handleSubmit = form.handleSubmit(
+    (data) => {
+      console.log('[DEBUG] handleSubmit callback called', data);
+      onSubmit(data, { tastingTags, relatedKeywords, imagePreviewUrl });
+    },
+    (errors) => {
+      console.log('[DEBUG] handleSubmit validation errors', errors);
+    }
+  );
 
   const handleDeleteConfirm = () => {
     handleDelete();
@@ -88,7 +113,7 @@ export function WhiskyDetailPage() {
                 삭제
               </Button>
             )}
-            <Button onClick={handleSubmit} disabled={isPending}>
+            <Button onClick={() => { console.log('[DEBUG] Button clicked, isPending:', isPending); handleSubmit(); }} disabled={isPending}>
               <Save className="mr-2 h-4 w-4" />
               {isPending ? '등록 중...' : isNewMode ? '등록' : '저장'}
             </Button>
@@ -115,6 +140,7 @@ export function WhiskyDetailPage() {
                 imageUrl={imagePreviewUrl}
                 onImageChange={handleImageChange}
                 error={form.formState.errors.imageUrl?.message}
+                isUploading={isImageUploading}
               />
 
               {whiskyData && (

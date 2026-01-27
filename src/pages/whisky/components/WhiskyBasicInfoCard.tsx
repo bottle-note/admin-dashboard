@@ -60,7 +60,8 @@ export function WhiskyBasicInfoCard({
     if (selected) {
       setValue('korCategory', selected.korCategory);
       setValue('engCategory', selected.engCategory);
-      setValue('categoryGroup', selected.categoryGroup);
+      // API에서 categoryGroup이 없을 수 있으므로 기본값 'OTHER' 사용
+      setValue('categoryGroup', selected.categoryGroup ?? 'OTHER');
     }
   };
 
