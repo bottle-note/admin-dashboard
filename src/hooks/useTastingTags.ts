@@ -15,6 +15,8 @@ import type {
   TastingTagFormData,
   TastingTagFormResponse,
   TastingTagDeleteResponse,
+  TastingTagDetail,
+  TastingTagAlcoholConnectionResponse,
 } from '@/types/api';
 
 /**
@@ -167,6 +169,67 @@ export function useTastingTagDelete(
         // 원래 onSuccess 콜백 호출
         if (onSuccess) {
           (onSuccess as (data: TastingTagDeleteResponse, variables: number, context: unknown) => void)(data, variables, context);
+        }
+      },
+    }
+  );
+}
+
+/**
+ * 테이스팅 태그 상세 조회 훅
+ */
+export function useTastingTagDetail(id: number | undefined) {
+  return useApiQuery<TastingTagDetail>(
+    tastingTagKeys.detail(id ?? 0),
+    () => tastingTagService.detail(id!),
+    {
+      enabled: !!id,
+      staleTime: 1000 * 60 * 5,
+    }
+  );
+}
+
+export interface TastingTagAlcoholConnectionVariables {
+  tagId: number;
+  alcoholIds: number[];
+}
+
+export function useTastingTagConnectAlcohols(
+  options?: Omit<UseApiMutationOptions<TastingTagAlcoholConnectionResponse, TastingTagAlcoholConnectionVariables>, 'successMessage'>
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...restOptions } = options ?? {};
+
+  return useApiMutation<TastingTagAlcoholConnectionResponse, TastingTagAlcoholConnectionVariables>(
+    ({ tagId, alcoholIds }) => tastingTagService.connectAlcohols(tagId, alcoholIds),
+    {
+      successMessage: '위스키가 연결되었습니다.',
+      ...restOptions,
+      onSuccess: (data, variables, context) => {
+        queryClient.invalidateQueries({ queryKey: tastingTagKeys.details() });
+        if (onSuccess) {
+          (onSuccess as (data: TastingTagAlcoholConnectionResponse, variables: TastingTagAlcoholConnectionVariables, context: unknown) => void)(data, variables, context);
+        }
+      },
+    }
+  );
+}
+
+export function useTastingTagDisconnectAlcohols(
+  options?: Omit<UseApiMutationOptions<TastingTagAlcoholConnectionResponse, TastingTagAlcoholConnectionVariables>, 'successMessage'>
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...restOptions } = options ?? {};
+
+  return useApiMutation<TastingTagAlcoholConnectionResponse, TastingTagAlcoholConnectionVariables>(
+    ({ tagId, alcoholIds }) => tastingTagService.disconnectAlcohols(tagId, alcoholIds),
+    {
+      successMessage: '위스키 연결이 해제되었습니다.',
+      ...restOptions,
+      onSuccess: (data, variables, context) => {
+        queryClient.invalidateQueries({ queryKey: tastingTagKeys.details() });
+        if (onSuccess) {
+          (onSuccess as (data: TastingTagAlcoholConnectionResponse, variables: TastingTagAlcoholConnectionVariables, context: unknown) => void)(data, variables, context);
         }
       },
     }

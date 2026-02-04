@@ -21,6 +21,7 @@ import {
 } from './components';
 import { useWhiskyDetailForm } from './useWhiskyDetailForm';
 import { useImageUpload, S3UploadPath } from '@/hooks/useImageUpload';
+import { useTastingTagList } from '@/hooks/useTastingTags';
 
 import type { AlcoholTastingTag } from '@/types/api';
 
@@ -46,6 +47,10 @@ export function WhiskyDetailPage() {
   const { upload: uploadImage, isUploading: isImageUploading } = useImageUpload({
     rootPath: S3UploadPath.ALCOHOL,
   });
+
+  // 기존 태그 목록 조회
+  const { data: tagListData } = useTastingTagList({ size: 100 });
+  const availableTags = tagListData?.items.map((t) => t.korName) ?? [];
 
   // 로컬 상태
   const [tastingTags, setTastingTags] = useState<AlcoholTastingTag[]>([]);
@@ -155,7 +160,11 @@ export function WhiskyDetailPage() {
           </div>
 
           {/* 테이스팅 태그 섹션 */}
-          <WhiskyTastingTagCard tastingTags={tastingTags} onTagsChange={setTastingTags} />
+          <WhiskyTastingTagCard
+            tastingTags={tastingTags}
+            availableTags={availableTags}
+            onTagsChange={setTastingTags}
+          />
 
           {/* 연관 키워드 섹션 */}
           <WhiskyRelatedKeywordsCard keywords={relatedKeywords} onKeywordsChange={setRelatedKeywords} />
