@@ -12,6 +12,9 @@ import {
   type TastingTagFormData,
   type TastingTagFormResponse,
   type TastingTagDeleteResponse,
+  type TastingTagDetail,
+  type TastingTagAlcoholConnectionRequest,
+  type TastingTagAlcoholConnectionResponse,
 } from '@/types/api';
 
 // ============================================
@@ -80,5 +83,29 @@ export const tastingTagService = {
   delete: async (id: number): Promise<TastingTagDeleteResponse> => {
     const endpoint = TastingTagApi.delete.endpoint.replace(':id', String(id));
     return apiClient.delete<TastingTagDeleteResponse>(endpoint);
+  },
+
+  /**
+   * 테이스팅 태그 상세 조회
+   */
+  detail: async (id: number): Promise<TastingTagDetail> => {
+    const endpoint = TastingTagApi.detail.endpoint.replace(':id', String(id));
+    return apiClient.get<TastingTagDetail>(endpoint);
+  },
+
+  /**
+   * 테이스팅 태그에 위스키 벌크 연결
+   */
+  connectAlcohols: async (tagId: number, alcoholIds: number[]): Promise<TastingTagAlcoholConnectionResponse> => {
+    const endpoint = TastingTagApi.connectAlcohols.endpoint.replace(':id', String(tagId));
+    return apiClient.post<TastingTagAlcoholConnectionResponse, TastingTagAlcoholConnectionRequest>(endpoint, { alcoholIds });
+  },
+
+  /**
+   * 테이스팅 태그에서 위스키 벌크 연결 해제
+   */
+  disconnectAlcohols: async (tagId: number, alcoholIds: number[]): Promise<TastingTagAlcoholConnectionResponse> => {
+    const endpoint = TastingTagApi.disconnectAlcohols.endpoint.replace(':id', String(tagId));
+    return apiClient.delete<TastingTagAlcoholConnectionResponse>(endpoint, { data: { alcoholIds } });
   },
 };

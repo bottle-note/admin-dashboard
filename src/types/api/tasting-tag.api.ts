@@ -33,6 +33,16 @@ export const TastingTagApi = {
     endpoint: '/admin/api/v1/tasting-tags/:id',
     method: 'DELETE',
   },
+  /** 테이스팅 태그와 위스키 연결 */
+  connectAlcohols: {
+    endpoint: '/admin/api/v1/tasting-tags/:id/alcohols',
+    method: 'POST',
+  },
+  /** 테이스팅 태그와 위스키 연결 해제 */
+  disconnectAlcohols: {
+    endpoint: '/admin/api/v1/tasting-tags/:id/alcohols',
+    method: 'DELETE',
+  },
 } as const;
 
 // ============================================
@@ -45,6 +55,48 @@ export type TastingTagSortOrder = 'ASC' | 'DESC';
 // ============================================
 // API 타입 정의
 // ============================================
+
+/**
+ * 테이스팅 태그 트리 노드
+ * @param id - 태그 ID
+ * @param korName - 한글 이름
+ * @param engName - 영문 이름
+ * @param icon - 아이콘
+ * @param description - 설명
+ * @param parent - 부모 태그
+ * @param children - 자식 태그 목록
+ */
+export interface TastingTagTreeNode {
+  id: number;
+  korName: string;
+  engName: string;
+  icon: string | null;
+  description: string | null;
+  parent: TastingTagTreeNode | null;
+  children: TastingTagTreeNode[];
+}
+
+/**
+ * 테이스팅 태그 연관 위스키
+ * @param alcoholId - 위스키 ID
+ * @param korName - 한글 이름
+ * @param engName - 영문 이름
+ * @param korCategoryName - 한글 카테고리
+ * @param engCategoryName - 영문 카테고리
+ * @param imageUrl - 이미지 URL
+ * @param createdAt - 생성일시
+ * @param modifiedAt - 수정일시
+ */
+export interface TastingTagAlcohol {
+  alcoholId: number;
+  korName: string;
+  engName: string;
+  korCategoryName: string;
+  engCategoryName: string;
+  imageUrl: string | null;
+  createdAt: string;
+  modifiedAt: string;
+}
 
 export interface TastingTagApiTypes {
   /** 테이스팅 태그 목록 조회 */
@@ -95,20 +147,16 @@ export interface TastingTagApiTypes {
   detail: {
     /** 응답 */
     response: {
-      /** 태그 ID */
-      id: number;
-      /** 한글 이름 */
-      korName: string;
-      /** 영문 이름 */
-      engName: string;
-      /** 아이콘 */
-      icon: string | null;
-      /** 태그 설명 */
-      description: string | null;
-      /** 생성일시 */
-      createdAt: string;
-      /** 수정일시 */
-      modifiedAt: string;
+      tag: {
+        id: number;
+        korName: string;
+        engName: string;
+        icon: string | null;
+        description: string | null;
+        parent: TastingTagTreeNode | null;
+        children: TastingTagTreeNode[];
+      };
+      alcohols: TastingTagAlcohol[];
     };
   };
   /** 테이스팅 태그 생성/수정 요청 */
@@ -150,6 +198,18 @@ export interface TastingTagApiTypes {
       responseAt: string;
     };
   };
+  /** 위스키 연결/해제 요청 */
+  alcoholConnection: {
+    request: {
+      alcoholIds: number[];
+    };
+    response: {
+      code: string;
+      message: string;
+      targetId: number;
+      responseAt: string;
+    };
+  };
 }
 
 // ============================================
@@ -166,7 +226,7 @@ export type TastingTagListItem = TastingTagApiTypes['list']['response'];
 export type TastingTagPageMeta = TastingTagApiTypes['list']['meta'];
 
 /** 테이스팅 태그 상세 */
-export type TastingTag = TastingTagApiTypes['detail']['response'];
+export type TastingTagDetail = TastingTagApiTypes['detail']['response'];
 
 /** 테이스팅 태그 폼 데이터 (생성/수정) */
 export type TastingTagFormData = TastingTagApiTypes['form']['request'];
@@ -176,3 +236,9 @@ export type TastingTagFormResponse = TastingTagApiTypes['form']['response'];
 
 /** 테이스팅 태그 삭제 응답 */
 export type TastingTagDeleteResponse = TastingTagApiTypes['delete']['response'];
+
+/** 위스키 연결/해제 요청 */
+export type TastingTagAlcoholConnectionRequest = TastingTagApiTypes['alcoholConnection']['request'];
+
+/** 위스키 연결/해제 응답 */
+export type TastingTagAlcoholConnectionResponse = TastingTagApiTypes['alcoholConnection']['response'];

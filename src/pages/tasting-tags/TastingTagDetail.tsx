@@ -2,7 +2,7 @@
  * 테이스팅 태그 상세 페이지
  * - 신규 등록 (id가 'new'인 경우)
  * - 상세 조회 및 수정 (id가 숫자인 경우)
- * - 연관 위스키 관리 (API 미구현 - UI만 구현)
+ * - 연관 위스키 관리
  */
 
 import { useState, useEffect } from 'react';
@@ -27,10 +27,12 @@ import {
 } from '@/components/common/WhiskySearchSelect';
 
 import {
-  useTastingTagList,
+  useTastingTagDetail,
   useTastingTagCreate,
   useTastingTagUpdate,
   useTastingTagDelete,
+  useTastingTagConnectAlcohols,
+  useTastingTagDisconnectAlcohols,
 } from '@/hooks/useTastingTags';
 
 // Zod 스키마 정의
@@ -46,14 +48,14 @@ export function TastingTagDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const isNewMode = id === 'new';
+  // /tasting-tags/new 라우트는 id param이 없음 (undefined)
+  // /tasting-tags/:id 라우트는 id param이 있음
+  const isNewMode = !id || id === 'new';
   const tagId = isNewMode ? undefined : Number(id);
 
-  // API 조회 (목록에서 해당 태그 찾기 - 상세 API 미구현)
-  const { data: listData, isLoading } = useTastingTagList({ size: 100 });
-  const tagData = tagId
-    ? listData?.items.find((t) => t.id === tagId)
-    : undefined;
+  // API 조회
+  const { data: detailData, isLoading } = useTastingTagDetail(tagId);
+  const tagData = detailData?.tag;
 
   // Mutations
   const createMutation = useTastingTagCreate({
@@ -74,12 +76,17 @@ export function TastingTagDetailPage() {
     },
   });
 
+  const connectAlcoholsMutation = useTastingTagConnectAlcohols();
+  const disconnectAlcoholsMutation = useTastingTagDisconnectAlcohols();
+
   // 상태
   const [iconBase64, setIconBase64] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [connectedWhiskies, setConnectedWhiskies] = useState<SelectedWhisky[]>(
     []
   );
+  // 초기 연결된 위스키 ID (diff 계산용)
+  const [initialAlcoholIds, setInitialAlcoholIds] = useState<number[]>([]);
 
   // React Hook Form 설정
   const form = useForm<TastingTagFormValues>({
@@ -93,17 +100,24 @@ export function TastingTagDetailPage() {
 
   // API 데이터로 폼 초기화 (수정 모드)
   useEffect(() => {
-    if (tagData) {
+    if (detailData) {
+      const tag = detailData.tag;
       form.reset({
-        korName: tagData.korName,
-        engName: tagData.engName,
-        description: tagData.description ?? '',
+        korName: tag.korName,
+        engName: tag.engName,
+        description: tag.description ?? '',
       });
-      setIconBase64(tagData.icon);
-      // TODO: API가 구현되면 연관 위스키 목록도 설정
-      // setConnectedWhiskies(tagData.connectedWhiskies ?? []);
+      setIconBase64(tag.icon);
+      const alcohols = detailData.alcohols.map((a) => ({
+        alcoholId: a.alcoholId,
+        korName: a.korName,
+        engName: a.engName,
+        imageUrl: a.imageUrl,
+      }));
+      setConnectedWhiskies(alcohols);
+      setInitialAlcoholIds(alcohols.map((a) => a.alcoholId));
     }
-  }, [tagData, form]);
+  }, [detailData, form]);
 
   // 아이콘 이미지 변경 (File → base64 변환)
   const handleIconChange = (file: File | null, previewUrl: string | null) => {
@@ -118,18 +132,16 @@ export function TastingTagDetailPage() {
     }
   };
 
-  // 위스키 추가
+  // 위스키 추가 (로컬 상태만 - 저장 시 API 호출)
   const handleAddWhisky = (whisky: SelectedWhisky) => {
     setConnectedWhiskies((prev) => [...prev, whisky]);
-    // TODO: API 연동 시 서버에 추가 요청
   };
 
-  // 위스키 제거
+  // 위스키 제거 (로컬 상태만 - 저장 시 API 호출)
   const handleRemoveWhisky = (alcoholId: number) => {
     setConnectedWhiskies((prev) =>
       prev.filter((w) => w.alcoholId !== alcoholId)
     );
-    // TODO: API 연동 시 서버에 삭제 요청
   };
 
   // 위스키 상세 페이지로 이동 (새 창)
@@ -147,8 +159,42 @@ export function TastingTagDetailPage() {
 
     if (isNewMode) {
       createMutation.mutate(formData);
-    } else if (tagId) {
-      updateMutation.mutate({ id: tagId, data: formData });
+      return;
+    }
+
+    if (tagId) {
+      // 수정 모드: 태그 수정 후 위스키 연결 변경사항 처리
+      const currentIds = connectedWhiskies.map((w) => w.alcoholId);
+      const toConnect = currentIds.filter((id) => !initialAlcoholIds.includes(id));
+      const toDisconnect = initialAlcoholIds.filter((id) => !currentIds.includes(id));
+
+      updateMutation.mutate(
+        { id: tagId, data: formData },
+        {
+          onSuccess: async () => {
+            // 위스키 연결 변경사항 처리
+            const promises: Promise<unknown>[] = [];
+
+            if (toConnect.length > 0) {
+              promises.push(
+                connectAlcoholsMutation.mutateAsync({ tagId, alcoholIds: toConnect })
+              );
+            }
+
+            if (toDisconnect.length > 0) {
+              promises.push(
+                disconnectAlcoholsMutation.mutateAsync({ tagId, alcoholIds: toDisconnect })
+              );
+            }
+
+            if (promises.length > 0) {
+              await Promise.all(promises);
+              // 초기 상태 업데이트 (다음 저장을 위해)
+              setInitialAlcoholIds(currentIds);
+            }
+          },
+        }
+      );
     }
   };
 
@@ -260,7 +306,7 @@ export function TastingTagDetailPage() {
               <CardHeader>
                 <CardTitle>연관 위스키</CardTitle>
                 <CardDescription>
-                  이 태그가 연결된 위스키 목록입니다. (API 미구현 - UI만 구현)
+                  이 태그가 연결된 위스키 목록입니다.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
