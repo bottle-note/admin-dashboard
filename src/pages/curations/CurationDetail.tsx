@@ -2,6 +2,7 @@
  * 큐레이션 상세/등록 페이지
  * - 신규 등록 (id가 'new'인 경우)
  * - 상세 조회 및 수정 (id가 숫자인 경우)
+ * - 위스키 연결은 로컬 상태로 관리하다가 저장 시 PUT API로 일괄 처리
  */
 
 import { useState, useEffect } from 'react';
@@ -18,11 +19,11 @@ import { Badge } from '@/components/ui/badge';
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
 import { ImageUpload } from '@/components/common/ImageUpload';
+import { FormField } from '@/components/common/FormField';
 import { WhiskySearchSelect, type SelectedWhisky } from '@/components/common/WhiskySearchSelect';
 
 import { useCurationDetailForm } from './useCurationDetailForm';
 import { useImageUpload, S3UploadPath } from '@/hooks/useImageUpload';
-import { useCurationAddAlcohols, useCurationRemoveAlcohol } from '@/hooks/useCurations';
 
 export function CurationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,16 +40,10 @@ export function CurationDetailPage() {
     handleDelete,
   } = useCurationDetailForm(id);
 
-  const curationId = !isNewMode && id ? parseInt(id, 10) : undefined;
-
   // 이미지 업로드 훅
   const { upload: uploadImage, isUploading: isImageUploading } = useImageUpload({
     rootPath: S3UploadPath.BANNER, // TODO: Create S3UploadPath.CURATION if needed
   });
-
-  // 위스키 추가/제거 mutation 훅 (수정 모드에서 사용)
-  const addAlcoholsMutation = useCurationAddAlcohols();
-  const removeAlcoholMutation = useCurationRemoveAlcohol();
 
   // 로컬 상태
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -90,54 +85,31 @@ export function CurationDetailPage() {
     }
   };
 
+  // 위스키 추가 (로컬 상태만 - 저장 시 API 호출)
   const handleAddWhisky = (whisky: SelectedWhisky) => {
-    if (isNewMode) {
-      // 신규 모드: 로컬 상태에 추가
-      const currentIds = form.getValues('alcoholIds');
-      form.setValue('alcoholIds', [...currentIds, whisky.alcoholId]);
-      setSelectedWhiskies((prev) => [...prev, whisky]);
-    } else if (curationId) {
-      // 수정 모드: API로 추가
-      addAlcoholsMutation.mutate(
-        {
-          curationId,
-          data: { alcoholIds: [whisky.alcoholId] },
-        },
-        {
-          onSuccess: () => {
-            // 로컬 상태도 업데이트 (optimistic)
-            setSelectedWhiskies((prev) => [...prev, whisky]);
-          },
-        }
-      );
-    }
+    // 폼 상태에 추가 (유효성 검사용)
+    const currentIds = form.getValues('alcoholIds');
+    form.setValue('alcoholIds', [...currentIds, whisky.alcoholId], { shouldValidate: true });
+    // 로컬 상태에 추가
+    setSelectedWhiskies((prev) => [...prev, whisky]);
   };
 
+  // 위스키 제거 (로컬 상태만 - 저장 시 API 호출)
   const handleRemoveWhisky = (alcoholId: number) => {
-    if (isNewMode) {
-      // 신규 모드: 로컬 상태에서 제거
-      const currentIds = form.getValues('alcoholIds');
-      form.setValue(
-        'alcoholIds',
-        currentIds.filter((id) => id !== alcoholId)
-      );
-      setSelectedWhiskies((prev) => prev.filter((w) => w.alcoholId !== alcoholId));
-    } else if (curationId) {
-      // 수정 모드: API로 제거
-      removeAlcoholMutation.mutate(
-        { curationId, alcoholId },
-        {
-          onSuccess: () => {
-            // 로컬 상태도 업데이트 (optimistic)
-            setSelectedWhiskies((prev) => prev.filter((w) => w.alcoholId !== alcoholId));
-          },
-        }
-      );
-    }
+    // 폼 상태에서 제거 (유효성 검사용)
+    const currentIds = form.getValues('alcoholIds');
+    form.setValue(
+      'alcoholIds',
+      currentIds.filter((id) => id !== alcoholId),
+      { shouldValidate: true }
+    );
+    // 로컬 상태에서 제거
+    setSelectedWhiskies((prev) => prev.filter((w) => w.alcoholId !== alcoholId));
   };
 
   const handleSubmit = form.handleSubmit(
     (data) => {
+      // PUT API가 alcoholIds를 포함하므로 단일 호출로 처리
       onSubmit(data);
     },
     (errors) => {
@@ -154,9 +126,7 @@ export function CurationDetailPage() {
   const isActive = form.watch('isActive');
 
   // 현재 선택된 위스키 ID 목록 (excludeIds용)
-  const alcoholIds = isNewMode
-    ? form.watch('alcoholIds')
-    : selectedWhiskies.map((w) => w.alcoholId);
+  const alcoholIds = form.watch('alcoholIds');
 
   return (
     <div className="space-y-6">
@@ -193,44 +163,43 @@ export function CurationDetailPage() {
                 <CardTitle>기본 정보</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">큐레이션명 *</Label>
+                <FormField
+                  label="큐레이션명"
+                  required
+                  error={form.formState.errors.name?.message}
+                >
                   <Input
                     id="name"
                     {...form.register('name')}
                     placeholder="큐레이션명을 입력하세요"
                   />
-                  {form.formState.errors.name && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.name.message}
-                    </p>
-                  )}
-                </div>
+                </FormField>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">설명</Label>
+                <FormField
+                  label="설명"
+                  required
+                  error={form.formState.errors.description?.message}
+                >
                   <Textarea
                     id="description"
                     {...form.register('description')}
                     placeholder="큐레이션에 대한 설명을 입력하세요"
                     rows={4}
                   />
-                </div>
+                </FormField>
 
-                <div className="space-y-2">
-                  <Label htmlFor="displayOrder">노출 순서</Label>
+                <FormField
+                  label="노출 순서"
+                  required
+                  error={form.formState.errors.displayOrder?.message}
+                >
                   <Input
                     id="displayOrder"
                     type="number"
                     {...form.register('displayOrder', { valueAsNumber: true })}
                     min={0}
                   />
-                  {form.formState.errors.displayOrder && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.displayOrder.message}
-                    </p>
-                  )}
-                </div>
+                </FormField>
 
                 <div className="flex items-center space-x-2">
                   <Switch
@@ -247,7 +216,7 @@ export function CurationDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle>
-                  포함된 위스키
+                  포함된 위스키 <span className="text-destructive">*</span>
                   {selectedWhiskies.length > 0 && (
                     <Badge variant="secondary" className="ml-2">
                       {selectedWhiskies.length}
@@ -261,8 +230,12 @@ export function CurationDetailPage() {
                   onSelect={handleAddWhisky}
                   excludeIds={alcoholIds}
                   placeholder="위스키 검색하여 추가..."
-                  disabled={addAlcoholsMutation.isPending}
                 />
+                {form.formState.errors.alcoholIds && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.alcoholIds.message}
+                  </p>
+                )}
 
                 {/* 선택된 위스키 목록 */}
                 {selectedWhiskies.length === 0 ? (
@@ -303,7 +276,6 @@ export function CurationDetailPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleRemoveWhisky(whisky.alcoholId)}
-                          disabled={removeAlcoholMutation.isPending}
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -320,7 +292,7 @@ export function CurationDetailPage() {
             {/* 커버 이미지 */}
             <Card>
               <CardHeader>
-                <CardTitle>커버 이미지</CardTitle>
+                <CardTitle>커버 이미지 <span className="text-destructive">*</span></CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <ImageUpload

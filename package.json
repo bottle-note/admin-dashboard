@@ -1,7 +1,7 @@
 {
   "name": "bottlenote-admin",
   "private": true,
-  "version": "1.0.13",
+  "version": "1.0.14",
   "type": "module",
   "scripts": {
     "dev:local": "./scripts/ensure-env.sh local && vite",

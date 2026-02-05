@@ -23,7 +23,9 @@ import {
   type CurationAddAlcoholsRequest,
   type CurationAddAlcoholsResponse,
   type CurationRemoveAlcoholResponse,
+  type CurationAlcoholItem,
 } from '@/types/api';
+import { adminAlcoholService } from './admin-alcohol.service';
 
 // ============================================
 // Query Keys
@@ -46,10 +48,30 @@ export interface CurationListResponse {
 
 /**
  * API 응답을 UI용 CurationDetail로 변환
- * - alcoholIds → alcohols 배열로 변환
+ * - alcoholIds → alcohols 배열로 변환 (상세 정보 포함)
  * - modifiedAt → updatedAt 매핑
  */
-function transformDetailResponse(response: CurationDetailResponse): CurationDetail {
+async function transformDetailResponse(response: CurationDetailResponse): Promise<CurationDetail> {
+  // 연결된 위스키 상세 정보 병렬 조회
+  let alcohols: CurationAlcoholItem[] = [];
+
+  if (response.alcoholIds.length > 0) {
+    const alcoholDetails = await Promise.all(
+      response.alcoholIds.map((alcoholId) =>
+        adminAlcoholService.getDetail(alcoholId).catch(() => null)
+      )
+    );
+
+    alcohols = alcoholDetails
+      .filter((detail): detail is NonNullable<typeof detail> => detail !== null)
+      .map((detail) => ({
+        alcoholId: detail.alcoholId,
+        korName: detail.korName,
+        engName: detail.engName,
+        imageUrl: detail.imageUrl,
+      }));
+  }
+
   return {
     id: response.id,
     name: response.name,
@@ -60,12 +82,7 @@ function transformDetailResponse(response: CurationDetailResponse): CurationDeta
     createdAt: response.createdAt,
     updatedAt: response.modifiedAt, // API는 modifiedAt 사용
     alcoholCount: response.alcoholIds.length,
-    alcohols: response.alcoholIds.map((alcoholId) => ({
-      alcoholId,
-      korName: `위스키 #${alcoholId}`, // API에서 이름 정보 미제공
-      engName: `Whisky #${alcoholId}`,
-      imageUrl: null,
-    })),
+    alcohols,
   };
 }
 
@@ -99,11 +116,12 @@ export const curationService = {
   /**
    * 큐레이션 상세 조회
    * API 응답을 UI용 타입으로 변환하여 반환
+   * 연결된 위스키의 상세 정보도 함께 조회
    */
   getDetail: async (curationId: number): Promise<CurationDetail> => {
     const endpoint = CurationApi.detail.endpoint.replace(':curationId', String(curationId));
     const response = await apiClient.get<CurationDetailResponse>(endpoint);
-    return transformDetailResponse(response);
+    return await transformDetailResponse(response);
   },
 
   /**
@@ -157,13 +175,25 @@ export const curationService = {
   },
 
   /**
-   * 큐레이션 위스키 제거
+   * 큐레이션 위스키 제거 (단건)
    */
   removeAlcohol: async (curationId: number, alcoholId: number): Promise<CurationRemoveAlcoholResponse> => {
     const endpoint = CurationApi.removeAlcohol.endpoint
       .replace(':curationId', String(curationId))
       .replace(':alcoholId', String(alcoholId));
     return apiClient.delete<CurationRemoveAlcoholResponse>(endpoint);
+  },
+
+  /**
+   * 큐레이션 위스키 벌크 제거
+   * API가 단건만 지원하므로 병렬로 여러 번 호출
+   */
+  removeAlcohols: async (curationId: number, alcoholIds: number[]): Promise<void> => {
+    await Promise.all(
+      alcoholIds.map((alcoholId) =>
+        curationService.removeAlcohol(curationId, alcoholId)
+      )
+    );
   },
 
   /**

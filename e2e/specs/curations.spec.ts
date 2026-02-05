@@ -260,6 +260,110 @@ test.describe('큐레이션 CRUD 플로우', () => {
   });
 });
 
+test.describe('큐레이션 순서 변경', () => {
+  let listPage: CurationListPage;
+
+  test.beforeEach(async ({ page }) => {
+    listPage = new CurationListPage(page);
+  });
+
+  test('순서 변경 버튼을 클릭하면 순서 변경 모드로 진입한다', async ({ page }) => {
+    await listPage.goto();
+
+    const rowCount = await listPage.getRowCount();
+    if (rowCount === 0) {
+      test.skip();
+      return;
+    }
+
+    // 순서 변경 모드 진입
+    await listPage.enterReorderMode();
+
+    // 순서 변경 모드 안내 배너가 표시됨
+    await expect(listPage.reorderModeBanner()).toBeVisible();
+
+    // 버튼 텍스트가 "순서 변경 완료"로 변경됨
+    await expect(listPage.reorderButton()).toContainText('순서 변경 완료');
+
+    // 드래그 핸들이 표시됨
+    const handleCount = await listPage.getDragHandleCount();
+    expect(handleCount).toBeGreaterThan(0);
+  });
+
+  test('순서 변경 모드에서는 행 클릭으로 상세 페이지 이동이 안 된다', async ({ page }) => {
+    await listPage.goto();
+
+    const rowCount = await listPage.getRowCount();
+    if (rowCount === 0) {
+      test.skip();
+      return;
+    }
+
+    // 순서 변경 모드 진입
+    await listPage.enterReorderMode();
+
+    // 첫 번째 행 클릭
+    await listPage.tableRows().first().click();
+
+    // URL이 변경되지 않아야 함 (상세 페이지로 이동하지 않음)
+    await expect(page).toHaveURL(/.*curations$/);
+  });
+
+  test('순서 변경 완료 버튼을 클릭하면 일반 모드로 돌아간다', async ({ page }) => {
+    await listPage.goto();
+
+    const rowCount = await listPage.getRowCount();
+    if (rowCount === 0) {
+      test.skip();
+      return;
+    }
+
+    // 순서 변경 모드 진입
+    await listPage.enterReorderMode();
+    await expect(listPage.reorderModeBanner()).toBeVisible();
+
+    // 순서 변경 모드 종료
+    await listPage.exitReorderMode();
+
+    // 안내 배너가 사라짐
+    await expect(listPage.reorderModeBanner()).not.toBeVisible();
+
+    // 버튼 텍스트가 "순서 변경"으로 변경됨
+    await expect(listPage.reorderButton()).toContainText('순서 변경');
+    await expect(listPage.reorderButton()).not.toContainText('완료');
+  });
+
+  test('순서 변경 모드에서 드래그하면 displayOrder API가 호출된다', async ({ page }) => {
+    await listPage.goto();
+
+    const rowCount = await listPage.getRowCount();
+    if (rowCount < 2) {
+      test.skip();
+      return;
+    }
+
+    // 순서 변경 모드 진입
+    await listPage.enterReorderMode();
+
+    // 첫 번째와 두 번째 행 가져오기
+    const firstRow = listPage.tableRows().first();
+    const secondRow = listPage.tableRows().nth(1);
+
+    // displayOrder API 호출 대기 준비 (PATCH /curations/:id/display-order)
+    const displayOrderPromise = page.waitForResponse(
+      (resp) => resp.url().includes('/display-order') && resp.request().method() === 'PATCH',
+      { timeout: 10000 }
+    );
+
+    // 첫 번째 행을 두 번째 행 위치로 드래그
+    await firstRow.dragTo(secondRow);
+
+    // API 호출 확인
+    const response = await displayOrderPromise;
+    expect(response.ok()).toBe(true);
+  });
+});
+
 test.describe('큐레이션 위스키 관리', () => {
   let listPage: CurationListPage;
   let detailPage: CurationDetailPage;
@@ -269,7 +373,7 @@ test.describe('큐레이션 위스키 관리', () => {
     detailPage = new CurationDetailPage(page);
   });
 
-  test('큐레이션에 위스키를 추가할 수 있다', async ({ page }) => {
+  test('큐레이션에 위스키를 추가하고 저장할 수 있다', async ({ page }) => {
     // 기존 큐레이션 상세로 이동
     await listPage.goto();
     const rowCount = await listPage.getRowCount();
@@ -285,38 +389,47 @@ test.describe('큐레이션 위스키 관리', () => {
     // 현재 위스키 개수 확인
     const initialCount = await detailPage.getWhiskyCount();
 
-    // 위스키 검색 (debounce 300ms + API 응답 대기)
+    // 위스키 검색
     await detailPage.searchWhisky('글렌');
 
-    // 드롭다운 아이템 대기 (컴포넌트는 ul > li > button 구조)
+    // 드롭다운 아이템 대기
     const dropdownList = page.locator('ul.max-h-64');
     const firstOption = dropdownList.locator('li button').first();
 
-    // 드롭다운이 나타날 때까지 대기
     await expect(dropdownList).toBeVisible({ timeout: 10000 });
     const hasOptions = await firstOption.isVisible().catch(() => false);
 
     if (!hasOptions) {
-      // 검색 결과가 없으면 스킵
       test.skip();
       return;
     }
 
-    // API 응답 대기하며 위스키 추가
+    // 위스키 선택 (로컬 상태에 추가)
+    await firstOption.click();
+
+    // 위스키가 로컬 상태에 추가되었는지 확인
+    const afterAddCount = await detailPage.getWhiskyCount();
+    expect(afterAddCount).toBeGreaterThan(initialCount);
+
+    // 저장 버튼 클릭 (PUT 요청 대기)
     await Promise.all([
       page.waitForResponse(
-        (resp) => resp.url().includes('/alcohols') && resp.request().method() === 'POST',
+        (resp) => resp.url().includes('/curations/') && resp.request().method() === 'PUT',
         { timeout: 10000 }
       ),
-      firstOption.click(),
+      detailPage.clickSave(),
     ]);
 
-    // 위스키 개수가 증가했는지 확인
-    const newCount = await detailPage.getWhiskyCount();
-    expect(newCount).toBeGreaterThan(initialCount);
+    // 저장 성공 후 페이지 새로고침하여 서버 상태 확인
+    await page.reload();
+    await detailPage.waitForLoadingComplete();
+
+    // 서버에 저장된 위스키 개수 확인
+    const savedCount = await detailPage.getWhiskyCount();
+    expect(savedCount).toBeGreaterThan(initialCount);
   });
 
-  test('큐레이션에서 위스키를 제거할 수 있다', async ({ page }) => {
+  test('큐레이션에서 위스키를 제거하고 저장할 수 있다', async ({ page }) => {
     // 기존 큐레이션 상세로 이동
     await listPage.goto();
     const rowCount = await listPage.getRowCount();
@@ -334,10 +447,8 @@ test.describe('큐레이션 위스키 관리', () => {
 
     // 위스키가 없으면 먼저 추가
     if (currentCount === 0) {
-      // 위스키 검색 (debounce 300ms + API 응답 대기)
       await detailPage.searchWhisky('글렌');
 
-      // 드롭다운 아이템 대기
       const dropdownList = page.locator('ul.max-h-64');
       const firstOption = dropdownList.locator('li button').first();
 
@@ -345,39 +456,47 @@ test.describe('큐레이션 위스키 관리', () => {
       const hasOptions = await firstOption.isVisible().catch(() => false);
 
       if (!hasOptions) {
-        // 검색 결과가 없으면 스킵
         test.skip();
         return;
       }
 
-      // API 응답 대기하며 위스키 추가
+      // 위스키 선택 및 저장
+      await firstOption.click();
       await Promise.all([
         page.waitForResponse(
-          (resp) => resp.url().includes('/alcohols') && resp.request().method() === 'POST',
+          (resp) => resp.url().includes('/curations/') && resp.request().method() === 'PUT',
           { timeout: 10000 }
         ),
-        firstOption.click(),
+        detailPage.clickSave(),
       ]);
 
-      // 추가 후 개수 업데이트
       currentCount = await detailPage.getWhiskyCount();
     }
 
-    // 첫 번째 위스키의 제거 버튼 찾기
+    // 첫 번째 위스키의 제거 버튼 클릭
     const firstWhiskyItem = detailPage.whiskyList().first();
     const removeButton = firstWhiskyItem.getByRole('button');
+    await removeButton.click();
 
-    // API 응답 대기하며 위스키 제거
+    // 로컬 상태에서 제거되었는지 확인
+    const afterRemoveCount = await detailPage.getWhiskyCount();
+    expect(afterRemoveCount).toBeLessThan(currentCount);
+
+    // 저장 버튼 클릭 (PUT 요청 대기)
     await Promise.all([
       page.waitForResponse(
-        (resp) => resp.url().includes('/alcohols/') && resp.request().method() === 'DELETE',
+        (resp) => resp.url().includes('/curations/') && resp.request().method() === 'PUT',
         { timeout: 10000 }
       ),
-      removeButton.click(),
+      detailPage.clickSave(),
     ]);
 
-    // 위스키 개수가 감소했는지 확인
-    const newCount = await detailPage.getWhiskyCount();
-    expect(newCount).toBeLessThan(currentCount);
+    // 저장 성공 후 페이지 새로고침하여 서버 상태 확인
+    await page.reload();
+    await detailPage.waitForLoadingComplete();
+
+    // 서버에 저장된 위스키 개수 확인
+    const savedCount = await detailPage.getWhiskyCount();
+    expect(savedCount).toBeLessThan(currentCount);
   });
 });

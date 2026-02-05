@@ -410,5 +410,56 @@ export function useCurationRemoveAlcohol(
   );
 }
 
+/**
+ * 큐레이션 위스키 벌크 제거 mutation 변수 타입
+ */
+export interface CurationRemoveAlcoholsVariables {
+  curationId: number;
+  alcoholIds: number[];
+}
+
+/**
+ * 큐레이션 위스키 벌크 제거 훅
+ * API가 단건만 지원하므로 내부적으로 병렬 호출
+ *
+ * @example
+ * ```tsx
+ * const removeMutation = useCurationRemoveAlcohols({
+ *   onSuccess: () => {
+ *     console.log('위스키 벌크 제거 완료');
+ *   },
+ * });
+ *
+ * removeMutation.mutate({
+ *   curationId: 1,
+ *   alcoholIds: [10, 20, 30],
+ * });
+ * ```
+ */
+export function useCurationRemoveAlcohols(
+  options?: Omit<UseApiMutationOptions<void, CurationRemoveAlcoholsVariables>, 'successMessage'>
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...restOptions } = options ?? {};
+
+  return useApiMutation<void, CurationRemoveAlcoholsVariables>(
+    ({ curationId, alcoholIds }) => curationService.removeAlcohols(curationId, alcoholIds),
+    {
+      successMessage: '위스키가 제거되었습니다.',
+      ...restOptions,
+      onSuccess: (data, variables, context) => {
+        // 목록 캐시 무효화
+        queryClient.invalidateQueries({ queryKey: curationKeys.lists() });
+        // 상세 캐시 무효화 (alcohols 배열 변경)
+        queryClient.invalidateQueries({ queryKey: curationKeys.detail(variables.curationId) });
+        // 원래 onSuccess 콜백 호출
+        if (onSuccess) {
+          (onSuccess as (data: void, variables: CurationRemoveAlcoholsVariables, context: unknown) => void)(data, variables, context);
+        }
+      },
+    }
+  );
+}
+
 // Re-export curationService for convenience
 export { curationService };

@@ -51,7 +51,8 @@ export function BannerDetailPage() {
   });
 
   // 큐레이션 목록 조회 (CURATION 타입일 때 사용)
-  const { data: curations = [] } = useCurationList();
+  const { data: curationData } = useCurationList();
+  const curations = curationData?.items ?? [];
 
   // 로컬 상태
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);

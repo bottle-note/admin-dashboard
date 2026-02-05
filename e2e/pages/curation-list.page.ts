@@ -9,6 +9,7 @@ import { BasePage } from './base.page';
  * - 검색 + 상태 필터 (전체/활성/비활성)
  * - 행 클릭 시 상세 페이지로 이동
  * - 인라인 Switch로 활성화 상태 토글
+ * - 순서 변경 모드에서 드래그 앤 드롭으로 순서 변경
  */
 export class CurationListPage extends BasePage {
   constructor(page: Page) {
@@ -60,6 +61,19 @@ export class CurationListPage extends BasePage {
    */
   readonly statusSwitch = (rowLocator: ReturnType<typeof this.rowWithName>) =>
     rowLocator.locator('button[role="switch"]');
+
+  /** 순서 변경 버튼 */
+  readonly reorderButton = () => this.page.getByRole('button', { name: /순서 변경/ });
+
+  /** 순서 변경 모드 안내 배너 */
+  readonly reorderModeBanner = () => this.page.getByText('순서 변경 모드');
+
+  /** 드래그 핸들 (순서 변경 모드에서만 표시) */
+  readonly dragHandles = () => this.page.locator('tbody tr td:last-child svg');
+
+  /** 특정 행의 순서 번호 (순서 변경 모드 시 첫 번째 컬럼) */
+  readonly orderColumn = (rowLocator: ReturnType<typeof this.rowWithName>) =>
+    rowLocator.locator('td').first();
 
   /* ============================================
    * Actions
@@ -164,5 +178,35 @@ export class CurationListPage extends BasePage {
    */
   async expectCurationNotExists(name: string) {
     await this.rowWithName(name).waitFor({ state: 'hidden' });
+  }
+
+  /**
+   * 순서 변경 모드 진입
+   */
+  async enterReorderMode() {
+    await this.reorderButton().click();
+    await this.reorderModeBanner().waitFor({ state: 'visible', timeout: 5000 });
+  }
+
+  /**
+   * 순서 변경 모드 종료
+   */
+  async exitReorderMode() {
+    await this.reorderButton().click();
+    await this.reorderModeBanner().waitFor({ state: 'hidden', timeout: 5000 });
+  }
+
+  /**
+   * 순서 변경 모드 여부 확인
+   */
+  async isReorderMode() {
+    return await this.reorderModeBanner().isVisible().catch(() => false);
+  }
+
+  /**
+   * 드래그 핸들 개수 확인 (순서 변경 모드에서만 표시)
+   */
+  async getDragHandleCount() {
+    return await this.dragHandles().count();
   }
 }

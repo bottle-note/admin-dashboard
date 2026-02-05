@@ -96,6 +96,7 @@ export function useCurationDetailForm(id: string | undefined): UseCurationDetail
         description: data.description,
         coverImageUrl: data.coverImageUrl,
         displayOrder: data.displayOrder,
+        isActive: data.isActive,
         alcoholIds: data.alcoholIds,
       };
       createMutation.mutate(createData);
@@ -105,6 +106,7 @@ export function useCurationDetailForm(id: string | undefined): UseCurationDetail
         description: data.description,
         coverImageUrl: data.coverImageUrl,
         displayOrder: data.displayOrder,
+        isActive: data.isActive,
         alcoholIds: data.alcoholIds,
       };
       updateMutation.mutate({ curationId, data: updateData });
