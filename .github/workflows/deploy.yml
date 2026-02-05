@@ -38,9 +38,6 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "image-tag=dashboard_${VERSION}" >> $GITHUB_OUTPUT
 
-      - name: prepare env file
-        run: cp git.environment-variables/admin.vite/env.prod .env
-
       - name: build and push to registry
         id: build
         uses: ./.github/actions/docker-build-push
@@ -59,6 +56,10 @@ jobs:
           image-description: "BottleNote Admin Dashboard Frontend"
           image-vendor: "BottleNote"
           image-authors: "BottleNote Team"
+          build-args: |
+            ENV_FILE=git.environment-variables/application.vite/prod.sops.env
+          build-secrets: |
+            age_key=${{ secrets.SOPS_AGE_SECRET_KEY }}
           sign-image: 'true'
           cosign-key-path: 'git.environment-variables/storage/docker-registry/cosign.key'
           cosign-password: ${{ secrets.COSIGN_PASSWORD }}

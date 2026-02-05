@@ -12,6 +12,7 @@ import {
   List,
   Plus,
   LayoutDashboard,
+  Layers,
 } from 'lucide-react';
 import type { MenuGroup } from '@/types/menu';
 
@@ -47,6 +48,12 @@ export const menuConfig: MenuGroup[] = [
                 icon: List,
                 path: '/whisky',
               },
+              {
+                id: 'whisky-create',
+                label: '위스키 추가',
+                icon: Plus,
+                path: '/whisky/new',
+              },
             ],
           },
           {
@@ -59,6 +66,12 @@ export const menuConfig: MenuGroup[] = [
                 label: '테이스팅 태그 목록',
                 icon: List,
                 path: '/tasting-tags',
+              },
+              {
+                id: 'tasting-tag-create',
+                label: '태그 추가',
+                icon: Plus,
+                path: '/tasting-tags/new',
               },
             ],
           },
@@ -76,16 +89,41 @@ export const menuConfig: MenuGroup[] = [
         roles: ['ROOT_ADMIN'],
         children: [
           {
+            id: 'banner-list',
+            label: '배너 목록',
+            icon: List,
+            path: '/banners',
+          },
+          {
             id: 'banner-create',
-            label: '배너 등록',
+            label: '배너 추가',
             icon: Plus,
             path: '/banners/new',
           },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'curation',
+    items: [
+      {
+        id: 'curation-management',
+        label: '큐레이션 관리',
+        icon: Layers,
+        roles: ['ROOT_ADMIN'],
+        children: [
           {
-            id: 'banner-list',
-            label: '배너 조회',
+            id: 'curation-list',
+            label: '큐레이션 목록',
             icon: List,
-            path: '/banners',
+            path: '/curations',
+          },
+          {
+            id: 'curation-create',
+            label: '큐레이션 추가',
+            icon: Plus,
+            path: '/curations/new',
           },
         ],
       },

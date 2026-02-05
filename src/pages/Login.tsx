@@ -47,7 +47,8 @@ export function LoginPage() {
 
       showToast({
         type: 'success',
-        message: `${user.name}님, 환영합니다!`,
+        message: '환영합니다!',
+        duration: 1500,
       });
 
       navigate('/');

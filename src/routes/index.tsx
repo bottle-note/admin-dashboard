@@ -13,9 +13,12 @@ import { DashboardPage } from '@/pages/Dashboard';
 import { WhiskyListPage } from '@/pages/whisky/WhiskyList';
 import { WhiskyDetailPage } from '@/pages/whisky/WhiskyDetail';
 import { TastingTagListPage } from '@/pages/tasting-tags/TastingTagList';
+import { TastingTagDetailPage } from '@/pages/tasting-tags/TastingTagDetail';
 import { BannerListPage } from '@/pages/banners/BannerList';
 import { BannerDetailPage } from '@/pages/banners/BannerDetail';
 import { BannerCreatePage } from '@/pages/banners/BannerCreate';
+import { CurationListPage } from '@/pages/curations/CurationList';
+import { CurationDetailPage } from '@/pages/curations/CurationDetail';
 import { InquiryListPage } from '@/pages/inquiries/InquiryList';
 import { PolicyListPage } from '@/pages/policies/PolicyList';
 import { UserListPage } from '@/pages/users/UserList';
@@ -61,6 +64,14 @@ export function AppRoutes() {
           }
         />
         <Route
+          path="whisky/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <WhiskyDetailPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
           path="whisky/:id"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
@@ -75,6 +86,22 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
               <TastingTagListPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="tasting-tags/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <TastingTagDetailPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="tasting-tags/:id"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <TastingTagDetailPage />
             </RoleProtectedRoute>
           }
         />
@@ -101,6 +128,31 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
               <BannerDetailPage />
+            </RoleProtectedRoute>
+          }
+        />
+        {/* Curations - ROOT_ADMIN only */}
+        <Route
+          path="curations"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <CurationListPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="curations/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <CurationDetailPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="curations/:id"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <CurationDetailPage />
             </RoleProtectedRoute>
           }
         />
