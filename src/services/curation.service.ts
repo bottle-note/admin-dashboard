@@ -1,41 +1,177 @@
 /**
- * 큐레이션 서비스
- * TODO: 실제 API 연동 시 httpClient 사용으로 변경
+ * 큐레이션 API 서비스
  */
 
-import { MOCK_CURATIONS, type CurationListItem } from '@/data/mock/curations.mock';
+import { apiClient } from '@/lib/api-client';
+import { createQueryKeys } from '@/hooks/useApiQuery';
+import {
+  CurationApi,
+  type CurationSearchParams,
+  type CurationListItem,
+  type CurationPageMeta,
+  type CurationDetail,
+  type CurationDetailResponse,
+  type CurationCreateRequest,
+  type CurationCreateResponse,
+  type CurationUpdateRequest,
+  type CurationUpdateResponse,
+  type CurationDeleteResponse,
+  type CurationToggleStatusRequest,
+  type CurationToggleStatusResponse,
+  type CurationUpdateDisplayOrderRequest,
+  type CurationUpdateDisplayOrderResponse,
+  type CurationAddAlcoholsRequest,
+  type CurationAddAlcoholsResponse,
+  type CurationRemoveAlcoholResponse,
+} from '@/types/api';
 
-/**
- * 큐레이션 목록 조회
- * @returns 큐레이션 목록
- */
-export async function getCurations(): Promise<CurationListItem[]> {
-  // Mock: 실제 API 호출 시뮬레이션
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  return MOCK_CURATIONS;
+// ============================================
+// Query Keys
+// ============================================
+
+export const curationKeys = createQueryKeys('curations');
+
+// ============================================
+// 응답 타입 (페이지네이션 포함)
+// ============================================
+
+export interface CurationListResponse {
+  items: CurationListItem[];
+  meta: CurationPageMeta;
 }
 
-/**
- * 큐레이션 ID로 단일 큐레이션 조회
- * @param id - 큐레이션 ID
- * @returns 큐레이션 정보 또는 undefined
- */
-export async function getCurationById(id: number): Promise<CurationListItem | undefined> {
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  return MOCK_CURATIONS.find((c) => c.id === id);
-}
+// ============================================
+// 응답 변환 헬퍼
+// ============================================
 
 /**
- * 큐레이션 URL 생성
- * @param curationId - 큐레이션 ID
- * @returns 앱 내부 URL
+ * API 응답을 UI용 CurationDetail로 변환
+ * - alcoholIds → alcohols 배열로 변환
+ * - modifiedAt → updatedAt 매핑
  */
-export function generateCurationUrl(curationId: number): string {
-  return `/alcohols/search?curationId=${curationId}`;
+function transformDetailResponse(response: CurationDetailResponse): CurationDetail {
+  return {
+    id: response.id,
+    name: response.name,
+    description: response.description,
+    coverImageUrl: response.coverImageUrl,
+    displayOrder: response.displayOrder,
+    isActive: response.isActive,
+    createdAt: response.createdAt,
+    updatedAt: response.modifiedAt, // API는 modifiedAt 사용
+    alcoholCount: response.alcoholIds.length,
+    alcohols: response.alcoholIds.map((alcoholId) => ({
+      alcoholId,
+      korName: `위스키 #${alcoholId}`, // API에서 이름 정보 미제공
+      engName: `Whisky #${alcoholId}`,
+      imageUrl: null,
+    })),
+  };
 }
+
+// ============================================
+// Service
+// ============================================
 
 export const curationService = {
-  getCurations,
-  getCurationById,
-  generateCurationUrl,
+  /**
+   * 큐레이션 목록 조회
+   * 페이지 기반 페이지네이션 (meta에 페이지 정보 포함)
+   */
+  search: async (params?: CurationSearchParams): Promise<CurationListResponse> => {
+    const response = await apiClient.getWithMeta<CurationListItem[]>(
+      CurationApi.search.endpoint,
+      { params }
+    );
+
+    return {
+      items: response.data ?? [],
+      meta: {
+        page: response.meta.page ?? params?.page ?? 0,
+        size: response.meta.size ?? params?.size ?? 20,
+        totalElements: response.meta.totalElements ?? 0,
+        totalPages: response.meta.totalPages ?? 0,
+        hasNext: response.meta.hasNext ?? false,
+      },
+    };
+  },
+
+  /**
+   * 큐레이션 상세 조회
+   * API 응답을 UI용 타입으로 변환하여 반환
+   */
+  getDetail: async (curationId: number): Promise<CurationDetail> => {
+    const endpoint = CurationApi.detail.endpoint.replace(':curationId', String(curationId));
+    const response = await apiClient.get<CurationDetailResponse>(endpoint);
+    return transformDetailResponse(response);
+  },
+
+  /**
+   * 큐레이션 생성
+   */
+  create: async (data: CurationCreateRequest): Promise<CurationCreateResponse> => {
+    return apiClient.post<CurationCreateResponse, CurationCreateRequest>(
+      CurationApi.create.endpoint,
+      data
+    );
+  },
+
+  /**
+   * 큐레이션 수정
+   */
+  update: async (curationId: number, data: CurationUpdateRequest): Promise<CurationUpdateResponse> => {
+    const endpoint = CurationApi.update.endpoint.replace(':curationId', String(curationId));
+    return apiClient.put<CurationUpdateResponse, CurationUpdateRequest>(endpoint, data);
+  },
+
+  /**
+   * 큐레이션 삭제
+   */
+  delete: async (curationId: number): Promise<CurationDeleteResponse> => {
+    const endpoint = CurationApi.delete.endpoint.replace(':curationId', String(curationId));
+    return apiClient.delete<CurationDeleteResponse>(endpoint);
+  },
+
+  /**
+   * 큐레이션 활성화 상태 토글
+   */
+  toggleStatus: async (curationId: number, data: CurationToggleStatusRequest): Promise<CurationToggleStatusResponse> => {
+    const endpoint = CurationApi.toggleStatus.endpoint.replace(':curationId', String(curationId));
+    return apiClient.patch<CurationToggleStatusResponse, CurationToggleStatusRequest>(endpoint, data);
+  },
+
+  /**
+   * 큐레이션 노출 순서 변경
+   */
+  updateDisplayOrder: async (curationId: number, data: CurationUpdateDisplayOrderRequest): Promise<CurationUpdateDisplayOrderResponse> => {
+    const endpoint = CurationApi.updateDisplayOrder.endpoint.replace(':curationId', String(curationId));
+    return apiClient.patch<CurationUpdateDisplayOrderResponse, CurationUpdateDisplayOrderRequest>(endpoint, data);
+  },
+
+  /**
+   * 큐레이션 위스키 추가
+   */
+  addAlcohols: async (curationId: number, data: CurationAddAlcoholsRequest): Promise<CurationAddAlcoholsResponse> => {
+    const endpoint = CurationApi.addAlcohols.endpoint.replace(':curationId', String(curationId));
+    return apiClient.post<CurationAddAlcoholsResponse, CurationAddAlcoholsRequest>(endpoint, data);
+  },
+
+  /**
+   * 큐레이션 위스키 제거
+   */
+  removeAlcohol: async (curationId: number, alcoholId: number): Promise<CurationRemoveAlcoholResponse> => {
+    const endpoint = CurationApi.removeAlcohol.endpoint
+      .replace(':curationId', String(curationId))
+      .replace(':alcoholId', String(alcoholId));
+    return apiClient.delete<CurationRemoveAlcoholResponse>(endpoint);
+  },
+
+  /**
+   * 큐레이션 URL 생성
+   * @param curationId - 큐레이션 ID
+   * @returns 앱 내부 URL
+   */
+  generateCurationUrl: (curationId: number): string => {
+    return `/alcohols/search?curationId=${curationId}`;
+  },
 };
