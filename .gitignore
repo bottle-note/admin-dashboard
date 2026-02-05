@@ -45,3 +45,11 @@ CLAUDE.personal.md
 
 # Secrets
 .secrets
+.claude/
+
+# Playwright
+e2e/.auth/
+e2e/reports/
+e2e/test-results/
+playwright-report/
+test-results/
