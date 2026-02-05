@@ -12,6 +12,7 @@ import {
   List,
   Plus,
   LayoutDashboard,
+  Layers,
 } from 'lucide-react';
 import type { MenuGroup } from '@/types/menu';
 
@@ -98,6 +99,31 @@ export const menuConfig: MenuGroup[] = [
             label: '배너 추가',
             icon: Plus,
             path: '/banners/new',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'curation',
+    items: [
+      {
+        id: 'curation-management',
+        label: '큐레이션 관리',
+        icon: Layers,
+        roles: ['ROOT_ADMIN'],
+        children: [
+          {
+            id: 'curation-list',
+            label: '큐레이션 목록',
+            icon: List,
+            path: '/curations',
+          },
+          {
+            id: 'curation-create',
+            label: '큐레이션 추가',
+            icon: Plus,
+            path: '/curations/new',
           },
         ],
       },

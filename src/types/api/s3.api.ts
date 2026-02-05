@@ -65,6 +65,8 @@ export const S3UploadPath = {
   ALCOHOL: 'admin/alcohol',
   /** 배너 이미지 */
   BANNER: 'admin/banner',
+  /** 큐레이션 커버 이미지 */
+  CURATION: 'admin/curation',
   /** 테이스팅 태그 아이콘 */
   TASTING_TAG: 'admin/tasting-tag',
 } as const;

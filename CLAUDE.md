@@ -46,6 +46,44 @@ src/
 - 스키마는 `pages/*/*.schema.ts`에 정의
 - `useApiMutation` 훅으로 mutation 처리
 
+### 폼 유효성 검사 패턴
+**모든 필드는 기본적으로 required** (특별한 이유가 없으면 optional 사용 지양)
+
+1. **스키마 정의** (`*.schema.ts`)
+```typescript
+export const formSchema = z.object({
+  name: z.string().min(1, '이름은 필수입니다'),
+  description: z.string().min(1, '설명은 필수입니다'),
+  imageUrl: z.string().min(1, '이미지를 업로드해주세요'),
+  items: z.array(z.number()).min(1, '최소 1개 이상 선택해주세요'),
+});
+```
+
+2. **에러 메시지 표시** - `FormField` 컴포넌트 사용
+```tsx
+import { FormField } from '@/components/common/FormField';
+
+<FormField label="이름" required error={form.formState.errors.name?.message}>
+  <Input {...form.register('name')} />
+</FormField>
+```
+
+3. **카드 타이틀에 필수 표시**
+```tsx
+<CardTitle>포함된 항목 <span className="text-destructive">*</span></CardTitle>
+{form.formState.errors.items && (
+  <p className="text-sm text-destructive">{form.formState.errors.items.message}</p>
+)}
+```
+
+### 연관 엔티티 관리 패턴 (TastingTag 패턴)
+위스키 연결 등 연관 엔티티는 **로컬 상태로 관리하다가 저장 시 벌크로 처리**
+
+1. 초기 상태 저장: `initialIds` (diff 계산용)
+2. 추가/제거 시 로컬 상태만 변경 (즉시 API 호출 X)
+3. 저장 시 diff 계산 (`toAdd`, `toRemove`)
+4. 벌크 API 호출 (`addMutation`, `removeMutation`)
+
 ### 컴포넌트 구조
 ```typescript
 /**
