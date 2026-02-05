@@ -99,9 +99,13 @@ export class CurationListPage extends BasePage {
    */
   async search(keyword: string) {
     await this.searchInput().fill(keyword);
+    // API 응답 대기 준비
+    const responsePromise = this.page.waitForResponse(
+      (resp) => resp.url().includes('/curations') && resp.status() === 200,
+      { timeout: 10000 }
+    ).catch(() => {});
     await this.searchInput().press('Enter');
-    // Mock API delay 대기
-    await this.page.waitForTimeout(500);
+    await responsePromise;
     await this.waitForLoadingComplete();
   }
 
@@ -110,9 +114,13 @@ export class CurationListPage extends BasePage {
    */
   async searchWithButton(keyword: string) {
     await this.searchInput().fill(keyword);
+    // API 응답 대기 준비
+    const responsePromise = this.page.waitForResponse(
+      (resp) => resp.url().includes('/curations') && resp.status() === 200,
+      { timeout: 10000 }
+    ).catch(() => {});
     await this.searchButton().click();
-    // Mock API delay 대기
-    await this.page.waitForTimeout(500);
+    await responsePromise;
     await this.waitForLoadingComplete();
   }
 
@@ -122,9 +130,13 @@ export class CurationListPage extends BasePage {
    */
   async selectStatusFilter(status: '전체' | '활성' | '비활성') {
     await this.statusFilterTrigger().click();
+    // API 응답 대기 준비
+    const responsePromise = this.page.waitForResponse(
+      (resp) => resp.url().includes('/curations') && resp.status() === 200,
+      { timeout: 10000 }
+    ).catch(() => {});
     await this.page.getByRole('option', { name: status, exact: true }).click();
-    // Mock API delay 대기
-    await this.page.waitForTimeout(500);
+    await responsePromise;
     await this.waitForLoadingComplete();
   }
 

@@ -180,8 +180,8 @@ export class CurationDetailPage extends BasePage {
       (resp) => resp.url().includes('/alcohols') && resp.status() === 200,
       { timeout: 10000 }
     ).catch(() => {});
-    // 드롭다운 렌더링 대기
-    await this.page.waitForTimeout(100);
+    // 드롭다운 렌더링 대기: 목록이 실제로 표시될 때까지 대기
+    await this.whiskyDropdownList().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
   }
 
   /**

@@ -200,18 +200,38 @@ export function CurationListPage() {
     const maxIndex = Math.max(draggedIndex, targetIndex);
     const affectedItems = items.slice(minIndex, maxIndex + 1);
 
-    // 각 큐레이션의 displayOrder 업데이트 (병렬 호출)
+    // 롤백을 위한 기존 displayOrder 저장
+    const originalDisplayOrders = new Map(
+      data.items.map((item) => [item.id, item.displayOrder])
+    );
+
+    // 각 큐레이션의 displayOrder 업데이트 (순차 호출 + 실패 시 롤백)
     setIsReordering(true);
     try {
-      await Promise.all(
-        affectedItems.map((item, idx) =>
-          updateDisplayOrderMutation.mutateAsync({
-            curationId: item.id,
-            data: { displayOrder: minIndex + idx },
-          })
-        )
-      );
+      for (let idx = 0; idx < affectedItems.length; idx++) {
+        const item = affectedItems[idx]!;
+        await updateDisplayOrderMutation.mutateAsync({
+          curationId: item.id,
+          data: { displayOrder: minIndex + idx },
+        });
+      }
       // 목록 새로고침
+      await refetch();
+    } catch {
+      // 실패 시 기존 displayOrder로 롤백 시도
+      for (const item of affectedItems) {
+        const originalOrder = originalDisplayOrders.get(item.id);
+        if (originalOrder === undefined) continue;
+        try {
+          await updateDisplayOrderMutation.mutateAsync({
+            curationId: item.id,
+            data: { displayOrder: originalOrder },
+          });
+        } catch {
+          // 롤백 중 에러는 무시하고 가능한 한 복구 시도
+        }
+      }
+      // 롤백 후 목록 새로고침
       await refetch();
     } finally {
       setIsReordering(false);

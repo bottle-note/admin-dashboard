@@ -51,15 +51,46 @@ export interface CurationListResponse {
  * - alcoholIds → alcohols 배열로 변환 (상세 정보 포함)
  * - modifiedAt → updatedAt 매핑
  */
+/**
+ * 동시성 제한된 병렬 실행
+ * @param items - 처리할 아이템 배열
+ * @param fn - 각 아이템에 적용할 비동기 함수
+ * @param concurrency - 최대 동시 실행 수 (기본값: 5)
+ */
+async function runWithConcurrency<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  concurrency = 5
+): Promise<R[]> {
+  const results: R[] = [];
+  const executing: Promise<void>[] = [];
+
+  for (const item of items) {
+    const promise = fn(item).then((result) => {
+      results.push(result);
+    });
+
+    executing.push(promise as unknown as Promise<void>);
+
+    if (executing.length >= concurrency) {
+      await Promise.race(executing);
+      executing.splice(0, executing.findIndex((p) => p === promise) + 1);
+    }
+  }
+
+  await Promise.all(executing);
+  return results;
+}
+
 async function transformDetailResponse(response: CurationDetailResponse): Promise<CurationDetail> {
-  // 연결된 위스키 상세 정보 병렬 조회
+  // 연결된 위스키 상세 정보 조회 (동시성 제한: 최대 5개)
   let alcohols: CurationAlcoholItem[] = [];
 
   if (response.alcoholIds.length > 0) {
-    const alcoholDetails = await Promise.all(
-      response.alcoholIds.map((alcoholId) =>
-        adminAlcoholService.getDetail(alcoholId).catch(() => null)
-      )
+    const alcoholDetails = await runWithConcurrency(
+      response.alcoholIds,
+      (alcoholId) => adminAlcoholService.getDetail(alcoholId).catch(() => null),
+      5 // 최대 5개 동시 요청
     );
 
     alcohols = alcoholDetails

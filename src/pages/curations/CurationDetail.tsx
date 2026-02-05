@@ -40,9 +40,9 @@ export function CurationDetailPage() {
     handleDelete,
   } = useCurationDetailForm(id);
 
-  // 이미지 업로드 훅
+  // 이미지 업로드 훅 (큐레이션 전용 S3 경로 사용)
   const { upload: uploadImage, isUploading: isImageUploading } = useImageUpload({
-    rootPath: S3UploadPath.BANNER, // TODO: Create S3UploadPath.CURATION if needed
+    rootPath: S3UploadPath.CURATION,
   });
 
   // 로컬 상태
