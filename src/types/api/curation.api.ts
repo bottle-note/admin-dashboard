@@ -162,6 +162,8 @@ export interface CurationApiTypes {
       coverImageUrl?: string;
       /** 노출 순서 (선택) */
       displayOrder?: number;
+      /** 활성화 상태 (선택) */
+      isActive?: boolean;
       /** 포함할 위스키 ID 목록 (선택) */
       alcoholIds?: number[];
     };
@@ -189,6 +191,8 @@ export interface CurationApiTypes {
       coverImageUrl?: string;
       /** 노출 순서 (선택) */
       displayOrder?: number;
+      /** 활성화 상태 (선택) */
+      isActive?: boolean;
       /** 포함할 위스키 ID 목록 (선택) */
       alcoholIds?: number[];
     };
