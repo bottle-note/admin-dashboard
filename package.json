@@ -12,6 +12,12 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:unit": "vitest run --dir src",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:all": "pnpm test:run && pnpm test:e2e",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
@@ -62,6 +68,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
