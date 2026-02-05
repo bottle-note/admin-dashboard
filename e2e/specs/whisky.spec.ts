@@ -114,6 +114,41 @@ test.describe('위스키 상세', () => {
 
 });
 
+test.describe('위스키 폼 리셋', () => {
+  test('상세 페이지에서 추가 페이지로 이동하면 폼이 초기화된다', async ({ page }) => {
+    const listPage = new WhiskyListPage(page);
+    const detailPage = new WhiskyDetailPage(page);
+
+    // 1. 목록에서 위스키 선택
+    await listPage.goto();
+    const rowCount = await listPage.getRowCount();
+    if (rowCount === 0) {
+      test.skip();
+      return;
+    }
+
+    await listPage.clickFirstRow();
+    await detailPage.waitForLoadingComplete();
+
+    // 2. 현재 폼 값 저장
+    const originalKorName = await detailPage.korNameInput().inputValue();
+    expect(originalKorName).not.toBe(''); // 데이터가 있어야 함
+
+    // 3. 사이드바에서 "위스키 추가" 메뉴 클릭 (새 등록 페이지로 이동)
+    // 사이드바 메뉴 구조: 위스키/테이스팅 태그 > 위스키 정보 관리 > 위스키 추가
+    await page.getByRole('button', { name: '위스키/테이스팅 태그' }).click();
+    await page.getByRole('button', { name: '위스키 정보 관리' }).click();
+    await page.getByRole('button', { name: '위스키 추가' }).click();
+
+    // 4. URL 확인
+    await expect(page).toHaveURL(/.*whisky\/new/);
+    await detailPage.waitForLoadingComplete();
+
+    // 5. 폼이 비어있어야 함 (useEffect가 form.reset을 호출할 때까지 대기)
+    await expect(detailPage.korNameInput()).toHaveValue('', { timeout: 5000 });
+  });
+});
+
 test.describe('위스키 수정 플로우', () => {
   test('완전한 데이터가 있는 위스키를 수정할 수 있다', async ({ page }) => {
     const listPage = new WhiskyListPage(page);

@@ -65,6 +65,41 @@ test.describe('테이스팅 태그 관리', () => {
   });
 });
 
+test.describe('테이스팅 태그 폼 리셋', () => {
+  test('상세 페이지에서 추가 페이지로 이동하면 폼이 초기화된다', async ({ page }) => {
+    const listPage = new TastingTagListPage(page);
+
+    // 1. 목록에서 태그 선택
+    await listPage.goto();
+    const tagCount = await listPage.getTagCount();
+    if (tagCount === 0) {
+      test.skip();
+      return;
+    }
+
+    await listPage.tagBadges().first().click();
+    await page.getByText('로딩 중...').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
+
+    // 2. 현재 폼 값 저장
+    const originalKorName = await page.getByPlaceholder('예: 바닐라').inputValue();
+    expect(originalKorName).not.toBe(''); // 데이터가 있어야 함
+
+    // 3. 사이드바에서 "테이스팅 태그 추가" 메뉴 클릭
+    // 사이드바 메뉴 구조: 위스키/테이스팅 태그 > 테이스팅 태그 관리 > 태그 추가
+    await page.getByRole('button', { name: '위스키/테이스팅 태그' }).click();
+    await page.getByRole('button', { name: '테이스팅 태그 관리' }).click();
+    await page.getByRole('button', { name: '태그 추가' }).click();
+
+    // 4. URL 확인
+    await expect(page).toHaveURL(/.*tasting-tags\/new/);
+    await page.getByText('로딩 중...').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
+
+    // 5. 폼이 비어있어야 함
+    const newKorName = await page.getByPlaceholder('예: 바닐라').inputValue();
+    expect(newKorName).toBe('');
+  });
+});
+
 test.describe('테이스팅 태그 CRUD 플로우', () => {
   const testTagName = `테스트태그_${Date.now()}`;
   const updatedTagName = `${testTagName}_수정됨`;

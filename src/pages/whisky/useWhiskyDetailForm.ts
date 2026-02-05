@@ -104,9 +104,13 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
   // 수정 mutation
   const updateMutation = useAdminAlcoholUpdate();
 
-  // API 데이터를 폼에 반영
+  // API 데이터를 폼에 반영 (신규 모드에서는 초기화)
   useEffect(() => {
-    if (whiskyData) {
+    if (isNewMode) {
+      // 신규 등록 모드: 폼을 기본값으로 초기화
+      form.reset(DEFAULT_WHISKY_FORM);
+    } else if (whiskyData) {
+      // 수정 모드: API 데이터로 폼 채움
       form.reset({
         korName: whiskyData.korName,
         engName: whiskyData.engName,
@@ -123,7 +127,7 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
         imageUrl: whiskyData.imageUrl ?? '',
       });
     }
-  }, [whiskyData, form]);
+  }, [whiskyData, form, isNewMode]);
 
   const onSubmit = (
     data: WhiskyFormValues,

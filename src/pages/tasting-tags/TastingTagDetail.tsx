@@ -98,9 +98,20 @@ export function TastingTagDetailPage() {
     },
   });
 
-  // API 데이터로 폼 초기화 (수정 모드)
+  // API 데이터로 폼 초기화 (신규 모드에서는 초기화)
   useEffect(() => {
-    if (detailData) {
+    if (isNewMode) {
+      // 신규 등록 모드: 폼과 상태를 기본값으로 초기화
+      form.reset({
+        korName: '',
+        engName: '',
+        description: '',
+      });
+      setIconBase64(null);
+      setConnectedWhiskies([]);
+      setInitialAlcoholIds([]);
+    } else if (detailData) {
+      // 수정 모드: API 데이터로 폼 채움
       const tag = detailData.tag;
       form.reset({
         korName: tag.korName,
@@ -117,7 +128,7 @@ export function TastingTagDetailPage() {
       setConnectedWhiskies(alcohols);
       setInitialAlcoholIds(alcohols.map((a) => a.alcoholId));
     }
-  }, [detailData, form]);
+  }, [detailData, form, isNewMode]);
 
   // 아이콘 이미지 변경 (File → base64 변환)
   const handleIconChange = (file: File | null, previewUrl: string | null) => {
