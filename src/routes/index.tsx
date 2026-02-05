@@ -131,7 +131,6 @@ export function AppRoutes() {
             </RoleProtectedRoute>
           }
         />
-
         {/* Curations - ROOT_ADMIN only */}
         <Route
           path="curations"
