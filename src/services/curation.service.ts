@@ -92,8 +92,7 @@ export const curationService = {
 
   /**
    * 큐레이션 상세 조회
-   * API 응답을 UI용 타입으로 변환하여 반환
-   * 연결된 위스키의 상세 정보도 함께 조회
+   * API 응답을 UI용 타입으로 변환하여 반환 (연결된 위스키 정보 포함)
    */
   getDetail: async (curationId: number): Promise<CurationDetail> => {
     const endpoint = CurationApi.detail.endpoint.replace(':curationId', String(curationId));

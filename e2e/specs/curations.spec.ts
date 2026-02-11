@@ -215,15 +215,15 @@ test.describe('큐레이션 CRUD 플로우', () => {
       displayOrder: 999,
     });
 
-    // 3-1. 커버 이미지 업로드 (필수)
-    await detailPage.uploadTestImage();
-
-    // 3-2. 위스키 추가 (필수 - 최소 1개)
+    // 3-1. 위스키 추가 (필수 - 최소 1개, skip 판단을 위해 이미지 업로드보다 먼저)
     const added = await detailPage.addFirstWhiskyBySearch('글렌');
     if (!added) {
       test.skip();
       return;
     }
+
+    // 3-2. 커버 이미지 업로드 (필수)
+    await detailPage.uploadTestImage();
 
     // 4. 등록 버튼 클릭 + API 응답 대기
     await Promise.all([

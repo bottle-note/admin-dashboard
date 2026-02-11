@@ -186,8 +186,8 @@ export class CurationDetailPage extends BasePage {
   async uploadTestImage() {
     const testImagePath = path.resolve(__dirname, '../fixtures/test-image.png');
     await this.imageFileInput().setInputFiles(testImagePath);
-    // S3 업로드 완료 대기 (성공 또는 실패 후 coverImageUrl이 설정됨)
-    await this.page.waitForTimeout(2000);
+    // S3 업로드 완료 대기: 업로드된 이미지 미리보기가 표시될 때까지 대기
+    await this.uploadedImage().waitFor({ state: 'visible', timeout: 10000 });
   }
 
   /**
