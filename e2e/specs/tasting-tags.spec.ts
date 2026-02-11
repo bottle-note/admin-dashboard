@@ -94,9 +94,8 @@ test.describe('테이스팅 태그 폼 리셋', () => {
     await expect(page).toHaveURL(/.*tasting-tags\/new/);
     await page.getByText('로딩 중...').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
 
-    // 5. 폼이 비어있어야 함
-    const newKorName = await page.getByPlaceholder('예: 바닐라').inputValue();
-    expect(newKorName).toBe('');
+    // 5. 폼이 비어있어야 함 (auto-retry: React useEffect 실행 대기)
+    await expect(page.getByPlaceholder('예: 바닐라')).toHaveValue('');
   });
 });
 

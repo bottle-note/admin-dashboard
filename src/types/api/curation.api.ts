@@ -69,8 +69,16 @@ export interface CurationAlcoholItem {
   korName: string;
   /** 영문명 */
   engName: string;
+  /** 한글 카테고리명 */
+  korCategoryName: string;
+  /** 영문 카테고리명 */
+  engCategoryName: string;
   /** 위스키 이미지 URL (nullable) */
   imageUrl: string | null;
+  /** 생성일시 */
+  createdAt: string;
+  /** 수정일시 */
+  modifiedAt: string;
 }
 
 // ============================================
@@ -146,8 +154,8 @@ export interface CurationApiTypes {
       createdAt: string;
       /** 수정일시 */
       modifiedAt: string;
-      /** 포함된 위스키 ID 목록 */
-      alcoholIds: number[];
+      /** 포함된 위스키 목록 */
+      alcohols: CurationAlcoholItem[];
     };
   };
   /** 큐레이션 생성 */
