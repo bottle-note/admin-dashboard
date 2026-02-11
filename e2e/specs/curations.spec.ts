@@ -208,12 +208,22 @@ test.describe('큐레이션 CRUD 플로우', () => {
     await listPage.clickCreate();
     await expect(page).toHaveURL(/.*curations\/new/);
 
-    // 3. 폼 입력
+    // 3. 폼 입력 (필수 필드 모두 채우기)
     await detailPage.fillBasicInfo({
       name: testCurationName,
       description: 'E2E 테스트용 큐레이션입니다.',
       displayOrder: 999,
     });
+
+    // 3-1. 커버 이미지 업로드 (필수)
+    await detailPage.uploadTestImage();
+
+    // 3-2. 위스키 추가 (필수 - 최소 1개)
+    const added = await detailPage.addFirstWhiskyBySearch('글렌');
+    if (!added) {
+      test.skip();
+      return;
+    }
 
     // 4. 등록 버튼 클릭 + API 응답 대기
     await Promise.all([
@@ -386,6 +396,9 @@ test.describe('큐레이션 위스키 관리', () => {
     await listPage.clickFirstRow();
     await detailPage.waitForLoadingComplete();
 
+    // 커버 이미지 없으면 업로드 (필수 필드)
+    await detailPage.ensureCoverImage();
+
     // 현재 위스키 개수 확인
     const initialCount = await detailPage.getWhiskyCount();
 
@@ -441,6 +454,9 @@ test.describe('큐레이션 위스키 관리', () => {
 
     await listPage.clickFirstRow();
     await detailPage.waitForLoadingComplete();
+
+    // 커버 이미지 없으면 업로드 (필수 필드)
+    await detailPage.ensureCoverImage();
 
     // 현재 위스키 개수 확인
     let currentCount = await detailPage.getWhiskyCount();

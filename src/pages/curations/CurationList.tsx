@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { Search, ImageOff, Plus, Check, X, GripVertical, ArrowUpDown } from 'lucide-react';
+import { Search, Plus, Check, X, GripVertical, ArrowUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -244,13 +244,6 @@ export function CurationListPage() {
     setDragOverId(null);
   };
 
-  // 설명 텍스트 truncate
-  const truncateDescription = (description: string | null, maxLength: number = 50) => {
-    if (!description) return '-';
-    if (description.length <= maxLength) return description;
-    return `${description.slice(0, maxLength)}...`;
-  };
-
   return (
     <div className="space-y-6">
       {/* 헤더 */}
@@ -316,29 +309,27 @@ export function CurationListPage() {
 
       {/* 테이블 */}
       <div className="rounded-lg border">
-        <Table>
+        <Table className="[&_th]:px-4 [&_td]:px-4">
           <TableHeader>
             <TableRow>
               {isReorderMode && <TableHead className="w-[60px]">순서</TableHead>}
-              <TableHead className="w-[80px]">이미지</TableHead>
               <TableHead>큐레이션명</TableHead>
-              <TableHead className="w-[200px]">설명</TableHead>
-              <TableHead className="w-[100px]">위스키 수</TableHead>
-              {!isReorderMode && <TableHead className="w-[60px]">순서</TableHead>}
-              <TableHead className="w-[100px]">상태</TableHead>
+              <TableHead className="w-[300px]">위스키 수</TableHead>
+              {!isReorderMode && <TableHead className="w-[180px]">순서</TableHead>}
+              <TableHead className="w-[300px]">상태</TableHead>
               {isReorderMode && <TableHead className="w-[50px]"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={isReorderMode ? 7 : 6} className="text-center py-8">
+                <TableCell colSpan={isReorderMode ? 5 : 4} className="text-center py-8">
                   <span className="text-muted-foreground">로딩 중...</span>
                 </TableCell>
               </TableRow>
             ) : data?.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isReorderMode ? 7 : 6} className="text-center py-8">
+                <TableCell colSpan={isReorderMode ? 5 : 4} className="text-center py-8">
                   <span className="text-muted-foreground">
                     검색 결과가 없습니다.
                   </span>
@@ -369,23 +360,7 @@ export function CurationListPage() {
                       {item.displayOrder}
                     </TableCell>
                   )}
-                  <TableCell>
-                    {item.coverImageUrl ? (
-                      <img
-                        src={item.coverImageUrl}
-                        alt={item.name}
-                        className="h-10 w-16 rounded object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-10 w-16 items-center justify-center rounded bg-muted">
-                        <ImageOff className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    )}
-                  </TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {truncateDescription(item.description)}
-                  </TableCell>
                   <TableCell>
                     <Badge variant="outline">
                       {item.alcoholCount}개
