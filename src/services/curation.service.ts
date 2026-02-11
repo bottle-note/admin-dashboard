@@ -23,9 +23,7 @@ import {
   type CurationAddAlcoholsRequest,
   type CurationAddAlcoholsResponse,
   type CurationRemoveAlcoholResponse,
-  type CurationAlcoholItem,
 } from '@/types/api';
-import { adminAlcoholService } from './admin-alcohol.service';
 
 // ============================================
 // Query Keys
@@ -48,61 +46,9 @@ export interface CurationListResponse {
 
 /**
  * API 응답을 UI용 CurationDetail로 변환
- * - alcoholIds → alcohols 배열로 변환 (상세 정보 포함)
  * - modifiedAt → updatedAt 매핑
  */
-/**
- * 동시성 제한된 병렬 실행
- * @param items - 처리할 아이템 배열
- * @param fn - 각 아이템에 적용할 비동기 함수
- * @param concurrency - 최대 동시 실행 수 (기본값: 5)
- */
-async function runWithConcurrency<T, R>(
-  items: T[],
-  fn: (item: T) => Promise<R>,
-  concurrency = 5
-): Promise<R[]> {
-  const results: R[] = [];
-  const executing: Promise<void>[] = [];
-
-  for (const item of items) {
-    const promise = fn(item).then((result) => {
-      results.push(result);
-    });
-
-    executing.push(promise as unknown as Promise<void>);
-
-    if (executing.length >= concurrency) {
-      await Promise.race(executing);
-      executing.splice(0, executing.findIndex((p) => p === promise) + 1);
-    }
-  }
-
-  await Promise.all(executing);
-  return results;
-}
-
-async function transformDetailResponse(response: CurationDetailResponse): Promise<CurationDetail> {
-  // 연결된 위스키 상세 정보 조회 (동시성 제한: 최대 5개)
-  let alcohols: CurationAlcoholItem[] = [];
-
-  if (response.alcoholIds.length > 0) {
-    const alcoholDetails = await runWithConcurrency(
-      response.alcoholIds,
-      (alcoholId) => adminAlcoholService.getDetail(alcoholId).catch(() => null),
-      5 // 최대 5개 동시 요청
-    );
-
-    alcohols = alcoholDetails
-      .filter((detail): detail is NonNullable<typeof detail> => detail !== null)
-      .map((detail) => ({
-        alcoholId: detail.alcoholId,
-        korName: detail.korName,
-        engName: detail.engName,
-        imageUrl: detail.imageUrl,
-      }));
-  }
-
+function transformDetailResponse(response: CurationDetailResponse): CurationDetail {
   return {
     id: response.id,
     name: response.name,
@@ -111,9 +57,9 @@ async function transformDetailResponse(response: CurationDetailResponse): Promis
     displayOrder: response.displayOrder,
     isActive: response.isActive,
     createdAt: response.createdAt,
-    updatedAt: response.modifiedAt, // API는 modifiedAt 사용
-    alcoholCount: response.alcoholIds.length,
-    alcohols,
+    updatedAt: response.modifiedAt,
+    alcoholCount: response.alcohols.length,
+    alcohols: response.alcohols,
   };
 }
 
@@ -146,13 +92,12 @@ export const curationService = {
 
   /**
    * 큐레이션 상세 조회
-   * API 응답을 UI용 타입으로 변환하여 반환
-   * 연결된 위스키의 상세 정보도 함께 조회
+   * API 응답을 UI용 타입으로 변환하여 반환 (연결된 위스키 정보 포함)
    */
   getDetail: async (curationId: number): Promise<CurationDetail> => {
     const endpoint = CurationApi.detail.endpoint.replace(':curationId', String(curationId));
     const response = await apiClient.get<CurationDetailResponse>(endpoint);
-    return await transformDetailResponse(response);
+    return transformDetailResponse(response);
   },
 
   /**

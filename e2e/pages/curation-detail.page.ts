@@ -1,5 +1,9 @@
 import { type Page } from '@playwright/test';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { BasePage } from './base.page';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * 큐레이션 상세 페이지 Page Object
@@ -168,6 +172,47 @@ export class CurationDetailPage extends BasePage {
    */
   async toggleActive() {
     await this.isActiveSwitch().click();
+  }
+
+  /** 이미지 파일 입력 (hidden) */
+  readonly imageFileInput = () => this.page.locator('input[type="file"][accept="image/*"]');
+
+  /** 업로드된 이미지 미리보기 */
+  readonly uploadedImage = () => this.page.locator('img[alt="업로드된 이미지"]');
+
+  /**
+   * 테스트용 이미지 업로드
+   */
+  async uploadTestImage() {
+    const testImagePath = path.resolve(__dirname, '../fixtures/test-image.png');
+    await this.imageFileInput().setInputFiles(testImagePath);
+    // S3 업로드 완료 대기: 업로드된 이미지 미리보기가 표시될 때까지 대기
+    await this.uploadedImage().waitFor({ state: 'visible', timeout: 10000 });
+  }
+
+  /**
+   * 커버 이미지가 없으면 테스트 이미지 업로드
+   */
+  async ensureCoverImage() {
+    const hasImage = await this.uploadedImage().isVisible().catch(() => false);
+    if (!hasImage) {
+      await this.uploadTestImage();
+    }
+  }
+
+  /**
+   * 위스키 검색 후 첫 번째 결과 선택
+   * @returns 선택 성공 여부
+   */
+  async addFirstWhiskyBySearch(keyword: string): Promise<boolean> {
+    await this.searchWhisky(keyword);
+
+    const firstOption = this.whiskyDropdownList().locator('li button').first();
+    const hasOptions = await firstOption.isVisible().catch(() => false);
+    if (!hasOptions) return false;
+
+    await firstOption.click();
+    return true;
   }
 
   /**
