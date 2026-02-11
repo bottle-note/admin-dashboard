@@ -67,7 +67,7 @@ export function AppRoutes() {
           path="whisky/new"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <WhiskyDetailPage />
+              <WhiskyDetailPage key="new" />
             </RoleProtectedRoute>
           }
         />
@@ -75,7 +75,7 @@ export function AppRoutes() {
           path="whisky/:id"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <WhiskyDetailPage />
+              <WhiskyDetailPage key="edit" />
             </RoleProtectedRoute>
           }
         />
@@ -93,7 +93,7 @@ export function AppRoutes() {
           path="tasting-tags/new"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <TastingTagDetailPage />
+              <TastingTagDetailPage key="new" />
             </RoleProtectedRoute>
           }
         />
@@ -101,7 +101,7 @@ export function AppRoutes() {
           path="tasting-tags/:id"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <TastingTagDetailPage />
+              <TastingTagDetailPage key="edit" />
             </RoleProtectedRoute>
           }
         />
@@ -144,7 +144,7 @@ export function AppRoutes() {
           path="curations/new"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <CurationDetailPage />
+              <CurationDetailPage key="new" />
             </RoleProtectedRoute>
           }
         />
@@ -152,7 +152,7 @@ export function AppRoutes() {
           path="curations/:id"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <CurationDetailPage />
+              <CurationDetailPage key="edit" />
             </RoleProtectedRoute>
           }
         />
