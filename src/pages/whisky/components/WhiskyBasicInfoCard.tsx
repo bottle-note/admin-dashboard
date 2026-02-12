@@ -106,7 +106,7 @@ export function WhiskyBasicInfoCard({
               emptyMessage="지역을 찾을 수 없습니다."
             />
           </FormField>
-          <FormField label="증류소" required error={errors.distilleryId?.message}>
+          <FormField label="증류소" error={errors.distilleryId?.message}>
             <SearchableSelect
               value={String(watch('distilleryId') || '')}
               onChange={(v) => setValue('distilleryId', v ? Number(v) : 0)}
@@ -128,7 +128,7 @@ export function WhiskyBasicInfoCard({
               placeholder="예: 40"
             />
           </FormField>
-          <FormField label="숙성년도" required error={errors.age?.message}>
+          <FormField label="숙성년도" error={errors.age?.message}>
             <Input {...register('age')} placeholder="예: 12" />
           </FormField>
         </div>
@@ -138,13 +138,13 @@ export function WhiskyBasicInfoCard({
           <FormField label="용량" required error={errors.volume?.message}>
             <Input {...register('volume')} placeholder="예: 700ml" />
           </FormField>
-          <FormField label="캐스크" required error={errors.cask?.message}>
+          <FormField label="캐스크" error={errors.cask?.message}>
             <Input {...register('cask')} placeholder="예: 아메리칸 오크 & 스패니시 셰리" />
           </FormField>
         </div>
 
         {/* 설명 */}
-        <FormField label="설명" required error={errors.description?.message}>
+        <FormField label="설명" error={errors.description?.message}>
           <Textarea
             {...register('description')}
             placeholder="위스키에 대한 설명을 입력하세요..."

@@ -33,10 +33,10 @@ const DEFAULT_WHISKY_FORM: WhiskyFormValues = {
   regionId: 0,
   distilleryId: 0,
   abv: 40,
-  age: '',
-  cask: '',
+  age: '-',
+  cask: '-',
   volume: '',
-  description: '',
+  description: '-',
   imageUrl: '',
 };
 
@@ -135,6 +135,12 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
   ) => {
     // TODO: API에 relatedKeywords 필드 추가 시 요청 데이터에 포함
     console.log('Related Keywords:', relatedKeywords);
+
+    // 선택 필드: 빈 값이면 '-'로 변환하여 API 호환성 유지
+    const age = data.age?.trim() || '-';
+    const cask = data.cask?.trim() || '-';
+    const description = data.description?.trim() || '-';
+
     if (isNewMode) {
       const createData: AlcoholCreateRequest = {
         korName: data.korName,
@@ -146,11 +152,11 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
         categoryGroup: data.categoryGroup,
         regionId: data.regionId,
         distilleryId: data.distilleryId,
-        age: data.age ?? '',
-        cask: data.cask ?? '',
+        age,
+        cask,
         imageUrl: data.imageUrl ?? imagePreviewUrl ?? '',
-        description: data.description ?? '',
-        volume: data.volume ?? '',
+        description,
+        volume: data.volume,
       };
       createMutation.mutate(createData);
     } else if (alcoholId) {
@@ -164,11 +170,11 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
         categoryGroup: data.categoryGroup,
         regionId: data.regionId,
         distilleryId: data.distilleryId,
-        age: data.age ?? '',
-        cask: data.cask ?? '',
+        age,
+        cask,
         imageUrl: data.imageUrl ?? imagePreviewUrl ?? '',
-        description: data.description ?? '',
-        volume: data.volume ?? '',
+        description,
+        volume: data.volume,
       };
       updateMutation.mutate({ alcoholId, data: updateData });
     }

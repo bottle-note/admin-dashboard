@@ -14,13 +14,13 @@ export const whiskyFormSchema = z.object({
     message: '카테고리 그룹은 필수입니다',
   }),
   regionId: z.number().min(1, '지역은 필수입니다'),
-  distilleryId: z.number().min(1, '증류소는 필수입니다'),
+  distilleryId: z.number().min(0),
   abv: z.number().min(0, '도수는 0 이상이어야 합니다').max(100, '도수는 100 이하여야 합니다'),
-  age: z.string().min(1, '숙성년도는 필수입니다'),
-  cask: z.string().min(1, '캐스크는 필수입니다'),
+  age: z.string(),
+  cask: z.string(),
   volume: z.string().min(1, '용량은 필수입니다'),
-  description: z.string().min(1, '설명은 필수입니다'),
-  imageUrl: z.string().min(1, '이미지는 필수입니다'),
+  description: z.string(),
+  imageUrl: z.string(),
 });
 
 /** 위스키 폼 타입 */
