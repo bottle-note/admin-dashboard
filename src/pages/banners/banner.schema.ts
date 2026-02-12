@@ -8,22 +8,32 @@ import { z } from 'zod';
 // 상시 노출 날짜 유틸리티
 // ============================================
 
-/** 상시 노출 종료일 (2099-12-31T23:59:59) */
-export const ALWAYS_VISIBLE_END_DATE = '2099-12-31T23:59:59';
-
 /** 오늘 날짜 시작 시각 문자열 반환 (YYYY-MM-DDT00:00:00) */
 export function getTodayStart(): string {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}T00:00:00`;
+  return formatDateTime(new Date(), true);
 }
 
-/** endDate가 상시 노출 기간인지 판별 */
+/** 현재로부터 1년 뒤 종료일 반환 (YYYY-MM-DDT23:59:59) */
+export function getOneYearLaterEnd(): string {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() + 1);
+  return formatDateTime(date, false);
+}
+
+/** endDate가 현재 시점 기준 6개월 이상 남았으면 상시 노출로 판별 */
 export function isAlwaysVisibleDate(endDate: string | null | undefined): boolean {
   if (!endDate) return false;
-  return endDate.startsWith('2099');
+  const end = new Date(endDate);
+  const sixMonthsLater = new Date();
+  sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+  return end >= sixMonthsLater;
+}
+
+function formatDateTime(date: Date, startOfDay: boolean): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}T${startOfDay ? '00:00:00' : '23:59:59'}`;
 }
 
 // ============================================

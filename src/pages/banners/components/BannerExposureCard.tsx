@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 import type { BannerFormValues } from '../banner.schema';
-import { ALWAYS_VISIBLE_END_DATE, getTodayStart } from '../banner.schema';
+import { getOneYearLaterEnd, getTodayStart } from '../banner.schema';
 
 interface BannerExposureCardProps {
   form: UseFormReturn<BannerFormValues>;
@@ -29,7 +29,7 @@ export function BannerExposureCard({ form }: BannerExposureCardProps) {
               form.setValue('isAlwaysVisible', !!checked);
               if (checked) {
                 form.setValue('startDate', getTodayStart());
-                form.setValue('endDate', ALWAYS_VISIBLE_END_DATE);
+                form.setValue('endDate', getOneYearLaterEnd());
               }
             }}
           />
