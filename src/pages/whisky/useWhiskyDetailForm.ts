@@ -33,10 +33,10 @@ const DEFAULT_WHISKY_FORM: WhiskyFormValues = {
   regionId: 0,
   distilleryId: 0,
   abv: 40,
-  age: '-',
-  cask: '-',
+  age: '',
+  cask: '',
   volume: '',
-  description: '-',
+  description: '',
   imageUrl: '',
 };
 
@@ -131,7 +131,7 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
 
   const onSubmit = (
     data: WhiskyFormValues,
-    { relatedKeywords, imagePreviewUrl }: { tastingTags: AlcoholTastingTag[]; relatedKeywords: string[]; imagePreviewUrl: string | null }
+    { relatedKeywords }: { tastingTags: AlcoholTastingTag[]; relatedKeywords: string[]; imagePreviewUrl: string | null }
   ) => {
     // TODO: API에 relatedKeywords 필드 추가 시 요청 데이터에 포함
     console.log('Related Keywords:', relatedKeywords);
@@ -140,6 +140,9 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
     const age = data.age?.trim() || '-';
     const cask = data.cask?.trim() || '-';
     const description = data.description?.trim() || '-';
+
+    // 증류소 미선택(0) 시 '-' 항목의 ID로 대체
+    const distilleryId = data.distilleryId || (distilleryData?.items.find((d) => d.korName === '-')?.id ?? data.distilleryId);
 
     if (isNewMode) {
       const createData: AlcoholCreateRequest = {
@@ -151,10 +154,10 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
         engCategory: data.engCategory,
         categoryGroup: data.categoryGroup,
         regionId: data.regionId,
-        distilleryId: data.distilleryId,
+        distilleryId,
         age,
         cask,
-        imageUrl: data.imageUrl ?? imagePreviewUrl ?? '',
+        imageUrl: data.imageUrl,
         description,
         volume: data.volume,
       };
@@ -169,10 +172,10 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
         engCategory: data.engCategory,
         categoryGroup: data.categoryGroup,
         regionId: data.regionId,
-        distilleryId: data.distilleryId,
+        distilleryId,
         age,
         cask,
-        imageUrl: data.imageUrl ?? imagePreviewUrl ?? '',
+        imageUrl: data.imageUrl,
         description,
         volume: data.volume,
       };
