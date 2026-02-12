@@ -1,7 +1,3 @@
-/**
- * 역할 기반 라우트 보호 컴포넌트
- */
-
 import { Navigate } from 'react-router';
 import { useAuthStore } from '@/stores/auth';
 import type { AdminRole } from '@/types/auth';
