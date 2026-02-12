@@ -6,6 +6,13 @@ import {
   mockDeleteResponse,
   mockAlcoholConnectionResponse,
   mockAlcoholDisconnectionResponse,
+  mockBannerListItems,
+  mockBannerDetail,
+  mockBannerCreateResponse,
+  mockBannerUpdateResponse,
+  mockBannerDeleteResponse,
+  mockBannerUpdateStatusResponse,
+  mockBannerUpdateSortOrderResponse,
   wrapApiResponse,
 } from './data';
 
@@ -120,4 +127,108 @@ export const tastingTagHandlers = [
   }),
 ];
 
-export const handlers = [...tastingTagHandlers];
+// ============================================
+// Banner Handlers
+// ============================================
+
+const BANNER_BASE = '/admin/api/v1/banners';
+
+export const bannerHandlers = [
+  // GET 목록
+  http.get(BANNER_BASE, ({ request }) => {
+    const url = new URL(request.url);
+    const keyword = url.searchParams.get('keyword');
+    const bannerType = url.searchParams.get('bannerType');
+    const isActive = url.searchParams.get('isActive');
+    const size = Number(url.searchParams.get('size') ?? 20);
+    const page = Number(url.searchParams.get('page') ?? 0);
+
+    let items = mockBannerListItems;
+    if (keyword) {
+      items = items.filter((b) => b.name.includes(keyword));
+    }
+    if (bannerType) {
+      items = items.filter((b) => b.bannerType === bannerType);
+    }
+    if (isActive !== null && isActive !== '') {
+      items = items.filter((b) => b.isActive === (isActive === 'true'));
+    }
+
+    return HttpResponse.json(
+      wrapApiResponse(items, {
+        page,
+        size,
+        totalElements: items.length,
+        totalPages: Math.ceil(items.length / size),
+        hasNext: false,
+      })
+    );
+  }),
+
+  // PATCH 상태 변경 (상세보다 먼저 매칭되도록)
+  http.patch(`${BANNER_BASE}/:bannerId/status`, ({ params }) => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockBannerUpdateStatusResponse,
+        targetId: Number(params.bannerId),
+      })
+    );
+  }),
+
+  // PATCH 정렬순서 변경
+  http.patch(`${BANNER_BASE}/:bannerId/sort-order`, ({ params }) => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockBannerUpdateSortOrderResponse,
+        targetId: Number(params.bannerId),
+      })
+    );
+  }),
+
+  // GET 상세
+  http.get(`${BANNER_BASE}/:bannerId`, ({ params }) => {
+    const id = Number(params.bannerId);
+    if (id === mockBannerDetail.id) {
+      return HttpResponse.json(wrapApiResponse(mockBannerDetail));
+    }
+    return HttpResponse.json(
+      {
+        success: false,
+        code: 404,
+        data: null,
+        errors: [{ code: 'BANNER_NOT_FOUND', message: '배너를 찾을 수 없습니다.' }],
+        meta: {},
+      },
+      { status: 404 }
+    );
+  }),
+
+  // POST 생성
+  http.post(BANNER_BASE, () => {
+    return HttpResponse.json(
+      wrapApiResponse(mockBannerCreateResponse)
+    );
+  }),
+
+  // PUT 수정
+  http.put(`${BANNER_BASE}/:bannerId`, ({ params }) => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockBannerUpdateResponse,
+        targetId: Number(params.bannerId),
+      })
+    );
+  }),
+
+  // DELETE 삭제
+  http.delete(`${BANNER_BASE}/:bannerId`, ({ params }) => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockBannerDeleteResponse,
+        targetId: Number(params.bannerId),
+      })
+    );
+  }),
+];
+
+export const handlers = [...tastingTagHandlers, ...bannerHandlers];

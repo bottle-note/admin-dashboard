@@ -33,10 +33,15 @@ export const BannerApi = {
     endpoint: '/admin/api/v1/banners/:bannerId',
     method: 'DELETE',
   },
-  /** 배너 순서 변경 */
-  reorder: {
-    endpoint: '/admin/api/v1/banners/reorder',
-    method: 'PUT',
+  /** 배너 상태 변경 */
+  updateStatus: {
+    endpoint: '/admin/api/v1/banners/:bannerId/status',
+    method: 'PATCH',
+  },
+  /** 배너 정렬순서 변경 */
+  updateSortOrder: {
+    endpoint: '/admin/api/v1/banners/:bannerId/sort-order',
+    method: 'PATCH',
   },
 } as const;
 
@@ -48,7 +53,7 @@ export const BannerApi = {
  * 배너 유형
  * @description 배너의 목적에 따른 유형 구분
  */
-export type BannerType = 'SURVEY' | 'CURATION' | 'AD' | 'PARTNERSHIP';
+export type BannerType = 'SURVEY' | 'CURATION' | 'AD' | 'PARTNERSHIP' | 'ETC';
 
 /**
  * 텍스트 위치
@@ -62,6 +67,7 @@ export const BANNER_TYPE_LABELS: Record<BannerType, string> = {
   CURATION: '큐레이션',
   AD: '광고',
   PARTNERSHIP: '제휴',
+  ETC: '기타',
 };
 
 /** 텍스트 위치 레이블 매핑 */
@@ -194,12 +200,12 @@ export interface BannerApiTypes {
       isExternalUrl: boolean;
       /** 배너 유형 */
       bannerType: BannerType;
-      /** 노출 시작일시 (nullable = 상시노출) */
+      /** 정렬 순서 (optional, 기본값 0) */
+      sortOrder?: number;
+      /** 노출 시작일시 */
       startDate: string | null;
-      /** 노출 종료일시 (nullable = 상시노출) */
+      /** 노출 종료일시 */
       endDate: string | null;
-      /** 활성화 상태 */
-      isActive: boolean;
     };
     /** 응답 데이터 */
     response: {
@@ -237,6 +243,8 @@ export interface BannerApiTypes {
       isExternalUrl: boolean;
       /** 배너 유형 */
       bannerType: BannerType;
+      /** 정렬 순서 */
+      sortOrder: number;
       /** 노출 시작일시 (nullable = 상시노출) */
       startDate: string | null;
       /** 노출 종료일시 (nullable = 상시노출) */
@@ -270,12 +278,12 @@ export interface BannerApiTypes {
       responseAt: string;
     };
   };
-  /** 배너 순서 변경 */
-  reorder: {
+  /** 배너 상태 변경 */
+  updateStatus: {
     /** 요청 데이터 */
     request: {
-      /** 배너 ID 목록 (순서대로) */
-      bannerIds: number[];
+      /** 활성화 상태 */
+      isActive: boolean;
     };
     /** 응답 데이터 */
     response: {
@@ -283,6 +291,27 @@ export interface BannerApiTypes {
       code: string;
       /** 결과 메시지 */
       message: string;
+      /** 배너 ID */
+      targetId: number;
+      /** 응답 시간 */
+      responseAt: string;
+    };
+  };
+  /** 배너 정렬순서 변경 */
+  updateSortOrder: {
+    /** 요청 데이터 */
+    request: {
+      /** 정렬 순서 (0 이상) */
+      sortOrder: number;
+    };
+    /** 응답 데이터 */
+    response: {
+      /** 결과 코드 */
+      code: string;
+      /** 결과 메시지 */
+      message: string;
+      /** 배너 ID */
+      targetId: number;
       /** 응답 시간 */
       responseAt: string;
     };
@@ -320,8 +349,14 @@ export type BannerUpdateResponse = BannerApiTypes['update']['response'];
 /** 배너 삭제 응답 데이터 */
 export type BannerDeleteResponse = BannerApiTypes['delete']['response'];
 
-/** 배너 순서 변경 요청 데이터 */
-export type BannerReorderRequest = BannerApiTypes['reorder']['request'];
+/** 배너 상태 변경 요청 데이터 */
+export type BannerUpdateStatusRequest = BannerApiTypes['updateStatus']['request'];
 
-/** 배너 순서 변경 응답 데이터 */
-export type BannerReorderResponse = BannerApiTypes['reorder']['response'];
+/** 배너 상태 변경 응답 데이터 */
+export type BannerUpdateStatusResponse = BannerApiTypes['updateStatus']['response'];
+
+/** 배너 정렬순서 변경 요청 데이터 */
+export type BannerUpdateSortOrderRequest = BannerApiTypes['updateSortOrder']['request'];
+
+/** 배너 정렬순서 변경 응답 데이터 */
+export type BannerUpdateSortOrderResponse = BannerApiTypes['updateSortOrder']['response'];

@@ -16,9 +16,13 @@ import {
   useBannerUpdate,
 } from '@/hooks/useBanners';
 
-import { bannerFormSchema, DEFAULT_BANNER_FORM } from './banner.schema';
+import {
+  bannerFormSchema,
+  DEFAULT_BANNER_FORM,
+  isAlwaysVisibleDate,
+} from './banner.schema';
 import type { BannerFormValues } from './banner.schema';
-import type { BannerCreateRequest, BannerUpdateRequest, BannerDetail } from '@/types/api';
+import type { BannerDetail } from '@/types/api';
 
 /**
  * 큐레이션 URL에서 curationId 추출
@@ -87,7 +91,7 @@ export function useBannerDetailForm(id: string | undefined): UseBannerDetailForm
   // API 데이터를 폼에 반영
   useEffect(() => {
     if (bannerData) {
-      const isAlwaysVisible = !bannerData.startDate && !bannerData.endDate;
+      const isAlwaysVisible = isAlwaysVisibleDate(bannerData.endDate);
 
       // CURATION 타입인 경우 URL에서 curationId 추출
       const curationId =
@@ -96,20 +100,20 @@ export function useBannerDetailForm(id: string | undefined): UseBannerDetailForm
           : null;
 
       form.reset({
-        name: bannerData.name,
+        name: bannerData.name ?? '',
         bannerType: bannerData.bannerType,
         isActive: bannerData.isActive,
-        imageUrl: bannerData.imageUrl,
+        imageUrl: bannerData.imageUrl ?? '',
         descriptionA: bannerData.descriptionA ?? '',
         descriptionB: bannerData.descriptionB ?? '',
         textPosition: bannerData.textPosition,
-        nameFontColor: bannerData.nameFontColor,
-        descriptionFontColor: bannerData.descriptionFontColor,
+        nameFontColor: (bannerData.nameFontColor ?? '#ffffff').replace(/^#/, ''),
+        descriptionFontColor: (bannerData.descriptionFontColor ?? '#ffffff').replace(/^#/, ''),
         targetUrl: bannerData.targetUrl ?? '',
         isExternalUrl: bannerData.isExternalUrl,
         isAlwaysVisible,
-        startDate: bannerData.startDate,
-        endDate: bannerData.endDate,
+        startDate: bannerData.startDate ?? '',
+        endDate: bannerData.endDate ?? '',
         curationId,
       });
     }
@@ -119,44 +123,32 @@ export function useBannerDetailForm(id: string | undefined): UseBannerDetailForm
     data: BannerFormValues,
     options?: { imagePreviewUrl: string | null }
   ) => {
-    // 상시 노출인 경우 날짜를 null로 설정
-    const startDate = data.isAlwaysVisible ? null : data.startDate;
-    const endDate = data.isAlwaysVisible ? null : data.endDate;
+    const commonFields = {
+      name: data.name,
+      bannerType: data.bannerType,
+      imageUrl: data.imageUrl || options?.imagePreviewUrl || '',
+      descriptionA: data.descriptionA ?? '',
+      descriptionB: data.descriptionB ?? '',
+      textPosition: data.textPosition,
+      nameFontColor: `#${data.nameFontColor}`,
+      descriptionFontColor: `#${data.descriptionFontColor}`,
+      targetUrl: data.targetUrl ?? '',
+      isExternalUrl: data.isExternalUrl,
+      startDate: data.startDate,
+      endDate: data.endDate,
+    };
 
     if (isNewMode) {
-      const createData: BannerCreateRequest = {
-        name: data.name,
-        bannerType: data.bannerType,
-        isActive: data.isActive,
-        imageUrl: data.imageUrl || options?.imagePreviewUrl || '',
-        descriptionA: data.descriptionA ?? '',
-        descriptionB: data.descriptionB ?? '',
-        textPosition: data.textPosition,
-        nameFontColor: data.nameFontColor,
-        descriptionFontColor: data.descriptionFontColor,
-        targetUrl: data.targetUrl ?? '',
-        isExternalUrl: data.isExternalUrl,
-        startDate,
-        endDate,
-      };
-      createMutation.mutate(createData);
+      createMutation.mutate(commonFields);
     } else if (bannerId) {
-      const updateData: BannerUpdateRequest = {
-        name: data.name,
-        bannerType: data.bannerType,
-        isActive: data.isActive,
-        imageUrl: data.imageUrl || options?.imagePreviewUrl || '',
-        descriptionA: data.descriptionA ?? '',
-        descriptionB: data.descriptionB ?? '',
-        textPosition: data.textPosition,
-        nameFontColor: data.nameFontColor,
-        descriptionFontColor: data.descriptionFontColor,
-        targetUrl: data.targetUrl ?? '',
-        isExternalUrl: data.isExternalUrl,
-        startDate,
-        endDate,
-      };
-      updateMutation.mutate({ bannerId, data: updateData });
+      updateMutation.mutate({
+        id: bannerId,
+        data: {
+          ...commonFields,
+          isActive: data.isActive,
+          sortOrder: bannerData?.sortOrder ?? 0,
+        },
+      });
     }
   };
 
