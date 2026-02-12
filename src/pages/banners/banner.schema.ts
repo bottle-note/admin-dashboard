@@ -4,10 +4,46 @@
 
 import { z } from 'zod';
 
+// ============================================
+// 상시 노출 날짜 유틸리티
+// ============================================
+
+/** 오늘 날짜 시작 시각 문자열 반환 (YYYY-MM-DDT00:00:00) */
+export function getTodayStart(): string {
+  return formatDateTime(new Date(), true);
+}
+
+/** 현재로부터 1년 뒤 종료일 반환 (YYYY-MM-DDT23:59:59) */
+export function getOneYearLaterEnd(): string {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() + 1);
+  return formatDateTime(date, false);
+}
+
+/** endDate가 현재 시점 기준 6개월 이상 남았으면 상시 노출로 판별 */
+export function isAlwaysVisibleDate(endDate: string | null | undefined): boolean {
+  if (!endDate) return false;
+  const end = new Date(endDate);
+  const sixMonthsLater = new Date();
+  sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+  return end >= sixMonthsLater;
+}
+
+function formatDateTime(date: Date, startOfDay: boolean): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}T${startOfDay ? '00:00:00' : '23:59:59'}`;
+}
+
+// ============================================
+// 폼 스키마
+// ============================================
+
 /** 배너 폼 Zod 스키마 */
 export const bannerFormSchema = z.object({
   name: z.string().min(1, '배너명은 필수입니다'),
-  bannerType: z.enum(['SURVEY', 'CURATION', 'AD', 'PARTNERSHIP'], {
+  bannerType: z.enum(['SURVEY', 'CURATION', 'AD', 'PARTNERSHIP', 'ETC'], {
     message: '배너 타입을 선택해주세요',
   }),
   isActive: z.boolean(),
@@ -22,23 +58,11 @@ export const bannerFormSchema = z.object({
   targetUrl: z.string(),
   isExternalUrl: z.boolean(),
   isAlwaysVisible: z.boolean(),
-  startDate: z.string().nullable(),
-  endDate: z.string().nullable(),
+  startDate: z.string({ error: '시작일을 입력해주세요' }).min(1, '시작일을 입력해주세요'),
+  endDate: z.string({ error: '종료일을 입력해주세요' }).min(1, '종료일을 입력해주세요'),
   /** 큐레이션 ID (CURATION 타입인 경우에만 사용) */
   curationId: z.number().nullable(),
 }).refine(
-  (data) => {
-    // 상시 노출이 아닌 경우 시작일/종료일 필수
-    if (!data.isAlwaysVisible) {
-      return data.startDate && data.endDate;
-    }
-    return true;
-  },
-  {
-    message: '노출 기간을 설정해주세요',
-    path: ['startDate'],
-  }
-).refine(
   (data) => {
     // CURATION 타입인 경우 큐레이션 선택 필수
     if (data.bannerType === 'CURATION') {
@@ -69,7 +93,7 @@ export const DEFAULT_BANNER_FORM: BannerFormValues = {
   targetUrl: '',
   isExternalUrl: false,
   isAlwaysVisible: false,
-  startDate: null,
-  endDate: null,
+  startDate: '',
+  endDate: '',
   curationId: null,
 };

@@ -26,7 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/common/Pagination';
-import { useBannerList, useBannerReorder } from '@/hooks/useBanners';
+import { useBannerList, useBannerUpdateSortOrder } from '@/hooks/useBanners';
 import {
   type BannerSearchParams,
   type BannerType,
@@ -40,6 +40,7 @@ const BANNER_TYPE_OPTIONS: { value: BannerType | 'ALL'; label: string }[] = [
   { value: 'CURATION', label: '큐레이션' },
   { value: 'AD', label: '광고' },
   { value: 'PARTNERSHIP', label: '제휴' },
+  { value: 'ETC', label: '기타' },
 ];
 
 export function BannerListPage() {
@@ -76,7 +77,7 @@ export function BannerListPage() {
   };
 
   const { data, isLoading } = useBannerList(searchParams);
-  const reorderMutation = useBannerReorder();
+  const updateSortOrderMutation = useBannerUpdateSortOrder();
 
   // URL 파라미터 업데이트 헬퍼
   const updateUrlParams = (updates: Record<string, string | undefined>) => {
@@ -189,9 +190,14 @@ export function BannerListPage() {
     items.splice(draggedIndex, 1);
     items.splice(targetIndex, 0, draggedItem);
 
-    // API 호출
-    const bannerIds = items.map((item) => item.id);
-    reorderMutation.mutate({ bannerIds });
+    // 변경된 순서로 개별 API 호출 (페이지 오프셋 반영)
+    const pageOffset = page * size;
+    items.forEach((item, index) => {
+      const newSortOrder = pageOffset + index;
+      if (item.sortOrder !== newSortOrder) {
+        updateSortOrderMutation.mutate({ bannerId: item.id, data: { sortOrder: newSortOrder } });
+      }
+    });
 
     setDraggedItem(null);
   };
