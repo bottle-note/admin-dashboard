@@ -154,6 +154,7 @@ pnpm test:e2e:headed # 브라우저 표시
 
 - **IMPORTANT:** `src/components/ui/`는 shadcn/ui 생성 파일 - 직접 수정 금지
 - **IMPORTANT:** API 타입은 `src/types/api/`에 정의, 다른 곳에 중복 정의 금지
+- **IMPORTANT:** 불필요한 배럴 파일(`index.ts`) 생성 금지 - 각 모듈을 직접 import할 것. 배럴 파일은 번들 사이즈 증가, 순환 참조, tree-shaking 방해의 원인이 됨
 - 환경변수는 `scripts/ensure-env.sh`로 관리됨 - `.env` 직접 수정 금지
 - 페이지네이션은 0-based index 사용 (백엔드 API 규격)
 
