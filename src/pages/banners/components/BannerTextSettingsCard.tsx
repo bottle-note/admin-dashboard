@@ -1,7 +1,6 @@
 import type { UseFormReturn } from 'react-hook-form';
 
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -10,6 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FormField } from '@/components/common/FormField';
 
 import type { BannerFormValues } from '../banner.schema';
 import { TEXT_POSITION_LABELS, type TextPosition } from '@/types/api';
@@ -25,26 +25,23 @@ export function BannerTextSettingsCard({ form }: BannerTextSettingsCardProps) {
         <CardTitle>텍스트 설정</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="descriptionA">설명 A</Label>
+        <FormField label="설명 A">
           <Input
             id="descriptionA"
             {...form.register('descriptionA')}
             placeholder="첫 번째 줄 설명"
           />
-        </div>
+        </FormField>
 
-        <div className="space-y-2">
-          <Label htmlFor="descriptionB">설명 B</Label>
+        <FormField label="설명 B">
           <Input
             id="descriptionB"
             {...form.register('descriptionB')}
             placeholder="두 번째 줄 설명"
           />
-        </div>
+        </FormField>
 
-        <div className="space-y-2">
-          <Label htmlFor="textPosition">텍스트 위치 *</Label>
+        <FormField label="텍스트 위치" required>
           <Select
             value={form.watch('textPosition')}
             onValueChange={(value) => form.setValue('textPosition', value as TextPosition)}
@@ -60,11 +57,10 @@ export function BannerTextSettingsCard({ form }: BannerTextSettingsCardProps) {
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FormField>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="nameFontColor">제목 색상</Label>
+          <FormField label="제목 색상" error={form.formState.errors.nameFontColor?.message}>
             <div className="flex gap-2">
               <div
                 className="w-10 h-10 rounded border"
@@ -77,15 +73,9 @@ export function BannerTextSettingsCard({ form }: BannerTextSettingsCardProps) {
                 maxLength={6}
               />
             </div>
-            {form.formState.errors.nameFontColor && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.nameFontColor.message}
-              </p>
-            )}
-          </div>
+          </FormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="descriptionFontColor">설명 색상</Label>
+          <FormField label="설명 색상" error={form.formState.errors.descriptionFontColor?.message}>
             <div className="flex gap-2">
               <div
                 className="w-10 h-10 rounded border"
@@ -98,12 +88,7 @@ export function BannerTextSettingsCard({ form }: BannerTextSettingsCardProps) {
                 maxLength={6}
               />
             </div>
-            {form.formState.errors.descriptionFontColor && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.descriptionFontColor.message}
-              </p>
-            )}
-          </div>
+          </FormField>
         </div>
       </CardContent>
     </Card>

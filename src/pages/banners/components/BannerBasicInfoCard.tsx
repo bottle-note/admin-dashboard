@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FormField } from '@/components/common/FormField';
 
 import type { BannerFormValues } from '../banner.schema';
 import { BANNER_TYPE_LABELS, type BannerType } from '@/types/api';
@@ -28,22 +29,15 @@ export function BannerBasicInfoCard({ form }: BannerBasicInfoCardProps) {
         <CardTitle>기본 정보</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">배너명 *</Label>
+        <FormField label="배너명" required error={form.formState.errors.name?.message}>
           <Input
             id="name"
             {...form.register('name')}
             placeholder="배너명을 입력하세요"
           />
-          {form.formState.errors.name && (
-            <p className="text-sm text-destructive">
-              {form.formState.errors.name.message}
-            </p>
-          )}
-        </div>
+        </FormField>
 
-        <div className="space-y-2">
-          <Label htmlFor="bannerType">배너 타입 *</Label>
+        <FormField label="배너 타입" required>
           <Select
             value={form.watch('bannerType')}
             onValueChange={(value) => {
@@ -67,7 +61,7 @@ export function BannerBasicInfoCard({ form }: BannerBasicInfoCardProps) {
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FormField>
 
         <div className="flex items-center space-x-2">
           <Switch

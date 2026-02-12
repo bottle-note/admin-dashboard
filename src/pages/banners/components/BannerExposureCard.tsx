@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FormField } from '@/components/common/FormField';
 
 import type { BannerFormValues } from '../banner.schema';
 import { getOneYearLaterEnd, getTodayStart } from '../banner.schema';
@@ -38,32 +39,24 @@ export function BannerExposureCard({ form }: BannerExposureCardProps) {
 
         {!isAlwaysVisible && (
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">시작일</Label>
+            <FormField label="시작일" required error={form.formState.errors.startDate?.message}>
               <Input
                 id="startDate"
                 type="datetime-local"
                 value={form.watch('startDate')}
                 onChange={(e) => form.setValue('startDate', e.target.value)}
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="endDate">종료일</Label>
+            <FormField label="종료일" required error={form.formState.errors.endDate?.message}>
               <Input
                 id="endDate"
                 type="datetime-local"
                 value={form.watch('endDate')}
                 onChange={(e) => form.setValue('endDate', e.target.value)}
               />
-            </div>
+            </FormField>
           </div>
-        )}
-
-        {form.formState.errors.startDate && (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.startDate.message}
-          </p>
         )}
       </CardContent>
     </Card>

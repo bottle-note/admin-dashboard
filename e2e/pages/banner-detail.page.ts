@@ -27,7 +27,7 @@ export class BannerDetailPage extends BasePage {
   readonly nameInput = () => this.page.getByPlaceholder('배너명을 입력하세요');
 
   readonly bannerTypeSelect = () =>
-    this.page.locator('button[role="combobox"]').filter({ hasText: /설문조사|큐레이션|광고|제휴|기타|배너 타입 선택/ });
+    this.page.locator('button[role="combobox"]').filter({ hasText: /^\s*(설문조사|큐레이션|광고|제휴|기타|배너 타입 선택)\s*$/ });
 
   readonly isActiveSwitch = () => this.page.locator('button#isActive');
 

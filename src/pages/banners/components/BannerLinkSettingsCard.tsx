@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FormField } from '@/components/common/FormField';
 
 import type { BannerFormValues } from '../banner.schema';
 import { curationService } from '@/hooks/useCurations';
@@ -42,8 +43,7 @@ export function BannerLinkSettingsCard({ form, curations }: BannerLinkSettingsCa
       </CardHeader>
       <CardContent className="space-y-4">
         {isCurationType && (
-          <div className="space-y-2">
-            <Label htmlFor="curationId">큐레이션 선택 *</Label>
+          <FormField label="큐레이션 선택" required error={form.formState.errors.curationId?.message}>
             <Select
               value={curationId?.toString() ?? ''}
               onValueChange={handleCurationChange}
@@ -59,12 +59,7 @@ export function BannerLinkSettingsCard({ form, curations }: BannerLinkSettingsCa
                 ))}
               </SelectContent>
             </Select>
-            {form.formState.errors.curationId && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.curationId.message}
-              </p>
-            )}
-          </div>
+          </FormField>
         )}
 
         <div className="space-y-2">
