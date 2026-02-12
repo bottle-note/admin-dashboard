@@ -174,9 +174,8 @@ test.describe('큐레이션 폼 리셋', () => {
     await listPage.clickFirstRow();
     await detailPage.waitForLoadingComplete();
 
-    // 2. 현재 폼 값 저장
-    const originalName = await detailPage.nameInput().inputValue();
-    expect(originalName).not.toBe(''); // 데이터가 있어야 함
+    // 2. 폼 데이터 로딩 대기 (auto-retrying assertion)
+    await expect(detailPage.nameInput()).not.toHaveValue('', { timeout: 10000 });
 
     // 3. 사이드바에서 "큐레이션 추가" 메뉴 클릭
     // 사이드바 메뉴 구조: 큐레이션 관리 > 큐레이션 추가
