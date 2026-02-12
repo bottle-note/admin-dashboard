@@ -99,6 +99,7 @@ describe('useBanners hooks', () => {
         targetUrl: '/test',
         isExternalUrl: false,
         bannerType: 'AD',
+        isActive: true,
         startDate: null,
         endDate: null,
       });
@@ -130,6 +131,7 @@ describe('useBanners hooks', () => {
         targetUrl: '',
         isExternalUrl: false,
         bannerType: 'AD',
+        isActive: true,
         startDate: null,
         endDate: null,
       });

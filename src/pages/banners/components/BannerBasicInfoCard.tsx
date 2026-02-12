@@ -37,7 +37,7 @@ export function BannerBasicInfoCard({ form }: BannerBasicInfoCardProps) {
           />
         </FormField>
 
-        <FormField label="배너 타입" required>
+        <FormField label="배너 타입" required error={form.formState.errors.bannerType?.message}>
           <Select
             value={form.watch('bannerType')}
             onValueChange={(value) => {

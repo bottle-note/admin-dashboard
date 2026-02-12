@@ -41,7 +41,7 @@ export function BannerTextSettingsCard({ form }: BannerTextSettingsCardProps) {
           />
         </FormField>
 
-        <FormField label="텍스트 위치" required>
+        <FormField label="텍스트 위치" required error={form.formState.errors.textPosition?.message}>
           <Select
             value={form.watch('textPosition')}
             onValueChange={(value) => form.setValue('textPosition', value as TextPosition)}

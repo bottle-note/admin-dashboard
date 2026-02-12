@@ -126,6 +126,7 @@ export function useBannerDetailForm(id: string | undefined): UseBannerDetailForm
     const commonFields = {
       name: data.name,
       bannerType: data.bannerType,
+      isActive: data.isActive,
       imageUrl: data.imageUrl || options?.imagePreviewUrl || '',
       descriptionA: data.descriptionA ?? '',
       descriptionB: data.descriptionB ?? '',
@@ -145,7 +146,6 @@ export function useBannerDetailForm(id: string | undefined): UseBannerDetailForm
         id: bannerId,
         data: {
           ...commonFields,
-          isActive: data.isActive,
           sortOrder: bannerData?.sortOrder ?? 0,
         },
       });

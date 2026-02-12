@@ -206,6 +206,8 @@ export interface BannerApiTypes {
       startDate: string | null;
       /** 노출 종료일시 */
       endDate: string | null;
+      /** 활성화 상태 */
+      isActive: boolean;
     };
     /** 응답 데이터 */
     response: {

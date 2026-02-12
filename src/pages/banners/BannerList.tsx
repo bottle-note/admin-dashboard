@@ -190,10 +190,12 @@ export function BannerListPage() {
     items.splice(draggedIndex, 1);
     items.splice(targetIndex, 0, draggedItem);
 
-    // 변경된 순서로 개별 API 호출
+    // 변경된 순서로 개별 API 호출 (페이지 오프셋 반영)
+    const pageOffset = page * size;
     items.forEach((item, index) => {
-      if (item.sortOrder !== index) {
-        updateSortOrderMutation.mutate({ bannerId: item.id, data: { sortOrder: index } });
+      const newSortOrder = pageOffset + index;
+      if (item.sortOrder !== newSortOrder) {
+        updateSortOrderMutation.mutate({ bannerId: item.id, data: { sortOrder: newSortOrder } });
       }
     });
 
