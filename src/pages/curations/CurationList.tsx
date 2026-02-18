@@ -28,8 +28,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/common/Pagination';
 import { StatusToggle } from '@/components/common/StatusToggle';
+import { useReorderDrag } from '@/hooks/useReorderDrag';
 import { useCurationList, useCurationToggleStatus, useCurationUpdateDisplayOrder } from '@/hooks/useCurations';
-import type { CurationSearchParams, CurationListItem } from '@/types/api';
+import type { CurationSearchParams } from '@/types/api';
 
 const IS_ACTIVE_OPTIONS = [
   { value: 'ALL', label: '전체' },
@@ -50,13 +51,6 @@ export function CurationListPage() {
   // 검색 입력 필드용 로컬 상태 (Enter/버튼 클릭 시에만 URL 반영)
   const [keywordInput, setKeywordInput] = useState(keyword);
 
-  // 순서 변경 모드 상태
-  const [isReorderMode, setIsReorderMode] = useState(false);
-
-  // 드래그 상태 (순서 변경 모드에서만 사용)
-  const [draggedItem, setDraggedItem] = useState<CurationListItem | null>(null);
-  const [dragOverId, setDragOverId] = useState<number | null>(null);
-
   // URL의 keyword가 변경되면 입력 필드도 동기화
   useEffect(() => {
     setKeywordInput(keyword);
@@ -74,8 +68,14 @@ export function CurationListPage() {
   const toggleStatusMutation = useCurationToggleStatus();
   const updateDisplayOrderMutation = useCurationUpdateDisplayOrder();
 
-  // 순서 변경 진행 중 상태
-  const [isReordering, setIsReordering] = useState(false);
+  const { isReorderMode, isReordering, dragOverId, toggleReorderMode, getDragHandlers } =
+    useReorderDrag({
+      items: data?.items,
+      getOrder: (item) => item.displayOrder,
+      onReorder: (itemId, newOrder) =>
+        updateDisplayOrderMutation.mutateAsync({ curationId: itemId, data: { displayOrder: newOrder } }),
+      onAfterReorder: refetch,
+    });
 
   // URL 파라미터 업데이트 헬퍼
   const updateUrlParams = (updates: Record<string, string | undefined>) => {
@@ -99,7 +99,7 @@ export function CurationListPage() {
   const handleSearch = () => {
     updateUrlParams({
       keyword: keywordInput || undefined,
-      page: '0', // 검색 시 첫 페이지로
+      page: '0',
     });
   };
 
@@ -112,136 +112,26 @@ export function CurationListPage() {
   const handleIsActiveChange = (value: string) => {
     updateUrlParams({
       isActive: value === 'ALL' ? undefined : value,
-      page: '0', // 필터 변경 시 첫 페이지로
+      page: '0',
     });
   };
 
   const handlePageChange = (newPage: number) => {
-    updateUrlParams({
-      page: String(newPage),
-    });
+    updateUrlParams({ page: String(newPage) });
   };
 
   const handlePageSizeChange = (newSize: number) => {
-    updateUrlParams({
-      size: String(newSize),
-      page: '0', // 페이지 크기 변경 시 첫 페이지로
-    });
+    updateUrlParams({ size: String(newSize), page: '0' });
   };
 
   const handleRowClick = (curationId: number) => {
-    // 순서 변경 모드에서는 클릭으로 상세 페이지 이동하지 않음
     if (!isReorderMode) {
       navigate(`/curations/${curationId}`);
     }
   };
 
   const handleStatusToggle = (curationId: number, currentStatus: boolean) => {
-    toggleStatusMutation.mutate({
-      curationId,
-      data: { isActive: !currentStatus },
-    });
-  };
-
-  // 순서 변경 모드 토글
-  const toggleReorderMode = () => {
-    setIsReorderMode(!isReorderMode);
-    // 모드 종료 시 드래그 상태 초기화
-    if (isReorderMode) {
-      setDraggedItem(null);
-      setDragOverId(null);
-    }
-  };
-
-  // 드래그 앤 드롭 핸들러 (순서 변경 모드에서만 동작)
-  const handleDragStart = (e: React.DragEvent, item: CurationListItem) => {
-    if (!isReorderMode) return;
-    setDraggedItem(item);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e: React.DragEvent, itemId: number) => {
-    if (!isReorderMode) return;
-    e.preventDefault();
-    setDragOverId(itemId);
-  };
-
-  const handleDragLeave = () => {
-    if (!isReorderMode) return;
-    setDragOverId(null);
-  };
-
-  const handleDrop = async (e: React.DragEvent, targetItem: CurationListItem) => {
-    if (!isReorderMode || isReordering) return;
-    e.preventDefault();
-    setDragOverId(null);
-
-    if (!draggedItem || !data?.items || draggedItem.id === targetItem.id) {
-      setDraggedItem(null);
-      return;
-    }
-
-    // 새로운 순서 계산
-    const items = [...data.items];
-    const draggedIndex = items.findIndex((item) => item.id === draggedItem.id);
-    const targetIndex = items.findIndex((item) => item.id === targetItem.id);
-
-    if (draggedIndex === -1 || targetIndex === -1) {
-      setDraggedItem(null);
-      return;
-    }
-
-    // 순서 변경 (배열 재정렬)
-    items.splice(draggedIndex, 1);
-    items.splice(targetIndex, 0, draggedItem);
-
-    // 영향받는 범위 계산 (draggedIndex ~ targetIndex)
-    const minIndex = Math.min(draggedIndex, targetIndex);
-    const maxIndex = Math.max(draggedIndex, targetIndex);
-    const affectedItems = items.slice(minIndex, maxIndex + 1);
-
-    // 롤백을 위한 기존 displayOrder 저장
-    const originalDisplayOrders = new Map(
-      data.items.map((item) => [item.id, item.displayOrder])
-    );
-
-    // 각 큐레이션의 displayOrder 업데이트 (순차 호출 + 실패 시 롤백)
-    setIsReordering(true);
-    try {
-      for (let idx = 0; idx < affectedItems.length; idx++) {
-        const item = affectedItems[idx]!;
-        await updateDisplayOrderMutation.mutateAsync({
-          curationId: item.id,
-          data: { displayOrder: minIndex + idx },
-        });
-      }
-      // 목록 새로고침
-      await refetch();
-    } catch {
-      // 실패 시 기존 displayOrder로 롤백 시도
-      for (const item of affectedItems) {
-        const originalOrder = originalDisplayOrders.get(item.id);
-        if (originalOrder === undefined) continue;
-        try {
-          await updateDisplayOrderMutation.mutateAsync({
-            curationId: item.id,
-            data: { displayOrder: originalOrder },
-          });
-        } catch {
-          // 롤백 중 에러는 무시하고 가능한 한 복구 시도
-        }
-      }
-      // 롤백 후 목록 새로고침
-      await refetch();
-    } finally {
-      setIsReordering(false);
-      setDraggedItem(null);
-    }
-  };
-
-  const handleDragEnd = () => {
-    setDraggedItem(null);
-    setDragOverId(null);
+    toggleStatusMutation.mutate({ curationId, data: { isActive: !currentStatus } });
   };
 
   return (
@@ -289,10 +179,7 @@ export function CurationListPage() {
             className="pl-9"
           />
         </div>
-        <Select
-          value={isActiveParam ?? 'ALL'}
-          onValueChange={handleIsActiveChange}
-        >
+        <Select value={isActiveParam ?? 'ALL'} onValueChange={handleIsActiveChange}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="상태" />
           </SelectTrigger>
@@ -330,31 +217,21 @@ export function CurationListPage() {
             ) : data?.items.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={isReorderMode ? 5 : 4} className="text-center py-8">
-                  <span className="text-muted-foreground">
-                    검색 결과가 없습니다.
-                  </span>
+                  <span className="text-muted-foreground">검색 결과가 없습니다.</span>
                 </TableCell>
               </TableRow>
             ) : (
               data?.items.map((item) => (
                 <TableRow
                   key={item.id}
-                  className={`${
+                  {...getDragHandlers(item)}
+                  className={
                     isReorderMode
-                      ? dragOverId === item.id
-                        ? 'bg-primary/10'
-                        : ''
+                      ? dragOverId === item.id ? 'bg-primary/10' : ''
                       : 'cursor-pointer hover:bg-muted/50'
-                  }`}
-                  draggable={isReorderMode}
-                  onDragStart={(e) => handleDragStart(e, item)}
-                  onDragOver={(e) => handleDragOver(e, item.id)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, item)}
-                  onDragEnd={handleDragEnd}
+                  }
                   onClick={() => handleRowClick(item.id)}
                 >
-                  {/* 순서 변경 모드: 좌측에 순서 번호 */}
                   {isReorderMode && (
                     <TableCell className="text-center font-mono text-sm font-semibold text-primary">
                       {item.displayOrder}
@@ -362,11 +239,8 @@ export function CurationListPage() {
                   )}
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">
-                      {item.alcoholCount}개
-                    </Badge>
+                    <Badge variant="outline">{item.alcoholCount}개</Badge>
                   </TableCell>
-                  {/* 일반 모드: 우측에 순서 번호 */}
                   {!isReorderMode && (
                     <TableCell className="text-center font-mono text-sm">
                       {item.displayOrder}
@@ -379,7 +253,6 @@ export function CurationListPage() {
                       disabled={toggleStatusMutation.isPending || isReorderMode}
                     />
                   </TableCell>
-                  {/* 순서 변경 모드: 우측에 드래그 핸들 */}
                   {isReorderMode && (
                     <TableCell
                       className="cursor-grab active:cursor-grabbing"
