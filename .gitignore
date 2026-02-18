@@ -47,6 +47,12 @@ CLAUDE.personal.md
 .secrets
 .claude/
 
+# OMC (oh-my-claudecode) internal state
+.omc/
+
+# Git environment variables (conductor tooling)
+git.environment-variables
+
 # Playwright
 e2e/.auth/
 e2e/reports/
