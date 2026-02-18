@@ -225,13 +225,13 @@ export function BannerListPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
+                <TableCell colSpan={isReorderMode ? 6 : 5} className="text-center py-8">
                   <span className="text-muted-foreground">로딩 중...</span>
                 </TableCell>
               </TableRow>
             ) : data?.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
+                <TableCell colSpan={isReorderMode ? 6 : 5} className="text-center py-8">
                   <span className="text-muted-foreground">검색 결과가 없습니다.</span>
                 </TableCell>
               </TableRow>
