@@ -201,9 +201,9 @@ export function CurationListPage() {
             <TableRow>
               {isReorderMode && <TableHead className="w-[60px]">순서</TableHead>}
               <TableHead>큐레이션명</TableHead>
-              <TableHead className="w-[300px]">위스키 수</TableHead>
-              {!isReorderMode && <TableHead className="w-[180px]">순서</TableHead>}
-              <TableHead className="w-[300px]">상태</TableHead>
+              <TableHead className="w-[100px]">위스키 수</TableHead>
+              {!isReorderMode && <TableHead className="w-[60px]">순서</TableHead>}
+              <TableHead className="w-[180px]">상태</TableHead>
               {isReorderMode && <TableHead className="w-[50px]"></TableHead>}
             </TableRow>
           </TableHeader>

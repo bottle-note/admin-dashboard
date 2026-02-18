@@ -29,8 +29,8 @@ function makeDefaultHook(overrides: {
     useReorderDrag({
       items: ITEMS,
       getOrder: (item) => item.order,
-      onReorder,
-      onAfterReorder,
+      onReorder: onReorder as (itemId: number, newOrder: number) => Promise<unknown>,
+      onAfterReorder: onAfterReorder as () => Promise<unknown>,
       pageOffset: overrides.pageOffset,
     })
   );
