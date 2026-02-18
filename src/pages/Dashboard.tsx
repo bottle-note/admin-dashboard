@@ -2,7 +2,7 @@
  * 대시보드 페이지
  */
 
-import { useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { Wine, MessageSquare, Tag, Image, BookOpen } from 'lucide-react';
 import { useAdminAlcoholList } from '@/hooks/useAdminAlcohols';
 import { useHelpList } from '@/hooks/useHelps';
@@ -19,13 +19,8 @@ interface StatCardProps {
 }
 
 function StatCard({ title, value, icon, isLoading, href }: StatCardProps) {
-  const navigate = useNavigate();
-
-  return (
-    <div
-      className={`rounded-lg border bg-card p-6${href ? ' cursor-pointer transition-shadow hover:shadow-md' : ''}`}
-      onClick={href ? () => navigate(href) : undefined}
-    >
+  const inner = (
+    <div className={`rounded-lg border bg-card p-6${href ? ' transition-shadow hover:shadow-md' : ''}`}>
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
         <div className="text-muted-foreground">{icon}</div>
@@ -39,6 +34,8 @@ function StatCard({ title, value, icon, isLoading, href }: StatCardProps) {
       </p>
     </div>
   );
+
+  return href ? <Link to={href}>{inner}</Link> : inner;
 }
 
 export function DashboardPage() {
