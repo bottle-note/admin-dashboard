@@ -2,20 +2,30 @@
  * 대시보드 페이지
  */
 
-import { Wine, MessageSquare, Tag, Image } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { Wine, MessageSquare, Tag, Image, BookOpen } from 'lucide-react';
 import { useAdminAlcoholList } from '@/hooks/useAdminAlcohols';
 import { useHelpList } from '@/hooks/useHelps';
+import { useTastingTagList } from '@/hooks/useTastingTags';
+import { useBannerList } from '@/hooks/useBanners';
+import { useCurationList } from '@/hooks/useCurations';
 
 interface StatCardProps {
   title: string;
   value: number | string;
   icon: React.ReactNode;
   isLoading?: boolean;
+  href?: string;
 }
 
-function StatCard({ title, value, icon, isLoading }: StatCardProps) {
+function StatCard({ title, value, icon, isLoading, href }: StatCardProps) {
+  const navigate = useNavigate();
+
   return (
-    <div className="rounded-lg border bg-card p-6">
+    <div
+      className={`rounded-lg border bg-card p-6${href ? ' cursor-pointer transition-shadow hover:shadow-md' : ''}`}
+      onClick={href ? () => navigate(href) : undefined}
+    >
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
         <div className="text-muted-foreground">{icon}</div>
@@ -36,8 +46,18 @@ export function DashboardPage() {
   const { data: alcoholData, isLoading: isAlcoholLoading } = useAdminAlcoholList({
     size: 1,
   });
+  const { data: tagData, isLoading: isTagLoading } = useTastingTagList({
+    size: 1,
+  });
+  const { data: bannerData, isLoading: isBannerLoading } = useBannerList({
+    size: 1,
+  });
+  const { data: curationData, isLoading: isCurationLoading } = useCurationList({
+    size: 1,
+  });
   const { data: helpData, isLoading: isHelpLoading } = useHelpList({
     pageSize: 1,
+    status: 'WAITING',
   });
 
   return (
@@ -49,28 +69,41 @@ export function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <StatCard
           title="총 위스키"
           value={alcoholData?.meta.totalElements ?? 0}
           icon={<Wine className="h-5 w-5" />}
           isLoading={isAlcoholLoading}
+          href="/whisky"
         />
         <StatCard
           title="테이스팅 태그"
-          value="-"
+          value={tagData?.meta.totalElements ?? 0}
           icon={<Tag className="h-5 w-5" />}
+          isLoading={isTagLoading}
+          href="/tasting-tags"
         />
         <StatCard
           title="배너"
-          value="-"
+          value={bannerData?.meta.totalElements ?? 0}
           icon={<Image className="h-5 w-5" />}
+          isLoading={isBannerLoading}
+          href="/banners"
         />
         <StatCard
-          title="문의"
+          title="큐레이션"
+          value={curationData?.meta.totalElements ?? 0}
+          icon={<BookOpen className="h-5 w-5" />}
+          isLoading={isCurationLoading}
+          href="/curations"
+        />
+        <StatCard
+          title="처리 대기 문의"
           value={helpData?.totalCount ?? 0}
           icon={<MessageSquare className="h-5 w-5" />}
           isLoading={isHelpLoading}
+          href="/inquiries"
         />
       </div>
     </div>
