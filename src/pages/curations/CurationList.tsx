@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { Search, Plus, Check, X, GripVertical, ArrowUpDown } from 'lucide-react';
+import { Search, Plus, GripVertical, ArrowUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -26,8 +26,8 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Pagination } from '@/components/common/Pagination';
+import { StatusToggle } from '@/components/common/StatusToggle';
 import { useCurationList, useCurationToggleStatus, useCurationUpdateDisplayOrder } from '@/hooks/useCurations';
 import type { CurationSearchParams, CurationListItem } from '@/types/api';
 
@@ -373,27 +373,11 @@ export function CurationListPage() {
                     </TableCell>
                   )}
                   <TableCell>
-                    <div
-                      className="flex items-center gap-2"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Switch
-                        checked={item.isActive}
-                        onCheckedChange={() => handleStatusToggle(item.id, item.isActive)}
-                        disabled={toggleStatusMutation.isPending || isReorderMode}
-                      />
-                      {item.isActive ? (
-                        <Badge variant="default" className="whitespace-nowrap bg-green-500">
-                          <Check className="mr-1 h-3 w-3" />
-                          활성
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="whitespace-nowrap">
-                          <X className="mr-1 h-3 w-3" />
-                          비활성
-                        </Badge>
-                      )}
-                    </div>
+                    <StatusToggle
+                      isActive={item.isActive}
+                      onToggle={() => handleStatusToggle(item.id, item.isActive)}
+                      disabled={toggleStatusMutation.isPending || isReorderMode}
+                    />
                   </TableCell>
                   {/* 순서 변경 모드: 우측에 드래그 핸들 */}
                   {isReorderMode && (
