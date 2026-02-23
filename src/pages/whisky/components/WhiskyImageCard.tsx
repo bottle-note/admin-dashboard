@@ -19,6 +19,7 @@ export interface WhiskyImageCardProps {
   onImageChange: (file: File | null, previewUrl: string | null) => void;
   error?: string;
   isUploading?: boolean;
+  disabled?: boolean;
 }
 
 export function WhiskyImageCard({
@@ -26,6 +27,7 @@ export function WhiskyImageCard({
   onImageChange,
   error,
   isUploading = false,
+  disabled = false,
 }: WhiskyImageCardProps) {
   return (
     <Card>
@@ -41,7 +43,7 @@ export function WhiskyImageCard({
         </CardTitle>
         <CardDescription>이미지를 드래그하거나 클릭하여 업로드합니다.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className={disabled ? 'pointer-events-none opacity-60' : ''}>
         <ImageUpload imageUrl={imageUrl} onImageChange={onImageChange} />
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
       </CardContent>

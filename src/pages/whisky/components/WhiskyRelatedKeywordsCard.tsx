@@ -14,11 +14,13 @@ import { TagSelector } from '@/components/common/TagSelector';
 export interface WhiskyRelatedKeywordsCardProps {
   keywords: string[];
   onKeywordsChange: (keywords: string[]) => void;
+  disabled?: boolean;
 }
 
 export function WhiskyRelatedKeywordsCard({
   keywords,
   onKeywordsChange,
+  disabled = false,
 }: WhiskyRelatedKeywordsCardProps) {
   return (
     <Card>
@@ -28,7 +30,7 @@ export function WhiskyRelatedKeywordsCard({
           검색 시 이 위스키를 찾을 수 있도록 연관 키워드를 입력합니다.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className={disabled ? 'pointer-events-none opacity-60' : ''}>
         <TagSelector
           selectedTags={keywords}
           availableTags={[]}
