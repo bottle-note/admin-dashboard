@@ -44,7 +44,7 @@ export function WhiskyImageCard({
         <CardDescription>이미지를 드래그하거나 클릭하여 업로드합니다.</CardDescription>
       </CardHeader>
       <CardContent className={disabled ? 'pointer-events-none opacity-60' : ''}>
-        <ImageUpload imageUrl={imageUrl} onImageChange={onImageChange} />
+        <ImageUpload imageUrl={imageUrl} onImageChange={disabled ? () => {} : onImageChange} />
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
       </CardContent>
     </Card>
