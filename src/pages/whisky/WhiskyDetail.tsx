@@ -92,12 +92,8 @@ export function WhiskyDetailPage() {
 
   const handleSubmit = form.handleSubmit(
     (data) => {
-      console.log('[DEBUG] handleSubmit callback called', data);
       onSubmit(data, { tastingTags, relatedKeywords, imagePreviewUrl });
     },
-    (errors) => {
-      console.log('[DEBUG] handleSubmit validation errors', errors);
-    }
   );
 
   const handleDeleteConfirm = () => {
@@ -127,7 +123,7 @@ export function WhiskyDetailPage() {
                   삭제
                 </Button>
               )}
-              <Button onClick={() => { console.log('[DEBUG] Button clicked, isPending:', isPending); handleSubmit(); }} disabled={isPending}>
+              <Button onClick={handleSubmit} disabled={isPending}>
                 <Save className="mr-2 h-4 w-4" />
                 {isPending ? '등록 중...' : isNewMode ? '등록' : '저장'}
               </Button>
