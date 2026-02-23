@@ -9,6 +9,7 @@ import { useParams } from 'react-router';
 import { Save, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
 
@@ -33,6 +34,7 @@ export function WhiskyDetailPage() {
     form,
     isLoading,
     isNewMode,
+    isDeleted,
     isPending,
     whiskyData,
     categories,
@@ -90,12 +92,8 @@ export function WhiskyDetailPage() {
 
   const handleSubmit = form.handleSubmit(
     (data) => {
-      console.log('[DEBUG] handleSubmit callback called', data);
       onSubmit(data, { tastingTags, relatedKeywords, imagePreviewUrl });
     },
-    (errors) => {
-      console.log('[DEBUG] handleSubmit validation errors', errors);
-    }
   );
 
   const handleDeleteConfirm = () => {
@@ -108,21 +106,29 @@ export function WhiskyDetailPage() {
       {/* 헤더 */}
       <DetailPageHeader
         title={isNewMode ? '위스키 등록' : '위스키 상세'}
-        subtitle={whiskyData ? `ID: ${id}` : undefined}
+        subtitle={
+          isDeleted
+            ? undefined
+            : whiskyData ? `ID: ${id}` : undefined
+        }
         onBack={handleBack}
         actions={
-          <>
-            {whiskyData && (
-              <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                삭제
+          isDeleted ? (
+            <Badge variant="destructive">삭제됨</Badge>
+          ) : (
+            <>
+              {whiskyData && (
+                <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  삭제
+                </Button>
+              )}
+              <Button onClick={handleSubmit} disabled={isPending}>
+                <Save className="mr-2 h-4 w-4" />
+                {isPending ? '등록 중...' : isNewMode ? '등록' : '저장'}
               </Button>
-            )}
-            <Button onClick={() => { console.log('[DEBUG] Button clicked, isPending:', isPending); handleSubmit(); }} disabled={isPending}>
-              <Save className="mr-2 h-4 w-4" />
-              {isPending ? '등록 중...' : isNewMode ? '등록' : '저장'}
-            </Button>
-          </>
+            </>
+          )
         }
       />
 
@@ -137,6 +143,7 @@ export function WhiskyDetailPage() {
               categories={categories}
               regions={regions}
               distilleries={distilleries}
+              disabled={isDeleted}
             />
 
             {/* 이미지 + 통계 카드 */}
@@ -146,6 +153,7 @@ export function WhiskyDetailPage() {
                 onImageChange={handleImageChange}
                 error={form.formState.errors.imageUrl?.message}
                 isUploading={isImageUploading}
+                disabled={isDeleted}
               />
 
               {whiskyData && (
@@ -164,10 +172,11 @@ export function WhiskyDetailPage() {
             tastingTags={tastingTags}
             availableTags={availableTags}
             onTagsChange={setTastingTags}
+            disabled={isDeleted}
           />
 
           {/* 연관 키워드 섹션 */}
-          <WhiskyRelatedKeywordsCard keywords={relatedKeywords} onKeywordsChange={setRelatedKeywords} />
+          <WhiskyRelatedKeywordsCard keywords={relatedKeywords} onKeywordsChange={setRelatedKeywords} disabled={isDeleted} />
         </div>
       )}
 

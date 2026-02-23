@@ -27,6 +27,7 @@ export interface WhiskyBasicInfoCardProps {
   categories: CategoryReference[];
   regions: Array<{ id: number; korName: string }>;
   distilleries: Array<{ id: number; korName: string }>;
+  disabled?: boolean;
 }
 
 export function WhiskyBasicInfoCard({
@@ -34,6 +35,7 @@ export function WhiskyBasicInfoCard({
   categories,
   regions,
   distilleries,
+  disabled = false,
 }: WhiskyBasicInfoCardProps) {
   const { register, watch, setValue, formState } = form;
   const { errors } = formState;
@@ -71,7 +73,7 @@ export function WhiskyBasicInfoCard({
         <CardTitle>기본 정보</CardTitle>
         <CardDescription>위스키의 기본 정보를 입력합니다.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={`space-y-4 ${disabled ? 'pointer-events-none opacity-60' : ''}`}>
         {/* 한글명 / 영문명 */}
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="한글명" required error={errors.korName?.message}>
