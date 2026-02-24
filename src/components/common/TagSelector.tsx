@@ -125,7 +125,7 @@ export function TagSelector({ selectedTags, availableTags, onTagsChange }: TagSe
           />
         </div>
         {filteredUnselectedTags.length > 0 ? (
-          <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
+          <div className="flex max-h-60 flex-wrap gap-1.5 overflow-y-auto">
             {filteredUnselectedTags.map((tag) => (
               <Badge
                 key={tag}
