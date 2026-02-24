@@ -55,7 +55,7 @@ export function WhiskyTastingTagCard({
       <CardHeader>
         <CardTitle>테이스팅 태그</CardTitle>
         <CardDescription>
-          이 위스키의 테이스팅 노트를 선택하거나 직접 추가할 수 있습니다.
+          이 위스키의 테이스팅 노트를 선택할 수 있습니다.
         </CardDescription>
       </CardHeader>
       <CardContent className={disabled ? 'pointer-events-none opacity-60' : ''}>
@@ -63,6 +63,7 @@ export function WhiskyTastingTagCard({
           selectedTags={tastingTags.map((tag) => tag.korName)}
           availableTags={availableTags}
           onTagsChange={handleTagsChange}
+          allowCustomTags={false}
         />
       </CardContent>
     </Card>
