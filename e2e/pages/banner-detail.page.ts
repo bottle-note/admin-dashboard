@@ -24,16 +24,16 @@ export class BannerDetailPage extends BasePage {
 
   readonly loadingState = () => this.page.getByText('로딩 중...');
 
-  readonly nameInput = () => this.page.getByPlaceholder('배너명을 입력하세요');
+  readonly nameInput = () => this.page.getByPlaceholder('설명을 입력하세요');
 
   readonly bannerTypeSelect = () =>
     this.page.locator('button[role="combobox"]').filter({ hasText: /^\s*(설문조사|큐레이션|광고|제휴|기타|배너 타입 선택)\s*$/ });
 
   readonly isActiveSwitch = () => this.page.locator('button#isActive');
 
-  readonly descriptionAInput = () => this.page.getByPlaceholder('첫 번째 줄 설명');
+  readonly descriptionAInput = () => this.page.getByPlaceholder('제목 첫번째줄을 입력하세요');
 
-  readonly descriptionBInput = () => this.page.getByPlaceholder('두 번째 줄 설명');
+  readonly descriptionBInput = () => this.page.getByPlaceholder('제목 두번째줄을 입력하세요');
 
   readonly textPositionSelect = () =>
     this.page.locator('button[role="combobox"]').filter({ hasText: /좌측 상단|좌측 하단|우측 상단|우측 하단|중앙|텍스트 위치 선택/ });
