@@ -34,7 +34,7 @@ export function TastingTagListPage() {
   // API 조회
   const { data, isLoading } = useTastingTagList({
     keyword: searchKeyword || undefined,
-    size: 100, // 태그는 보통 많지 않으므로 한 번에 조회
+    size: 500, // 태그 전체를 한 번에 조회
   });
 
   // 삭제 mutation
