@@ -21,7 +21,7 @@ export function BannerImageCard({ imagePreviewUrl, onImageChange, isUploading, e
           minHeight={200}
         />
         <p className="text-sm text-muted-foreground">
-          권장 사이즈: 1920x600px
+          권장 사이즈: 936x454px (2x 기준, 비율 약 2:1)
         </p>
         {error && (
           <p className="text-sm text-destructive">{error}</p>
