@@ -132,7 +132,7 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
 
   const onSubmit = (
     data: WhiskyFormValues,
-    { relatedKeywords }: { tastingTags: AlcoholTastingTag[]; relatedKeywords: string[]; imagePreviewUrl: string | null }
+    { tastingTags, relatedKeywords }: { tastingTags: AlcoholTastingTag[]; relatedKeywords: string[]; imagePreviewUrl: string | null }
   ) => {
     // TODO: API에 relatedKeywords 필드 추가 시 요청 데이터에 포함
     console.log('Related Keywords:', relatedKeywords);
@@ -144,6 +144,9 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
 
     // 증류소 미선택(0) 시 '-' 항목의 ID로 대체
     const distilleryId = data.distilleryId || (distilleryData?.items.find((d) => d.korName === '-')?.id ?? data.distilleryId);
+
+    // 테이스팅 태그 ID 목록 추출
+    const tastingTagIds = tastingTags.map((tag) => tag.id);
 
     if (isNewMode) {
       const createData: AlcoholCreateRequest = {
@@ -161,6 +164,7 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
         imageUrl: data.imageUrl,
         description,
         volume: data.volume,
+        tastingTagIds,
       };
       createMutation.mutate(createData);
     } else if (alcoholId) {
@@ -179,6 +183,7 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
         imageUrl: data.imageUrl,
         description,
         volume: data.volume,
+        tastingTagIds,
       };
       updateMutation.mutate({ alcoholId, data: updateData });
     }

@@ -171,6 +171,7 @@ export function WhiskyDetailPage() {
           <WhiskyTastingTagCard
             tastingTags={tastingTags}
             availableTags={availableTags}
+            tagListItems={tagListData?.items}
             onTagsChange={setTastingTags}
             disabled={isDeleted}
           />

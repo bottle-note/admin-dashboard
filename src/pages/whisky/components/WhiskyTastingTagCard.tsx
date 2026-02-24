@@ -8,31 +8,46 @@ import { TagSelector } from '@/components/common/TagSelector';
 
 import type { AlcoholTastingTag } from '@/types/api';
 
+/** 태그 목록 아이템 (ID 매핑용) */
+interface TagListItem {
+  id: number;
+  korName: string;
+  engName: string;
+}
+
 /**
  * WhiskyTastingTagCard 컴포넌트의 props
  * @param tastingTags - 현재 선택된 테이스팅 태그 목록
- * @param availableTags - 선택 가능한 태그 목록
+ * @param availableTags - 선택 가능한 태그 이름 목록
+ * @param tagListItems - 전체 태그 목록 (ID 매핑용)
  * @param onTagsChange - 태그 변경 콜백
  */
 export interface WhiskyTastingTagCardProps {
   tastingTags: AlcoholTastingTag[];
   availableTags?: string[];
+  tagListItems?: TagListItem[];
   onTagsChange: (tags: AlcoholTastingTag[]) => void;
   disabled?: boolean;
+}
+
+/** 이름으로 태그 객체를 찾아 반환. 선택 목록 → 전체 목록 → 폴백 순서 */
+function resolveTag(name: string, selected: AlcoholTastingTag[], all: TagListItem[]): AlcoholTastingTag {
+  const fromSelected = selected.find((t) => t.korName === name);
+  if (fromSelected) return fromSelected;
+  const fromAll = all.find((t) => t.korName === name);
+  if (fromAll) return { id: fromAll.id, korName: fromAll.korName, engName: fromAll.engName };
+  return { id: 0, korName: name, engName: name };
 }
 
 export function WhiskyTastingTagCard({
   tastingTags,
   availableTags = [],
+  tagListItems = [],
   onTagsChange,
   disabled = false,
 }: WhiskyTastingTagCardProps) {
   const handleTagsChange = (tags: string[]) => {
-    const newTags = tags.map((name) => {
-      const existing = tastingTags.find((t) => t.korName === name);
-      return existing ?? { id: 0, korName: name, engName: name };
-    });
-    onTagsChange(newTags);
+    onTagsChange(tags.map((name) => resolveTag(name, tastingTags, tagListItems)));
   };
 
   return (
