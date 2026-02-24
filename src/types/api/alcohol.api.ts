@@ -235,6 +235,8 @@ export interface AlcoholApiTypes {
       description: string;
       /** 용량 (예: "700ml") */
       volume: string;
+      /** 연결할 테이스팅 태그 ID 목록 */
+      tastingTagIds: number[];
     };
     /** 응답 데이터 */
     response: {
@@ -294,6 +296,8 @@ export interface AlcoholApiTypes {
       description: string;
       /** 용량 (예: "700ml") */
       volume: string;
+      /** 연결할 테이스팅 태그 ID 목록 */
+      tastingTagIds: number[];
     };
     /** 응답 데이터 */
     response: {

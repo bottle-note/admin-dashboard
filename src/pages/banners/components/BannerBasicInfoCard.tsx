@@ -1,6 +1,5 @@
 import type { UseFormReturn } from 'react-hook-form';
 
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -29,14 +28,6 @@ export function BannerBasicInfoCard({ form }: BannerBasicInfoCardProps) {
         <CardTitle>기본 정보</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <FormField label="배너명" required error={form.formState.errors.name?.message}>
-          <Input
-            id="name"
-            {...form.register('name')}
-            placeholder="배너명을 입력하세요"
-          />
-        </FormField>
-
         <FormField label="배너 타입" required error={form.formState.errors.bannerType?.message}>
           <Select
             value={form.watch('bannerType')}

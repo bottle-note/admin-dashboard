@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField } from '@/components/common/FormField';
+import { ColorPickerInput } from '@/components/common/ColorPickerInput';
 
 import type { BannerFormValues } from '../banner.schema';
 import { TEXT_POSITION_LABELS, type TextPosition } from '@/types/api';
@@ -22,22 +23,30 @@ export function BannerTextSettingsCard({ form }: BannerTextSettingsCardProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>텍스트 설정</CardTitle>
+        <CardTitle>배너 텍스트</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <FormField label="설명 A">
+        <FormField label="제목 첫번째줄">
           <Input
             id="descriptionA"
             {...form.register('descriptionA')}
-            placeholder="첫 번째 줄 설명"
+            placeholder="제목 첫번째줄을 입력하세요"
           />
         </FormField>
 
-        <FormField label="설명 B">
+        <FormField label="제목 두번째줄">
           <Input
             id="descriptionB"
             {...form.register('descriptionB')}
-            placeholder="두 번째 줄 설명"
+            placeholder="제목 두번째줄을 입력하세요"
+          />
+        </FormField>
+
+        <FormField label="설명" required error={form.formState.errors.name?.message}>
+          <Input
+            id="name"
+            {...form.register('name')}
+            placeholder="설명을 입력하세요"
           />
         </FormField>
 
@@ -60,34 +69,22 @@ export function BannerTextSettingsCard({ form }: BannerTextSettingsCardProps) {
         </FormField>
 
         <div className="grid grid-cols-2 gap-4">
-          <FormField label="제목 색상" error={form.formState.errors.nameFontColor?.message}>
-            <div className="flex gap-2">
-              <div
-                className="w-10 h-10 rounded border"
-                style={{ backgroundColor: `#${form.watch('nameFontColor')}` }}
-              />
-              <Input
-                id="nameFontColor"
-                {...form.register('nameFontColor')}
-                placeholder="ffffff"
-                maxLength={6}
-              />
-            </div>
+          <FormField label="제목 색상" error={form.formState.errors.descriptionFontColor?.message}>
+            <ColorPickerInput
+              id="descriptionFontColor"
+              value={form.watch('descriptionFontColor')}
+              onChange={(hex) => form.setValue('descriptionFontColor', hex)}
+              error={form.formState.errors.descriptionFontColor?.message}
+            />
           </FormField>
 
-          <FormField label="설명 색상" error={form.formState.errors.descriptionFontColor?.message}>
-            <div className="flex gap-2">
-              <div
-                className="w-10 h-10 rounded border"
-                style={{ backgroundColor: `#${form.watch('descriptionFontColor')}` }}
-              />
-              <Input
-                id="descriptionFontColor"
-                {...form.register('descriptionFontColor')}
-                placeholder="ffffff"
-                maxLength={6}
-              />
-            </div>
+          <FormField label="설명 색상" error={form.formState.errors.nameFontColor?.message}>
+            <ColorPickerInput
+              id="nameFontColor"
+              value={form.watch('nameFontColor')}
+              onChange={(hex) => form.setValue('nameFontColor', hex)}
+              error={form.formState.errors.nameFontColor?.message}
+            />
           </FormField>
         </div>
       </CardContent>

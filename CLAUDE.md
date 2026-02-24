@@ -95,6 +95,30 @@ export interface ComponentProps { ... }
 export function Component({ ... }: ComponentProps) { ... }
 ```
 
+### Memoization (useMemo / useCallback)
+**원칙: 측정 먼저, 최적화 나중.** 추측으로 추가하지 않는다.
+
+**사용하는 경우:**
+- 계산 비용 ≥1ms (`console.time()`으로 측정 확인)
+- `memo()`로 감싼 자식에 객체/함수를 props로 전달할 때 (세트로 사용)
+- 다른 Hook의 deps 배열에 객체/배열/함수가 들어갈 때 (참조 안정화)
+- 커스텀 훅에서 함수를 반환할 때 (소비자 최적화 여지 보장)
+- Context Provider의 value prop
+
+**사용하지 않는 경우:**
+- `memo()` 없는 자식에게 전달되는 props (효과 없음)
+- 단순 계산 (`.map()`, `.filter()`, 문자열 접합, 날짜 포맷 등)
+- "혹시 모르니까" 예방적 추가 (코드 복잡성 + 메모리 비용만 증가)
+- deps가 매 렌더마다 바뀌는 경우 (캐시 히트 0%)
+- useEffect deps 문제를 우회하기 위해 (근본 원인을 수정할 것)
+
+> React Compiler 1.0 (2025.10 stable)이 수동 메모이제이션을 자동화한다.
+> 지금 최소화하면 향후 마이그레이션에도 유리.
+>
+> 근거: [React 공식 useMemo](https://react.dev/reference/react/useMemo) |
+> [Kent C. Dodds](https://kentcdodds.com/blog/usememo-and-usecallback) |
+> [Josh Comeau](https://www.joshwcomeau.com/react/usememo-and-usecallback/)
+
 ## 구현 워크플로우 (IMPORTANT)
 
 ### 자동 TDD 적용

@@ -50,8 +50,8 @@ export function WhiskyDetailPage() {
     rootPath: S3UploadPath.ALCOHOL,
   });
 
-  // 기존 태그 목록 조회
-  const { data: tagListData } = useTastingTagList({ size: 100 });
+  // 기존 태그 목록 조회 (전체 태그를 한 번에 가져옴)
+  const { data: tagListData } = useTastingTagList({ size: 500 });
   const availableTags = tagListData?.items.map((t) => t.korName) ?? [];
 
   // 로컬 상태
@@ -171,6 +171,7 @@ export function WhiskyDetailPage() {
           <WhiskyTastingTagCard
             tastingTags={tastingTags}
             availableTags={availableTags}
+            tagListItems={tagListData?.items}
             onTagsChange={setTastingTags}
             disabled={isDeleted}
           />
