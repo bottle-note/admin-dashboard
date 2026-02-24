@@ -51,7 +51,7 @@ export function BannerPreviewCard({ form, imagePreviewUrl }: BannerPreviewCardPr
       <CardContent>
         <div className="flex justify-center rounded-lg bg-muted/40 p-4">
           <div
-            className="relative overflow-hidden rounded-lg"
+            className="relative overflow-hidden"
             style={{ width: selectedWidth, height: BANNER_HEIGHT }}
           >
             <img
@@ -113,15 +113,15 @@ function BannerTextOverlay({
   const isBottom = textPosition === 'LB' || textPosition === 'RB';
 
   const titleBlock = (descriptionA || descriptionB) ? (
-    <div style={{ color: `#${descriptionFontColor}` }} className="drop-shadow-lg">
-      {descriptionA && <p className="text-xl font-semibold">{descriptionA}</p>}
-      {descriptionB && <p className="text-xl font-semibold">{descriptionB}</p>}
+    <div style={{ color: `#${descriptionFontColor}` }}>
+      {descriptionA && <p className="text-xl font-semibold leading-tight">{descriptionA}</p>}
+      {descriptionB && <p className="text-xl font-semibold leading-tight">{descriptionB}</p>}
     </div>
   ) : null;
 
   const descBlock = name ? (
     <p
-      className="text-sm drop-shadow"
+      className="text-sm"
       style={{ color: `#${nameFontColor}` }}
     >
       {name}
@@ -130,7 +130,7 @@ function BannerTextOverlay({
 
   return (
     <div
-      className={`absolute ${positionClasses[textPosition]} ${textAlignClasses[textPosition]} max-w-[60%]`}
+      className={`absolute ${positionClasses[textPosition]} ${textAlignClasses[textPosition]} flex flex-col gap-2 max-w-[60%]`}
     >
       {isBottom ? (
         <>
