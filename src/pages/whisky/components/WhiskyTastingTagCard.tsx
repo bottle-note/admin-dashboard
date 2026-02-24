@@ -18,12 +18,14 @@ export interface WhiskyTastingTagCardProps {
   tastingTags: AlcoholTastingTag[];
   availableTags?: string[];
   onTagsChange: (tags: AlcoholTastingTag[]) => void;
+  disabled?: boolean;
 }
 
 export function WhiskyTastingTagCard({
   tastingTags,
   availableTags = [],
   onTagsChange,
+  disabled = false,
 }: WhiskyTastingTagCardProps) {
   const handleTagsChange = (tags: string[]) => {
     const newTags = tags.map((name) => {
@@ -41,7 +43,7 @@ export function WhiskyTastingTagCard({
           이 위스키의 테이스팅 노트를 선택하거나 직접 추가할 수 있습니다.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className={disabled ? 'pointer-events-none opacity-60' : ''}>
         <TagSelector
           selectedTags={tastingTags.map((tag) => tag.korName)}
           availableTags={availableTags}

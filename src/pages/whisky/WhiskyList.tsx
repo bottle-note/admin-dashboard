@@ -2,6 +2,7 @@
  * 위스키 목록 페이지
  * - URL 쿼리파라미터로 검색/필터/페이지네이션 상태 관리
  * - 새로고침/뒤로가기 시 상태 유지
+ * - 삭제된 데이터 포함 필터 지원
  */
 
 import { useState, useEffect } from 'react';
@@ -24,6 +25,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/common/Pagination';
 import { useAdminAlcoholList } from '@/hooks/useAdminAlcohols';
 import type { AlcoholSearchParams, AlcoholCategory } from '@/types/api';
@@ -47,6 +51,7 @@ export function WhiskyListPage() {
   const category = urlParams.get('category') as AlcoholCategory | null;
   const page = Number(urlParams.get('page')) || 0;
   const size = Number(urlParams.get('size')) || 20;
+  const includeDeleted = urlParams.get('includeDeleted') === 'true';
 
   // 검색 입력 필드용 로컬 상태 (Enter/버튼 클릭 시에만 URL 반영)
   const [keywordInput, setKeywordInput] = useState(keyword);
@@ -62,9 +67,13 @@ export function WhiskyListPage() {
     category: category || undefined,
     page,
     size,
+    includeDeleted: includeDeleted || undefined,
   };
 
   const { data, isLoading } = useAdminAlcoholList(searchParams);
+
+  // 테이블 컬럼 수 계산
+  const columnCount = includeDeleted ? 7 : 6;
 
   // URL 파라미터 업데이트 헬퍼
   const updateUrlParams = (updates: Record<string, string | undefined>) => {
@@ -102,6 +111,13 @@ export function WhiskyListPage() {
     updateUrlParams({
       category: value === 'ALL' ? undefined : value,
       page: '0', // 카테고리 변경 시 첫 페이지로
+    });
+  };
+
+  const handleIncludeDeletedChange = (checked: boolean | 'indeterminate') => {
+    updateUrlParams({
+      includeDeleted: checked === true ? 'true' : undefined,
+      page: '0', // 필터 변경 시 첫 페이지로
     });
   };
 
@@ -158,6 +174,16 @@ export function WhiskyListPage() {
           </SelectContent>
         </Select>
         <Button onClick={handleSearch}>검색</Button>
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="includeDeleted"
+            checked={includeDeleted}
+            onCheckedChange={handleIncludeDeletedChange}
+          />
+          <Label htmlFor="includeDeleted" className="cursor-pointer text-sm">
+            삭제된 데이터 포함
+          </Label>
+        </div>
       </div>
 
       {/* 테이블 */}
@@ -171,56 +197,69 @@ export function WhiskyListPage() {
               <TableHead>영문명</TableHead>
               <TableHead className="w-[100px]">카테고리</TableHead>
               <TableHead className="w-[100px]">수정일</TableHead>
+              {includeDeleted && (
+                <TableHead className="w-[80px]">상태</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={columnCount} className="text-center py-8">
                   <span className="text-muted-foreground">로딩 중...</span>
                 </TableCell>
               </TableRow>
             ) : data?.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={columnCount} className="text-center py-8">
                   <span className="text-muted-foreground">
                     검색 결과가 없습니다.
                   </span>
                 </TableCell>
               </TableRow>
             ) : (
-              data?.items.map((item) => (
-                <TableRow
-                  key={item.alcoholId}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleRowClick(item.alcoholId)}
-                >
-                  <TableCell className="font-mono text-sm">
-                    {item.alcoholId}
-                  </TableCell>
-                  <TableCell>
-                    {item.imageUrl ? (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.korName}
-                        className="h-10 w-10 rounded object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded bg-muted">
-                        <ImageOff className="h-4 w-4 text-muted-foreground" />
-                      </div>
+              data?.items.map((item) => {
+                const isDeleted = item.deletedAt != null;
+                return (
+                  <TableRow
+                    key={item.alcoholId}
+                    className={`cursor-pointer hover:bg-muted/50 ${isDeleted ? 'opacity-50' : ''}`}
+                    onClick={() => handleRowClick(item.alcoholId)}
+                  >
+                    <TableCell className="font-mono text-sm">
+                      {item.alcoholId}
+                    </TableCell>
+                    <TableCell>
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.korName}
+                          className="h-10 w-10 rounded object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded bg-muted">
+                          <ImageOff className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium">{item.korName}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {item.engName}
+                    </TableCell>
+                    <TableCell>{item.korCategoryName}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(item.modifiedAt).toLocaleDateString('ko-KR')}
+                    </TableCell>
+                    {includeDeleted && (
+                      <TableCell>
+                        {isDeleted && (
+                          <Badge variant="destructive">삭제됨</Badge>
+                        )}
+                      </TableCell>
                     )}
-                  </TableCell>
-                  <TableCell className="font-medium">{item.korName}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {item.engName}
-                  </TableCell>
-                  <TableCell>{item.korCategoryName}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(item.modifiedAt).toLocaleDateString('ko-KR')}
-                  </TableCell>
-                </TableRow>
-              ))
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>

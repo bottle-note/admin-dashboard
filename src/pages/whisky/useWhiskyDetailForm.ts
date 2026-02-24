@@ -47,6 +47,7 @@ export interface UseWhiskyDetailFormReturn {
   form: ReturnType<typeof useForm<WhiskyFormValues>>;
   isLoading: boolean;
   isNewMode: boolean;
+  isDeleted: boolean;
   isPending: boolean;
   whiskyData: ReturnType<typeof useAdminAlcoholDetail>['data'];
   categories: CategoryReference[];
@@ -191,10 +192,13 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
     }
   };
 
+  const isDeleted = whiskyData?.deletedAt != null;
+
   return {
     form,
     isLoading,
     isNewMode,
+    isDeleted,
     isPending: createMutation.isPending || deleteMutation.isPending || updateMutation.isPending,
     whiskyData,
     categories: categoryData ?? [],

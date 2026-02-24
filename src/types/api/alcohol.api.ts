@@ -98,6 +98,8 @@ export interface AlcoholApiTypes {
       page?: number;
       /** 페이지 크기 (기본값: 20) */
       size?: number;
+      /** 삭제된 데이터 포함 여부 (기본값: false) */
+      includeDeleted?: boolean;
     };
     /** 응답 아이템 */
     response: {
@@ -117,6 +119,8 @@ export interface AlcoholApiTypes {
       createdAt: string;
       /** 수정일시 */
       modifiedAt: string;
+      /** 삭제일시 (null이면 미삭제) */
+      deletedAt: string | null;
     };
     /** 페이지네이션 메타 정보 */
     meta: {
@@ -195,6 +199,8 @@ export interface AlcoholApiTypes {
       createdAt: string;
       /** 수정일시 */
       modifiedAt: string;
+      /** 삭제일시 (null이면 미삭제) */
+      deletedAt: string | null;
     };
   };
   /** 술 생성 */

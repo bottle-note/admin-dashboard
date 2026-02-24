@@ -6,6 +6,8 @@ import {
   mockDeleteResponse,
   mockAlcoholConnectionResponse,
   mockAlcoholDisconnectionResponse,
+  mockAlcoholListItems,
+  mockAlcoholDeleteResponse,
   mockBannerListItems,
   mockBannerDetail,
   mockBannerCreateResponse,
@@ -231,4 +233,60 @@ export const bannerHandlers = [
   }),
 ];
 
-export const handlers = [...tastingTagHandlers, ...bannerHandlers];
+// ============================================
+// Alcohol Handlers
+// ============================================
+
+const ALCOHOL_BASE = '/admin/api/v1/alcohols';
+
+export const alcoholHandlers = [
+  // GET 목록
+  http.get(ALCOHOL_BASE, ({ request }) => {
+    const url = new URL(request.url);
+    const keyword = url.searchParams.get('keyword');
+    const category = url.searchParams.get('category');
+    const includeDeleted = url.searchParams.get('includeDeleted');
+    const size = Number(url.searchParams.get('size') ?? 20);
+    const page = Number(url.searchParams.get('page') ?? 0);
+
+    let items = mockAlcoholListItems;
+
+    // 기본: 삭제된 데이터 제외
+    if (includeDeleted !== 'true') {
+      items = items.filter((item) => item.deletedAt === null);
+    }
+
+    if (keyword) {
+      items = items.filter(
+        (item) =>
+          item.korName.includes(keyword) ||
+          item.engName.toLowerCase().includes(keyword.toLowerCase())
+      );
+    }
+    if (category) {
+      items = items.filter((item) => item.engCategoryName.toUpperCase().replace(' ', '_') === category);
+    }
+
+    return HttpResponse.json(
+      wrapApiResponse(items, {
+        page,
+        size,
+        totalElements: items.length,
+        totalPages: Math.ceil(items.length / size),
+        hasNext: false,
+      })
+    );
+  }),
+
+  // DELETE 삭제
+  http.delete(`${ALCOHOL_BASE}/:alcoholId`, ({ params }) => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockAlcoholDeleteResponse,
+        targetId: Number(params.alcoholId),
+      })
+    );
+  }),
+];
+
+export const handlers = [...tastingTagHandlers, ...bannerHandlers, ...alcoholHandlers];

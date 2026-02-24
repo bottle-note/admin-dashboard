@@ -1,12 +1,13 @@
 /**
  * 배너 목록 페이지
  * - URL 쿼리파라미터로 검색/필터/페이지네이션 상태 관리
+ * - 인라인 Switch로 활성화 상태 토글
  * - 순서 변경 모드에서 드래그 앤 드롭으로 순서 변경
  */
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { Search, ImageOff, Plus, GripVertical, Check, X, ArrowUpDown } from 'lucide-react';
+import { Search, Plus, GripVertical, ArrowUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -26,21 +27,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/common/Pagination';
-import { useBannerList, useBannerUpdateSortOrder } from '@/hooks/useBanners';
+import { StatusToggle } from '@/components/common/StatusToggle';
+import { useReorderDrag } from '@/hooks/useReorderDrag';
+import { useBannerList, useBannerUpdateStatus, useBannerUpdateSortOrder } from '@/hooks/useBanners';
 import {
   type BannerSearchParams,
-  type BannerType,
-  type BannerListItem,
   BANNER_TYPE_LABELS,
 } from '@/types/api';
 
-const BANNER_TYPE_OPTIONS: { value: BannerType | 'ALL'; label: string }[] = [
+const IS_ACTIVE_OPTIONS = [
   { value: 'ALL', label: '전체' },
-  { value: 'SURVEY', label: '설문조사' },
-  { value: 'CURATION', label: '큐레이션' },
-  { value: 'AD', label: '광고' },
-  { value: 'PARTNERSHIP', label: '제휴' },
-  { value: 'ETC', label: '기타' },
+  { value: 'true', label: '활성' },
+  { value: 'false', label: '비활성' },
 ];
 
 export function BannerListPage() {
@@ -49,19 +47,12 @@ export function BannerListPage() {
 
   // URL에서 검색 파라미터 읽기
   const keyword = urlParams.get('keyword') ?? '';
-  const bannerType = urlParams.get('bannerType') as BannerType | null;
+  const isActiveParam = urlParams.get('isActive');
   const page = Number(urlParams.get('page')) || 0;
   const size = Number(urlParams.get('size')) || 20;
 
   // 검색 입력 필드용 로컬 상태 (Enter/버튼 클릭 시에만 URL 반영)
   const [keywordInput, setKeywordInput] = useState(keyword);
-
-  // 순서 변경 모드 상태
-  const [isReorderMode, setIsReorderMode] = useState(false);
-
-  // 드래그 상태 (순서 변경 모드에서만 사용)
-  const [draggedItem, setDraggedItem] = useState<BannerListItem | null>(null);
-  const [dragOverId, setDragOverId] = useState<number | null>(null);
 
   // URL의 keyword가 변경되면 입력 필드도 동기화
   useEffect(() => {
@@ -71,13 +62,24 @@ export function BannerListPage() {
   // API 요청용 파라미터
   const searchParams: BannerSearchParams = {
     keyword: keyword || undefined,
-    bannerType: bannerType || undefined,
+    isActive: isActiveParam === 'true' ? true : isActiveParam === 'false' ? false : undefined,
     page,
     size,
   };
 
-  const { data, isLoading } = useBannerList(searchParams);
+  const { data, isLoading, refetch } = useBannerList(searchParams);
+  const toggleStatusMutation = useBannerUpdateStatus();
   const updateSortOrderMutation = useBannerUpdateSortOrder();
+
+  const { isReorderMode, isReordering, dragOverId, toggleReorderMode, getDragHandlers } =
+    useReorderDrag({
+      items: data?.items,
+      getOrder: (item) => item.sortOrder,
+      onReorder: (itemId, newOrder) =>
+        updateSortOrderMutation.mutateAsync({ bannerId: itemId, data: { sortOrder: newOrder } }),
+      onAfterReorder: refetch,
+      pageOffset: page * size,
+    });
 
   // URL 파라미터 업데이트 헬퍼
   const updateUrlParams = (updates: Record<string, string | undefined>) => {
@@ -101,7 +103,7 @@ export function BannerListPage() {
   const handleSearch = () => {
     updateUrlParams({
       keyword: keywordInput || undefined,
-      page: '0', // 검색 시 첫 페이지로
+      page: '0',
     });
   };
 
@@ -111,117 +113,39 @@ export function BannerListPage() {
     }
   };
 
-  const handleBannerTypeChange = (value: string) => {
+  const handleIsActiveChange = (value: string) => {
     updateUrlParams({
-      bannerType: value === 'ALL' ? undefined : value,
-      page: '0', // 타입 변경 시 첫 페이지로
+      isActive: value === 'ALL' ? undefined : value,
+      page: '0',
     });
   };
 
   const handlePageChange = (newPage: number) => {
-    updateUrlParams({
-      page: String(newPage),
-    });
+    updateUrlParams({ page: String(newPage) });
   };
 
   const handlePageSizeChange = (newSize: number) => {
-    updateUrlParams({
-      size: String(newSize),
-      page: '0', // 페이지 크기 변경 시 첫 페이지로
-    });
+    updateUrlParams({ size: String(newSize), page: '0' });
   };
 
   const handleRowClick = (bannerId: number) => {
-    // 순서 변경 모드에서는 클릭으로 상세 페이지 이동하지 않음
     if (!isReorderMode) {
       navigate(`/banners/${bannerId}`);
     }
   };
 
-  // 순서 변경 모드 토글
-  const toggleReorderMode = () => {
-    setIsReorderMode(!isReorderMode);
-    // 모드 종료 시 드래그 상태 초기화
-    if (isReorderMode) {
-      setDraggedItem(null);
-      setDragOverId(null);
-    }
-  };
-
-  // 드래그 앤 드롭 핸들러 (순서 변경 모드에서만 동작)
-  const handleDragStart = (e: React.DragEvent, item: BannerListItem) => {
-    if (!isReorderMode) return;
-    setDraggedItem(item);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e: React.DragEvent, itemId: number) => {
-    if (!isReorderMode) return;
-    e.preventDefault();
-    setDragOverId(itemId);
-  };
-
-  const handleDragLeave = () => {
-    if (!isReorderMode) return;
-    setDragOverId(null);
-  };
-
-  const handleDrop = (e: React.DragEvent, targetItem: BannerListItem) => {
-    if (!isReorderMode) return;
-    e.preventDefault();
-    setDragOverId(null);
-
-    if (!draggedItem || !data?.items || draggedItem.id === targetItem.id) {
-      setDraggedItem(null);
-      return;
-    }
-
-    // 새로운 순서 계산
-    const items = [...data.items];
-    const draggedIndex = items.findIndex((item) => item.id === draggedItem.id);
-    const targetIndex = items.findIndex((item) => item.id === targetItem.id);
-
-    if (draggedIndex === -1 || targetIndex === -1) {
-      setDraggedItem(null);
-      return;
-    }
-
-    // 순서 변경
-    items.splice(draggedIndex, 1);
-    items.splice(targetIndex, 0, draggedItem);
-
-    // 변경된 순서로 개별 API 호출 (페이지 오프셋 반영)
-    const pageOffset = page * size;
-    items.forEach((item, index) => {
-      const newSortOrder = pageOffset + index;
-      if (item.sortOrder !== newSortOrder) {
-        updateSortOrderMutation.mutate({ bannerId: item.id, data: { sortOrder: newSortOrder } });
-      }
-    });
-
-    setDraggedItem(null);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedItem(null);
-    setDragOverId(null);
+  const handleStatusToggle = (bannerId: number, currentStatus: boolean) => {
+    toggleStatusMutation.mutate({ bannerId, data: { isActive: !currentStatus } });
   };
 
   // 노출 기간 포맷팅
   const formatExposurePeriod = (startDate: string | null, endDate: string | null) => {
-    if (!startDate && !endDate) {
-      return '상시 노출';
-    }
-
+    if (!startDate && !endDate) return '상시 노출';
     const formatDate = (dateStr: string) => {
       const date = new Date(dateStr);
       return `${date.getMonth() + 1}/${date.getDate()}`;
     };
-
-    const start = startDate ? formatDate(startDate) : '';
-    const end = endDate ? formatDate(endDate) : '';
-
-    return `${start} ~ ${end}`;
+    return `${startDate ? formatDate(startDate) : ''} ~ ${endDate ? formatDate(endDate) : ''}`;
   };
 
   return (
@@ -252,6 +176,7 @@ export function BannerListPage() {
         <div className="rounded-lg border border-primary/50 bg-primary/5 p-4">
           <p className="text-sm text-primary">
             <strong>순서 변경 모드</strong> - 우측의 핸들을 드래그하여 배너 순서를 변경할 수 있습니다.
+            {isReordering && <span className="ml-2 text-muted-foreground">(순서 변경 중...)</span>}
           </p>
         </div>
       )}
@@ -268,15 +193,12 @@ export function BannerListPage() {
             className="pl-9"
           />
         </div>
-        <Select
-          value={bannerType ?? 'ALL'}
-          onValueChange={handleBannerTypeChange}
-        >
+        <Select value={isActiveParam ?? 'ALL'} onValueChange={handleIsActiveChange}>
           <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="배너 타입" />
+            <SelectValue placeholder="상태" />
           </SelectTrigger>
           <SelectContent>
-            {BANNER_TYPE_OPTIONS.map((option) => (
+            {IS_ACTIVE_OPTIONS.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>
@@ -288,101 +210,67 @@ export function BannerListPage() {
 
       {/* 테이블 */}
       <div className="rounded-lg border">
-        <Table>
+        <Table className="[&_th]:px-4 [&_td]:px-4">
           <TableHeader>
             <TableRow>
               {isReorderMode && <TableHead className="w-[60px]">순서</TableHead>}
-              <TableHead className="w-[80px]">이미지</TableHead>
               <TableHead>배너명</TableHead>
               <TableHead className="w-[100px]">타입</TableHead>
               <TableHead className="w-[120px]">노출기간</TableHead>
-              <TableHead className="w-[80px]">상태</TableHead>
               {!isReorderMode && <TableHead className="w-[60px]">순서</TableHead>}
+              <TableHead className="w-[180px]">상태</TableHead>
               {isReorderMode && <TableHead className="w-[50px]"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={isReorderMode ? 7 : 7} className="text-center py-8">
+                <TableCell colSpan={isReorderMode ? 6 : 5} className="text-center py-8">
                   <span className="text-muted-foreground">로딩 중...</span>
                 </TableCell>
               </TableRow>
             ) : data?.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isReorderMode ? 7 : 7} className="text-center py-8">
-                  <span className="text-muted-foreground">
-                    검색 결과가 없습니다.
-                  </span>
+                <TableCell colSpan={isReorderMode ? 6 : 5} className="text-center py-8">
+                  <span className="text-muted-foreground">검색 결과가 없습니다.</span>
                 </TableCell>
               </TableRow>
             ) : (
               data?.items.map((item) => (
                 <TableRow
                   key={item.id}
-                  className={`${
+                  {...getDragHandlers(item)}
+                  className={
                     isReorderMode
-                      ? dragOverId === item.id
-                        ? 'bg-primary/10'
-                        : ''
+                      ? dragOverId === item.id ? 'bg-primary/10' : ''
                       : 'cursor-pointer hover:bg-muted/50'
-                  }`}
-                  draggable={isReorderMode}
-                  onDragStart={(e) => handleDragStart(e, item)}
-                  onDragOver={(e) => handleDragOver(e, item.id)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, item)}
-                  onDragEnd={handleDragEnd}
+                  }
                   onClick={() => handleRowClick(item.id)}
                 >
-                  {/* 순서 변경 모드: 좌측에 순서 번호 */}
                   {isReorderMode && (
                     <TableCell className="text-center font-mono text-sm font-semibold text-primary">
                       {item.sortOrder + 1}
                     </TableCell>
                   )}
-                  <TableCell>
-                    {item.imageUrl ? (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name}
-                        className="h-10 w-16 rounded object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-10 w-16 items-center justify-center rounded bg-muted">
-                        <ImageOff className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    )}
-                  </TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">
-                      {BANNER_TYPE_LABELS[item.bannerType]}
-                    </Badge>
+                    <Badge variant="outline">{BANNER_TYPE_LABELS[item.bannerType]}</Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatExposurePeriod(item.startDate, item.endDate)}
                   </TableCell>
-                  <TableCell>
-                    {item.isActive ? (
-                      <Badge variant="default" className="whitespace-nowrap bg-green-500">
-                        <Check className="mr-1 h-3 w-3" />
-                        활성
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="whitespace-nowrap">
-                        <X className="mr-1 h-3 w-3" />
-                        비활성
-                      </Badge>
-                    )}
-                  </TableCell>
-                  {/* 일반 모드: 우측에 순서 번호 */}
                   {!isReorderMode && (
                     <TableCell className="text-center font-mono text-sm">
                       {item.sortOrder + 1}
                     </TableCell>
                   )}
-                  {/* 순서 변경 모드: 우측에 드래그 핸들 */}
+                  <TableCell>
+                    <StatusToggle
+                      isActive={item.isActive}
+                      onToggle={() => handleStatusToggle(item.id, item.isActive)}
+                      disabled={toggleStatusMutation.isPending || isReorderMode}
+                    />
+                  </TableCell>
                   {isReorderMode && (
                     <TableCell
                       className="cursor-grab active:cursor-grabbing"

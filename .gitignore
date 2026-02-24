@@ -47,6 +47,10 @@ CLAUDE.personal.md
 .secrets
 .claude/
 
+# OMC (oh-my-claudecode) internal state
+.omc/
+
+
 # Playwright
 e2e/.auth/
 e2e/reports/

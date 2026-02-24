@@ -5,6 +5,8 @@ import type {
   TastingTagDeleteResponse,
   TastingTagAlcoholConnectionResponse,
   TastingTagAlcohol,
+  AlcoholListItem,
+  AlcoholDeleteResponse,
   BannerListItem,
   BannerDetail,
   BannerCreateResponse,
@@ -106,6 +108,53 @@ export const mockAlcoholDisconnectionResponse: TastingTagAlcoholConnectionRespon
   code: 'TASTING_TAG_ALCOHOL_REMOVED',
   message: '위스키 연결이 해제되었습니다.',
   targetId: 1,
+  responseAt: '2024-06-01T00:00:00',
+};
+
+// ============================================
+// Alcohol Mock Data
+// ============================================
+
+export const mockAlcoholListItems: AlcoholListItem[] = [
+  {
+    alcoholId: 10,
+    korName: '글렌피딕 12년',
+    engName: 'Glenfiddich 12',
+    korCategoryName: '싱글몰트',
+    engCategoryName: 'Single Malt',
+    imageUrl: 'https://example.com/glenfiddich.jpg',
+    createdAt: '2024-01-01T00:00:00',
+    modifiedAt: '2024-06-01T00:00:00',
+    deletedAt: null,
+  },
+  {
+    alcoholId: 20,
+    korName: '맥캘란 18년',
+    engName: 'Macallan 18',
+    korCategoryName: '싱글몰트',
+    engCategoryName: 'Single Malt',
+    imageUrl: null,
+    createdAt: '2024-03-01T00:00:00',
+    modifiedAt: '2024-06-01T00:00:00',
+    deletedAt: null,
+  },
+  {
+    alcoholId: 30,
+    korName: '삭제된 위스키',
+    engName: 'Deleted Whisky',
+    korCategoryName: '블렌디드',
+    engCategoryName: 'Blend',
+    imageUrl: null,
+    createdAt: '2024-01-01T00:00:00',
+    modifiedAt: '2024-05-01T00:00:00',
+    deletedAt: '2024-07-01T00:00:00',
+  },
+];
+
+export const mockAlcoholDeleteResponse: AlcoholDeleteResponse = {
+  code: 'ALCOHOL_DELETED',
+  message: '위스키가 삭제되었습니다.',
+  targetId: 10,
   responseAt: '2024-06-01T00:00:00',
 };
 
