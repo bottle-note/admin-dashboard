@@ -51,7 +51,7 @@ export function ColorPickerInput({ value, onChange, error, id }: ColorPickerInpu
       />
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="icon" className="shrink-0" type="button">
+          <Button variant="outline" size="icon" className="shrink-0" type="button" aria-label="색상 선택">
             <Pipette className="h-4 w-4" />
           </Button>
         </PopoverTrigger>
@@ -67,6 +67,7 @@ export function ColorPickerInput({ value, onChange, error, id }: ColorPickerInpu
                 )}
                 style={{ backgroundColor: `#${color}` }}
                 onClick={() => onChange(color)}
+                aria-label={`색상 #${color}`}
                 title={`#${color}`}
               />
             ))}

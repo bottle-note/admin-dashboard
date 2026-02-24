@@ -73,7 +73,7 @@ export function BannerTextSettingsCard({ form }: BannerTextSettingsCardProps) {
             <ColorPickerInput
               id="descriptionFontColor"
               value={form.watch('descriptionFontColor')}
-              onChange={(hex) => form.setValue('descriptionFontColor', hex, { shouldValidate: true })}
+              onChange={(hex) => form.setValue('descriptionFontColor', hex)}
               error={form.formState.errors.descriptionFontColor?.message}
             />
           </FormField>
@@ -82,7 +82,7 @@ export function BannerTextSettingsCard({ form }: BannerTextSettingsCardProps) {
             <ColorPickerInput
               id="nameFontColor"
               value={form.watch('nameFontColor')}
-              onChange={(hex) => form.setValue('nameFontColor', hex, { shouldValidate: true })}
+              onChange={(hex) => form.setValue('nameFontColor', hex)}
               error={form.formState.errors.nameFontColor?.message}
             />
           </FormField>

@@ -42,7 +42,7 @@ function formatDateTime(date: Date, startOfDay: boolean): string {
 
 /** 배너 폼 Zod 스키마 */
 export const bannerFormSchema = z.object({
-  name: z.string().min(1, '배너명은 필수입니다'),
+  name: z.string().min(1, '설명은 필수입니다'),
   bannerType: z.enum(['SURVEY', 'CURATION', 'AD', 'PARTNERSHIP', 'ETC'], {
     message: '배너 타입을 선택해주세요',
   }),

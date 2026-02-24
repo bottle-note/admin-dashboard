@@ -22,7 +22,7 @@ interface BannerPreviewCardProps {
 }
 
 export function BannerPreviewCard({ form, imagePreviewUrl }: BannerPreviewCardProps) {
-  const [selectedWidth, setSelectedWidth] = useState(468);
+  const [selectedWidth, setSelectedWidth] = useState<number>(PREVIEW_WIDTHS[1].width);
 
   if (!imagePreviewUrl) return null;
 
