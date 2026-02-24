@@ -16,14 +16,16 @@ import { Input } from '@/components/ui/input';
  * @param selectedTags - 현재 선택된 태그 목록
  * @param availableTags - 선택 가능한 전체 태그 목록
  * @param onTagsChange - 태그 변경 시 호출되는 콜백
+ * @param allowCustomTags - 직접 입력으로 새 태그 추가 허용 여부 (기본값: true)
  */
 export interface TagSelectorProps {
   selectedTags: string[];
   availableTags: string[];
   onTagsChange: (tags: string[]) => void;
+  allowCustomTags?: boolean;
 }
 
-export function TagSelector({ selectedTags, availableTags, onTagsChange }: TagSelectorProps) {
+export function TagSelector({ selectedTags, availableTags, onTagsChange, allowCustomTags = true }: TagSelectorProps) {
   const [customTag, setCustomTag] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [isComposing, setIsComposing] = useState(false);
@@ -88,29 +90,31 @@ export function TagSelector({ selectedTags, availableTags, onTagsChange }: TagSe
       </div>
 
       {/* 직접 입력 */}
-      <div>
-        <p className="mb-2 text-sm font-medium">새 태그 추가</p>
-        <div className="flex gap-2">
-          <Input
-            placeholder="태그 입력 후 Enter..."
-            value={customTag}
-            onChange={(e) => setCustomTag(e.target.value)}
-            onKeyDown={handleCustomTagKeyDown}
-            onCompositionStart={() => setIsComposing(true)}
-            onCompositionEnd={() => setIsComposing(false)}
-            className="h-8 flex-1"
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={handleAddCustomTag}
-            disabled={!customTag.trim()}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+      {allowCustomTags && (
+        <div>
+          <p className="mb-2 text-sm font-medium">새 태그 추가</p>
+          <div className="flex gap-2">
+            <Input
+              placeholder="태그 입력 후 Enter..."
+              value={customTag}
+              onChange={(e) => setCustomTag(e.target.value)}
+              onKeyDown={handleCustomTagKeyDown}
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={() => setIsComposing(false)}
+              className="h-8 flex-1"
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleAddCustomTag}
+              disabled={!customTag.trim()}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 기존 태그 목록 (Chip 형태) */}
       <div>
