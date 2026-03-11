@@ -178,6 +178,6 @@ export const curationService = {
    * @returns 앱 내부 URL
    */
   generateCurationUrl: (curationId: number): string => {
-    return `/alcohols/search?curationId=${curationId}`;
+    return `/search?curationId=${curationId}`;
   },
 };
