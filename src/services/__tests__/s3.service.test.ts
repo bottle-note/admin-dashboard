@@ -128,6 +128,15 @@ describe('s3Service', () => {
       expect(capturedUploadContentType).toBe('video/mp4');
     });
 
+    it('명시적 contentType이 presign과 S3 PUT 양쪽에 일치하게 전달된다', async () => {
+      const file = new File(['test'], 'banner.mp4', { type: 'video/mp4' });
+
+      await s3Service.uploadImage(file, 'admin/banner', 'video/webm');
+
+      expect(capturedContentType).toBe('video/webm');
+      expect(capturedUploadContentType).toBe('video/webm');
+    });
+
     it('업로드 성공 시 viewUrl을 반환한다', async () => {
       const file = new File(['test'], 'banner.jpg', { type: 'image/jpeg' });
 
