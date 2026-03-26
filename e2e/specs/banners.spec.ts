@@ -232,6 +232,36 @@ test.describe('배너 CRUD 플로우', () => {
   });
 });
 
+test.describe('배너 동영상 업로드', () => {
+  test('동영상 파일 업로드 시 비디오 미리보기가 표시된다', async ({ page }) => {
+    const detailPage = new BannerDetailPage(page);
+
+    await detailPage.gotoNew();
+
+    // 동영상 업로드
+    await detailPage.uploadTestVideo();
+
+    // <video> 태그로 미리보기가 표시되는지 확인
+    await expect(detailPage.uploadedVideo()).toBeVisible();
+    // <img> 태그는 표시되지 않아야 함
+    await expect(detailPage.uploadedImage()).not.toBeVisible();
+  });
+
+  test('이미지 파일 업로드 시 이미지 미리보기가 표시된다', async ({ page }) => {
+    const detailPage = new BannerDetailPage(page);
+
+    await detailPage.gotoNew();
+
+    // 이미지 업로드
+    await detailPage.uploadTestImage();
+
+    // <img> 태그로 미리보기가 표시되는지 확인
+    await expect(detailPage.uploadedImage()).toBeVisible();
+    // <video> 태그는 표시되지 않아야 함
+    await expect(detailPage.uploadedVideo()).not.toBeVisible();
+  });
+});
+
 test.describe('배너 순서 변경', () => {
   let listPage: BannerListPage;
 

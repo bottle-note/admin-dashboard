@@ -54,11 +54,22 @@ export function BannerPreviewCard({ form, imagePreviewUrl }: BannerPreviewCardPr
             className="relative overflow-hidden"
             style={{ width: selectedWidth, height: BANNER_HEIGHT }}
           >
-            <img
-              src={imagePreviewUrl}
-              alt="배너 미리보기"
-              className="h-full w-full object-cover"
-            />
+            {form.watch('mediaType') === 'VIDEO' ? (
+              <video
+                src={imagePreviewUrl}
+                className="h-full w-full object-cover"
+                autoPlay
+                muted
+                loop
+                playsInline
+              />
+            ) : (
+              <img
+                src={imagePreviewUrl}
+                alt="배너 미리보기"
+                className="h-full w-full object-cover"
+              />
+            )}
             <BannerTextOverlay
               name={form.watch('name')}
               descriptionA={form.watch('descriptionA')}

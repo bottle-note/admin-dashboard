@@ -61,6 +61,18 @@ export type BannerType = 'SURVEY' | 'CURATION' | 'AD' | 'PARTNERSHIP' | 'ETC';
  */
 export type TextPosition = 'LT' | 'LB' | 'RT' | 'RB' | 'CENTER';
 
+/**
+ * 미디어 유형
+ * @description 배너 미디어의 유형 구분 (이미지 또는 동영상)
+ */
+export type MediaType = 'IMAGE' | 'VIDEO';
+
+/** 미디어 유형 레이블 매핑 */
+export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
+  IMAGE: '이미지',
+  VIDEO: '동영상',
+};
+
 /** 배너 타입 레이블 매핑 */
 export const BANNER_TYPE_LABELS: Record<BannerType, string> = {
   SURVEY: '설문조사',
@@ -117,6 +129,8 @@ export interface BannerApiTypes {
       endDate: string | null;
       /** 활성화 상태 */
       isActive: boolean;
+      /** 미디어 유형 (IMAGE | VIDEO) */
+      mediaType: MediaType;
       /** 생성일시 */
       createdAt: string;
       /** 수정일시 */
@@ -170,6 +184,8 @@ export interface BannerApiTypes {
       endDate: string | null;
       /** 활성화 상태 */
       isActive: boolean;
+      /** 미디어 유형 (IMAGE | VIDEO) */
+      mediaType: MediaType;
       /** 생성일시 */
       createdAt: string;
       /** 수정일시 */
@@ -208,6 +224,8 @@ export interface BannerApiTypes {
       endDate: string | null;
       /** 활성화 상태 */
       isActive: boolean;
+      /** 미디어 유형 (기본값: IMAGE) */
+      mediaType?: MediaType;
     };
     /** 응답 데이터 */
     response: {
@@ -253,6 +271,8 @@ export interface BannerApiTypes {
       endDate: string | null;
       /** 활성화 상태 */
       isActive: boolean;
+      /** 미디어 유형 (미입력 시 기존 값 유지) */
+      mediaType?: MediaType;
     };
     /** 응답 데이터 */
     response: {
