@@ -69,14 +69,9 @@ export function BannerDetailPage() {
     form.setValue('mediaType', mediaType);
   };
 
-  const handleSubmit = form.handleSubmit(
-    (data) => {
-      onSubmit(data, { imagePreviewUrl });
-    },
-    (errors) => {
-      console.log('[DEBUG] Form validation errors:', errors);
-    }
-  );
+  const handleSubmit = form.handleSubmit((data) => {
+    onSubmit(data, { imagePreviewUrl });
+  });
 
   const handleDeleteConfirm = () => {
     handleDelete();
