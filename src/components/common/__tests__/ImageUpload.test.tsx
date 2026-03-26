@@ -251,7 +251,9 @@ describe('ImageUpload 컴포넌트', () => {
       fireEvent.change(input, { target: { files: [mp4File] } });
 
       // 2. handleFile에서 blob URL이 생성되어 onImageChange로 전달됨
-      const blobUrl = onImageChange.mock.calls[0][1] as string;
+      const call = onImageChange.mock.calls[0];
+      expect(call).toBeDefined();
+      const blobUrl = call![1] as string;
       expect(blobUrl).toMatch(/^blob:/);
 
       // 3. 부모가 imageUrl prop을 blob URL로 다시 내려줌 (실제 앱 동작)

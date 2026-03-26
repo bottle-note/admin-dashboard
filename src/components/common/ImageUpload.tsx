@@ -71,6 +71,7 @@ export function ImageUpload({
   const [previewUrl, setPreviewUrl] = useState<string | null>(imageUrl);
   const [isVideo, setIsVideo] = useState(() => isVideoFile(imageUrl));
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const blobUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     setPreviewUrl(imageUrl);
@@ -89,8 +90,12 @@ export function ImageUpload({
         return;
       }
 
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+      }
       setIsVideo(file.type.startsWith('video/'));
       const url = URL.createObjectURL(file);
+      blobUrlRef.current = url;
       setPreviewUrl(url);
       onImageChange(file, url);
     },
@@ -125,6 +130,10 @@ export function ImageUpload({
   };
 
   const handleRemove = () => {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
     setPreviewUrl(null);
     setIsVideo(false);
     onImageChange(null, null);
