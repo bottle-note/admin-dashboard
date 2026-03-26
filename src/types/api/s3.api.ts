@@ -27,6 +27,8 @@ export const S3Api = {
 export interface PresignUrlParams {
   rootPath: string;
   uploadSize: number;
+  /** Content-Type (기본값: image/jpeg). 예: 'image/webp', 'video/mp4' */
+  contentType?: string;
 }
 
 /**

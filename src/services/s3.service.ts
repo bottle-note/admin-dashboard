@@ -57,11 +57,12 @@ export const s3Service = {
    * @param rootPath - 업로드 경로
    * @returns CDN 조회 URL (viewUrl)
    */
-  uploadImage: async (file: File, rootPath: string): Promise<string> => {
+  uploadImage: async (file: File, rootPath: string, contentType?: string): Promise<string> => {
     // 1. Presigned URL 발급
     const presignResponse = await s3Service.getPresignedUrls({
       rootPath,
       uploadSize: 1,
+      contentType: contentType ?? file.type,
     });
 
     const uploadInfo = presignResponse.imageUploadInfo[0];

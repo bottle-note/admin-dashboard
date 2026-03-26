@@ -59,7 +59,14 @@ export function BannerDetailPage() {
       }
     } else {
       form.setValue('imageUrl', previewUrl ?? '');
+      if (!previewUrl) {
+        form.setValue('mediaType', 'IMAGE');
+      }
     }
+  };
+
+  const handleMediaTypeChange = (mediaType: 'IMAGE' | 'VIDEO') => {
+    form.setValue('mediaType', mediaType);
   };
 
   const handleSubmit = form.handleSubmit(
@@ -112,6 +119,7 @@ export function BannerDetailPage() {
             <BannerImageCard
               imagePreviewUrl={imagePreviewUrl}
               onImageChange={handleImageChange}
+              onMediaTypeChange={handleMediaTypeChange}
               isUploading={isImageUploading}
               error={form.formState.errors.imageUrl?.message}
             />

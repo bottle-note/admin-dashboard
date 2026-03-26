@@ -30,6 +30,17 @@ describe('useBanners hooks', () => {
       expect(result.current.data!.meta.totalElements).toBeGreaterThan(0);
     });
 
+    it('목록 응답에 mediaType이 포함된다', async () => {
+      const { result } = renderHook(() => useBannerList());
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      result.current.data!.items.forEach((item) => {
+        expect(item.mediaType).toBeDefined();
+        expect(['IMAGE', 'VIDEO']).toContain(item.mediaType);
+      });
+    });
+
     it('keyword로 필터링한다', async () => {
       const { result } = renderHook(() => useBannerList({ keyword: '큐레이션' }));
 
@@ -73,6 +84,14 @@ describe('useBanners hooks', () => {
       expect(result.current.data!.textPosition).toBe('RT');
     });
 
+    it('상세 응답에 mediaType이 포함된다', async () => {
+      const { result } = renderHook(() => useBannerDetail(1));
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(result.current.data!.mediaType).toBe('IMAGE');
+    });
+
     it('존재하지 않는 ID는 에러 상태가 된다', async () => {
       const { result } = renderHook(() => useBannerDetail(9999));
 
@@ -102,6 +121,31 @@ describe('useBanners hooks', () => {
         isActive: true,
         startDate: null,
         endDate: null,
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(onSuccess).toHaveBeenCalled();
+    });
+
+    it('mediaType: VIDEO로 생성할 수 있다', async () => {
+      const onSuccess = vi.fn();
+      const { result } = renderHook(() => useBannerCreate({ onSuccess }));
+
+      result.current.mutate({
+        name: '동영상 배너',
+        nameFontColor: '#ffffff',
+        descriptionA: '설명A',
+        descriptionB: '설명B',
+        descriptionFontColor: '#ffffff',
+        imageUrl: 'https://example.com/banner.mp4',
+        textPosition: 'CENTER',
+        targetUrl: '/test',
+        isExternalUrl: false,
+        bannerType: 'AD',
+        isActive: true,
+        startDate: null,
+        endDate: null,
+        mediaType: 'VIDEO',
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -165,6 +209,35 @@ describe('useBanners hooks', () => {
           startDate: null,
           endDate: null,
           isActive: true,
+        },
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(onSuccess).toHaveBeenCalled();
+    });
+
+    it('mediaType을 VIDEO로 변경할 수 있다', async () => {
+      const onSuccess = vi.fn();
+      const { result } = renderHook(() => useBannerUpdate({ onSuccess }));
+
+      result.current.mutate({
+        id: 1,
+        data: {
+          name: '동영상 배너',
+          nameFontColor: '#000000',
+          descriptionA: '수정A',
+          descriptionB: '수정B',
+          descriptionFontColor: '#000000',
+          imageUrl: 'https://example.com/updated.mp4',
+          textPosition: 'LB',
+          targetUrl: '/updated',
+          isExternalUrl: false,
+          bannerType: 'CURATION',
+          sortOrder: 0,
+          startDate: null,
+          endDate: null,
+          isActive: true,
+          mediaType: 'VIDEO',
         },
       });
 
