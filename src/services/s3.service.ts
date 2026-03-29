@@ -35,12 +35,12 @@ export const s3Service = {
    * @param file - 업로드할 파일
    * @throws 업로드 실패 시 에러
    */
-  uploadToS3: async (uploadUrl: string, file: File): Promise<void> => {
+  uploadToS3: async (uploadUrl: string, file: File, contentType?: string): Promise<void> => {
     const response = await fetch(uploadUrl, {
       method: 'PUT',
       body: file,
       headers: {
-        'Content-Type': file.type,
+        'Content-Type': contentType ?? file.type,
       },
     });
 
@@ -57,11 +57,12 @@ export const s3Service = {
    * @param rootPath - 업로드 경로
    * @returns CDN 조회 URL (viewUrl)
    */
-  uploadImage: async (file: File, rootPath: string): Promise<string> => {
+  uploadImage: async (file: File, rootPath: string, contentType?: string): Promise<string> => {
     // 1. Presigned URL 발급
     const presignResponse = await s3Service.getPresignedUrls({
       rootPath,
       uploadSize: 1,
+      contentType: contentType ?? file.type,
     });
 
     const uploadInfo = presignResponse.imageUploadInfo[0];
@@ -69,8 +70,9 @@ export const s3Service = {
       throw new Error('Presigned URL 발급 실패');
     }
 
-    // 2. S3에 업로드
-    await s3Service.uploadToS3(uploadInfo.uploadUrl, file);
+    // 2. S3에 업로드 (presign 서명과 동일한 contentType 사용)
+    const resolvedContentType = contentType ?? file.type;
+    await s3Service.uploadToS3(uploadInfo.uploadUrl, file, resolvedContentType);
 
     // 3. CDN URL 반환
     return uploadInfo.viewUrl;

@@ -172,6 +172,7 @@ export const mockBannerListItems: BannerListItem[] = [
     startDate: '2024-01-01T00:00:00',
     endDate: '2024-01-31T23:59:59',
     isActive: true,
+    mediaType: 'IMAGE',
     createdAt: '2024-01-01T00:00:00',
     updatedAt: '2024-01-01T00:00:00',
   },
@@ -184,6 +185,7 @@ export const mockBannerListItems: BannerListItem[] = [
     startDate: null,
     endDate: null,
     isActive: false,
+    mediaType: 'IMAGE',
     createdAt: '2024-02-01T00:00:00',
     updatedAt: '2024-02-01T00:00:00',
   },
@@ -205,6 +207,7 @@ export const mockBannerDetail: BannerDetail = {
   startDate: '2024-01-01T00:00:00',
   endDate: '2024-01-31T23:59:59',
   isActive: true,
+  mediaType: 'IMAGE',
   createdAt: '2024-01-01T00:00:00',
   updatedAt: '2024-01-01T00:00:00',
 };

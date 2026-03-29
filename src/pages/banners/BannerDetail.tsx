@@ -59,17 +59,19 @@ export function BannerDetailPage() {
       }
     } else {
       form.setValue('imageUrl', previewUrl ?? '');
+      if (!previewUrl) {
+        form.setValue('mediaType', 'IMAGE');
+      }
     }
   };
 
-  const handleSubmit = form.handleSubmit(
-    (data) => {
-      onSubmit(data, { imagePreviewUrl });
-    },
-    (errors) => {
-      console.log('[DEBUG] Form validation errors:', errors);
-    }
-  );
+  const handleMediaTypeChange = (mediaType: 'IMAGE' | 'VIDEO') => {
+    form.setValue('mediaType', mediaType);
+  };
+
+  const handleSubmit = form.handleSubmit((data) => {
+    onSubmit(data, { imagePreviewUrl });
+  });
 
   const handleDeleteConfirm = () => {
     handleDelete();
@@ -112,6 +114,7 @@ export function BannerDetailPage() {
             <BannerImageCard
               imagePreviewUrl={imagePreviewUrl}
               onImageChange={handleImageChange}
+              onMediaTypeChange={handleMediaTypeChange}
               isUploading={isImageUploading}
               error={form.formState.errors.imageUrl?.message}
             />

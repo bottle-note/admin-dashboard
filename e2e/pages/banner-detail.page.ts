@@ -56,9 +56,13 @@ export class BannerDetailPage extends BasePage {
 
   readonly endDateInput = () => this.page.locator('input#endDate');
 
-  readonly imageFileInput = () => this.page.locator('input[type="file"][accept="image/*"]');
+  readonly mediaFileInput = () => this.page.locator('input[type="file"]');
 
   readonly uploadedImage = () => this.page.locator('img[alt="업로드된 이미지"]');
+
+  readonly uploadedVideo = () => this.page.locator('video');
+
+  readonly uploadedMedia = () => this.page.locator('img[alt="업로드된 이미지"], video');
 
   readonly deleteDialog = () => this.page.getByRole('alertdialog');
 
@@ -148,13 +152,19 @@ export class BannerDetailPage extends BasePage {
 
   async uploadTestImage() {
     const testImagePath = path.resolve(__dirname, '../fixtures/test-image.png');
-    await this.imageFileInput().setInputFiles(testImagePath);
-    await this.uploadedImage().waitFor({ state: 'visible', timeout: 10000 });
+    await this.mediaFileInput().setInputFiles(testImagePath);
+    await this.uploadedMedia().waitFor({ state: 'visible', timeout: 10000 });
+  }
+
+  async uploadTestVideo() {
+    const testVideoPath = path.resolve(__dirname, '../fixtures/test-video.mp4');
+    await this.mediaFileInput().setInputFiles(testVideoPath);
+    await this.uploadedVideo().waitFor({ state: 'visible', timeout: 10000 });
   }
 
   async ensureImage() {
-    const hasImage = await this.uploadedImage().isVisible().catch(() => false);
-    if (!hasImage) {
+    const hasMedia = await this.uploadedMedia().isVisible().catch(() => false);
+    if (!hasMedia) {
       await this.uploadTestImage();
     }
   }

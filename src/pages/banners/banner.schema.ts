@@ -47,7 +47,10 @@ export const bannerFormSchema = z.object({
     message: '배너 타입을 선택해주세요',
   }),
   isActive: z.boolean(),
-  imageUrl: z.string().min(1, '이미지를 업로드해주세요'),
+  mediaType: z.enum(['IMAGE', 'VIDEO'], {
+    message: '미디어 유형을 선택해주세요',
+  }),
+  imageUrl: z.string().min(1, '미디어 파일을 업로드해주세요'),
   descriptionA: z.string(),
   descriptionB: z.string(),
   textPosition: z.enum(['LT', 'LB', 'RT', 'RB', 'CENTER'], {
@@ -84,6 +87,7 @@ export const DEFAULT_BANNER_FORM: BannerFormValues = {
   name: '',
   bannerType: 'CURATION',
   isActive: true,
+  mediaType: 'IMAGE',
   imageUrl: '',
   descriptionA: '',
   descriptionB: '',
