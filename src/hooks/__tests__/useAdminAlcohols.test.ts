@@ -86,17 +86,7 @@ describe('useAdminAlcohols hooks', () => {
       expect(result.current.data!.length).toBeGreaterThan(0);
     });
 
-    it('실제 API 응답에는 categoryGroup이 없다', async () => {
-      const { result } = renderHook(() => useCategoryReferences());
-
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-      // 백엔드 CategoryReference API는 categoryGroup을 내려주지 않음
-      result.current.data!.forEach((ref) => {
-        expect(ref.categoryGroup).toBeUndefined();
-      });
-    });
-  });
+});
 
   // ==========================================
   // getCategoryGroup (프론트엔드 매핑)

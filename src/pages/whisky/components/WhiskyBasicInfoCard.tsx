@@ -3,17 +3,24 @@
  * - 한글명, 영문명, 카테고리, 지역, 도수, 증류소 등 기본 정보 폼
  */
 
-import { useMemo } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { FormField } from '@/components/common/FormField';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 import type { WhiskyFormValues } from '../whisky.schema';
-import type { CategoryReference } from '@/types/api';
+import type { AlcoholCategory, CategoryReference } from '@/types/api';
+import { ALCOHOL_CATEGORIES, CATEGORY_GROUP_LABELS, GROUP_TO_CATEGORY } from '@/types/api';
 
 /**
  * WhiskyBasicInfoCard 컴포넌트의 props
@@ -40,30 +47,37 @@ export function WhiskyBasicInfoCard({
   const { register, watch, setValue, formState } = form;
   const { errors } = formState;
 
-  // 옵션 목록 변환
-  const categoryOptions = useMemo(
-    () => categories.map((cat) => ({ value: cat.korCategory, label: cat.korCategory })),
-    [categories]
-  );
+  const regionOptions = regions.map((region) => ({ value: String(region.id), label: region.korName }));
+  const distilleryOptions = distilleries.map((distillery) => ({ value: String(distillery.id), label: distillery.korName }));
 
-  const regionOptions = useMemo(
-    () => regions.map((region) => ({ value: String(region.id), label: region.korName })),
-    [regions]
-  );
+  const currentCategoryGroup = watch('categoryGroup');
+  const isOtherCategory = currentCategoryGroup === 'OTHER';
 
-  const distilleryOptions = useMemo(
-    () => distilleries.map((distillery) => ({ value: String(distillery.id), label: distillery.korName })),
-    [distilleries]
-  );
+  // OTHER일 때 기존 서브카테고리 옵션 (CategoryReference API에서 메인 그룹 제외)
+  const mainKorCategories = new Set(Object.values(GROUP_TO_CATEGORY).map((c) => c.korCategory));
+  const otherCategoryOptions = categories
+    .filter((cat) => !mainKorCategories.has(cat.korCategory))
+    .map((cat) => ({ value: cat.korCategory, label: `${cat.korCategory} (${cat.engCategory})` }));
 
-  // 카테고리 선택 시 korCategory, engCategory, categoryGroup을 함께 저장
-  const handleCategoryChange = (korCategory: string) => {
-    const selected = categories.find((c) => c.korCategory === korCategory);
-    if (selected) {
-      setValue('korCategory', selected.korCategory);
-      setValue('engCategory', selected.engCategory);
-      // API에서 categoryGroup이 없을 수 있으므로 기본값 'OTHER' 사용
-      setValue('categoryGroup', selected.categoryGroup ?? 'OTHER');
+  // 카테고리 그룹 변경 시 korCategory/engCategory 자동 세팅
+  const handleCategoryGroupChange = (group: AlcoholCategory) => {
+    setValue('categoryGroup', group);
+    if (group !== 'OTHER') {
+      const mapped = GROUP_TO_CATEGORY[group];
+      setValue('korCategory', mapped.korCategory);
+      setValue('engCategory', mapped.engCategory);
+    } else {
+      setValue('korCategory', '');
+      setValue('engCategory', '');
+    }
+  };
+
+  // OTHER 서브카테고리 선택 시 engCategory도 함께 세팅
+  const handleOtherCategorySelect = (korCategory: string) => {
+    setValue('korCategory', korCategory);
+    const matched = categories.find((c) => c.korCategory === korCategory);
+    if (matched) {
+      setValue('engCategory', matched.engCategory);
     }
   };
 
@@ -84,17 +98,59 @@ export function WhiskyBasicInfoCard({
           </FormField>
         </div>
 
-        {/* 카테고리 */}
-        <FormField label="카테고리" required error={errors.korCategory?.message}>
-          <SearchableSelect
-            value={watch('korCategory')}
-            onChange={handleCategoryChange}
-            options={categoryOptions}
-            placeholder="카테고리 선택"
-            searchPlaceholder="카테고리 검색..."
-            emptyMessage="카테고리를 찾을 수 없습니다."
-          />
+        {/* 카테고리 그룹 (1차 선택) */}
+        <FormField label="카테고리 그룹" required error={errors.categoryGroup?.message}>
+          <Select
+            value={currentCategoryGroup}
+            onValueChange={(v) => handleCategoryGroupChange(v as AlcoholCategory)}
+          >
+            <SelectTrigger className="sm:w-[240px]">
+              <SelectValue placeholder="카테고리 그룹 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              {ALCOHOL_CATEGORIES.map((value) => (
+                <SelectItem key={value} value={value}>{CATEGORY_GROUP_LABELS[value]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </FormField>
+
+        {/* 카테고리: 메인 그룹은 읽기 전용, OTHER는 선택+입력 */}
+        {isOtherCategory ? (
+          <>
+            {otherCategoryOptions.length > 0 && (
+              <FormField label="기존 카테고리">
+                <SearchableSelect
+                  value={watch('korCategory')}
+                  onChange={handleOtherCategorySelect}
+                  options={otherCategoryOptions}
+                  placeholder="기존 카테고리에서 선택..."
+                  searchPlaceholder="카테고리 검색..."
+                  emptyMessage="카테고리를 찾을 수 없습니다."
+                />
+              </FormField>
+            )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label="한글 카테고리" required error={errors.korCategory?.message}>
+                <Input {...register('korCategory')} placeholder="예: 테네시" />
+              </FormField>
+              <FormField label="영문 카테고리" required error={errors.engCategory?.message}>
+                <Input {...register('engCategory')} placeholder="예: Tennessee" />
+              </FormField>
+            </div>
+          </>
+        ) : (
+          currentCategoryGroup && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label="한글 카테고리">
+                <Input value={watch('korCategory')} readOnly className="bg-muted" />
+              </FormField>
+              <FormField label="영문 카테고리">
+                <Input value={watch('engCategory')} readOnly className="bg-muted" />
+              </FormField>
+            </div>
+          )
+        )}
 
         {/* 지역 / 증류소 */}
         <div className="grid gap-4 sm:grid-cols-2">
