@@ -8,6 +8,7 @@ import {
   mockAlcoholDisconnectionResponse,
   mockAlcoholListItems,
   mockAlcoholDeleteResponse,
+  mockCategoryReferences,
   mockBannerListItems,
   mockBannerDetail,
   mockBannerCreateResponse,
@@ -240,6 +241,11 @@ export const bannerHandlers = [
 const ALCOHOL_BASE = '/admin/api/v1/alcohols';
 
 export const alcoholHandlers = [
+  // GET 카테고리 레퍼런스 (목록보다 먼저 매칭되도록)
+  http.get(`${ALCOHOL_BASE}/categories/reference`, () => {
+    return HttpResponse.json(wrapApiResponse(mockCategoryReferences));
+  }),
+
   // GET 목록
   http.get(ALCOHOL_BASE, ({ request }) => {
     const url = new URL(request.url);
