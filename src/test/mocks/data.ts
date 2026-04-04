@@ -7,6 +7,7 @@ import type {
   TastingTagAlcohol,
   AlcoholListItem,
   AlcoholDeleteResponse,
+  CategoryReference,
   BannerListItem,
   BannerDetail,
   BannerCreateResponse,
@@ -157,6 +158,26 @@ export const mockAlcoholDeleteResponse: AlcoholDeleteResponse = {
   targetId: 10,
   responseAt: '2024-06-01T00:00:00',
 };
+
+// ============================================
+// Category Reference Mock Data
+// ============================================
+
+/** 실제 API 응답과 동일한 구조 (categoryGroup 없음) */
+export const mockCategoryReferences: CategoryReference[] = [
+  { korCategory: '라이', engCategory: 'Rye' },
+  { korCategory: '버번', engCategory: 'Bourbon' },
+  { korCategory: '블렌디드', engCategory: 'Blend' },
+  { korCategory: '블렌디드 몰트', engCategory: 'Blended Malt' },
+  { korCategory: '스피릿', engCategory: 'Spirit' },
+  { korCategory: '싱글 그레인', engCategory: 'Single Grain' },
+  { korCategory: '싱글 몰트', engCategory: 'Single Malt' },
+  { korCategory: '싱글 팟 스틸', engCategory: 'Single Pot Still' },
+  { korCategory: '싱글몰트 알코올', engCategory: 'Single Malts' },
+  { korCategory: '위트', engCategory: 'Wheat' },
+  { korCategory: '콘', engCategory: 'Corn' },
+  { korCategory: '테네시', engCategory: 'Tennessee' },
+];
 
 // ============================================
 // Banner Mock Data
