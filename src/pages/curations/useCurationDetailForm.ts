@@ -90,11 +90,13 @@ export function useCurationDetailForm(id: string | undefined): UseCurationDetail
   }, [curationData, form, isNewMode]);
 
   const onSubmit = (data: CurationFormValues) => {
+    const coverImageUrl = data.coverImageUrl || undefined;
+
     if (isNewMode) {
       const createData: CurationCreateRequest = {
         name: data.name,
         description: data.description,
-        coverImageUrl: data.coverImageUrl,
+        coverImageUrl,
         displayOrder: data.displayOrder,
         isActive: data.isActive,
         alcoholIds: data.alcoholIds,
@@ -104,7 +106,7 @@ export function useCurationDetailForm(id: string | undefined): UseCurationDetail
       const updateData: CurationUpdateRequest = {
         name: data.name,
         description: data.description,
-        coverImageUrl: data.coverImageUrl,
+        coverImageUrl,
         displayOrder: data.displayOrder,
         isActive: data.isActive,
         alcoholIds: data.alcoholIds,
