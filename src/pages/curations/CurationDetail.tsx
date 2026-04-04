@@ -292,7 +292,7 @@ export function CurationDetailPage() {
             {/* 커버 이미지 */}
             <Card>
               <CardHeader>
-                <CardTitle>커버 이미지 <span className="text-destructive">*</span></CardTitle>
+                <CardTitle>커버 이미지</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <ImageUpload
@@ -301,11 +301,6 @@ export function CurationDetailPage() {
                   minHeight={200}
                 />
                 <p className="text-sm text-muted-foreground">권장 사이즈: 400x300px</p>
-                {form.formState.errors.coverImageUrl && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.coverImageUrl.message}
-                  </p>
-                )}
                 {isImageUploading && (
                   <p className="text-sm text-muted-foreground">이미지 업로드 중...</p>
                 )}
