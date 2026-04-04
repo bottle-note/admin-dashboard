@@ -31,15 +31,14 @@ import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/common/Pagination';
 import { useAdminAlcoholList } from '@/hooks/useAdminAlcohols';
 import type { AlcoholSearchParams, AlcoholCategory } from '@/types/api';
+import { ALCOHOL_CATEGORIES, CATEGORY_GROUP_LABELS, getCategoryGroup } from '@/types/api';
 
 const CATEGORY_OPTIONS: { value: AlcoholCategory | 'ALL'; label: string }[] = [
   { value: 'ALL', label: '전체' },
-  { value: 'SINGLE_MALT', label: '싱글몰트' },
-  { value: 'BLEND', label: '블렌디드' },
-  { value: 'BLENDED_MALT', label: '블렌디드 몰트' },
-  { value: 'BOURBON', label: '버번' },
-  { value: 'RYE', label: '라이' },
-  { value: 'OTHER', label: '기타' },
+  ...ALCOHOL_CATEGORIES.map((value) => ({
+    value,
+    label: CATEGORY_GROUP_LABELS[value],
+  })),
 ];
 
 export function WhiskyListPage() {
@@ -246,7 +245,14 @@ export function WhiskyListPage() {
                     <TableCell className="text-muted-foreground">
                       {item.engName}
                     </TableCell>
-                    <TableCell>{item.korCategoryName}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-0.5">
+                        <span>{item.korCategoryName}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {CATEGORY_GROUP_LABELS[getCategoryGroup(item.korCategoryName)]}
+                        </span>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(item.modifiedAt).toLocaleDateString('ko-KR')}
                     </TableCell>

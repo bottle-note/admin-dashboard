@@ -348,6 +348,57 @@ export type AlcoholUpdateRequest = AlcoholApiTypes['update']['request'];
 export type AlcoholUpdateResponse = AlcoholApiTypes['update']['response'];
 
 // ============================================
+// 카테고리 그룹 라벨
+// ============================================
+
+/** 카테고리 그룹별 한글 라벨 */
+export const CATEGORY_GROUP_LABELS: Record<AlcoholCategory, string> = {
+  SINGLE_MALT: '싱글몰트',
+  BLEND: '블렌디드',
+  BLENDED_MALT: '블렌디드 몰트',
+  BOURBON: '버번',
+  RYE: '라이',
+  OTHER: '기타',
+};
+
+/** 카테고리 그룹 키 목록 (타입 안전) */
+export const ALCOHOL_CATEGORIES: AlcoholCategory[] = Object.keys(CATEGORY_GROUP_LABELS) as AlcoholCategory[];
+
+/**
+ * korCategory → categoryGroup 매핑
+ * 메인 5개 그룹에 해당하는 카테고리만 명시, 나머지는 모두 OTHER
+ */
+const CATEGORY_TO_GROUP_MAP: Record<string, AlcoholCategory> = {
+  '싱글 몰트': 'SINGLE_MALT',
+  '싱글몰트 알코올': 'SINGLE_MALT',
+  '블렌디드': 'BLEND',
+  '블렌디드 몰트': 'BLENDED_MALT',
+  '버번': 'BOURBON',
+  '라이': 'RYE',
+};
+
+/**
+ * korCategory 문자열로부터 categoryGroup을 결정한다.
+ * CategoryReference API가 categoryGroup을 내려주지 않으므로 프론트에서 매핑.
+ * 메인 5개 그룹에 해당하지 않으면 OTHER로 분류.
+ */
+export function getCategoryGroup(korCategory: string): AlcoholCategory {
+  return CATEGORY_TO_GROUP_MAP[korCategory] ?? 'OTHER';
+}
+
+/**
+ * categoryGroup → 고정 카테고리 이름 매핑 (메인 5개 그룹용)
+ * OTHER는 자유 입력이므로 포함하지 않음
+ */
+export const GROUP_TO_CATEGORY: Record<Exclude<AlcoholCategory, 'OTHER'>, { korCategory: string; engCategory: string }> = {
+  SINGLE_MALT: { korCategory: '싱글 몰트', engCategory: 'Single Malt' },
+  BLEND: { korCategory: '블렌디드', engCategory: 'Blend' },
+  BLENDED_MALT: { korCategory: '블렌디드 몰트', engCategory: 'Blended Malt' },
+  BOURBON: { korCategory: '버번', engCategory: 'Bourbon' },
+  RYE: { korCategory: '라이', engCategory: 'Rye' },
+};
+
+// ============================================
 // 카테고리 레퍼런스 타입
 // ============================================
 
@@ -357,6 +408,6 @@ export interface CategoryReference {
   korCategory: string;
   /** 영문 카테고리 */
   engCategory: string;
-  /** 카테고리 그룹 */
-  categoryGroup: AlcoholCategory;
+  /** 카테고리 그룹 (API 응답에 포함되지 않을 수 있음) */
+  categoryGroup?: AlcoholCategory;
 }

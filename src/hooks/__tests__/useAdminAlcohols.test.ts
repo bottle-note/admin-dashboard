@@ -4,7 +4,8 @@ import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { renderHook } from '@/test/test-utils';
 import { wrapApiError } from '@/test/mocks/data';
-import { useAdminAlcoholList } from '../useAdminAlcohols';
+import { useAdminAlcoholList, useCategoryReferences } from '../useAdminAlcohols';
+import { getCategoryGroup } from '@/types/api/alcohol.api';
 
 const BASE = '/admin/api/v1/alcohols';
 
@@ -70,6 +71,60 @@ describe('useAdminAlcohols hooks', () => {
       expect(result.current.data!.meta).toBeDefined();
       expect(result.current.data!.meta.page).toBe(0);
       expect(result.current.data!.meta.totalElements).toBeGreaterThan(0);
+    });
+  });
+
+  // ==========================================
+  // useCategoryReferences
+  // ==========================================
+  describe('useCategoryReferences', () => {
+    it('카테고리 레퍼런스 목록을 반환한다', async () => {
+      const { result } = renderHook(() => useCategoryReferences());
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(result.current.data!.length).toBeGreaterThan(0);
+    });
+
+    it('실제 API 응답에는 categoryGroup이 없다', async () => {
+      const { result } = renderHook(() => useCategoryReferences());
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // 백엔드 CategoryReference API는 categoryGroup을 내려주지 않음
+      result.current.data!.forEach((ref) => {
+        expect(ref.categoryGroup).toBeUndefined();
+      });
+    });
+  });
+
+  // ==========================================
+  // getCategoryGroup (프론트엔드 매핑)
+  // ==========================================
+  describe('getCategoryGroup', () => {
+    it('메인 카테고리를 올바른 그룹으로 매핑한다', () => {
+      expect(getCategoryGroup('싱글 몰트')).toBe('SINGLE_MALT');
+      expect(getCategoryGroup('블렌디드')).toBe('BLEND');
+      expect(getCategoryGroup('블렌디드 몰트')).toBe('BLENDED_MALT');
+      expect(getCategoryGroup('버번')).toBe('BOURBON');
+      expect(getCategoryGroup('라이')).toBe('RYE');
+    });
+
+    it('싱글몰트 알코올 변형도 SINGLE_MALT로 매핑한다', () => {
+      expect(getCategoryGroup('싱글몰트 알코올')).toBe('SINGLE_MALT');
+    });
+
+    it('기타 하위 카테고리는 OTHER로 매핑한다', () => {
+      expect(getCategoryGroup('테네시')).toBe('OTHER');
+      expect(getCategoryGroup('싱글 그레인')).toBe('OTHER');
+      expect(getCategoryGroup('싱글 팟 스틸')).toBe('OTHER');
+      expect(getCategoryGroup('위트')).toBe('OTHER');
+      expect(getCategoryGroup('콘')).toBe('OTHER');
+      expect(getCategoryGroup('스피릿')).toBe('OTHER');
+    });
+
+    it('알 수 없는 카테고리도 OTHER로 매핑한다', () => {
+      expect(getCategoryGroup('새로운카테고리')).toBe('OTHER');
     });
   });
 });
