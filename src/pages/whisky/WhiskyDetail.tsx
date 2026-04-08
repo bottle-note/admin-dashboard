@@ -23,6 +23,7 @@ import {
 import { useWhiskyDetailForm } from './useWhiskyDetailForm';
 import { useImageUpload, S3UploadPath } from '@/hooks/useImageUpload';
 import { useTastingTagList } from '@/hooks/useTastingTags';
+import { useToast } from '@/hooks/useToast';
 
 import type { AlcoholTastingTag } from '@/types/api';
 
@@ -44,6 +45,9 @@ export function WhiskyDetailPage() {
     handleBack,
     handleDelete,
   } = useWhiskyDetailForm(id);
+
+  // Toast 알림
+  const { showToast } = useToast();
 
   // 이미지 업로드 훅
   const { upload: uploadImage, isUploading: isImageUploading } = useImageUpload({
@@ -93,6 +97,9 @@ export function WhiskyDetailPage() {
   const handleSubmit = form.handleSubmit(
     (data) => {
       onSubmit(data, { tastingTags, relatedKeywords, imagePreviewUrl });
+    },
+    () => {
+      showToast({ type: 'warning', message: '입력 정보를 확인해주세요.' });
     },
   );
 
