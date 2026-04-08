@@ -75,7 +75,7 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
   const { data: whiskyData, isLoading: isWhiskyLoading } = useAdminAlcoholDetail(alcoholId);
   const { data: categoryData, isLoading: isCategoryLoading } = useCategoryReferences();
   const { data: regionData, isLoading: isRegionLoading } = useRegionList({ size: 100 });
-  const { data: distilleryData, isLoading: isDistilleryLoading } = useDistilleryList({ size: 100 });
+  const { data: distilleryData, isLoading: isDistilleryLoading } = useDistilleryList({ size: 9999 });
 
   const isLoading = isWhiskyLoading || isCategoryLoading || isRegionLoading || isDistilleryLoading;
 
