@@ -22,13 +22,15 @@ import { useDistilleryList } from '@/hooks/useDistilleries';
 import { whiskyFormSchema } from './whisky.schema';
 import type { WhiskyFormValues } from './whisky.schema';
 import type { AlcoholCreateRequest, AlcoholUpdateRequest, AlcoholTastingTag, CategoryReference } from '@/types/api';
+import { GROUPED_CATEGORY_REFERENCES } from '@/types/api';
 
 /** 신규 등록용 폼 기본값 */
+const defaultCategory = GROUPED_CATEGORY_REFERENCES.SINGLE_MALT[0]!;
 const DEFAULT_WHISKY_FORM: WhiskyFormValues = {
   korName: '',
   engName: '',
-  korCategory: '',
-  engCategory: '',
+  korCategory: defaultCategory.korCategory,
+  engCategory: defaultCategory.engCategory,
   categoryGroup: 'SINGLE_MALT',
   regionId: 0,
   distilleryId: 0,

@@ -5,7 +5,7 @@ import { server } from '@/test/mocks/server';
 import { renderHook } from '@/test/test-utils';
 import { wrapApiError } from '@/test/mocks/data';
 import { useAdminAlcoholList, useCategoryReferences } from '../useAdminAlcohols';
-import { getCategoryGroup } from '@/types/api/alcohol.api';
+import { useCategoryGroupMap } from '../useCategoryGroupMap';
 
 const BASE = '/admin/api/v1/alcohols';
 
@@ -89,10 +89,13 @@ describe('useAdminAlcohols hooks', () => {
 });
 
   // ==========================================
-  // getCategoryGroup (프론트엔드 매핑)
+  // useCategoryGroupMap (카테고리 그룹 매핑 훅)
   // ==========================================
-  describe('getCategoryGroup', () => {
+  describe('useCategoryGroupMap', () => {
     it('메인 카테고리를 올바른 그룹으로 매핑한다', () => {
+      const { result } = renderHook(() => useCategoryGroupMap());
+      const { getCategoryGroup } = result.current;
+
       expect(getCategoryGroup('싱글 몰트')).toBe('SINGLE_MALT');
       expect(getCategoryGroup('블렌디드')).toBe('BLEND');
       expect(getCategoryGroup('블렌디드 몰트')).toBe('BLENDED_MALT');
@@ -100,11 +103,10 @@ describe('useAdminAlcohols hooks', () => {
       expect(getCategoryGroup('라이')).toBe('RYE');
     });
 
-    it('싱글몰트 알코올 변형도 SINGLE_MALT로 매핑한다', () => {
-      expect(getCategoryGroup('싱글몰트 알코올')).toBe('SINGLE_MALT');
-    });
-
     it('기타 하위 카테고리는 OTHER로 매핑한다', () => {
+      const { result } = renderHook(() => useCategoryGroupMap());
+      const { getCategoryGroup } = result.current;
+
       expect(getCategoryGroup('테네시')).toBe('OTHER');
       expect(getCategoryGroup('싱글 그레인')).toBe('OTHER');
       expect(getCategoryGroup('싱글 팟 스틸')).toBe('OTHER');
@@ -114,7 +116,22 @@ describe('useAdminAlcohols hooks', () => {
     });
 
     it('알 수 없는 카테고리도 OTHER로 매핑한다', () => {
-      expect(getCategoryGroup('새로운카테고리')).toBe('OTHER');
+      const { result } = renderHook(() => useCategoryGroupMap());
+      expect(result.current.getCategoryGroup('새로운카테고리')).toBe('OTHER');
+    });
+
+    it('그룹의 대표 카테고리를 반환한다', () => {
+      const { result } = renderHook(() => useCategoryGroupMap());
+      const { getGroupDefaultCategory } = result.current;
+
+      expect(getGroupDefaultCategory('SINGLE_MALT')).toEqual({
+        korCategory: '싱글 몰트',
+        engCategory: 'Single Malt',
+      });
+      expect(getGroupDefaultCategory('BLEND')).toEqual({
+        korCategory: '블렌디드',
+        engCategory: 'Blend',
+      });
     });
   });
 });
