@@ -20,7 +20,8 @@ import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 import type { WhiskyFormValues } from '../whisky.schema';
 import type { AlcoholCategory, CategoryReference } from '@/types/api';
-import { ALCOHOL_CATEGORIES, CATEGORY_GROUP_LABELS, GROUP_TO_CATEGORY } from '@/types/api';
+import { ALCOHOL_CATEGORIES, CATEGORY_GROUP_LABELS } from '@/types/api';
+import { useCategoryGroupMap } from '@/hooks/useCategoryGroupMap';
 
 /**
  * WhiskyBasicInfoCard 컴포넌트의 props
@@ -46,6 +47,7 @@ export function WhiskyBasicInfoCard({
 }: WhiskyBasicInfoCardProps) {
   const { register, watch, setValue, formState } = form;
   const { errors } = formState;
+  const { getGroupDefaultCategory, categoryReferencesByGroup } = useCategoryGroupMap();
 
   const regionOptions = regions.map((region) => ({ value: String(region.id), label: region.korName }));
   const distilleryOptions = distilleries.map((distillery) => ({ value: String(distillery.id), label: distillery.korName }));
@@ -54,7 +56,11 @@ export function WhiskyBasicInfoCard({
   const isOtherCategory = currentCategoryGroup === 'OTHER';
 
   // OTHER일 때 기존 서브카테고리 옵션 (CategoryReference API에서 메인 그룹 제외)
-  const mainKorCategories = new Set(Object.values(GROUP_TO_CATEGORY).map((c) => c.korCategory));
+  const mainKorCategories = new Set(
+    Object.entries(categoryReferencesByGroup)
+      .filter(([group]) => group !== 'OTHER')
+      .flatMap(([, refs]) => refs.map((r) => r.korCategory))
+  );
   const otherCategoryOptions = categories
     .filter((cat) => !mainKorCategories.has(cat.korCategory))
     .map((cat) => ({ value: cat.korCategory, label: `${cat.korCategory} (${cat.engCategory})` }));
@@ -63,7 +69,7 @@ export function WhiskyBasicInfoCard({
   const handleCategoryGroupChange = (group: AlcoholCategory) => {
     setValue('categoryGroup', group);
     if (group !== 'OTHER') {
-      const mapped = GROUP_TO_CATEGORY[group];
+      const mapped = getGroupDefaultCategory(group);
       setValue('korCategory', mapped.korCategory);
       setValue('engCategory', mapped.engCategory);
     } else {
