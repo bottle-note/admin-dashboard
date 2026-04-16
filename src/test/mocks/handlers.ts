@@ -16,6 +16,7 @@ import {
   mockBannerDeleteResponse,
   mockBannerUpdateStatusResponse,
   mockBannerUpdateSortOrderResponse,
+  mockUserListItems,
   wrapApiResponse,
 } from './data';
 
@@ -295,4 +296,41 @@ export const alcoholHandlers = [
   }),
 ];
 
-export const handlers = [...tastingTagHandlers, ...bannerHandlers, ...alcoholHandlers];
+// ============================================
+// User Handlers
+// ============================================
+
+const USER_BASE = '/admin/api/v1/users';
+
+export const userHandlers = [
+  // GET 목록
+  http.get(USER_BASE, ({ request }) => {
+    const url = new URL(request.url);
+    const keyword = url.searchParams.get('keyword');
+    const status = url.searchParams.get('status');
+    const size = Number(url.searchParams.get('size') ?? 20);
+    const page = Number(url.searchParams.get('page') ?? 0);
+
+    let items = mockUserListItems;
+    if (keyword) {
+      items = items.filter(
+        (u) => u.nickName.includes(keyword) || u.email.toLowerCase().includes(keyword.toLowerCase())
+      );
+    }
+    if (status) {
+      items = items.filter((u) => u.status === status);
+    }
+
+    return HttpResponse.json(
+      wrapApiResponse(items, {
+        page,
+        size,
+        totalElements: items.length,
+        totalPages: Math.ceil(items.length / size),
+        hasNext: false,
+      })
+    );
+  }),
+];
+
+export const handlers = [...tastingTagHandlers, ...bannerHandlers, ...alcoholHandlers, ...userHandlers];
