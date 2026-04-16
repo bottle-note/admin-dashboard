@@ -11,3 +11,4 @@ export * from './distillery.api';
 export * from './s3.api';
 export * from './banner.api';
 export * from './curation.api';
+export * from './user.api';
