@@ -13,6 +13,26 @@ export const DistilleryApi = {
     endpoint: '/admin/api/v1/distilleries',
     method: 'GET',
   },
+  /** 증류소 상세 조회 */
+  detail: {
+    endpoint: '/admin/api/v1/distilleries/:id',
+    method: 'GET',
+  },
+  /** 증류소 생성 */
+  create: {
+    endpoint: '/admin/api/v1/distilleries',
+    method: 'POST',
+  },
+  /** 증류소 수정 */
+  update: {
+    endpoint: '/admin/api/v1/distilleries/:id',
+    method: 'PUT',
+  },
+  /** 증류소 삭제 */
+  delete: {
+    endpoint: '/admin/api/v1/distilleries/:id',
+    method: 'DELETE',
+  },
 } as const;
 
 // ============================================
@@ -62,6 +82,69 @@ export interface DistilleryApiTypes {
       hasNext: boolean;
     };
   };
+  /** 증류소 상세 조회 */
+  detail: {
+    /** 응답 */
+    response: {
+      /** 증류소 ID */
+      id: number;
+      /** 증류소 한글명 */
+      korName: string;
+      /** 증류소 영문명 */
+      engName: string;
+      /** 로고 이미지 URL */
+      logoImgUrl: string | null;
+      /** 지역 ID */
+      regionId: number | null;
+      /** 지역 한글명 */
+      korRegion: string | null;
+      /** 지역 영문명 */
+      engRegion: string | null;
+      /** 생성일시 */
+      createdAt: string;
+      /** 수정일시 */
+      modifiedAt: string;
+    };
+  };
+  /** 증류소 생성/수정 요청 */
+  form: {
+    /** 요청 데이터 */
+    request: {
+      /** 증류소 한글명 */
+      korName: string;
+      /** 증류소 영문명 */
+      engName: string;
+      /** 로고 이미지 URL */
+      logoImgUrl?: string | null;
+      /** 지역 ID */
+      regionId?: number | null;
+    };
+    /** 응답 데이터 */
+    response: {
+      /** 결과 코드 */
+      code: string;
+      /** 결과 메시지 */
+      message: string;
+      /** 생성/수정된 증류소 ID */
+      targetId: number;
+      /** 응답 시간 */
+      responseAt: string;
+    };
+  };
+  /** 증류소 삭제 */
+  delete: {
+    /** 응답 데이터 */
+    response: {
+      /** 결과 코드 */
+      code: string;
+      /** 결과 메시지 */
+      message: string;
+      /** 삭제된 증류소 ID */
+      targetId: number;
+      /** 응답 시간 */
+      responseAt: string;
+    };
+  };
 }
 
 // ============================================
@@ -76,3 +159,15 @@ export type DistilleryListItem = DistilleryApiTypes['list']['response'];
 
 /** 증류소 목록 페이지네이션 메타 */
 export type DistilleryPageMeta = DistilleryApiTypes['list']['meta'];
+
+/** 증류소 상세 */
+export type DistilleryDetail = DistilleryApiTypes['detail']['response'];
+
+/** 증류소 폼 데이터 (생성/수정) */
+export type DistilleryFormData = DistilleryApiTypes['form']['request'];
+
+/** 증류소 생성/수정 응답 */
+export type DistilleryFormResponse = DistilleryApiTypes['form']['response'];
+
+/** 증류소 삭제 응답 */
+export type DistilleryDeleteResponse = DistilleryApiTypes['delete']['response'];
