@@ -9,6 +9,10 @@ import {
   type DistillerySearchParams,
   type DistilleryListItem,
   type DistilleryPageMeta,
+  type DistilleryDetail,
+  type DistilleryFormData,
+  type DistilleryFormResponse,
+  type DistilleryDeleteResponse,
 } from '@/types/api';
 
 // ============================================
@@ -51,5 +55,39 @@ export const distilleryService = {
         hasNext: response.meta.hasNext ?? false,
       },
     };
+  },
+
+  /**
+   * 증류소 상세 조회
+   */
+  detail: async (id: number): Promise<DistilleryDetail> => {
+    const endpoint = DistilleryApi.detail.endpoint.replace(':id', String(id));
+    return apiClient.get<DistilleryDetail>(endpoint);
+  },
+
+  /**
+   * 증류소 생성
+   */
+  create: async (data: DistilleryFormData): Promise<DistilleryFormResponse> => {
+    return apiClient.post<DistilleryFormResponse, DistilleryFormData>(
+      DistilleryApi.create.endpoint,
+      data
+    );
+  },
+
+  /**
+   * 증류소 수정
+   */
+  update: async (id: number, data: DistilleryFormData): Promise<DistilleryFormResponse> => {
+    const endpoint = DistilleryApi.update.endpoint.replace(':id', String(id));
+    return apiClient.put<DistilleryFormResponse, DistilleryFormData>(endpoint, data);
+  },
+
+  /**
+   * 증류소 삭제
+   */
+  delete: async (id: number): Promise<DistilleryDeleteResponse> => {
+    const endpoint = DistilleryApi.delete.endpoint.replace(':id', String(id));
+    return apiClient.delete<DistilleryDeleteResponse>(endpoint);
   },
 };

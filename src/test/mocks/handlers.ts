@@ -17,6 +17,10 @@ import {
   mockBannerUpdateStatusResponse,
   mockBannerUpdateSortOrderResponse,
   mockUserListItems,
+  mockDistilleryListItems,
+  mockDistilleryDetail,
+  mockDistilleryFormResponse,
+  mockDistilleryDeleteResponse,
   wrapApiResponse,
 } from './data';
 
@@ -333,4 +337,91 @@ export const userHandlers = [
   }),
 ];
 
-export const handlers = [...tastingTagHandlers, ...bannerHandlers, ...alcoholHandlers, ...userHandlers];
+// ============================================
+// Distillery Handlers
+// ============================================
+
+const DISTILLERY_BASE = '/admin/api/v1/distilleries';
+
+export const distilleryHandlers = [
+  // GET 목록
+  http.get(DISTILLERY_BASE, ({ request }) => {
+    const url = new URL(request.url);
+    const keyword = url.searchParams.get('keyword');
+    const size = Number(url.searchParams.get('size') ?? 20);
+    const page = Number(url.searchParams.get('page') ?? 0);
+
+    let items = mockDistilleryListItems;
+    if (keyword) {
+      items = items.filter(
+        (d) => d.korName.includes(keyword) || d.engName.toLowerCase().includes(keyword.toLowerCase())
+      );
+    }
+
+    return HttpResponse.json(
+      wrapApiResponse(items, {
+        page,
+        size,
+        totalElements: items.length,
+        totalPages: Math.ceil(items.length / size),
+        hasNext: false,
+      })
+    );
+  }),
+
+  // GET 상세
+  http.get(`${DISTILLERY_BASE}/:id`, ({ params }) => {
+    const id = Number(params.id);
+    if (id === mockDistilleryDetail.id) {
+      return HttpResponse.json(wrapApiResponse(mockDistilleryDetail));
+    }
+    return HttpResponse.json(
+      {
+        success: false,
+        code: 404,
+        data: null,
+        errors: [{ code: 'DISTILLERY_NOT_FOUND', message: '증류소를 찾을 수 없습니다.' }],
+        meta: {},
+      },
+      { status: 404 }
+    );
+  }),
+
+  // POST 생성
+  http.post(DISTILLERY_BASE, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockDistilleryFormResponse,
+        code: 'DISTILLERY_CREATED',
+        targetId: 99,
+        message: `${body.korName} 증류소가 생성되었습니다.`,
+      })
+    );
+  }),
+
+  // PUT 수정
+  http.put(`${DISTILLERY_BASE}/:id`, async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockDistilleryFormResponse,
+        code: 'DISTILLERY_UPDATED',
+        targetId: Number(params.id),
+        message: `${body.korName} 증류소가 수정되었습니다.`,
+      })
+    );
+  }),
+
+  // DELETE 삭제
+  http.delete(`${DISTILLERY_BASE}/:id`, ({ params }) => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockDistilleryDeleteResponse,
+        targetId: Number(params.id),
+      })
+    );
+  }),
+];
+
+export const handlers = [...tastingTagHandlers, ...bannerHandlers, ...alcoholHandlers, ...userHandlers, ...distilleryHandlers];
