@@ -13,6 +13,7 @@ import {
   Plus,
   LayoutDashboard,
   Layers,
+  Factory,
 } from 'lucide-react';
 import type { MenuGroup } from '@/types/menu';
 
@@ -72,6 +73,25 @@ export const menuConfig: MenuGroup[] = [
                 label: '태그 추가',
                 icon: Plus,
                 path: '/tasting-tags/new',
+              },
+            ],
+          },
+          {
+            id: 'distillery-management',
+            label: '증류소 관리',
+            icon: Factory,
+            children: [
+              {
+                id: 'distillery-list',
+                label: '증류소 목록',
+                icon: List,
+                path: '/distilleries',
+              },
+              {
+                id: 'distillery-create',
+                label: '증류소 추가',
+                icon: Plus,
+                path: '/distilleries/new',
               },
             ],
           },
