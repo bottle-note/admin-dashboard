@@ -1,11 +1,12 @@
 ARG ENV_FILE=prod.sops.env
 FROM node:22-alpine AS base
 RUN apk add --no-cache libc6-compat gettext
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# pnpm 버전은 package.json 의 `packageManager` 필드를 corepack 이 자동 인식한다
+RUN corepack enable
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
