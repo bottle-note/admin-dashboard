@@ -364,21 +364,6 @@ export const CATEGORY_GROUP_LABELS: Record<AlcoholCategory, string> = {
 /** 카테고리 그룹 키 목록 (타입 안전) */
 export const ALCOHOL_CATEGORIES: AlcoholCategory[] = Object.keys(CATEGORY_GROUP_LABELS) as AlcoholCategory[];
 
-/**
- * 그룹별 카테고리 레퍼런스 (단일 소스)
- * 현재는 하드코딩이지만, #221 API 반영 시 서버 응답으로 교체 예정.
- * 서버 응답 형태: Record<AlcoholCategory, CategoryReference[]>
- */
-// TODO: #221 API 반영 시 서버 응답으로 교체
-export const GROUPED_CATEGORY_REFERENCES: Record<AlcoholCategory, CategoryReference[]> = {
-  SINGLE_MALT: [{ korCategory: '싱글 몰트', engCategory: 'Single Malt' }],
-  BLEND: [{ korCategory: '블렌디드', engCategory: 'Blend' }],
-  BLENDED_MALT: [{ korCategory: '블렌디드 몰트', engCategory: 'Blended Malt' }],
-  BOURBON: [{ korCategory: '버번', engCategory: 'Bourbon' }],
-  RYE: [{ korCategory: '라이', engCategory: 'Rye' }],
-  OTHER: [],
-};
-
 // ============================================
 // 카테고리 레퍼런스 타입
 // ============================================
@@ -390,3 +375,19 @@ export interface CategoryReference {
   /** 영문 카테고리 */
   engCategory: string;
 }
+
+/**
+ * 카테고리 레퍼런스 응답
+ * 서버는 그룹별로 카테고리 목록을 묶어 내려준다.
+ */
+export type CategoryReferenceMap = Record<AlcoholCategory, CategoryReference[]>;
+
+/** 빈 카테고리 레퍼런스 맵 (로딩 전 폴백) */
+export const EMPTY_CATEGORY_REFERENCE_MAP: CategoryReferenceMap = {
+  SINGLE_MALT: [],
+  BLEND: [],
+  BLENDED_MALT: [],
+  BOURBON: [],
+  RYE: [],
+  OTHER: [],
+};
