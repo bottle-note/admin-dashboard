@@ -331,17 +331,19 @@ export const mockDistilleryListItems: DistilleryListItem[] = [
     id: 1,
     korName: '맥캘란',
     engName: 'Macallan',
-    logoImgUrl: 'https://example.com/macallan.jpg',
+    imageUrl: 'https://example.com/macallan.jpg',
     createdAt: '2024-01-01T00:00:00',
     modifiedAt: '2024-06-01T00:00:00',
+    sortOrder: 1,
   },
   {
     id: 2,
     korName: '글렌피딕',
     engName: 'Glenfiddich',
-    logoImgUrl: null,
+    imageUrl: null,
     createdAt: '2024-02-01T00:00:00',
     modifiedAt: '2024-06-01T00:00:00',
+    sortOrder: 9999,
   },
 ];
 
@@ -349,12 +351,10 @@ export const mockDistilleryDetail: DistilleryDetail = {
   id: 1,
   korName: '맥캘란',
   engName: 'Macallan',
-  logoImgUrl: 'https://example.com/macallan.jpg',
-  regionId: 1,
-  korRegion: '스페이사이드',
-  engRegion: 'Speyside',
+  imageUrl: 'https://example.com/macallan.jpg',
   createdAt: '2024-01-01T00:00:00',
   modifiedAt: '2024-06-01T00:00:00',
+  sortOrder: 1,
 };
 
 export const mockDistilleryFormResponse: DistilleryFormResponse = {

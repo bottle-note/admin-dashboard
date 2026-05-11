@@ -422,6 +422,18 @@ export const distilleryHandlers = [
       })
     );
   }),
+
+  // PATCH 정렬 순서 변경
+  http.patch(`${DISTILLERY_BASE}/:id/sort-order`, async ({ params }) => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        code: 'DISTILLERY_SORT_ORDER_UPDATED',
+        message: '증류소 정렬 순서가 변경되었습니다.',
+        targetId: Number(params.id),
+        responseAt: '2024-06-01T00:00:00',
+      })
+    );
+  }),
 ];
 
 export const handlers = [...tastingTagHandlers, ...bannerHandlers, ...alcoholHandlers, ...userHandlers, ...distilleryHandlers];

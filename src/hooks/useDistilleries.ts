@@ -16,6 +16,8 @@ import type {
   DistilleryFormData,
   DistilleryFormResponse,
   DistilleryDeleteResponse,
+  DistillerySortOrderRequest,
+  DistillerySortOrderResponse,
 } from '@/types/api';
 
 /**
@@ -96,6 +98,43 @@ export function useDistilleryUpdate(
         queryClient.invalidateQueries({ queryKey: distilleryKeys.details() });
         if (onSuccess) {
           (onSuccess as (data: DistilleryFormResponse, variables: DistilleryUpdateVariables, context: unknown) => void)(data, variables, context);
+        }
+      },
+    }
+  );
+}
+
+export interface DistillerySortOrderVariables {
+  id: number;
+  data: DistillerySortOrderRequest;
+}
+
+/**
+ * 증류소 정렬 순서 변경 훅
+ */
+export function useDistillerySortOrderUpdate(
+  options?: Omit<
+    UseApiMutationOptions<DistillerySortOrderResponse, DistillerySortOrderVariables>,
+    'successMessage'
+  >
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...restOptions } = options ?? {};
+
+  return useApiMutation<DistillerySortOrderResponse, DistillerySortOrderVariables>(
+    ({ id, data }) => distilleryService.updateSortOrder(id, data),
+    {
+      successMessage: '증류소 정렬 순서가 변경되었습니다.',
+      ...restOptions,
+      onSuccess: (data, variables, context) => {
+        queryClient.invalidateQueries({ queryKey: distilleryKeys.lists() });
+        queryClient.invalidateQueries({ queryKey: distilleryKeys.details() });
+        if (onSuccess) {
+          (onSuccess as (
+            data: DistillerySortOrderResponse,
+            variables: DistillerySortOrderVariables,
+            context: unknown
+          ) => void)(data, variables, context);
         }
       },
     }

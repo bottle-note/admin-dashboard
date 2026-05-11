@@ -68,8 +68,8 @@ describe('useDistilleries hooks', () => {
 
       expect(result.current.data!.id).toBe(1);
       expect(result.current.data!.korName).toBe('맥캘란');
-      expect(result.current.data!.regionId).toBe(1);
-      expect(result.current.data!.korRegion).toBe('스페이사이드');
+      expect(result.current.data!.imageUrl).toBe('https://example.com/macallan.jpg');
+      expect(result.current.data!.sortOrder).toBe(1);
     });
 
     it('존재하지 않는 ID는 에러 상태가 된다', async () => {

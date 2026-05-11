@@ -6,19 +6,12 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
@@ -32,7 +25,6 @@ import {
   useDistilleryUpdate,
   useDistilleryDelete,
 } from '@/hooks/useDistilleries';
-import { useRegionList } from '@/hooks/useRegions';
 
 import {
   distilleryFormSchema,
@@ -49,7 +41,6 @@ export function DistilleryDetailPage() {
 
   // API 조회
   const { data: detailData, isLoading } = useDistilleryDetail(distilleryId);
-  const { data: regionData } = useRegionList({ size: 500 });
 
   // Mutations
   const createMutation = useDistilleryCreate({
@@ -71,7 +62,7 @@ export function DistilleryDetailPage() {
   });
 
   // 상태
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // React Hook Form 설정
@@ -84,27 +75,27 @@ export function DistilleryDetailPage() {
   useEffect(() => {
     if (isNewMode) {
       form.reset(distilleryDefaultValues);
-      setLogoUrl(null);
+      setImageUrl(null);
     } else if (detailData) {
       form.reset({
         korName: detailData.korName,
         engName: detailData.engName,
-        regionId: detailData.regionId,
+        sortOrder: detailData.sortOrder,
       });
-      setLogoUrl(detailData.logoImgUrl);
+      setImageUrl(detailData.imageUrl);
     }
   }, [detailData, form, isNewMode]);
 
-  // 로고 이미지 변경
-  const handleLogoChange = (file: File | null, previewUrl: string | null) => {
+  // 이미지 변경
+  const handleImageChange = (file: File | null, previewUrl: string | null) => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setLogoUrl(reader.result as string);
+        setImageUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
     } else {
-      setLogoUrl(previewUrl);
+      setImageUrl(previewUrl);
     }
   };
 
@@ -112,8 +103,8 @@ export function DistilleryDetailPage() {
     const formData = {
       korName: data.korName,
       engName: data.engName,
-      logoImgUrl: logoUrl,
-      regionId: data.regionId,
+      imageUrl,
+      sortOrder: data.sortOrder,
     };
 
     if (isNewMode) {
@@ -132,8 +123,6 @@ export function DistilleryDetailPage() {
   const handleBack = () => navigate('/distilleries');
 
   const isMutating = createMutation.isPending || updateMutation.isPending;
-
-  const regions = regionData?.items ?? [];
 
   return (
     <div className="space-y-6">
@@ -196,48 +185,34 @@ export function DistilleryDetailPage() {
                 </FormField>
               </div>
 
-              {/* 지역 선택 */}
-              <FormField label="지역">
-                <Controller
-                  name="regionId"
-                  control={form.control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value ? String(field.value) : 'none'}
-                      onValueChange={(val) =>
-                        field.onChange(val === 'none' ? null : Number(val))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="지역을 선택하세요" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">선택 안함</SelectItem>
-                        {regions.map((region) => (
-                          <SelectItem key={region.id} value={String(region.id)}>
-                            {region.korName} ({region.engName})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+              {/* 정렬 순서 */}
+              <FormField
+                label="정렬 순서"
+                required
+                error={form.formState.errors.sortOrder?.message}
+              >
+                <Input
+                  type="number"
+                  min={0}
+                  {...form.register('sortOrder', { valueAsNumber: true })}
+                  placeholder="미지정 시 9999"
                 />
               </FormField>
             </CardContent>
           </Card>
 
-          {/* 로고 카드 */}
+          {/* 이미지 카드 */}
           <Card className="flex-1">
             <CardHeader>
-              <CardTitle>로고</CardTitle>
+              <CardTitle>이미지</CardTitle>
               <CardDescription>
-                증류소 로고 이미지를 업로드합니다. (선택)
+                증류소 이미지를 업로드합니다. (선택)
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ImageUpload
-                imageUrl={logoUrl}
-                onImageChange={handleLogoChange}
+                imageUrl={imageUrl}
+                onImageChange={handleImageChange}
                 minHeight={150}
               />
             </CardContent>

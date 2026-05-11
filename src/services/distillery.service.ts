@@ -13,6 +13,8 @@ import {
   type DistilleryFormData,
   type DistilleryFormResponse,
   type DistilleryDeleteResponse,
+  type DistillerySortOrderRequest,
+  type DistillerySortOrderResponse,
 } from '@/types/api';
 
 // ============================================
@@ -89,5 +91,19 @@ export const distilleryService = {
   delete: async (id: number): Promise<DistilleryDeleteResponse> => {
     const endpoint = DistilleryApi.delete.endpoint.replace(':id', String(id));
     return apiClient.delete<DistilleryDeleteResponse>(endpoint);
+  },
+
+  /**
+   * 증류소 정렬 순서 변경
+   */
+  updateSortOrder: async (
+    id: number,
+    data: DistillerySortOrderRequest
+  ): Promise<DistillerySortOrderResponse> => {
+    const endpoint = DistilleryApi.updateSortOrder.endpoint.replace(':id', String(id));
+    return apiClient.patch<DistillerySortOrderResponse, DistillerySortOrderRequest>(
+      endpoint,
+      data
+    );
   },
 };

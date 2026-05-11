@@ -33,6 +33,11 @@ export const DistilleryApi = {
     endpoint: '/admin/api/v1/distilleries/:id',
     method: 'DELETE',
   },
+  /** 증류소 정렬 순서 변경 */
+  updateSortOrder: {
+    endpoint: '/admin/api/v1/distilleries/:id/sort-order',
+    method: 'PATCH',
+  },
 } as const;
 
 // ============================================
@@ -61,12 +66,14 @@ export interface DistilleryApiTypes {
       korName: string;
       /** 증류소 영문명 */
       engName: string;
-      /** 로고 이미지 URL */
-      logoImgUrl: string | null;
+      /** 이미지 URL */
+      imageUrl: string | null;
       /** 생성일시 */
       createdAt: string;
       /** 수정일시 */
       modifiedAt: string;
+      /** 정렬 순서 (미설정: 9999) */
+      sortOrder: number;
     };
     /** 페이지네이션 메타 정보 */
     meta: {
@@ -92,18 +99,14 @@ export interface DistilleryApiTypes {
       korName: string;
       /** 증류소 영문명 */
       engName: string;
-      /** 로고 이미지 URL */
-      logoImgUrl: string | null;
-      /** 지역 ID */
-      regionId: number | null;
-      /** 지역 한글명 */
-      korRegion: string | null;
-      /** 지역 영문명 */
-      engRegion: string | null;
+      /** 이미지 URL */
+      imageUrl: string | null;
       /** 생성일시 */
       createdAt: string;
       /** 수정일시 */
       modifiedAt: string;
+      /** 정렬 순서 (미설정: 9999) */
+      sortOrder: number;
     };
   };
   /** 증류소 생성/수정 요청 */
@@ -114,10 +117,10 @@ export interface DistilleryApiTypes {
       korName: string;
       /** 증류소 영문명 */
       engName: string;
-      /** 로고 이미지 URL */
-      logoImgUrl?: string | null;
-      /** 지역 ID */
-      regionId?: number | null;
+      /** 이미지 URL */
+      imageUrl?: string | null;
+      /** 정렬 순서 (미지정 시 백엔드 기본값 9999) */
+      sortOrder?: number | null;
     };
     /** 응답 데이터 */
     response: {
@@ -140,6 +143,25 @@ export interface DistilleryApiTypes {
       /** 결과 메시지 */
       message: string;
       /** 삭제된 증류소 ID */
+      targetId: number;
+      /** 응답 시간 */
+      responseAt: string;
+    };
+  };
+  /** 증류소 정렬 순서 변경 */
+  updateSortOrder: {
+    /** 요청 데이터 */
+    request: {
+      /** 정렬 순서 (0 이상) */
+      sortOrder: number;
+    };
+    /** 응답 데이터 */
+    response: {
+      /** 결과 코드 */
+      code: string;
+      /** 결과 메시지 */
+      message: string;
+      /** 대상 증류소 ID */
       targetId: number;
       /** 응답 시간 */
       responseAt: string;
@@ -171,3 +193,9 @@ export type DistilleryFormResponse = DistilleryApiTypes['form']['response'];
 
 /** 증류소 삭제 응답 */
 export type DistilleryDeleteResponse = DistilleryApiTypes['delete']['response'];
+
+/** 증류소 정렬 순서 변경 요청 */
+export type DistillerySortOrderRequest = DistilleryApiTypes['updateSortOrder']['request'];
+
+/** 증류소 정렬 순서 변경 응답 */
+export type DistillerySortOrderResponse = DistilleryApiTypes['updateSortOrder']['response'];

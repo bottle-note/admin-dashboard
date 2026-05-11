@@ -180,9 +180,9 @@ export function DistilleryListPage() {
                 >
                   <TableCell className="font-mono text-sm">{item.id}</TableCell>
                   <TableCell>
-                    {item.logoImgUrl ? (
+                    {item.imageUrl ? (
                       <img
-                        src={item.logoImgUrl}
+                        src={item.imageUrl}
                         alt={item.korName}
                         className="h-10 w-10 rounded object-cover"
                       />
