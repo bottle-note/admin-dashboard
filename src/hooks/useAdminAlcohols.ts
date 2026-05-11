@@ -18,7 +18,7 @@ import type {
   AlcoholDeleteResponse,
   AlcoholUpdateRequest,
   AlcoholUpdateResponse,
-  CategoryReference,
+  CategoryReferenceMap,
 } from '@/types/api';
 
 /**
@@ -116,21 +116,19 @@ export function useAdminAlcoholCreate(
 
 /**
  * 카테고리 레퍼런스 조회 훅
- * DB에 등록된 모든 카테고리 페어(한글/영문) 목록을 조회합니다.
+ * 서버는 그룹(AlcoholCategory)별로 카테고리 페어를 묶어 내려준다.
  *
  * @example
  * ```tsx
- * const { data: categories, isLoading } = useCategoryReferences();
+ * const { data: categoryMap, isLoading } = useCategoryReferences();
  *
- * if (categories) {
- *   categories.forEach(cat => {
- *     console.log(cat.korCategory, cat.engCategory);
- *   });
+ * if (categoryMap) {
+ *   categoryMap.OTHER.forEach(cat => console.log(cat.korCategory));
  * }
  * ```
  */
 export function useCategoryReferences() {
-  return useApiQuery<CategoryReference[]>(
+  return useApiQuery<CategoryReferenceMap>(
     [...adminAlcoholKeys.all, 'category-references'],
     () => adminAlcoholService.getCategoryReferences(),
     {

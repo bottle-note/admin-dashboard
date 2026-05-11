@@ -15,7 +15,7 @@ import {
   type AlcoholDeleteResponse,
   type AlcoholUpdateRequest,
   type AlcoholUpdateResponse,
-  type CategoryReference,
+  type CategoryReferenceMap,
 } from '@/types/api';
 
 // ============================================
@@ -81,10 +81,10 @@ export const adminAlcoholService = {
 
   /**
    * 카테고리 레퍼런스 조회
-   * DB에 등록된 모든 카테고리 페어(한글/영문) 목록 조회
+   * 서버 응답은 그룹(AlcoholCategory)별로 묶인 카테고리 페어 목록.
    */
-  getCategoryReferences: async (): Promise<CategoryReference[]> => {
-    return apiClient.get<CategoryReference[]>(AlcoholApi.categoryReference.endpoint);
+  getCategoryReferences: async (): Promise<CategoryReferenceMap> => {
+    return apiClient.get<CategoryReferenceMap>(AlcoholApi.categoryReference.endpoint);
   },
 
   /**

@@ -7,7 +7,7 @@ import type {
   TastingTagAlcohol,
   AlcoholListItem,
   AlcoholDeleteResponse,
-  CategoryReference,
+  CategoryReferenceMap,
   BannerListItem,
   BannerDetail,
   BannerCreateResponse,
@@ -168,21 +168,25 @@ export const mockAlcoholDeleteResponse: AlcoholDeleteResponse = {
 // Category Reference Mock Data
 // ============================================
 
-/** 실제 API 응답과 동일한 구조 (categoryGroup 없음) */
-export const mockCategoryReferences: CategoryReference[] = [
-  { korCategory: '라이', engCategory: 'Rye' },
-  { korCategory: '버번', engCategory: 'Bourbon' },
-  { korCategory: '블렌디드', engCategory: 'Blend' },
-  { korCategory: '블렌디드 몰트', engCategory: 'Blended Malt' },
-  { korCategory: '스피릿', engCategory: 'Spirit' },
-  { korCategory: '싱글 그레인', engCategory: 'Single Grain' },
-  { korCategory: '싱글 몰트', engCategory: 'Single Malt' },
-  { korCategory: '싱글 팟 스틸', engCategory: 'Single Pot Still' },
-  { korCategory: '싱글몰트 알코올', engCategory: 'Single Malts' },
-  { korCategory: '위트', engCategory: 'Wheat' },
-  { korCategory: '콘', engCategory: 'Corn' },
-  { korCategory: '테네시', engCategory: 'Tennessee' },
-];
+/** 실제 API 응답 형태: Record<AlcoholCategory, CategoryReference[]> */
+export const mockCategoryReferences: CategoryReferenceMap = {
+  SINGLE_MALT: [
+    { korCategory: '싱글 몰트', engCategory: 'Single Malt' },
+    { korCategory: '싱글몰트 알코올', engCategory: 'Single Malts' },
+  ],
+  BLEND: [{ korCategory: '블렌디드', engCategory: 'Blend' }],
+  BLENDED_MALT: [{ korCategory: '블렌디드 몰트', engCategory: 'Blended Malt' }],
+  BOURBON: [{ korCategory: '버번', engCategory: 'Bourbon' }],
+  RYE: [{ korCategory: '라이', engCategory: 'Rye' }],
+  OTHER: [
+    { korCategory: '스피릿', engCategory: 'Spirit' },
+    { korCategory: '싱글 그레인', engCategory: 'Single Grain' },
+    { korCategory: '싱글 팟 스틸', engCategory: 'Single Pot Still' },
+    { korCategory: '위트', engCategory: 'Wheat' },
+    { korCategory: '콘', engCategory: 'Corn' },
+    { korCategory: '테네시', engCategory: 'Tennessee' },
+  ],
+};
 
 // ============================================
 // Banner Mock Data

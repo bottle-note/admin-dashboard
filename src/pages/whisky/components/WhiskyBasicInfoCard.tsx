@@ -19,20 +19,20 @@ import { FormField } from '@/components/common/FormField';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 
 import type { WhiskyFormValues } from '../whisky.schema';
-import type { AlcoholCategory, CategoryReference } from '@/types/api';
+import type { AlcoholCategory, CategoryReferenceMap } from '@/types/api';
 import { ALCOHOL_CATEGORIES, CATEGORY_GROUP_LABELS } from '@/types/api';
 import { useCategoryGroupMap } from '@/hooks/useCategoryGroupMap';
 
 /**
  * WhiskyBasicInfoCard 컴포넌트의 props
  * @param form - React Hook Form 인스턴스
- * @param categories - 카테고리 레퍼런스 목록 (API에서 조회)
+ * @param groupedCategories - 그룹별 카테고리 레퍼런스 (API에서 조회)
  * @param regions - 지역 목록
  * @param distilleries - 증류소 목록
  */
 export interface WhiskyBasicInfoCardProps {
   form: UseFormReturn<WhiskyFormValues>;
-  categories: CategoryReference[];
+  groupedCategories: CategoryReferenceMap;
   regions: Array<{ id: number; korName: string }>;
   distilleries: Array<{ id: number; korName: string }>;
   disabled?: boolean;
@@ -40,14 +40,14 @@ export interface WhiskyBasicInfoCardProps {
 
 export function WhiskyBasicInfoCard({
   form,
-  categories,
+  groupedCategories,
   regions,
   distilleries,
   disabled = false,
 }: WhiskyBasicInfoCardProps) {
   const { register, watch, setValue, formState } = form;
   const { errors } = formState;
-  const { getGroupDefaultCategory, categoryReferencesByGroup } = useCategoryGroupMap();
+  const { getGroupDefaultCategory } = useCategoryGroupMap();
 
   const regionOptions = regions.map((region) => ({ value: String(region.id), label: region.korName }));
   const distilleryOptions = distilleries.map((distillery) => ({ value: String(distillery.id), label: distillery.korName }));
@@ -55,15 +55,11 @@ export function WhiskyBasicInfoCard({
   const currentCategoryGroup = watch('categoryGroup');
   const isOtherCategory = currentCategoryGroup === 'OTHER';
 
-  // OTHER일 때 기존 서브카테고리 옵션 (CategoryReference API에서 메인 그룹 제외)
-  const mainKorCategories = new Set(
-    Object.entries(categoryReferencesByGroup)
-      .filter(([group]) => group !== 'OTHER')
-      .flatMap(([, refs]) => refs.map((r) => r.korCategory))
-  );
-  const otherCategoryOptions = categories
-    .filter((cat) => !mainKorCategories.has(cat.korCategory))
-    .map((cat) => ({ value: cat.korCategory, label: `${cat.korCategory} (${cat.engCategory})` }));
+  // OTHER 그룹의 서브카테고리 옵션 (서버가 이미 OTHER만 분리해서 내려줌)
+  const otherCategoryOptions = groupedCategories.OTHER.map((cat) => ({
+    value: cat.korCategory,
+    label: `${cat.korCategory} (${cat.engCategory})`,
+  }));
 
   // 카테고리 그룹 변경 시 korCategory/engCategory 자동 세팅
   const handleCategoryGroupChange = (group: AlcoholCategory) => {
@@ -81,7 +77,7 @@ export function WhiskyBasicInfoCard({
   // OTHER 서브카테고리 선택 시 engCategory도 함께 세팅
   const handleOtherCategorySelect = (korCategory: string) => {
     setValue('korCategory', korCategory);
-    const matched = categories.find((c) => c.korCategory === korCategory);
+    const matched = groupedCategories.OTHER.find((c) => c.korCategory === korCategory);
     if (matched) {
       setValue('engCategory', matched.engCategory);
     }
