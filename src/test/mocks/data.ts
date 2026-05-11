@@ -15,6 +15,11 @@ import type {
   BannerDeleteResponse,
   BannerUpdateStatusResponse,
   BannerUpdateSortOrderResponse,
+  UserListItem,
+  DistilleryListItem,
+  DistilleryDetail,
+  DistilleryFormResponse,
+  DistilleryDeleteResponse,
 } from '@/types/api';
 
 export const mockTastingTagListItems: TastingTagListItem[] = [
@@ -264,6 +269,104 @@ export const mockBannerUpdateStatusResponse: BannerUpdateStatusResponse = {
 export const mockBannerUpdateSortOrderResponse: BannerUpdateSortOrderResponse = {
   code: 'BANNER_SORT_ORDER_UPDATED',
   message: '배너 순서가 변경되었습니다.',
+  targetId: 1,
+  responseAt: '2024-06-01T00:00:00',
+};
+
+// ============================================
+// User Mock Data
+// ============================================
+
+export const mockUserListItems: UserListItem[] = [
+  {
+    userId: 1,
+    email: 'whisky@example.com',
+    nickName: '위스키러버',
+    imageUrl: 'https://example.com/user1.jpg',
+    role: 'ROLE_USER',
+    status: 'ACTIVE',
+    socialType: ['KAKAO'],
+    reviewCount: 15,
+    ratingCount: 42,
+    picksCount: 8,
+    createAt: '2024-01-15T10:00:00',
+    lastLoginAt: '2024-06-01T18:30:00',
+  },
+  {
+    userId: 2,
+    email: 'admin@bottlenote.com',
+    nickName: '관리자',
+    imageUrl: null,
+    role: 'ROLE_ADMIN',
+    status: 'ACTIVE',
+    socialType: ['GOOGLE', 'APPLE'],
+    reviewCount: 0,
+    ratingCount: 5,
+    picksCount: 2,
+    createAt: '2023-12-01T09:00:00',
+    lastLoginAt: '2024-06-10T08:00:00',
+  },
+  {
+    userId: 3,
+    email: 'deleted@example.com',
+    nickName: '탈퇴유저',
+    imageUrl: null,
+    role: 'ROLE_USER',
+    status: 'DELETED',
+    socialType: ['NAVER'],
+    reviewCount: 3,
+    ratingCount: 10,
+    picksCount: 1,
+    createAt: '2024-02-01T12:00:00',
+    lastLoginAt: null,
+  },
+];
+
+// ============================================
+// Distillery Mock Data
+// ============================================
+
+export const mockDistilleryListItems: DistilleryListItem[] = [
+  {
+    id: 1,
+    korName: '맥캘란',
+    engName: 'Macallan',
+    imageUrl: 'https://example.com/macallan.jpg',
+    createdAt: '2024-01-01T00:00:00',
+    modifiedAt: '2024-06-01T00:00:00',
+    sortOrder: 1,
+  },
+  {
+    id: 2,
+    korName: '글렌피딕',
+    engName: 'Glenfiddich',
+    imageUrl: null,
+    createdAt: '2024-02-01T00:00:00',
+    modifiedAt: '2024-06-01T00:00:00',
+    sortOrder: 9999,
+  },
+];
+
+export const mockDistilleryDetail: DistilleryDetail = {
+  id: 1,
+  korName: '맥캘란',
+  engName: 'Macallan',
+  imageUrl: 'https://example.com/macallan.jpg',
+  createdAt: '2024-01-01T00:00:00',
+  modifiedAt: '2024-06-01T00:00:00',
+  sortOrder: 1,
+};
+
+export const mockDistilleryFormResponse: DistilleryFormResponse = {
+  code: 'DISTILLERY_CREATED',
+  message: '증류소가 생성되었습니다.',
+  targetId: 1,
+  responseAt: '2024-06-01T00:00:00',
+};
+
+export const mockDistilleryDeleteResponse: DistilleryDeleteResponse = {
+  code: 'DISTILLERY_DELETED',
+  message: '증류소가 삭제되었습니다.',
   targetId: 1,
   responseAt: '2024-06-01T00:00:00',
 };
