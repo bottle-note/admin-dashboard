@@ -21,16 +21,23 @@ import { useDistilleryList } from '@/hooks/useDistilleries';
 
 import { whiskyFormSchema } from './whisky.schema';
 import type { WhiskyFormValues } from './whisky.schema';
-import type { AlcoholCreateRequest, AlcoholUpdateRequest, AlcoholTastingTag, CategoryReference } from '@/types/api';
-import { GROUPED_CATEGORY_REFERENCES } from '@/types/api';
+import type {
+  AlcoholCreateRequest,
+  AlcoholUpdateRequest,
+  AlcoholTastingTag,
+  CategoryReferenceMap,
+} from '@/types/api';
+import { EMPTY_CATEGORY_REFERENCE_MAP } from '@/types/api';
 
-/** 신규 등록용 폼 기본값 */
-const defaultCategory = GROUPED_CATEGORY_REFERENCES.SINGLE_MALT[0]!;
+/**
+ * 신규 등록용 폼 기본값
+ * korCategory/engCategory는 카테고리 레퍼런스 API 응답 도착 시 채워진다.
+ */
 const DEFAULT_WHISKY_FORM: WhiskyFormValues = {
   korName: '',
   engName: '',
-  korCategory: defaultCategory.korCategory,
-  engCategory: defaultCategory.engCategory,
+  korCategory: '',
+  engCategory: '',
   categoryGroup: 'SINGLE_MALT',
   regionId: 0,
   distilleryId: 0,
@@ -52,7 +59,7 @@ export interface UseWhiskyDetailFormReturn {
   isDeleted: boolean;
   isPending: boolean;
   whiskyData: ReturnType<typeof useAdminAlcoholDetail>['data'];
-  categories: CategoryReference[];
+  groupedCategories: CategoryReferenceMap;
   regions: Array<{ id: number; korName: string }>;
   distilleries: Array<{ id: number; korName: string }>;
   onSubmit: (
@@ -110,8 +117,13 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
   // API 데이터를 폼에 반영 (신규 모드에서는 초기화)
   useEffect(() => {
     if (isNewMode) {
-      // 신규 등록 모드: 폼을 기본값으로 초기화
-      form.reset(DEFAULT_WHISKY_FORM);
+      // 신규 등록 모드: 폼을 기본값으로 초기화하고, 카테고리는 API 응답으로 채움
+      const defaultRef = categoryData?.SINGLE_MALT[0];
+      form.reset({
+        ...DEFAULT_WHISKY_FORM,
+        korCategory: defaultRef?.korCategory ?? '',
+        engCategory: defaultRef?.engCategory ?? '',
+      });
     } else if (whiskyData) {
       // 수정 모드: API 데이터로 폼 채움
       form.reset({
@@ -130,7 +142,7 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
         imageUrl: whiskyData.imageUrl ?? '',
       });
     }
-  }, [whiskyData, form, isNewMode]);
+  }, [whiskyData, form, isNewMode, categoryData]);
 
   const onSubmit = (
     data: WhiskyFormValues,
@@ -208,7 +220,7 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
     isDeleted,
     isPending: createMutation.isPending || deleteMutation.isPending || updateMutation.isPending,
     whiskyData,
-    categories: categoryData ?? [],
+    groupedCategories: categoryData ?? EMPTY_CATEGORY_REFERENCE_MAP,
     regions: regionData?.items ?? [],
     distilleries: distilleryData?.items ?? [],
     onSubmit,

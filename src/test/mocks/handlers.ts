@@ -41,13 +41,18 @@ export const tastingTagHandlers = [
       );
     }
 
+    const totalElements = items.length;
+    const totalPages = Math.max(1, Math.ceil(totalElements / size));
+    const start = page * size;
+    const sliced = items.slice(start, start + size);
+
     return HttpResponse.json(
-      wrapApiResponse(items, {
+      wrapApiResponse(sliced, {
         page,
         size,
-        totalElements: items.length,
-        totalPages: Math.ceil(items.length / size),
-        hasNext: false,
+        totalElements,
+        totalPages,
+        hasNext: start + size < totalElements,
       })
     );
   }),

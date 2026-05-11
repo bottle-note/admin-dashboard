@@ -22,7 +22,6 @@ import {
 } from './components';
 import { useWhiskyDetailForm } from './useWhiskyDetailForm';
 import { useImageUpload, S3UploadPath } from '@/hooks/useImageUpload';
-import { useTastingTagList } from '@/hooks/useTastingTags';
 import { useToast } from '@/hooks/useToast';
 
 import type { AlcoholTastingTag } from '@/types/api';
@@ -38,7 +37,7 @@ export function WhiskyDetailPage() {
     isDeleted,
     isPending,
     whiskyData,
-    categories,
+    groupedCategories,
     regions,
     distilleries,
     onSubmit,
@@ -53,10 +52,6 @@ export function WhiskyDetailPage() {
   const { upload: uploadImage, isUploading: isImageUploading } = useImageUpload({
     rootPath: S3UploadPath.ALCOHOL,
   });
-
-  // 기존 태그 목록 조회 (전체 태그를 한 번에 가져옴)
-  const { data: tagListData } = useTastingTagList({ size: 500 });
-  const availableTags = tagListData?.items.map((t) => t.korName) ?? [];
 
   // 로컬 상태
   const [tastingTags, setTastingTags] = useState<AlcoholTastingTag[]>([]);
@@ -147,7 +142,7 @@ export function WhiskyDetailPage() {
           <div className="flex flex-col gap-6 lg:flex-row">
             <WhiskyBasicInfoCard
               form={form}
-              categories={categories}
+              groupedCategories={groupedCategories}
               regions={regions}
               distilleries={distilleries}
               disabled={isDeleted}
@@ -177,8 +172,6 @@ export function WhiskyDetailPage() {
           {/* 테이스팅 태그 섹션 */}
           <WhiskyTastingTagCard
             tastingTags={tastingTags}
-            availableTags={availableTags}
-            tagListItems={tagListData?.items}
             onTagsChange={setTastingTags}
             disabled={isDeleted}
           />

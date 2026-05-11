@@ -1,24 +1,47 @@
 /**
  * 카테고리 그룹 매핑 훅
- * GROUPED_CATEGORY_REFERENCES(단일 소스)에서 카테고리 ↔ 그룹 매핑을 파생.
- * TODO: #221 API 반영 시 내부 데이터 소스를 React Query로 교체
+ * useCategoryReferences API 응답(Record<AlcoholCategory, CategoryReference[]>)을
+ * 단일 소스로 사용한다.
  */
 
+import { useMemo } from 'react';
+
+import { useCategoryReferences } from './useAdminAlcohols';
 import {
-  GROUPED_CATEGORY_REFERENCES,
+  EMPTY_CATEGORY_REFERENCE_MAP,
   type AlcoholCategory,
   type CategoryReference,
+  type CategoryReferenceMap,
 } from '@/types/api';
 
-const categoryToGroupMap = new Map<string, AlcoholCategory>(
-  Object.entries(GROUPED_CATEGORY_REFERENCES).flatMap(([group, refs]) =>
-    refs.map((ref) => [ref.korCategory, group as AlcoholCategory] as const)
-  )
-);
+export interface UseCategoryGroupMapReturn {
+  /** 그룹별 카테고리 레퍼런스 (로딩 전에는 빈 맵) */
+  categoryReferencesByGroup: CategoryReferenceMap;
+  /** 카테고리(한글명)로 소속 그룹을 찾는다. 미매칭 시 'OTHER' */
+  getCategoryGroup: (korCategory: string) => AlcoholCategory;
+  /** 그룹의 대표 카테고리(첫 번째 항목) 반환. 빈 그룹이면 throw */
+  getGroupDefaultCategory: (group: Exclude<AlcoholCategory, 'OTHER'>) => CategoryReference;
+  /** 데이터 로딩 여부 */
+  isLoading: boolean;
+}
 
-export function useCategoryGroupMap() {
-  // TODO: #221 반영 시 useGroupedCategoryReferences() React Query 데이터로 교체
-  const categoryReferencesByGroup = GROUPED_CATEGORY_REFERENCES;
+export function useCategoryGroupMap(): UseCategoryGroupMapReturn {
+  const { data, isLoading } = useCategoryReferences();
+  const categoryReferencesByGroup = data ?? EMPTY_CATEGORY_REFERENCE_MAP;
+
+  const categoryToGroupMap = useMemo(() => {
+    const map = new Map<string, AlcoholCategory>();
+    (Object.entries(categoryReferencesByGroup) as Array<[AlcoholCategory, CategoryReference[]]>)
+      .forEach(([group, refs]) => {
+        refs.forEach((ref) => {
+          // 우선 등록된 그룹을 유지 (OTHER가 중복 포함하더라도 메인 그룹 우선)
+          if (!map.has(ref.korCategory) || group !== 'OTHER') {
+            map.set(ref.korCategory, group);
+          }
+        });
+      });
+    return map;
+  }, [categoryReferencesByGroup]);
 
   const getCategoryGroup = (korCategory: string): AlcoholCategory =>
     categoryToGroupMap.get(korCategory) ?? 'OTHER';
@@ -33,5 +56,10 @@ export function useCategoryGroupMap() {
     return ref;
   };
 
-  return { getCategoryGroup, getGroupDefaultCategory, categoryReferencesByGroup };
+  return {
+    categoryReferencesByGroup,
+    getCategoryGroup,
+    getGroupDefaultCategory,
+    isLoading,
+  };
 }

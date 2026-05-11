@@ -2,9 +2,11 @@
  * 테이스팅 태그 API 커스텀 훅
  */
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useApiQuery } from './useApiQuery';
 import { useApiMutation, type UseApiMutationOptions } from './useApiMutation';
+import { useToast } from './useToast';
+import { getErrorMessage, type ApiError } from '@/lib/api-error';
 import {
   tastingTagService,
   tastingTagKeys,
@@ -40,6 +42,60 @@ export function useTastingTagList(params?: TastingTagSearchParams) {
       staleTime: 1000 * 60 * 5, // 5분
     }
   );
+}
+
+/** 무한 스크롤용 page 인자 제외 파라미터 */
+export type TastingTagInfiniteParams = Omit<TastingTagSearchParams, 'page'>;
+
+const DEFAULT_INFINITE_PAGE_SIZE = 20;
+
+/**
+ * 테이스팅 태그 무한 스크롤 조회 훅
+ *
+ * 한 번에 모든 태그를 가져오지 않고 페이지 단위(기본 20개)로
+ * 점진 로딩한다. 응답의 `meta.hasNext`로 다음 페이지 존재 여부 판단.
+ *
+ * keyword가 바뀌면 쿼리 키가 달라져 자동으로 첫 페이지부터 다시 로드.
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   data, fetchNextPage, hasNextPage, isFetchingNextPage,
+ * } = useTastingTagListInfinite({ keyword: '바닐라' });
+ *
+ * const allItems = data?.pages.flatMap((p) => p.items) ?? [];
+ * ```
+ */
+export function useTastingTagListInfinite(params?: TastingTagInfiniteParams) {
+  const { showToast } = useToast();
+  const size = params?.size ?? DEFAULT_INFINITE_PAGE_SIZE;
+
+  return useInfiniteQuery<TastingTagListResponse, ApiError>({
+    queryKey: tastingTagKeys.list({ ...params, size, infinite: true }),
+    queryFn: async ({ pageParam }) => {
+      try {
+        return await tastingTagService.list({
+          ...params,
+          size,
+          page: pageParam as number,
+        });
+      } catch (error) {
+        showToast({ type: 'error', message: getErrorMessage(error) });
+        throw error;
+      }
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.hasNext ? lastPage.meta.page + 1 : undefined,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+/** 무한 쿼리 페이지들을 평탄화 */
+export function flattenTastingTagPages(
+  data: { pages: TastingTagListResponse[] } | undefined
+) {
+  return data?.pages.flatMap((p) => p.items) ?? [];
 }
 
 /**
