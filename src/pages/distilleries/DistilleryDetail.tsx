@@ -25,6 +25,7 @@ import {
   useDistilleryUpdate,
   useDistilleryDelete,
 } from '@/hooks/useDistilleries';
+import { useImageUpload, S3UploadPath } from '@/hooks/useImageUpload';
 
 import {
   distilleryFormSchema,
@@ -41,6 +42,11 @@ export function DistilleryDetailPage() {
 
   // API 조회
   const { data: detailData, isLoading } = useDistilleryDetail(distilleryId);
+
+  // 이미지 업로드 (S3 Presigned URL)
+  const { upload: uploadImage, isUploading: isImageUploading } = useImageUpload({
+    rootPath: S3UploadPath.DISTILLERY,
+  });
 
   // Mutations
   const createMutation = useDistilleryCreate({
@@ -62,7 +68,7 @@ export function DistilleryDetailPage() {
   });
 
   // 상태
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // React Hook Form 설정
@@ -75,27 +81,27 @@ export function DistilleryDetailPage() {
   useEffect(() => {
     if (isNewMode) {
       form.reset(distilleryDefaultValues);
-      setImageUrl(null);
+      setImagePreviewUrl(null);
     } else if (detailData) {
       form.reset({
         korName: detailData.korName,
         engName: detailData.engName,
+        imageUrl: detailData.imageUrl,
         sortOrder: detailData.sortOrder,
       });
-      setImageUrl(detailData.imageUrl);
+      setImagePreviewUrl(detailData.imageUrl);
     }
   }, [detailData, form, isNewMode]);
 
-  // 이미지 변경
-  const handleImageChange = (file: File | null, previewUrl: string | null) => {
+  // 이미지 변경 (S3 업로드 후 viewUrl을 폼 값으로 설정)
+  const handleImageChange = async (file: File | null, previewUrl: string | null) => {
+    setImagePreviewUrl(previewUrl);
+
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      const viewUrl = await uploadImage(file);
+      form.setValue('imageUrl', viewUrl ?? previewUrl ?? null);
     } else {
-      setImageUrl(previewUrl);
+      form.setValue('imageUrl', previewUrl);
     }
   };
 
@@ -103,7 +109,7 @@ export function DistilleryDetailPage() {
     const formData = {
       korName: data.korName,
       engName: data.engName,
-      imageUrl,
+      imageUrl: data.imageUrl,
       sortOrder: data.sortOrder,
     };
 
@@ -142,7 +148,10 @@ export function DistilleryDetailPage() {
                 삭제
               </Button>
             )}
-            <Button onClick={form.handleSubmit(onSubmit)} disabled={isMutating}>
+            <Button
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={isMutating || isImageUploading}
+            >
               <Save className="mr-2 h-4 w-4" />
               {isMutating ? '저장 중...' : isNewMode ? '등록' : '저장'}
             </Button>
@@ -209,12 +218,15 @@ export function DistilleryDetailPage() {
                 증류소 이미지를 업로드합니다. (선택)
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <ImageUpload
-                imageUrl={imageUrl}
+                imageUrl={imagePreviewUrl}
                 onImageChange={handleImageChange}
                 minHeight={150}
               />
+              {isImageUploading && (
+                <p className="text-sm text-muted-foreground">파일 업로드 중...</p>
+              )}
             </CardContent>
           </Card>
         </div>
