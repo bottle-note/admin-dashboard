@@ -9,6 +9,12 @@ import {
   type RegionSearchParams,
   type RegionListItem,
   type RegionPageMeta,
+  type RegionDetail,
+  type RegionFormData,
+  type RegionFormResponse,
+  type RegionDeleteResponse,
+  type RegionSortOrderRequest,
+  type RegionSortOrderResponse,
 } from '@/types/api';
 
 // ============================================
@@ -51,5 +57,53 @@ export const regionService = {
         hasNext: response.meta.hasNext ?? false,
       },
     };
+  },
+
+  /**
+   * 지역 상세 조회
+   */
+  detail: async (id: number): Promise<RegionDetail> => {
+    const endpoint = RegionApi.detail.endpoint.replace(':id', String(id));
+    return apiClient.get<RegionDetail>(endpoint);
+  },
+
+  /**
+   * 지역 생성
+   */
+  create: async (data: RegionFormData): Promise<RegionFormResponse> => {
+    return apiClient.post<RegionFormResponse, RegionFormData>(
+      RegionApi.create.endpoint,
+      data
+    );
+  },
+
+  /**
+   * 지역 수정
+   */
+  update: async (id: number, data: RegionFormData): Promise<RegionFormResponse> => {
+    const endpoint = RegionApi.update.endpoint.replace(':id', String(id));
+    return apiClient.put<RegionFormResponse, RegionFormData>(endpoint, data);
+  },
+
+  /**
+   * 지역 삭제
+   */
+  delete: async (id: number): Promise<RegionDeleteResponse> => {
+    const endpoint = RegionApi.delete.endpoint.replace(':id', String(id));
+    return apiClient.delete<RegionDeleteResponse>(endpoint);
+  },
+
+  /**
+   * 지역 정렬 순서 변경
+   */
+  updateSortOrder: async (
+    id: number,
+    data: RegionSortOrderRequest
+  ): Promise<RegionSortOrderResponse> => {
+    const endpoint = RegionApi.updateSortOrder.endpoint.replace(':id', String(id));
+    return apiClient.patch<RegionSortOrderResponse, RegionSortOrderRequest>(
+      endpoint,
+      data
+    );
   },
 };

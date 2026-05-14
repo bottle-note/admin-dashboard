@@ -21,6 +21,10 @@ import {
   mockDistilleryDetail,
   mockDistilleryFormResponse,
   mockDistilleryDeleteResponse,
+  mockRegionListItems,
+  mockRegionDetail,
+  mockRegionFormResponse,
+  mockRegionDeleteResponse,
   wrapApiResponse,
 } from './data';
 
@@ -441,4 +445,103 @@ export const distilleryHandlers = [
   }),
 ];
 
-export const handlers = [...tastingTagHandlers, ...bannerHandlers, ...alcoholHandlers, ...userHandlers, ...distilleryHandlers];
+// ============================================
+// Region Handlers
+// ============================================
+
+const REGION_BASE = '/admin/api/v1/regions';
+
+export const regionHandlers = [
+  // PATCH 정렬 순서 변경 (상세보다 먼저 매칭되도록)
+  http.patch(`${REGION_BASE}/:id/sort-order`, ({ params }) => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        code: 'REGION_SORT_ORDER_UPDATED',
+        message: '지역 정렬 순서가 변경되었습니다.',
+        targetId: Number(params.id),
+        responseAt: '2024-06-01T00:00:00',
+      })
+    );
+  }),
+
+  // GET 목록
+  http.get(REGION_BASE, ({ request }) => {
+    const url = new URL(request.url);
+    const keyword = url.searchParams.get('keyword');
+    const size = Number(url.searchParams.get('size') ?? 20);
+    const page = Number(url.searchParams.get('page') ?? 0);
+
+    let items = mockRegionListItems;
+    if (keyword) {
+      items = items.filter(
+        (r) => r.korName.includes(keyword) || r.engName.toLowerCase().includes(keyword.toLowerCase())
+      );
+    }
+
+    return HttpResponse.json(
+      wrapApiResponse(items, {
+        page,
+        size,
+        totalElements: items.length,
+        totalPages: Math.ceil(items.length / size),
+        hasNext: false,
+      })
+    );
+  }),
+
+  // GET 상세
+  http.get(`${REGION_BASE}/:id`, ({ params }) => {
+    const id = Number(params.id);
+    if (id === mockRegionDetail.id) {
+      return HttpResponse.json(wrapApiResponse(mockRegionDetail));
+    }
+    return HttpResponse.json(
+      {
+        success: false,
+        code: 404,
+        data: null,
+        errors: [{ code: 'REGION_NOT_FOUND', message: '지역을 찾을 수 없습니다.' }],
+        meta: {},
+      },
+      { status: 404 }
+    );
+  }),
+
+  // POST 생성
+  http.post(REGION_BASE, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockRegionFormResponse,
+        code: 'REGION_CREATED',
+        targetId: 99,
+        message: `${body.korName} 지역이 생성되었습니다.`,
+      })
+    );
+  }),
+
+  // PUT 수정
+  http.put(`${REGION_BASE}/:id`, async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockRegionFormResponse,
+        code: 'REGION_UPDATED',
+        targetId: Number(params.id),
+        message: `${body.korName} 지역이 수정되었습니다.`,
+      })
+    );
+  }),
+
+  // DELETE 삭제
+  http.delete(`${REGION_BASE}/:id`, ({ params }) => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockRegionDeleteResponse,
+        targetId: Number(params.id),
+      })
+    );
+  }),
+];
+
+export const handlers = [...tastingTagHandlers, ...bannerHandlers, ...alcoholHandlers, ...userHandlers, ...distilleryHandlers, ...regionHandlers];

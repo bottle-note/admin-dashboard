@@ -20,6 +20,10 @@ import type {
   DistilleryDetail,
   DistilleryFormResponse,
   DistilleryDeleteResponse,
+  RegionListItem,
+  RegionDetail,
+  RegionFormResponse,
+  RegionDeleteResponse,
 } from '@/types/api';
 
 export const mockTastingTagListItems: TastingTagListItem[] = [
@@ -371,6 +375,72 @@ export const mockDistilleryFormResponse: DistilleryFormResponse = {
 export const mockDistilleryDeleteResponse: DistilleryDeleteResponse = {
   code: 'DISTILLERY_DELETED',
   message: '증류소가 삭제되었습니다.',
+  targetId: 1,
+  responseAt: '2024-06-01T00:00:00',
+};
+
+// ============================================
+// Region Mocks
+// ============================================
+
+export const mockRegionListItems: RegionListItem[] = [
+  {
+    id: 1,
+    korName: '스코틀랜드',
+    engName: 'Scotland',
+    continent: 'EUROPE',
+    description: '스카치 위스키의 본고장',
+    parentId: null,
+    sortOrder: 1,
+    createdAt: '2024-01-01T00:00:00',
+    modifiedAt: '2024-06-01T00:00:00',
+  },
+  {
+    id: 2,
+    korName: '스코틀랜드/로우랜드',
+    engName: 'Scotland/Lowlands',
+    continent: 'EUROPE',
+    description: '부드러운 풍미의 로우랜드',
+    parentId: 1,
+    sortOrder: 2,
+    createdAt: '2024-01-01T00:00:00',
+    modifiedAt: '2024-06-01T00:00:00',
+  },
+  {
+    id: 3,
+    korName: '아일랜드',
+    engName: 'Ireland',
+    continent: 'EUROPE',
+    description: null,
+    parentId: null,
+    sortOrder: 9999,
+    createdAt: '2024-02-01T00:00:00',
+    modifiedAt: '2024-06-01T00:00:00',
+  },
+];
+
+export const mockRegionDetail: RegionDetail = {
+  id: 1,
+  korName: '스코틀랜드',
+  engName: 'Scotland',
+  continent: 'EUROPE',
+  description: '스카치 위스키의 본고장',
+  parentId: null,
+  sortOrder: 1,
+  createdAt: '2024-01-01T00:00:00',
+  modifiedAt: '2024-06-01T00:00:00',
+};
+
+export const mockRegionFormResponse: RegionFormResponse = {
+  code: 'REGION_CREATED',
+  message: '지역이 생성되었습니다.',
+  targetId: 1,
+  responseAt: '2024-06-01T00:00:00',
+};
+
+export const mockRegionDeleteResponse: RegionDeleteResponse = {
+  code: 'REGION_DELETED',
+  message: '지역이 삭제되었습니다.',
   targetId: 1,
   responseAt: '2024-06-01T00:00:00',
 };
