@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bottlenote Feature Plan"
+  short_description: "Plan admin implementation"
+  default_prompt: "Use $bottlenote-admin-feature-plan to write docs/features/{feature-slug}/plan.md from spec.md and design.md."

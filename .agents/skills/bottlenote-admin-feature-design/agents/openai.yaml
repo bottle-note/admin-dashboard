@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bottlenote Feature Design"
+  short_description: "Design admin feature UI"
+  default_prompt: "Use $bottlenote-admin-feature-design to write docs/features/{feature-slug}/design.md from the approved spec."

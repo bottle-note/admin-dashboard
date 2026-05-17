@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bottlenote Feature Implement"
+  short_description: "Implement planned admin work"
+  default_prompt: "Use $bottlenote-admin-feature-implement to implement the existing docs/features/{feature-slug}/plan.md."

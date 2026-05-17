@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bottlenote Admin API"
+  short_description: "Sync Bottlenote API contracts"
+  default_prompt: "Use $bottlenote-admin-api to compare the admin API docs with this dashboard code."

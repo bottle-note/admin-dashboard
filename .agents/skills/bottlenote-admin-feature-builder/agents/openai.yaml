@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bottlenote Feature Router"
+  short_description: "Route admin feature workflows"
+  default_prompt: "Use $bottlenote-admin-feature-builder to route this admin request to the right spec, design, plan, implementation, API, or PR workflow."
