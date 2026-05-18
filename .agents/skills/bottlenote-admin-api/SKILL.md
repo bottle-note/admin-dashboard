@@ -28,8 +28,29 @@ API contracts aligned with the dashboard code.
      shape is available.
    - Prefer the latest published API documentation:
      `https://bottle-note.github.io/bottle-note-api-server/bottle-note/admin-api/admin-api.html`
-   - If live docs cannot be fetched, use `references/api-spec.md` as the local
-     snapshot and explicitly say it may be stale.
+   - If the request specifically mentions dev, development, or behavior that is
+     missing from the published docs, check the dev API server from
+     `.env.local` (`VITE_API_BASE_URL`) before falling back to the local
+     snapshot.
+   - If dev documentation paths return 403/404 but API endpoints respond, use
+     non-destructive endpoint probing to confirm the contract:
+     - Authenticate with available local dev credentials when present.
+     - Use `OPTIONS` to discover allowed methods.
+     - Use safe `GET` requests for list/detail shapes.
+     - Use malformed or empty-body mutation requests to discover validation,
+       required fields, duplicate errors, and route existence.
+     - For delete/update checks, prefer impossible IDs or invalid payloads. Do
+       not create, update, or delete real records just to inspect a contract
+       unless the user explicitly approves it.
+     - Clearly label findings as "dev API behavior" when they come from probing
+       instead of a published document.
+   - If published docs and dev API behavior differ, report the difference and
+     prefer the source the user asked for. For feature docs targeting imminent
+     dev work, record dev API behavior and note that published docs may be
+     stale.
+   - If neither live docs nor dev API behavior can be checked, use
+     `references/api-spec.md` as the local snapshot and explicitly say it may be
+     stale.
    - When live docs differ from `references/api-spec.md`, update the snapshot
      only when the user explicitly wants the repo to record the new API
      contract snapshot.
@@ -73,7 +94,7 @@ API contracts aligned with the dashboard code.
 
 For API contract work, leave the user with:
 
-- API source used: live docs URL or local snapshot.
+- API source used: published docs, dev API behavior, or local snapshot.
 - Contract changes found: endpoint and field-level summary.
 - Code changes applied: types, services, hooks, tests.
 - Feature docs updated, when applicable.
