@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   Layers,
   Factory,
+  MapPinned,
 } from 'lucide-react';
 import type { MenuGroup } from '@/types/menu';
 
@@ -73,6 +74,25 @@ export const menuConfig: MenuGroup[] = [
                 label: '태그 추가',
                 icon: Plus,
                 path: '/tasting-tags/new',
+              },
+            ],
+          },
+          {
+            id: 'region-management',
+            label: '지역 관리',
+            icon: MapPinned,
+            children: [
+              {
+                id: 'region-list',
+                label: '지역 목록',
+                icon: List,
+                path: '/regions',
+              },
+              {
+                id: 'region-create',
+                label: '지역 추가',
+                icon: Plus,
+                path: '/regions/new',
               },
             ],
           },
