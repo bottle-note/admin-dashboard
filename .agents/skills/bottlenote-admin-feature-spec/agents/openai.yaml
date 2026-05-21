@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bottlenote Feature Spec"
+  short_description: "Write admin feature specs"
+  default_prompt: "Use $bottlenote-admin-feature-spec to write docs/features/{feature-slug}/spec.md for this admin feature."

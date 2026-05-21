@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bottlenote Korean PR"
+  short_description: "Create Korean dashboard PRs"
+  default_prompt: "Use $bottlenote-admin-korean-pr to create a Korean PR for this dashboard change."

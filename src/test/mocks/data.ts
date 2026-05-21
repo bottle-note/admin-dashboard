@@ -20,6 +20,11 @@ import type {
   DistilleryDetail,
   DistilleryFormResponse,
   DistilleryDeleteResponse,
+  RegionListItem,
+  RegionDetail,
+  RegionFormResponse,
+  RegionDeleteResponse,
+  RegionSortOrderResponse,
 } from '@/types/api';
 
 export const mockTastingTagListItems: TastingTagListItem[] = [
@@ -371,6 +376,82 @@ export const mockDistilleryFormResponse: DistilleryFormResponse = {
 export const mockDistilleryDeleteResponse: DistilleryDeleteResponse = {
   code: 'DISTILLERY_DELETED',
   message: '증류소가 삭제되었습니다.',
+  targetId: 1,
+  responseAt: '2024-06-01T00:00:00',
+};
+
+// ============================================
+// Region Mock Data
+// ============================================
+
+export const mockRegionListItems: RegionListItem[] = [
+  {
+    id: 1,
+    korName: '스코틀랜드',
+    engName: 'Scotland',
+    continent: '유럽',
+    description: '스카치 위스키의 대표 생산 지역입니다.',
+    createdAt: '2024-01-01T00:00:00',
+    modifiedAt: '2024-06-01T00:00:00',
+    parentId: null,
+    sortOrder: 0,
+  },
+  {
+    id: 2,
+    korName: '스페이사이드',
+    engName: 'Speyside',
+    continent: '유럽',
+    description: '스코틀랜드 북동부의 주요 위스키 생산지입니다.',
+    createdAt: '2024-01-02T00:00:00',
+    modifiedAt: '2024-06-02T00:00:00',
+    parentId: 1,
+    sortOrder: 1,
+  },
+  {
+    id: 3,
+    korName: '미국',
+    engName: 'United States',
+    continent: '북아메리카',
+    description: null,
+    createdAt: '2024-01-03T00:00:00',
+    modifiedAt: '2024-06-03T00:00:00',
+    parentId: null,
+    sortOrder: 2,
+  },
+];
+
+export const mockRegionDetail: RegionDetail = {
+  id: 1,
+  korName: '스코틀랜드',
+  engName: 'Scotland',
+  continent: '유럽',
+  description: '스카치 위스키의 대표 생산 지역입니다.',
+  sortOrder: 0,
+  parentId: null,
+  parentKorName: null,
+  hasChildren: true,
+  alcoholCount: 42,
+  createAt: '2024-01-01T00:00:00',
+  lastModifyAt: '2024-06-01T00:00:00',
+};
+
+export const mockRegionFormResponse: RegionFormResponse = {
+  code: 'REGION_CREATED',
+  message: '지역이 생성되었습니다.',
+  targetId: 1,
+  responseAt: '2024-06-01T00:00:00',
+};
+
+export const mockRegionDeleteResponse: RegionDeleteResponse = {
+  code: 'REGION_DELETED',
+  message: '지역이 삭제되었습니다.',
+  targetId: 1,
+  responseAt: '2024-06-01T00:00:00',
+};
+
+export const mockRegionSortOrderResponse: RegionSortOrderResponse = {
+  code: 'REGION_SORT_ORDER_UPDATED',
+  message: '지역 정렬 순서가 변경되었습니다.',
   targetId: 1,
   responseAt: '2024-06-01T00:00:00',
 };

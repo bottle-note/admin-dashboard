@@ -24,6 +24,8 @@ import { PolicyListPage } from '@/pages/policies/PolicyList';
 import { UserListPage } from '@/pages/users/UserList';
 import { DistilleryListPage } from '@/pages/distilleries/DistilleryList';
 import { DistilleryDetailPage } from '@/pages/distilleries/DistilleryDetail';
+import { RegionListPage } from '@/pages/regions/RegionList';
+import { RegionDetailPage } from '@/pages/regions/RegionDetail';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -201,6 +203,32 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
               <DistilleryDetailPage key="edit" />
+            </RoleProtectedRoute>
+          }
+        />
+
+        {/* Regions - ROOT_ADMIN only */}
+        <Route
+          path="regions"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <RegionListPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="regions/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <RegionDetailPage key="new" />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="regions/:id"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <RegionDetailPage key="edit" />
             </RoleProtectedRoute>
           }
         />
