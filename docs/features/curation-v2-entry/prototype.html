@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <!-- Figma 링크는 현재 에이전트 환경에서 화면 내용을 읽지 못해, 사용자 설명과 로컬 shadcn 토큰을 기준으로 작성했다. -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>큐레이션 v2 진입점 프로토타입</title>
+    <style>
+      :root {
+        --background: 0 0% 100%;
+        --foreground: 222.2 84% 4.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 222.2 84% 4.9%;
+        --primary: 222.2 47.4% 11.2%;
+        --primary-foreground: 210 40% 98%;
+        --secondary: 210 40% 96.1%;
+        --secondary-foreground: 222.2 47.4% 11.2%;
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+        --border: 214.3 31.8% 91.4%;
+        --input: 214.3 31.8% 91.4%;
+        --destructive: 0 84.2% 60.2%;
+        --radius: 0.5rem;
+        --sidebar: 222.2 47.4% 11.2%;
+        --sidebar-muted: 217.2 32.6% 17.5%;
+        --sidebar-text: 210 40% 98%;
+        --sidebar-subtle: 215 20.2% 65.1%;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: hsl(var(--muted) / 0.28);
+        color: hsl(var(--foreground));
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        font-size: 14px;
+        line-height: 1.45;
+        letter-spacing: 0;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .app {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow: auto;
+        background: hsl(var(--sidebar));
+        color: hsl(var(--sidebar-text));
+        padding: 20px 14px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 8px 22px;
+        font-size: 17px;
+        font-weight: 700;
+      }
+
+      .brand-mark {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: hsl(var(--primary-foreground));
+        color: hsl(var(--primary));
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+      }
+
+      .nav-section {
+        margin: 14px 0 22px;
+      }
+
+      .nav-label {
+        padding: 0 10px 8px;
+        color: hsl(var(--sidebar-subtle));
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .nav-item,
+      .nav-child {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 9px 10px;
+        border-radius: 8px;
+        color: hsl(var(--sidebar-text) / 0.86);
+        text-decoration: none;
+      }
+
+      .nav-child {
+        padding-left: 38px;
+        color: hsl(var(--sidebar-text) / 0.72);
+      }
+
+      .nav-item.active,
+      .nav-child.active {
+        background: hsl(var(--sidebar-muted));
+        color: hsl(var(--sidebar-text));
+      }
+
+      .topbar {
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 28px;
+        background: hsl(var(--background));
+        border-bottom: 1px solid hsl(var(--border));
+      }
+
+      .breadcrumbs {
+        color: hsl(var(--muted-foreground));
+        font-size: 13px;
+      }
+
+      .user {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: hsl(var(--muted-foreground));
+      }
+
+      .avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        background: hsl(var(--secondary));
+        color: hsl(var(--secondary-foreground));
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+      }
+
+      main {
+        max-width: 1400px;
+        padding: 28px;
+      }
+
+      .page-header {
+        margin-bottom: 24px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 24px;
+        line-height: 1.25;
+        font-weight: 700;
+      }
+
+      h2 {
+        font-size: 17px;
+        line-height: 1.3;
+        font-weight: 700;
+      }
+
+      h3 {
+        font-size: 15px;
+        line-height: 1.35;
+        font-weight: 700;
+      }
+
+      .subtle {
+        margin-top: 6px;
+        color: hsl(var(--muted-foreground));
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 24px;
+      }
+
+      .type-stack {
+        display: grid;
+        gap: 14px;
+        grid-column: span 2;
+      }
+
+      .card {
+        border: 1px solid hsl(var(--border));
+        border-radius: 8px;
+        background: hsl(var(--card));
+        color: hsl(var(--card-foreground));
+      }
+
+      .type-card {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        padding: 20px;
+      }
+
+      .icon-box {
+        width: 56px;
+        height: 56px;
+        flex: 0 0 auto;
+        border-radius: 8px;
+        border: 1px solid hsl(var(--border));
+        display: grid;
+        place-items: center;
+        background: hsl(var(--muted) / 0.45);
+      }
+
+      .icon-box svg {
+        width: 24px;
+        height: 24px;
+        stroke: hsl(var(--foreground));
+      }
+
+      .type-body {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      .type-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 12px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        border-radius: 999px;
+        padding: 0 9px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .chip {
+        background: hsl(var(--secondary));
+        color: hsl(var(--secondary-foreground));
+      }
+
+      .actions {
+        display: flex;
+        flex: 0 0 auto;
+        gap: 8px;
+      }
+
+      .btn {
+        min-height: 38px;
+        border: 1px solid hsl(var(--border));
+        border-radius: 8px;
+        background: hsl(var(--background));
+        color: hsl(var(--foreground));
+        padding: 0 14px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        white-space: nowrap;
+      }
+
+      .btn.primary {
+        border-color: hsl(var(--primary));
+        background: hsl(var(--primary));
+        color: hsl(var(--primary-foreground));
+      }
+
+      .preview-card {
+        position: sticky;
+        top: 84px;
+        min-height: 620px;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      .preview-header {
+        padding: 20px 20px 0;
+      }
+
+      .preview-body {
+        padding: 18px 20px 20px;
+      }
+
+      .preview-space {
+        height: 100%;
+        min-height: 520px;
+        border: 1px dashed hsl(var(--muted-foreground) / 0.35);
+        border-radius: 8px;
+        background: hsl(var(--muted) / 0.22);
+      }
+
+      .selected-label {
+        margin-top: 10px;
+        color: hsl(var(--muted-foreground));
+        font-size: 13px;
+      }
+
+      @media (max-width: 1100px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          display: none;
+        }
+
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .type-stack {
+          grid-column: auto;
+        }
+
+        .preview-card {
+          position: static;
+          min-height: 360px;
+        }
+
+        .preview-space {
+          min-height: 280px;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .topbar {
+          padding: 0 18px;
+        }
+
+        main {
+          padding: 18px;
+        }
+
+        .type-card {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .actions {
+          flex-direction: column;
+          align-items: stretch;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">BN</div>
+          <div>Bottlenote Admin</div>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-label">대시보드</div>
+          <a class="nav-item" href="#">현황</a>
+          <a class="nav-item active" href="#">큐레이션</a>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-label">관리자 전용</div>
+          <a class="nav-item" href="#">위스키/테이스팅 태그</a>
+          <a class="nav-item" href="#">배너 관리</a>
+          <a class="nav-item" href="#">큐레이션 관리</a>
+        </div>
+      </aside>
+
+      <div>
+        <header class="topbar">
+          <div class="breadcrumbs">대시보드 / 큐레이션</div>
+          <div class="user">
+            <span>BAR_OWNER</span>
+            <div class="avatar">B</div>
+          </div>
+        </header>
+
+        <main>
+          <div class="page-header">
+            <h1>큐레이션</h1>
+            <p class="subtle">운영 목적에 맞는 큐레이션 유형을 선택해 작성합니다.</p>
+          </div>
+
+          <div class="layout">
+            <section class="type-stack" aria-label="큐레이션 유형 선택">
+              <article class="card type-card">
+                <div class="icon-box" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M8 2v4" />
+                    <path d="M16 2v4" />
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <path d="M3 10h18" />
+                    <path d="M8 14h.01" />
+                    <path d="M12 14h.01" />
+                    <path d="M16 14h.01" />
+                    <path d="M8 18h.01" />
+                    <path d="M12 18h.01" />
+                  </svg>
+                </div>
+                <div class="type-body">
+                  <h2>시음회</h2>
+                  <p class="subtle">일시, 장소, 모집 정보와 시음 위스키 라인업을 작성합니다.</p>
+                  <div class="type-meta">
+                    <span class="chip">날짜</span>
+                    <span class="chip">장소</span>
+                    <span class="chip">참가비</span>
+                    <span class="chip">정원</span>
+                    <span class="chip">시음 위스키</span>
+                  </div>
+                </div>
+                <div class="actions">
+                  <button class="btn" data-preview="시음회" type="button">미리보기</button>
+                  <button class="btn primary" type="button">작성하기 →</button>
+                </div>
+              </article>
+
+              <article class="card type-card">
+                <div class="icon-box" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M12 2 3 7l9 5 9-5-9-5Z" />
+                    <path d="m3 12 9 5 9-5" />
+                    <path d="m3 17 9 5 9-5" />
+                  </svg>
+                </div>
+                <div class="type-body">
+                  <h2>일반 큐레이션</h2>
+                  <p class="subtle">위스키 카드와 큐레이터 코멘트를 작성합니다.</p>
+                  <div class="type-meta">
+                    <span class="chip">위스키 카드</span>
+                    <span class="chip">태그</span>
+                    <span class="chip">코멘트</span>
+                    <span class="chip">노출 이미지</span>
+                  </div>
+                </div>
+                <div class="actions">
+                  <button class="btn" data-preview="일반 큐레이션" type="button">미리보기</button>
+                  <button class="btn primary" type="button">작성하기 →</button>
+                </div>
+              </article>
+
+              <article class="card type-card">
+                <div class="icon-box" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M3 2v7c0 1.7 1.3 3 3 3s3-1.3 3-3V2" />
+                    <path d="M6 2v20" />
+                    <path d="M13 2v20" />
+                    <path d="M13 2c4 1 6 4 6 8v4h-6" />
+                  </svg>
+                </div>
+                <div class="type-body">
+                  <h2>페어링</h2>
+                  <p class="subtle">위스키와 어울리는 음식/아이템 페어링을 작성합니다.</p>
+                  <div class="type-meta">
+                    <span class="chip">위스키</span>
+                    <span class="chip">페어링 음식</span>
+                    <span class="chip">이미지</span>
+                    <span class="chip">설명</span>
+                  </div>
+                </div>
+                <div class="actions">
+                  <button class="btn" data-preview="페어링" type="button">미리보기</button>
+                  <button class="btn primary" type="button">작성하기 →</button>
+                </div>
+              </article>
+            </section>
+
+            <aside class="card preview-card" aria-label="미리보기 영역">
+              <div class="preview-header">
+                <h2>미리보기</h2>
+                <p class="subtle">선택한 유형의 미리보기 이미지가 표시될 영역입니다.</p>
+                <p class="selected-label" id="selectedLabel">선택된 유형 없음</p>
+              </div>
+              <div class="preview-body">
+                <div class="preview-space" aria-label="비어 있는 미리보기 공간"></div>
+              </div>
+            </aside>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const selectedLabel = document.querySelector('#selectedLabel');
+      document.querySelectorAll('[data-preview]').forEach((button) => {
+        button.addEventListener('click', () => {
+          selectedLabel.textContent = `${button.dataset.preview} 미리보기 선택됨`;
+        });
+      });
+    </script>
+  </body>
+</html>

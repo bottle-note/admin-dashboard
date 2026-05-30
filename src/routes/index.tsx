@@ -19,6 +19,7 @@ import { BannerDetailPage } from '@/pages/banners/BannerDetail';
 import { BannerCreatePage } from '@/pages/banners/BannerCreate';
 import { CurationListPage } from '@/pages/curations/CurationList';
 import { CurationDetailPage } from '@/pages/curations/CurationDetail';
+import { CurationV2EntryPage } from '@/pages/curations/CurationV2Entry';
 import { InquiryListPage } from '@/pages/inquiries/InquiryList';
 import { PolicyListPage } from '@/pages/policies/PolicyList';
 import { UserListPage } from '@/pages/users/UserList';
@@ -57,6 +58,14 @@ export function AppRoutes() {
       >
         {/* Dashboard */}
         <Route index element={<DashboardPage />} />
+        <Route
+          path="dashboard/curations"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
+              <CurationV2EntryPage />
+            </RoleProtectedRoute>
+          }
+        />
 
         {/* Whisky - ROOT_ADMIN only */}
         <Route
