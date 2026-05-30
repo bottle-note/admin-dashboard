@@ -83,4 +83,7 @@ design must follow the existing admin dashboard, not invent a new visual system.
 - Do not write implementation order or API service details.
 - Do not modify `src/components/ui`.
 - Prefer existing dense admin layouts over marketing-style composition.
+- Prefer ratio-, fraction-, and container-based responsive layouts for page
+  grids and major layout columns. Avoid fixed pixel column widths unless the
+  design constraint is explicit.
 - Use Korean for labels, validation, and destructive confirmation copy.

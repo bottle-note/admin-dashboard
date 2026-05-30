@@ -31,6 +31,8 @@ truth is `docs/features/<feature-slug>/plan.md`.
      route/menu -> tests.
    - Keep server data in TanStack Query.
    - Keep list search/filter/pagination in URL params.
+   - For page grids and major layout columns, prefer ratio-, fraction-, and
+     container-based responsive utilities over fixed pixel widths.
    - Do not modify `src/components/ui`.
    - Do not add barrel files unless required by an existing boundary.
 
