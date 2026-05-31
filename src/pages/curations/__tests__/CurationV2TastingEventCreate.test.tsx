@@ -476,4 +476,88 @@ describe('CurationV2TastingEventCreatePage', () => {
     });
     expect(screen.queryByText('BOTTLE_NOTE')).not.toBeInTheDocument();
   });
+
+  it('직접 입력 위스키를 MANUAL source와 alcoholId null payload로 전송한다', async () => {
+    const user = userEvent.setup();
+    let capturedBody: CurationV2CreateRequest | null = null;
+    mockSpecSuccess();
+    server.use(
+      http.post(CURATION_BASE, async ({ request }) => {
+        capturedBody = (await request.json()) as CurationV2CreateRequest;
+        return HttpResponse.json(
+          wrapApiResponse({
+            code: 'CURATION_CREATED',
+            message: '큐레이션이 등록되었습니다.',
+            targetId: 11,
+            responseAt: '2026-05-31T09:00:00',
+          })
+        );
+      })
+    );
+
+    render(<CurationV2TastingEventCreatePage />);
+
+    await screen.findByLabelText('큐레이션명');
+
+    fireEvent.change(screen.getByLabelText('큐레이션명'), {
+      target: { value: '6월 싱글몰트 시음회' },
+    });
+    fireEvent.change(screen.getByLabelText('설명'), {
+      target: { value: '소규모 위스키 시음회' },
+    });
+    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2026-06-01' } });
+    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2026-06-30' } });
+    fireEvent.change(screen.getByLabelText('시음회 날짜'), { target: { value: '2026-06-15' } });
+    fireEvent.change(screen.getByLabelText('시음회 시간'), { target: { value: '19:30' } });
+    fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
+      target: { value: '서울 강남구 테헤란로 123' },
+    });
+    fireEvent.change(screen.getByLabelText('상세 주소'), { target: { value: '2층 도시남 바' } });
+    fireEvent.change(screen.getByLabelText('참가비(1인당)'), { target: { value: '75000' } });
+    fireEvent.change(screen.getByLabelText('총 모집 인원수'), { target: { value: '20' } });
+    fireEvent.change(screen.getByLabelText('신청링크'), {
+      target: { value: 'https://forms.example.com/tasting' },
+    });
+    fireEvent.change(screen.getByLabelText('안내사항'), {
+      target: { value: '시작 10분 전 입장해 주세요.' },
+    });
+
+    await user.click(screen.getByRole('button', { name: '직접 입력' }));
+    fireEvent.change(screen.getByLabelText('1번 수동 위스키 한글명'), {
+      target: { value: '오픈 몰트 12년' },
+    });
+    fireEvent.change(screen.getByLabelText('1번 수동 위스키 영문명'), {
+      target: { value: 'Open Malt 12' },
+    });
+    fireEvent.change(screen.getByLabelText('1번 수동 위스키 도수'), {
+      target: { value: '46' },
+    });
+    await user.type(screen.getByLabelText('오픈 몰트 12년 테이스팅 태그'), '버번{enter}');
+    fireEvent.change(screen.getByLabelText('오픈 몰트 12년 기대평'), {
+      target: { value: '직접 섭외한 한정 위스키' },
+    });
+
+    await user.click(screen.getByRole('button', { name: /저장/ }));
+
+    await waitFor(() => expect(capturedBody).not.toBeNull());
+    expect(capturedBody).toMatchObject({
+      specId: 3,
+      payload: {
+        alcohols: [
+          {
+            source: 'MANUAL',
+            alcohol: {
+              alcoholId: null,
+              korName: '오픈 몰트 12년',
+              engName: 'Open Malt 12',
+              abv: '46',
+              selectedTags: ['버번'],
+            },
+            comment: '직접 섭외한 한정 위스키',
+          },
+        ],
+      },
+    });
+    expect(screen.queryByText('MANUAL')).not.toBeInTheDocument();
+  });
 });

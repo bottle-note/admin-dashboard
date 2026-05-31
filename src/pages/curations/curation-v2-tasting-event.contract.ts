@@ -1,5 +1,7 @@
 import type { CurationV2Spec, JsonSchemaNode } from '@/types/api';
 
+import type { CurationWhiskyCardListContract } from './curation-whisky-card-list.types';
+
 export interface TastingEventFieldContract {
   label: string;
   required: boolean;
@@ -18,17 +20,7 @@ export interface TastingEventCapacityFieldContract extends TastingEventNumberFie
   maximum: number;
 }
 
-export interface TastingEventAlcoholsContract extends TastingEventFieldContract {
-  minItems: number;
-  maxItems: number;
-  selectedTags: TastingEventFieldContract & {
-    minItems: number;
-    maxItems: number;
-  };
-  comment: TastingEventFieldContract & {
-    maxLength: number;
-  };
-}
+export interface TastingEventAlcoholsContract extends CurationWhiskyCardListContract {}
 
 export interface TastingEventFormContract {
   eventDate: TastingEventFieldContract;

@@ -1,9 +1,17 @@
-import type { SelectedWhisky } from '@/components/common/WhiskySearchSelect';
-
 import type {
   CurationV2TastingEventFormValues,
   CurationV2TastingEventPayload,
 } from './curation-v2-tasting-event.schema';
+
+const ALCOHOL_OPTIONAL_TEXT_FIELDS = [
+  'engName',
+  'imageUrl',
+  'abv',
+  'cask',
+  'volume',
+  'regionName',
+  'korCategory',
+] as const;
 
 export function buildTastingEventPayload(
   values: CurationV2TastingEventFormValues
@@ -20,31 +28,24 @@ export function buildTastingEventPayload(
     guideText: values.guideText.trim(),
     alcohols: values.alcohols.map((item) => {
       const comment = item.comment?.trim();
+      const alcohol = {
+        alcoholId: item.source === 'MANUAL' ? null : item.alcohol.alcoholId,
+        korName: item.alcohol.korName.trim(),
+        selectedTags: item.alcohol.selectedTags.map((tag) => tag.trim()).filter(Boolean),
+      } as typeof item.alcohol;
+
+      ALCOHOL_OPTIONAL_TEXT_FIELDS.forEach((key) => {
+        const value = item.alcohol[key]?.trim();
+        if (value) {
+          alcohol[key] = value;
+        }
+      });
 
       return {
-        source: 'BOTTLE_NOTE',
-        alcohol: {
-          ...item.alcohol,
-          selectedTags: item.alcohol.selectedTags.map((tag) => tag.trim()).filter(Boolean),
-        },
+        source: item.source,
+        alcohol,
         ...(comment ? { comment } : {}),
       };
     }),
-  };
-}
-
-export function createTastingEventAlcoholItem(
-  whisky: SelectedWhisky
-): CurationV2TastingEventFormValues['alcohols'][number] {
-  return {
-    source: 'BOTTLE_NOTE',
-    alcohol: {
-      alcoholId: whisky.alcoholId,
-      korName: whisky.korName,
-      engName: whisky.engName,
-      imageUrl: whisky.imageUrl,
-      selectedTags: [],
-    },
-    comment: '',
   };
 }

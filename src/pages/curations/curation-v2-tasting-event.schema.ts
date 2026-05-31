@@ -7,7 +7,7 @@ import {
 
 export function createTastingEventAlcoholSchema(contract: TastingEventFormContract) {
   return z.object({
-    source: z.literal('BOTTLE_NOTE'),
+    source: z.enum(['BOTTLE_NOTE', 'MANUAL']),
     alcohol: z.object({
       alcoholId: z.number().nullable(),
       korName: z.string().min(1, '위스키 한글명은 필수입니다.'),
