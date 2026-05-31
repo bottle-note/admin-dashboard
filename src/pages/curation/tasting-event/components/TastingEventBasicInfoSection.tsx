@@ -11,14 +11,19 @@ import type { TastingEventCreateFormState } from '../tasting-event.schema';
 
 interface TastingEventBasicInfoSectionProps {
   isRootAdmin: boolean;
+  isEditMode?: boolean;
 }
 
-export function TastingEventBasicInfoSection({ isRootAdmin }: TastingEventBasicInfoSectionProps) {
+export function TastingEventBasicInfoSection({
+  isRootAdmin,
+  isEditMode = false,
+}: TastingEventBasicInfoSectionProps) {
   const form = useFormContext<TastingEventCreateFormState>();
   const isActive = useWatch({
     control: form.control,
     name: 'isActive',
   });
+  const isNullableBasicInfoAllowed = isEditMode;
 
   return (
     <Card>
@@ -37,28 +42,24 @@ export function TastingEventBasicInfoSection({ isRootAdmin }: TastingEventBasicI
           </FormField>
           <FormField
             label="노출 시작일"
-            required
+            required={!isNullableBasicInfoAllowed}
             error={form.formState.errors.exposureStartDate?.message}
           >
-            <Input
-              aria-label="노출 시작일"
-              type="date"
-              {...form.register('exposureStartDate')}
-            />
+            <Input aria-label="노출 시작일" type="date" {...form.register('exposureStartDate')} />
           </FormField>
           <FormField
             label="노출 종료일"
-            required
+            required={!isNullableBasicInfoAllowed}
             error={form.formState.errors.exposureEndDate?.message}
           >
-            <Input
-              aria-label="노출 종료일"
-              type="date"
-              {...form.register('exposureEndDate')}
-            />
+            <Input aria-label="노출 종료일" type="date" {...form.register('exposureEndDate')} />
           </FormField>
         </div>
-        <FormField label="설명" required error={form.formState.errors.description?.message}>
+        <FormField
+          label="설명"
+          required={!isNullableBasicInfoAllowed}
+          error={form.formState.errors.description?.message}
+        >
           <Textarea
             aria-label="설명"
             rows={4}

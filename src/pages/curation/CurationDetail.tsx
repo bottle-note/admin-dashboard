@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCurationDetail } from '@/hooks/useCurations';
-import type { CurationV2Detail } from '@/types/api';
+import { CurationSpecCode, type CurationV2Detail } from '@/types/api';
 
+import { CurationTastingEventEditPage } from './tasting-event/CurationTastingEventCreate';
 import {
   formatCurationDateTime,
   formatCurationExposurePeriod,
@@ -21,6 +22,10 @@ export function CurationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const curationId = id ? Number(id) : undefined;
   const { data: curation, isLoading, isError, refetch } = useCurationDetail(curationId);
+
+  if (!isLoading && !isError && curation?.spec.code === CurationSpecCode.WHISKY_TASTING_EVENT) {
+    return <CurationTastingEventEditPage curation={curation} />;
+  }
 
   return (
     <div className="space-y-6">

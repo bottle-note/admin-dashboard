@@ -7,9 +7,16 @@ import { useNavigate } from 'react-router';
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useCurationCreate } from '@/hooks/useCurations';
+import { useCurationCreate, useCurationUpdate } from '@/hooks/useCurations';
+import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/stores/auth';
-import { CurationSpecCode, type CurationV2CreateRequest, type CurationV2Spec } from '@/types/api';
+import {
+  CurationSpecCode,
+  type CurationV2CreateRequest,
+  type CurationV2Detail,
+  type CurationV2Spec,
+  type CurationV2UpdateRequest,
+} from '@/types/api';
 
 import { useCurationSpecFormModel } from '../useCurationSpecFormModel';
 import { TastingEventBasicInfoSection } from './components/TastingEventBasicInfoSection';
@@ -19,7 +26,10 @@ import {
   createTastingEventFormModel,
   type TastingEventFormModel,
 } from './tasting-event.form-model';
-import { buildTastingEventPayload } from './tasting-event.mapper';
+import {
+  buildTastingEventPayload,
+  createTastingEventFormStateFromCuration,
+} from './tasting-event.mapper';
 import {
   createCurationTastingEventFormSchema,
   createDefaultTastingEventCreateFormState,
@@ -138,18 +148,44 @@ export function CurationTastingEventCreatePage() {
   );
 }
 
+export function CurationTastingEventEditPage({ curation }: { curation: CurationV2Detail }) {
+  const navigate = useNavigate();
+  const formModel = createTastingEventFormModel(curation.spec);
+
+  return (
+    <TastingEventReadyForm
+      specDetail={curation.spec}
+      formModel={formModel}
+      curation={curation}
+      onBack={() => navigate('/dashboard/curations')}
+    />
+  );
+}
+
 interface TastingEventReadyFormProps {
   specDetail: CurationV2Spec;
   formModel: TastingEventFormModel;
+  curation?: CurationV2Detail;
   onBack: () => void;
 }
 
-function TastingEventReadyForm({ specDetail, formModel, onBack }: TastingEventReadyFormProps) {
+function TastingEventReadyForm({
+  specDetail,
+  formModel,
+  curation,
+  onBack,
+}: TastingEventReadyFormProps) {
   const navigate = useNavigate();
   const isRootAdmin = useAuthStore((state) => state.hasRole('ROOT_ADMIN'));
+  const { showToast } = useToast();
   const [isImageUploading, setIsImageUploading] = useState(false);
-  const formSchema = createCurationTastingEventFormSchema(formModel);
-  const defaultValues = createDefaultTastingEventCreateFormState(formModel);
+  const isEditMode = Boolean(curation);
+  const formSchema = createCurationTastingEventFormSchema(formModel, {
+    mode: isEditMode ? 'edit' : 'create',
+  });
+  const defaultValues = curation
+    ? createTastingEventFormStateFromCuration(curation, formModel)
+    : createDefaultTastingEventCreateFormState(formModel);
 
   const form = useForm<TastingEventCreateFormState>({
     resolver: zodResolver(formSchema as never) as unknown as Resolver<TastingEventCreateFormState>,
@@ -163,28 +199,47 @@ function TastingEventReadyForm({ specDetail, formModel, onBack }: TastingEventRe
       navigate('/dashboard/curations');
     },
   });
-
-  const handleSubmit = form.handleSubmit((values) => {
-    const request: CurationV2CreateRequest = {
-      specId: specDetail.id,
-      name: values.name.trim(),
-      description: values.description.trim(),
-      imageUrls: values.imageUrls,
-      exposureStartDate: values.exposureStartDate,
-      exposureEndDate: values.exposureEndDate,
-      displayOrder: values.displayOrder,
-      isActive: values.isActive,
-      payload: buildTastingEventPayload(values, formModel),
-    };
-
-    createMutation.mutate(request);
+  const updateMutation = useCurationUpdate({
+    onSuccess: () => {
+      navigate('/dashboard/curations');
+    },
   });
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
+  const handleSubmit = form.handleSubmit(
+    (values) => {
+      const request: CurationV2CreateRequest | CurationV2UpdateRequest = {
+        specId: specDetail.id,
+        name: values.name.trim(),
+        description: toNullableTrimmedString(values.description),
+        imageUrls: values.imageUrls,
+        exposureStartDate: toNullableTrimmedString(values.exposureStartDate),
+        exposureEndDate: toNullableTrimmedString(values.exposureEndDate),
+        displayOrder: values.displayOrder,
+        isActive: values.isActive,
+        payload: buildTastingEventPayload(values, formModel),
+      };
+
+      if (curation) {
+        updateMutation.mutate({
+          curationId: curation.id,
+          data: request,
+        });
+        return;
+      }
+
+      createMutation.mutate(request);
+    },
+    () => {
+      showToast({ type: 'warning', message: '입력 정보를 확인해주세요.' });
+    }
+  );
 
   return (
     <div className="space-y-6">
       <DetailPageHeader
-        title="시음회 작성"
-        subtitle={specDetail.name}
+        title={isEditMode ? '시음회 수정' : '시음회 작성'}
+        subtitle={isEditMode ? `ID: ${curation?.id}` : specDetail.name}
         onBack={onBack}
         actions={
           <>
@@ -194,10 +249,10 @@ function TastingEventReadyForm({ specDetail, formModel, onBack }: TastingEventRe
             <Button
               type="button"
               onClick={handleSubmit}
-              disabled={createMutation.isPending || isImageUploading}
+              disabled={isSubmitting || isImageUploading}
             >
               <Save className="mr-2 h-4 w-4" />
-              {createMutation.isPending ? '저장 중...' : '저장'}
+              {isSubmitting ? '저장 중...' : isEditMode ? '수정' : '저장'}
             </Button>
           </>
         }
@@ -206,7 +261,7 @@ function TastingEventReadyForm({ specDetail, formModel, onBack }: TastingEventRe
       <FormProvider {...form}>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start">
           <div className="min-w-0 space-y-6">
-            <TastingEventBasicInfoSection isRootAdmin={isRootAdmin} />
+            <TastingEventBasicInfoSection isRootAdmin={isRootAdmin} isEditMode={isEditMode} />
             <TastingEventImageSection onUploadingChange={setIsImageUploading} />
             {formModel.sections.map((section) => (
               <CurationFormSection key={section.id} section={section} />
@@ -257,4 +312,9 @@ function BlockingState({ title, description, onRetry, onBack }: BlockingStatePro
       </CardContent>
     </Card>
   );
+}
+
+function toNullableTrimmedString(value: string): string | null {
+  const normalized = value.trim();
+  return normalized || null;
 }

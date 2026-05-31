@@ -68,14 +68,17 @@ function createTastingEventCreatePayloadShape(
 
 // requestSpec 기반 시음회 form model을 React Hook Form에서 사용할 전체 Zod schema로 변환합니다.
 export function createCurationTastingEventFormSchema(
-  formModel: TastingEventFormModel
+  formModel: TastingEventFormModel,
+  options: { mode?: 'create' | 'edit' } = {}
 ): z.ZodType<TastingEventCreateFormState> {
+  const isEditMode = options.mode === 'edit';
+
   return z.object({
     name: z.string().min(1, '큐레이션명은 필수입니다.'),
-    description: z.string().min(1, '설명은 필수입니다.'),
+    description: isEditMode ? z.string() : z.string().min(1, '설명은 필수입니다.'),
     imageUrls: z.array(z.string()).max(3, '이미지는 최대 3개까지 등록할 수 있습니다.'),
-    exposureStartDate: z.string().min(1, '노출 시작일은 필수입니다.'),
-    exposureEndDate: z.string().min(1, '노출 종료일은 필수입니다.'),
+    exposureStartDate: isEditMode ? z.string() : z.string().min(1, '노출 시작일은 필수입니다.'),
+    exposureEndDate: isEditMode ? z.string() : z.string().min(1, '노출 종료일은 필수입니다.'),
     displayOrder: z
       .number()
       .int('노출 순서는 정수로 입력해주세요.')

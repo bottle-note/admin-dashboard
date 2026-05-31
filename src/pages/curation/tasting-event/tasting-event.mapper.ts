@@ -1,6 +1,13 @@
+import type { CurationV2Detail } from '@/types/api';
+
 import type {
+  CurationWhiskyCardValue,
+  CurationWhiskySource,
+} from '../curation-whisky-card-list.types';
+import {
+  createDefaultTastingEventCreateFormState,
+  type TastingEventCreatePayload,
   TastingEventCreateFormState,
-  TastingEventCreatePayload,
 } from './tasting-event.schema';
 import type { TastingEventFormModel } from './tasting-event.form-model';
 
@@ -33,6 +40,62 @@ export function buildTastingEventPayload(
   }, {});
 }
 
+export function createTastingEventFormStateFromCuration(
+  curation: CurationV2Detail,
+  formModel: TastingEventFormModel
+): TastingEventCreateFormState {
+  const formState = createDefaultTastingEventCreateFormState(formModel);
+
+  formState.name = curation.name;
+  formState.description = curation.description ?? '';
+  formState.imageUrls =
+    curation.imageUrls.length > 0
+      ? [...curation.imageUrls]
+      : curation.coverImageUrl
+        ? [curation.coverImageUrl]
+        : [];
+  formState.exposureStartDate = toDateInputValue(curation.exposureStartDate);
+  formState.exposureEndDate = toDateInputValue(curation.exposureEndDate);
+  formState.displayOrder = curation.displayOrder;
+  formState.isActive = curation.isActive;
+
+  for (const field of formModel.payloadFields) {
+    if (!Object.prototype.hasOwnProperty.call(curation.payload, field.key)) {
+      continue;
+    }
+
+    const value = curation.payload[field.key];
+
+    switch (field.kind) {
+      case 'alcohol-card-list':
+        formState[field.key] = normalizeTastingEventAlcohols(value);
+        break;
+      case 'boolean-radio':
+        formState[field.key] = normalizeBooleanValue(value);
+        break;
+      case 'number':
+        formState[field.key] = normalizeNumberValue(value, formState[field.key]);
+        break;
+      case 'date':
+        formState[field.key] = toDateInputValue(value);
+        break;
+      case 'time':
+        formState[field.key] = toTimeInputValue(value);
+        break;
+      case 'textarea':
+      case 'text':
+        formState[field.key] = normalizeStringValue(value);
+        break;
+    }
+  }
+
+  if (Array.isArray(formState.alcohols)) {
+    formState.alcohols = normalizeTastingEventAlcohols(formState.alcohols);
+  }
+
+  return formState;
+}
+
 // 문자열은 trim하고 나머지 값은 서버 전송값으로 그대로 유지합니다.
 function normalizePayloadValue(value: unknown): unknown {
   return typeof value === 'string' ? value.trim() : value;
@@ -61,4 +124,72 @@ function mapTastingEventAlcohols(values: TastingEventCreateFormState['alcohols']
       ...(comment ? { comment } : {}),
     };
   });
+}
+
+function normalizeTastingEventAlcohols(value: unknown): CurationWhiskyCardValue[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.map((item) => {
+    const itemRecord = isRecord(item) ? item : {};
+    const alcohol = isRecord(itemRecord.alcohol) ? itemRecord.alcohol : {};
+
+    return {
+      source: normalizeWhiskySource(itemRecord.source),
+      alcohol: {
+        alcoholId: typeof alcohol.alcoholId === 'number' ? alcohol.alcoholId : null,
+        korName: normalizeStringValue(alcohol.korName),
+        engName: normalizeStringValue(alcohol.engName),
+        imageUrl: normalizeStringValue(alcohol.imageUrl),
+        abv: normalizeStringValue(alcohol.abv),
+        cask: normalizeStringValue(alcohol.cask),
+        volume: normalizeStringValue(alcohol.volume),
+        regionName: normalizeStringValue(alcohol.regionName),
+        korCategory: normalizeStringValue(alcohol.korCategory),
+        selectedTags: Array.isArray(alcohol.selectedTags)
+          ? alcohol.selectedTags.map(normalizeStringValue).filter(Boolean)
+          : [],
+      },
+      comment: normalizeStringValue(itemRecord.comment),
+    };
+  });
+}
+
+function normalizeWhiskySource(value: unknown): CurationWhiskySource {
+  return value === 'BOTTLE_NOTE' || value === 'MANUAL' ? value : 'MANUAL';
+}
+
+function normalizeStringValue(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  return typeof value === 'string' ? value : String(value);
+}
+
+function normalizeNumberValue(value: unknown, fallback: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+
+  const normalized = Number(value);
+  if (Number.isFinite(normalized)) return normalized;
+
+  return typeof fallback === 'number' ? fallback : 0;
+}
+
+function normalizeBooleanValue(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+
+  return Boolean(value);
+}
+
+function toDateInputValue(value: unknown): string {
+  const normalized = normalizeStringValue(value);
+  return normalized ? normalized.slice(0, 10) : '';
+}
+
+function toTimeInputValue(value: unknown): string {
+  const normalized = normalizeStringValue(value);
+  return normalized ? normalized.slice(0, 5) : '';
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

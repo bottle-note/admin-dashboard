@@ -231,10 +231,7 @@ describe('CurationTastingEventCreatePage', () => {
     expect(screen.getByText('장소 및 바(bar) 주소')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '큐레이션 이미지 업로드' })).toBeInTheDocument();
     expect(screen.getByText(/PNG, JPG, WEBP 지원/)).toBeInTheDocument();
-    expect(screen.queryByText('대표 이미지')).not.toBeInTheDocument();
-    expect(screen.queryByText('서브 이미지 1')).not.toBeInTheDocument();
     expect(screen.getByText('미리보기')).toBeInTheDocument();
-    expect(screen.getByLabelText('비어 있는 미리보기 영역')).toBeInTheDocument();
     expect(screen.queryByText('요약')).not.toBeInTheDocument();
     expect(screen.queryByText('관리자 전용 설정')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('노출 순서')).not.toBeInTheDocument();
