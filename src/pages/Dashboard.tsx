@@ -8,7 +8,7 @@ import { useAdminAlcoholList } from '@/hooks/useAdminAlcohols';
 import { useHelpList } from '@/hooks/useHelps';
 import { useTastingTagList } from '@/hooks/useTastingTags';
 import { useBannerList } from '@/hooks/useBanners';
-import { useCurationList } from '@/hooks/useCurations';
+import { useCurationList } from '@/hooks/useCurationOld';
 
 interface StatCardProps {
   title: string;

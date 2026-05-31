@@ -7,7 +7,7 @@ import { render } from '@/test/test-utils';
 import { server } from '@/test/mocks/server';
 import { wrapApiResponse } from '@/test/mocks/data';
 import type { CurationV2Spec } from '@/types/api';
-import { CurationV2EntryPage } from '../CurationV2Entry';
+import { CurationEntryPage } from '../CurationEntry';
 
 const SPEC_BASE = '/admin/api/v2/curation-specs';
 
@@ -84,7 +84,7 @@ function mockSpecList(specs = mockSpecs) {
   );
 }
 
-describe('CurationV2EntryPage', () => {
+describe('CurationEntryPage', () => {
   const getFirstPreviewButton = async () => {
     const [firstPreviewButton] = await screen.findAllByRole('button', { name: /미리보기/ });
 
@@ -98,7 +98,7 @@ describe('CurationV2EntryPage', () => {
   it('활성 큐레이션 스펙을 API 응답 기반으로 표시하고 정해진 code 순서로 정렬한다', async () => {
     mockSpecList();
 
-    render(<CurationV2EntryPage />);
+    render(<CurationEntryPage />);
 
     const typeSection = screen.getByLabelText('큐레이션 유형 선택');
     await screen.findByRole('heading', { name: '시음회' });
@@ -115,7 +115,7 @@ describe('CurationV2EntryPage', () => {
   it('각 활성 스펙 카드에 작성하기와 미리보기 액션을 표시한다', async () => {
     mockSpecList();
 
-    render(<CurationV2EntryPage />);
+    render(<CurationEntryPage />);
 
     expect(await screen.findAllByRole('link', { name: /작성하기/ })).toHaveLength(3);
     expect(screen.getAllByRole('button', { name: /미리보기/ })).toHaveLength(3);
@@ -124,7 +124,7 @@ describe('CurationV2EntryPage', () => {
   it('미리보기 패널은 빈 공간을 확보한다', async () => {
     mockSpecList();
 
-    render(<CurationV2EntryPage />);
+    render(<CurationEntryPage />);
 
     await screen.findByRole('heading', { name: '시음회' });
 
@@ -136,7 +136,7 @@ describe('CurationV2EntryPage', () => {
     const user = userEvent.setup();
     mockSpecList();
 
-    render(<CurationV2EntryPage />);
+    render(<CurationEntryPage />);
 
     await user.click(await getFirstPreviewButton());
 
@@ -147,7 +147,7 @@ describe('CurationV2EntryPage', () => {
     const user = userEvent.setup();
     mockSpecList();
 
-    render(<CurationV2EntryPage />);
+    render(<CurationEntryPage />);
 
     await user.click(await getFirstPreviewButton());
 
@@ -158,7 +158,7 @@ describe('CurationV2EntryPage', () => {
   it('활성 스펙이 없으면 빈 상태를 표시한다', async () => {
     mockSpecList(mockSpecs.map((spec) => ({ ...spec, isActive: false })));
 
-    render(<CurationV2EntryPage />);
+    render(<CurationEntryPage />);
 
     expect(await screen.findByText('생성 가능한 큐레이션 스펙이 없습니다.')).toBeInTheDocument();
   });

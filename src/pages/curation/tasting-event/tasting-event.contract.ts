@@ -1,6 +1,6 @@
 import type { CurationV2Spec, JsonSchemaNode } from '@/types/api';
 
-import type { CurationWhiskyCardListContract } from './curation-whisky-card-list.types';
+import type { CurationWhiskyCardListContract } from '../curation-whisky-card-list.types';
 
 export interface TastingEventFieldContract {
   label: string;

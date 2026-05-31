@@ -14,10 +14,10 @@ import {
   useCurationCreate,
   useCurationDelete,
   useCurationUpdate,
-} from '@/hooks/useCurations';
+} from '@/hooks/useCurationOld';
 
-import { curationFormSchema, DEFAULT_CURATION_FORM } from './curation.schema';
-import type { CurationFormValues } from './curation.schema';
+import { curationFormSchema, DEFAULT_CURATION_FORM } from './curation-old.schema';
+import type { CurationFormValues } from './curation-old.schema';
 import type { CurationCreateRequest, CurationUpdateRequest, CurationDetail } from '@/types/api';
 
 /**

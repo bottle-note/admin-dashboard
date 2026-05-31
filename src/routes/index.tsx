@@ -17,10 +17,10 @@ import { TastingTagDetailPage } from '@/pages/tasting-tags/TastingTagDetail';
 import { BannerListPage } from '@/pages/banners/BannerList';
 import { BannerDetailPage } from '@/pages/banners/BannerDetail';
 import { BannerCreatePage } from '@/pages/banners/BannerCreate';
-import { CurationListPage } from '@/pages/curations/CurationList';
-import { CurationDetailPage } from '@/pages/curations/CurationDetail';
-import { CurationV2EntryPage } from '@/pages/curations/CurationV2Entry';
-import { CurationV2TastingEventCreatePage } from '@/pages/curations/CurationV2TastingEventCreate';
+import { CurationListPage } from '@/pages/curation-old/CurationList';
+import { CurationDetailPage } from '@/pages/curation-old/CurationDetail';
+import { CurationEntryPage } from '@/pages/curation/CurationEntry';
+import { CurationTastingEventCreatePage } from '@/pages/curation/tasting-event/CurationTastingEventCreate';
 import { InquiryListPage } from '@/pages/inquiries/InquiryList';
 import { PolicyListPage } from '@/pages/policies/PolicyList';
 import { UserListPage } from '@/pages/users/UserList';
@@ -63,7 +63,7 @@ export function AppRoutes() {
           path="dashboard/curations"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
-              <CurationV2EntryPage />
+              <CurationEntryPage />
             </RoleProtectedRoute>
           }
         />
@@ -71,7 +71,7 @@ export function AppRoutes() {
           path="dashboard/curations/tasting-events/new"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
-              <CurationV2TastingEventCreatePage />
+              <CurationTastingEventCreatePage />
             </RoleProtectedRoute>
           }
         />

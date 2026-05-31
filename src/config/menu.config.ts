@@ -29,7 +29,7 @@ export const menuConfig: MenuGroup[] = [
         path: '/',
       },
       {
-        id: 'dashboard-curation-v2',
+        id: 'dashboard-curation',
         label: '큐레이션',
         icon: Layers,
         path: '/dashboard/curations',

@@ -7,14 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 
-import type { CurationV2TastingEventFormValues } from '../curation-v2-tasting-event.schema';
+import type { CurationTastingEventFormValues } from '../tasting-event.schema';
 
 interface TastingEventBasicInfoSectionProps {
   isRootAdmin: boolean;
 }
 
 export function TastingEventBasicInfoSection({ isRootAdmin }: TastingEventBasicInfoSectionProps) {
-  const form = useFormContext<CurationV2TastingEventFormValues>();
+  const form = useFormContext<CurationTastingEventFormValues>();
   const isActive = useWatch({
     control: form.control,
     name: 'isActive',

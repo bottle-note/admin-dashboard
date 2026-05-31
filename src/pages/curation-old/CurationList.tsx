@@ -29,7 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/common/Pagination';
 import { StatusToggle } from '@/components/common/StatusToggle';
 import { useReorderDrag } from '@/hooks/useReorderDrag';
-import { useCurationList, useCurationToggleStatus, useCurationUpdateDisplayOrder } from '@/hooks/useCurations';
+import { useCurationList, useCurationToggleStatus, useCurationUpdateDisplayOrder } from '@/hooks/useCurationOld';
 import type { CurationSearchParams } from '@/types/api';
 
 const IS_ACTIVE_OPTIONS = [

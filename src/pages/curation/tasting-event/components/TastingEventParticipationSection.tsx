@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 
-import type { TastingEventFormContract } from '../curation-v2-tasting-event.contract';
-import type { CurationV2TastingEventFormValues } from '../curation-v2-tasting-event.schema';
+import type { TastingEventFormContract } from '../tasting-event.contract';
+import type { CurationTastingEventFormValues } from '../tasting-event.schema';
 
 interface TastingEventParticipationSectionProps {
   contract: TastingEventFormContract;
@@ -17,7 +17,7 @@ interface TastingEventParticipationSectionProps {
 export function TastingEventParticipationSection({
   contract,
 }: TastingEventParticipationSectionProps) {
-  const form = useFormContext<CurationV2TastingEventFormValues>();
+  const form = useFormContext<CurationTastingEventFormValues>();
   const isRecruiting = useWatch({
     control: form.control,
     name: 'isRecruiting',

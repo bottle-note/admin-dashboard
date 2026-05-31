@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { wrapApiResponse } from '@/test/mocks/data';
 import type { CurationV2CreateRequest, CurationV2Spec } from '@/types/api';
-import { curationV2Service, resolveCurationV2SpecByCode } from '../curation-v2.service';
+import { curationService, resolveCurationSpecByCode } from '../curation.service';
 
 const SPEC_BASE = '/admin/api/v2/curation-specs';
 const CURATION_BASE = '/admin/api/v2/curations';
@@ -62,7 +62,7 @@ const createRequest: CurationV2CreateRequest = {
   },
 };
 
-describe('curationV2Service', () => {
+describe('curationService', () => {
   it('큐레이션 스펙 목록을 조회한다', async () => {
     server.use(
       http.get(SPEC_BASE, () => {
@@ -70,7 +70,7 @@ describe('curationV2Service', () => {
       })
     );
 
-    const result = await curationV2Service.listSpecs();
+    const result = await curationService.listSpecs();
 
     expect(result).toHaveLength(2);
     expect(result[1]!.code).toBe('WHISKY_TASTING_EVENT');
@@ -87,14 +87,14 @@ describe('curationV2Service', () => {
       })
     );
 
-    const result = await curationV2Service.getSpec(3);
+    const result = await curationService.getSpec(3);
 
     expect(capturedPath).toBe('/admin/api/v2/curation-specs/3');
     expect(result.id).toBe(3);
   });
 
   it('specCode로 스펙을 resolve한다', () => {
-    const result = resolveCurationV2SpecByCode(
+    const result = resolveCurationSpecByCode(
       [mockRecommendedSpec, mockTastingEventSpec],
       'WHISKY_TASTING_EVENT'
     );
@@ -103,7 +103,7 @@ describe('curationV2Service', () => {
   });
 
   it('존재하지 않는 specCode는 null을 반환한다', () => {
-    const result = resolveCurationV2SpecByCode([mockRecommendedSpec], 'WHISKY_TASTING_EVENT');
+    const result = resolveCurationSpecByCode([mockRecommendedSpec], 'WHISKY_TASTING_EVENT');
 
     expect(result).toBeNull();
   });
@@ -141,7 +141,7 @@ describe('curationV2Service', () => {
       })
     );
 
-    const result = await curationV2Service.list({ isActive: true, page: 0, size: 20 });
+    const result = await curationService.list({ isActive: true, page: 0, size: 20 });
 
     expect(result.items[0]!.specCode).toBe('WHISKY_TASTING_EVENT');
     expect(result.meta.totalElements).toBe(1);
@@ -172,7 +172,7 @@ describe('curationV2Service', () => {
       })
     );
 
-    const result = await curationV2Service.getDetail(10);
+    const result = await curationService.getDetail(10);
 
     expect(result.spec.code).toBe('WHISKY_TASTING_EVENT');
     expect(result.payload.eventDate).toBe('2026-06-15');
@@ -195,7 +195,7 @@ describe('curationV2Service', () => {
       })
     );
 
-    const result = await curationV2Service.create(createRequest);
+    const result = await curationService.create(createRequest);
 
     expect(capturedBody).toMatchObject({
       specId: 3,
@@ -226,7 +226,7 @@ describe('curationV2Service', () => {
       })
     );
 
-    const result = await curationV2Service.update(10, {
+    const result = await curationService.update(10, {
       ...createRequest,
       name: '수정된 시음회',
     });

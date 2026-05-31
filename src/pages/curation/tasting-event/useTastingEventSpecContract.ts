@@ -1,21 +1,21 @@
 import { useMemo } from 'react';
 
-import { useCurationV2Spec, useCurationV2Specs } from '@/hooks/useCurationV2';
+import { useCurationSpec, useCurationSpecs } from '@/hooks/useCurations';
 
 import {
   INITIAL_TASTING_EVENT_FORM_CONTRACT,
   createTastingEventFormContract,
-} from './curation-v2-tasting-event.contract';
+} from './tasting-event.contract';
 
 const TASTING_EVENT_SPEC_CODE = 'WHISKY_TASTING_EVENT';
 
 export function useTastingEventSpecContract() {
-  const specsQuery = useCurationV2Specs();
+  const specsQuery = useCurationSpecs();
   const tastingEventSpec = useMemo(
     () => specsQuery.data?.find((spec) => spec.code === TASTING_EVENT_SPEC_CODE && spec.isActive),
     [specsQuery.data]
   );
-  const specDetailQuery = useCurationV2Spec(tastingEventSpec?.id, {
+  const specDetailQuery = useCurationSpec(tastingEventSpec?.id, {
     showErrorToast: false,
   });
   const specDetail = specDetailQuery.data;

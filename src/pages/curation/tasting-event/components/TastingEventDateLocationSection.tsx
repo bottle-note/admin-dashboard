@@ -4,8 +4,8 @@ import { FormField } from '@/components/common/FormField';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
-import type { TastingEventFormContract } from '../curation-v2-tasting-event.contract';
-import type { CurationV2TastingEventFormValues } from '../curation-v2-tasting-event.schema';
+import type { TastingEventFormContract } from '../tasting-event.contract';
+import type { CurationTastingEventFormValues } from '../tasting-event.schema';
 
 interface TastingEventDateLocationSectionProps {
   contract: TastingEventFormContract;
@@ -14,7 +14,7 @@ interface TastingEventDateLocationSectionProps {
 export function TastingEventDateLocationSection({
   contract,
 }: TastingEventDateLocationSectionProps) {
-  const form = useFormContext<CurationV2TastingEventFormValues>();
+  const form = useFormContext<CurationTastingEventFormValues>();
 
   return (
     <Card>

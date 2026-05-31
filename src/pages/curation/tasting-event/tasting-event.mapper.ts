@@ -1,7 +1,7 @@
 import type {
-  CurationV2TastingEventFormValues,
-  CurationV2TastingEventPayload,
-} from './curation-v2-tasting-event.schema';
+  CurationTastingEventFormValues,
+  CurationTastingEventPayload,
+} from './tasting-event.schema';
 
 const ALCOHOL_OPTIONAL_TEXT_FIELDS = [
   'engName',
@@ -14,8 +14,8 @@ const ALCOHOL_OPTIONAL_TEXT_FIELDS = [
 ] as const;
 
 export function buildTastingEventPayload(
-  values: CurationV2TastingEventFormValues
-): CurationV2TastingEventPayload {
+  values: CurationTastingEventFormValues
+): CurationTastingEventPayload {
   return {
     eventDate: values.eventDate,
     eventTime: values.eventTime,

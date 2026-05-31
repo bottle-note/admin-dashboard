@@ -3,7 +3,7 @@ import { z } from 'zod';
 import {
   INITIAL_TASTING_EVENT_FORM_CONTRACT,
   type TastingEventFormContract,
-} from './curation-v2-tasting-event.contract';
+} from './tasting-event.contract';
 
 export function createTastingEventAlcoholSchema(contract: TastingEventFormContract) {
   return z.object({
@@ -39,7 +39,7 @@ export function createTastingEventAlcoholSchema(contract: TastingEventFormContra
   });
 }
 
-export function createCurationV2TastingEventFormSchema(
+export function createCurationTastingEventFormSchema(
   contract: TastingEventFormContract = INITIAL_TASTING_EVENT_FORM_CONTRACT
 ) {
   return z.object({
@@ -115,12 +115,12 @@ export function createCurationV2TastingEventFormSchema(
   });
 }
 
-export type CurationV2TastingEventFormValues = z.infer<
-  ReturnType<typeof createCurationV2TastingEventFormSchema>
+export type CurationTastingEventFormValues = z.infer<
+  ReturnType<typeof createCurationTastingEventFormSchema>
 >;
 
-export type CurationV2TastingEventPayload = Pick<
-  CurationV2TastingEventFormValues,
+export type CurationTastingEventPayload = Pick<
+  CurationTastingEventFormValues,
   | 'eventDate'
   | 'eventTime'
   | 'barAddress'
@@ -133,7 +133,7 @@ export type CurationV2TastingEventPayload = Pick<
   | 'alcohols'
 >;
 
-export const DEFAULT_CURATION_V2_TASTING_EVENT_FORM: CurationV2TastingEventFormValues = {
+export const DEFAULT_CURATION_TASTING_EVENT_FORM: CurationTastingEventFormValues = {
   name: '',
   description: '',
   imageUrls: [],

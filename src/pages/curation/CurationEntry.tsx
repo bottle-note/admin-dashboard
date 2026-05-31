@@ -14,7 +14,7 @@ import {
 import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useCurationV2Specs } from '@/hooks/useCurationV2';
+import { useCurationSpecs } from '@/hooks/useCurations';
 import type { CurationV2Spec, KnownCurationV2SpecCode } from '@/types/api';
 
 interface CurationSpecUiConfig {
@@ -62,9 +62,9 @@ function compareCurationSpecs(a: CurationV2Spec, b: CurationV2Spec) {
   return aOrder - bOrder || a.id - b.id;
 }
 
-export function CurationV2EntryPage() {
+export function CurationEntryPage() {
   const [selectedPreview, setSelectedPreview] = useState<string | null>(null);
-  const { data: specs = [], isError, isLoading, refetch } = useCurationV2Specs();
+  const { data: specs = [], isError, isLoading, refetch } = useCurationSpecs();
 
   const activeSpecs = specs.filter((spec) => spec.isActive).sort(compareCurationSpecs);
 

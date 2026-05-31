@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { CurationV2Spec } from '@/types/api';
 
-import { createTastingEventFormContract } from '../curation-v2-tasting-event.contract';
+import { createTastingEventFormContract } from '../tasting-event.contract';
 
 const tastingEventSpec: CurationV2Spec = {
   id: 3,

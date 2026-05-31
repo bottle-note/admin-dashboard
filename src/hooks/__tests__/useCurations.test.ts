@@ -7,12 +7,12 @@ import { wrapApiResponse } from '@/test/mocks/data';
 import { renderHook } from '@/test/test-utils';
 import type { CurationV2CreateRequest, CurationV2Spec } from '@/types/api';
 import {
-  useCurationV2Create,
-  useCurationV2List,
-  useCurationV2SpecByCode,
-  useCurationV2Specs,
-  useCurationV2Update,
-} from '../useCurationV2';
+  useCurationCreate,
+  useCurationList,
+  useCurationSpecByCode,
+  useCurationSpecs,
+  useCurationUpdate,
+} from '../useCurations';
 
 const SPEC_BASE = '/admin/api/v2/curation-specs';
 const CURATION_BASE = '/admin/api/v2/curations';
@@ -55,7 +55,7 @@ const createRequest: CurationV2CreateRequest = {
   },
 };
 
-describe('useCurationV2 hooks', () => {
+describe('useCurations hooks', () => {
   it('큐레이션 스펙 목록을 반환한다', async () => {
     server.use(
       http.get(SPEC_BASE, () => {
@@ -63,7 +63,7 @@ describe('useCurationV2 hooks', () => {
       })
     );
 
-    const { result } = renderHook(() => useCurationV2Specs());
+    const { result } = renderHook(() => useCurationSpecs());
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -77,7 +77,7 @@ describe('useCurationV2 hooks', () => {
       })
     );
 
-    const { result } = renderHook(() => useCurationV2SpecByCode('WHISKY_TASTING_EVENT'));
+    const { result } = renderHook(() => useCurationSpecByCode('WHISKY_TASTING_EVENT'));
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -91,7 +91,7 @@ describe('useCurationV2 hooks', () => {
       })
     );
 
-    const { result } = renderHook(() => useCurationV2SpecByCode('UNKNOWN_SPEC'));
+    const { result } = renderHook(() => useCurationSpecByCode('UNKNOWN_SPEC'));
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -126,7 +126,7 @@ describe('useCurationV2 hooks', () => {
       })
     );
 
-    const { result } = renderHook(() => useCurationV2List({ page: 0, size: 20 }));
+    const { result } = renderHook(() => useCurationList({ page: 0, size: 20 }));
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -151,7 +151,7 @@ describe('useCurationV2 hooks', () => {
       })
     );
 
-    const { result } = renderHook(() => useCurationV2Create({ onSuccess }));
+    const { result } = renderHook(() => useCurationCreate({ onSuccess }));
 
     result.current.mutate(createRequest);
 
@@ -184,7 +184,7 @@ describe('useCurationV2 hooks', () => {
       })
     );
 
-    const { result } = renderHook(() => useCurationV2Update({ onSuccess }));
+    const { result } = renderHook(() => useCurationUpdate({ onSuccess }));
 
     result.current.mutate({
       curationId: 10,

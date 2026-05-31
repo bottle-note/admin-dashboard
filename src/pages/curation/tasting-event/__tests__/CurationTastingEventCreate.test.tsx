@@ -9,7 +9,7 @@ import { wrapApiError, wrapApiResponse } from '@/test/mocks/data';
 import { useAuthStore } from '@/stores/auth';
 import type { CurationV2CreateRequest, CurationV2Spec } from '@/types/api';
 
-import { CurationV2TastingEventCreatePage } from '../CurationV2TastingEventCreate';
+import { CurationTastingEventCreatePage } from '../CurationTastingEventCreate';
 
 const SPEC_BASE = '/admin/api/v2/curation-specs';
 const CURATION_BASE = '/admin/api/v2/curations';
@@ -206,7 +206,7 @@ function setCurrentUserRoles(roles: Array<'ROOT_ADMIN' | 'BAR_OWNER' | 'COMMUNIT
   state.isAuthenticated = roles.length > 0;
 }
 
-describe('CurationV2TastingEventCreatePage', () => {
+describe('CurationTastingEventCreatePage', () => {
   beforeEach(() => {
     setCurrentUserRoles([]);
     Object.defineProperty(URL, 'createObjectURL', {
@@ -222,7 +222,7 @@ describe('CurationV2TastingEventCreatePage', () => {
   it('스펙 목록과 상세 조회 후 시음회 작성 폼을 렌더링한다', async () => {
     mockSpecSuccess();
 
-    render(<CurationV2TastingEventCreatePage />);
+    render(<CurationTastingEventCreatePage />);
 
     expect(await screen.findByRole('heading', { name: '시음회 작성' })).toBeInTheDocument();
     expect(await screen.findByText('날짜 및 장소 정보')).toBeInTheDocument();
@@ -246,7 +246,7 @@ describe('CurationV2TastingEventCreatePage', () => {
     const user = userEvent.setup();
     mockSpecSuccess(createTastingEventSpec({ alcoholsMaxItems: 1 }));
 
-    render(<CurationV2TastingEventCreatePage />);
+    render(<CurationTastingEventCreatePage />);
 
     expect(await screen.findByText(/1-1개까지 등록할 수 있습니다/)).toBeInTheDocument();
 
@@ -261,7 +261,7 @@ describe('CurationV2TastingEventCreatePage', () => {
     setCurrentUserRoles(['ROOT_ADMIN']);
     mockSpecSuccess();
 
-    render(<CurationV2TastingEventCreatePage />);
+    render(<CurationTastingEventCreatePage />);
 
     expect(await screen.findByText('관리자 전용 설정')).toBeInTheDocument();
     expect(screen.getByLabelText('노출 순서')).toBeInTheDocument();
@@ -272,7 +272,7 @@ describe('CurationV2TastingEventCreatePage', () => {
     const user = userEvent.setup();
     mockSpecSuccess();
 
-    render(<CurationV2TastingEventCreatePage />);
+    render(<CurationTastingEventCreatePage />);
 
     expect(await screen.findByText('시음회 참여자를 모집할 목적이신가요?')).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: '네' })).toHaveAttribute('aria-checked', 'true');
@@ -290,7 +290,7 @@ describe('CurationV2TastingEventCreatePage', () => {
     mockSpecSuccess();
     mockImageUpload();
 
-    render(<CurationV2TastingEventCreatePage />);
+    render(<CurationTastingEventCreatePage />);
 
     await screen.findByLabelText('큐레이션 이미지 파일 선택');
 
@@ -343,7 +343,7 @@ describe('CurationV2TastingEventCreatePage', () => {
       )
     );
 
-    render(<CurationV2TastingEventCreatePage />);
+    render(<CurationTastingEventCreatePage />);
 
     expect(
       await screen.findByText('시음회 스펙 상세를 불러올 권한이 없습니다.')
@@ -356,7 +356,7 @@ describe('CurationV2TastingEventCreatePage', () => {
     const user = userEvent.setup();
     mockSpecSuccess();
 
-    render(<CurationV2TastingEventCreatePage />);
+    render(<CurationTastingEventCreatePage />);
 
     await screen.findByLabelText('큐레이션명');
 
@@ -408,7 +408,7 @@ describe('CurationV2TastingEventCreatePage', () => {
       })
     );
 
-    render(<CurationV2TastingEventCreatePage />);
+    render(<CurationTastingEventCreatePage />);
 
     await screen.findByLabelText('큐레이션명');
 
@@ -495,7 +495,7 @@ describe('CurationV2TastingEventCreatePage', () => {
       })
     );
 
-    render(<CurationV2TastingEventCreatePage />);
+    render(<CurationTastingEventCreatePage />);
 
     await screen.findByLabelText('큐레이션명');
 

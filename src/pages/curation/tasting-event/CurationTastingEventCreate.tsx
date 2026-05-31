@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router';
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useCurationV2Create } from '@/hooks/useCurationV2';
+import { useCurationCreate } from '@/hooks/useCurations';
 import { useAuthStore } from '@/stores/auth';
 import type { CurationV2CreateRequest } from '@/types/api';
 
@@ -17,12 +17,12 @@ import { TastingEventDateLocationSection } from './components/TastingEventDateLo
 import { TastingEventImageSection } from './components/TastingEventImageSection';
 import { TastingEventParticipationSection } from './components/TastingEventParticipationSection';
 import { TastingEventPreviewPanel } from './components/TastingEventPreviewPanel';
-import { buildTastingEventPayload } from './curation-v2-tasting-event.mapper';
+import { buildTastingEventPayload } from './tasting-event.mapper';
 import {
-  DEFAULT_CURATION_V2_TASTING_EVENT_FORM,
-  createCurationV2TastingEventFormSchema,
-  type CurationV2TastingEventFormValues,
-} from './curation-v2-tasting-event.schema';
+  DEFAULT_CURATION_TASTING_EVENT_FORM,
+  createCurationTastingEventFormSchema,
+  type CurationTastingEventFormValues,
+} from './tasting-event.schema';
 import { useTastingEventSpecContract } from './useTastingEventSpecContract';
 
 interface BlockingStateProps {
@@ -58,7 +58,7 @@ function BlockingState({ title, description, onRetry, onBack }: BlockingStatePro
   );
 }
 
-export function CurationV2TastingEventCreatePage() {
+export function CurationTastingEventCreatePage() {
   const navigate = useNavigate();
   const isRootAdmin = useAuthStore((state) => state.hasRole('ROOT_ADMIN'));
   const [isImageUploading, setIsImageUploading] = useState(false);
@@ -71,17 +71,17 @@ export function CurationV2TastingEventCreatePage() {
     canShowForm,
   } = useTastingEventSpecContract();
   const formSchema = useMemo(
-    () => createCurationV2TastingEventFormSchema(formContract),
+    () => createCurationTastingEventFormSchema(formContract),
     [formContract]
   );
 
-  const form = useForm<CurationV2TastingEventFormValues>({
+  const form = useForm<CurationTastingEventFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: DEFAULT_CURATION_V2_TASTING_EVENT_FORM,
+    defaultValues: DEFAULT_CURATION_TASTING_EVENT_FORM,
     mode: 'onSubmit',
   });
 
-  const createMutation = useCurationV2Create({
+  const createMutation = useCurationCreate({
     successMessage: '시음회 큐레이션이 등록되었습니다.',
     onSuccess: () => {
       navigate('/dashboard/curations');
