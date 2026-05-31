@@ -17,9 +17,11 @@ import { TastingTagDetailPage } from '@/pages/tasting-tags/TastingTagDetail';
 import { BannerListPage } from '@/pages/banners/BannerList';
 import { BannerDetailPage } from '@/pages/banners/BannerDetail';
 import { BannerCreatePage } from '@/pages/banners/BannerCreate';
-import { CurationListPage } from '@/pages/curation-old/CurationList';
-import { CurationDetailPage } from '@/pages/curation-old/CurationDetail';
+import { CurationListPage as CurationOldListPage } from '@/pages/curation-old/CurationList';
+import { CurationDetailPage as CurationOldDetailPage } from '@/pages/curation-old/CurationDetail';
 import { CurationEntryPage } from '@/pages/curation/CurationEntry';
+import { CurationListPage } from '@/pages/curation/CurationList';
+import { CurationDetailPage } from '@/pages/curation/CurationDetail';
 import { CurationTastingEventCreatePage } from '@/pages/curation/tasting-event/CurationTastingEventCreate';
 import { InquiryListPage } from '@/pages/inquiries/InquiryList';
 import { PolicyListPage } from '@/pages/policies/PolicyList';
@@ -63,6 +65,14 @@ export function AppRoutes() {
           path="dashboard/curations"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
+              <CurationListPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="dashboard/curations/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
               <CurationEntryPage />
             </RoleProtectedRoute>
           }
@@ -72,6 +82,14 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
               <CurationTastingEventCreatePage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="dashboard/curations/:id"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
+              <CurationDetailPage />
             </RoleProtectedRoute>
           }
         />
@@ -158,7 +176,7 @@ export function AppRoutes() {
           path="curations"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <CurationListPage />
+              <CurationOldListPage />
             </RoleProtectedRoute>
           }
         />
@@ -166,7 +184,7 @@ export function AppRoutes() {
           path="curations/new"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <CurationDetailPage key="new" />
+              <CurationOldDetailPage key="new" />
             </RoleProtectedRoute>
           }
         />
@@ -174,7 +192,7 @@ export function AppRoutes() {
           path="curations/:id"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <CurationDetailPage key="edit" />
+              <CurationOldDetailPage key="edit" />
             </RoleProtectedRoute>
           }
         />
