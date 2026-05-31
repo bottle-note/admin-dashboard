@@ -147,6 +147,7 @@ function resolveSchemaKind(
   fieldStyle?: string
 ): CurationFieldKind {
   if (fieldStyle === 'long-text') return 'textarea';
+  if (fieldStyle === 'plain-text') return 'text';
   if (fieldStyle === 'alcohol-card-list') return 'alcohol-card-list';
   if (fieldStyle === 'time') return 'time';
   if (fieldStyle === 'date') return 'date';

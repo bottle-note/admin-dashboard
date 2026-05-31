@@ -204,8 +204,8 @@ function TastingEventReadyForm({ specDetail, formModel, onBack }: TastingEventRe
       />
 
       <FormProvider {...form}>
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start">
+          <div className="min-w-0 space-y-6">
             <TastingEventBasicInfoSection isRootAdmin={isRootAdmin} />
             <TastingEventImageSection onUploadingChange={setIsImageUploading} />
             {formModel.sections.map((section) => (
@@ -213,7 +213,7 @@ function TastingEventReadyForm({ specDetail, formModel, onBack }: TastingEventRe
             ))}
           </div>
 
-          <aside className="space-y-6 lg:col-span-1">
+          <aside className="lg:sticky lg:top-6">
             <TastingEventPreviewPanel />
           </aside>
         </div>

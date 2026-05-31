@@ -41,6 +41,7 @@ const tastingEventSpec: CurationV2Spec = {
         type: 'string',
         maxLength: 200,
         description: '장소 및 바 주소',
+        'x-field-style': 'plain-text',
         'x-display-name': '장소 및 바(bar) 주소',
       },
       detailAddress: {
@@ -71,6 +72,7 @@ const tastingEventSpec: CurationV2Spec = {
         type: 'string',
         maxLength: 2048,
         description: '신청 링크',
+        'x-field-style': 'plain-text',
         'x-display-name': '신청링크',
       },
       guideText: {
@@ -153,7 +155,10 @@ describe('createTastingEventFormModel', () => {
       maximum: 999,
       suffix: '명',
     });
-    expect(fieldsByKey.applicationLink).toMatchObject({ maxLength: 2048 });
+    expect(fieldsByKey.applicationLink).toMatchObject({
+      kind: 'text',
+      maxLength: 2048,
+    });
     expect(fieldsByKey.guideText).toMatchObject({
       kind: 'textarea',
       maxLength: 1000,
