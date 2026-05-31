@@ -4,7 +4,7 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 
-import { useApiQuery } from './useApiQuery';
+import { useApiQuery, type UseApiQueryOptions } from './useApiQuery';
 import { useApiMutation, type UseApiMutationOptions } from './useApiMutation';
 import {
   curationV2Keys,
@@ -35,13 +35,17 @@ export function useCurationV2Specs() {
 /**
  * 큐레이션 스펙 상세 조회 훅
  */
-export function useCurationV2Spec(specId: number | undefined) {
+export function useCurationV2Spec(
+  specId: number | undefined,
+  options?: UseApiQueryOptions<CurationV2Spec>
+) {
   return useApiQuery<CurationV2Spec>(
     curationV2Keys.spec(specId ?? 0),
     () => curationV2Service.getSpec(specId!),
     {
       enabled: !!specId && specId > 0,
       staleTime: 1000 * 60 * 5,
+      ...options,
     }
   );
 }
@@ -95,18 +99,19 @@ export function useCurationV2Detail(curationId: number | undefined) {
  * Spec 기반 큐레이션 생성 훅
  */
 export function useCurationV2Create(
-  options?: Omit<
-    UseApiMutationOptions<CurationV2CreateResponse, CurationV2CreateRequest>,
-    'successMessage'
-  >
+  options?: UseApiMutationOptions<CurationV2CreateResponse, CurationV2CreateRequest>
 ) {
   const queryClient = useQueryClient();
-  const { onSuccess, ...restOptions } = options ?? {};
+  const {
+    onSuccess,
+    successMessage = '큐레이션이 등록되었습니다.',
+    ...restOptions
+  } = options ?? {};
 
   return useApiMutation<CurationV2CreateResponse, CurationV2CreateRequest>(
     curationV2Service.create,
     {
-      successMessage: '큐레이션이 등록되었습니다.',
+      successMessage,
       ...restOptions,
       onSuccess: (data, variables, context) => {
         queryClient.invalidateQueries({ queryKey: curationV2Keys.lists() });

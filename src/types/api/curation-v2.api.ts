@@ -59,6 +59,8 @@ export interface JsonSchemaNode {
   title?: string;
   description?: string;
   format?: string;
+  nullable?: boolean;
+  example?: unknown;
   properties?: Record<string, JsonSchemaNode>;
   items?: JsonSchemaNode;
   required?: string[];
