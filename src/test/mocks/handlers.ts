@@ -16,17 +16,21 @@ import {
   mockBannerUpdateResponse,
   mockBannerDeleteResponse,
   mockBannerUpdateStatusResponse,
-  mockBannerUpdateSortOrderResponse,
+  mockBannerBulkReorderResponse,
   mockUserListItems,
+  mockReviewListItems,
   mockDistilleryListItems,
   mockDistilleryDetail,
   mockDistilleryFormResponse,
   mockDistilleryDeleteResponse,
+  mockCurationListItems,
+  mockCurationDetail,
+  mockCurationBulkReorderResponse,
   mockRegionListItems,
   mockRegionDetail,
   mockRegionFormResponse,
   mockRegionDeleteResponse,
-  mockRegionSortOrderResponse,
+  mockRegionBulkReorderResponse,
   wrapApiResponse,
 } from './data';
 
@@ -195,12 +199,13 @@ export const bannerHandlers = [
     );
   }),
 
-  // PATCH 정렬순서 변경
-  http.patch(`${BANNER_BASE}/:bannerId/sort-order`, ({ params }) => {
+  // PATCH 정렬순서 일괄 변경
+  http.patch(`${BANNER_BASE}/bulk/reorder`, async ({ request }) => {
+    const body = (await request.json()) as { ids: number[] };
     return HttpResponse.json(
       wrapApiResponse({
-        ...mockBannerUpdateSortOrderResponse,
-        targetId: Number(params.bannerId),
+        ...mockBannerBulkReorderResponse,
+        targetId: body.ids[0] ?? 0,
       })
     );
   }),
@@ -376,6 +381,58 @@ export const userHandlers = [
 ];
 
 // ============================================
+// Review Handlers
+// ============================================
+
+const REVIEW_BASE = '/admin/api/v1/reviews';
+
+export const reviewHandlers = [
+  // GET 목록
+  http.get(REVIEW_BASE, ({ request }) => {
+    const url = new URL(request.url);
+    const keyword = url.searchParams.get('keyword');
+    const activeStatus = url.searchParams.get('activeStatus');
+    const displayStatus = url.searchParams.get('displayStatus');
+    const alcoholId = url.searchParams.get('alcoholId');
+    const userId = url.searchParams.get('userId');
+    const size = Number(url.searchParams.get('size') ?? 20);
+    const page = Number(url.searchParams.get('page') ?? 0);
+
+    let items = mockReviewListItems;
+    if (keyword) {
+      items = items.filter(
+        (r) =>
+          r.content.includes(keyword) ||
+          r.userNickname.includes(keyword) ||
+          r.alcoholName.includes(keyword)
+      );
+    }
+    if (activeStatus) {
+      items = items.filter((r) => r.activeStatus === activeStatus);
+    }
+    if (displayStatus) {
+      items = items.filter((r) => r.displayStatus === displayStatus);
+    }
+    if (alcoholId) {
+      items = items.filter((r) => r.alcoholId === Number(alcoholId));
+    }
+    if (userId) {
+      items = items.filter((r) => r.userId === Number(userId));
+    }
+
+    return HttpResponse.json(
+      wrapApiResponse(items, {
+        page,
+        size,
+        totalElements: items.length,
+        totalPages: Math.ceil(items.length / size),
+        hasNext: false,
+      })
+    );
+  }),
+];
+
+// ============================================
 // Distillery Handlers
 // ============================================
 
@@ -476,6 +533,83 @@ export const distilleryHandlers = [
 ];
 
 // ============================================
+// Curation Handlers
+// ============================================
+
+const CURATION_BASE = '/admin/api/v1/curations';
+
+export const curationHandlers = [
+  // GET 목록
+  http.get(CURATION_BASE, ({ request }) => {
+    const url = new URL(request.url);
+    const keyword = url.searchParams.get('keyword');
+    const isActive = url.searchParams.get('isActive');
+    const size = Number(url.searchParams.get('size') ?? 20);
+    const page = Number(url.searchParams.get('page') ?? 0);
+
+    let items = mockCurationListItems;
+    if (keyword) {
+      items = items.filter((c) => c.name.includes(keyword));
+    }
+    if (isActive !== null && isActive !== '') {
+      items = items.filter((c) => c.isActive === (isActive === 'true'));
+    }
+
+    return HttpResponse.json(
+      wrapApiResponse(items, {
+        page,
+        size,
+        totalElements: items.length,
+        totalPages: Math.ceil(items.length / size),
+        hasNext: false,
+      })
+    );
+  }),
+
+  // PATCH 노출순서 일괄 변경 (상세보다 먼저)
+  http.patch(`${CURATION_BASE}/bulk/reorder`, async ({ request }) => {
+    const body = (await request.json()) as { ids: number[] };
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockCurationBulkReorderResponse,
+        targetId: body.ids[0] ?? 0,
+      })
+    );
+  }),
+
+  // GET 상세
+  http.get(`${CURATION_BASE}/:curationId`, ({ params }) => {
+    const id = Number(params.curationId);
+    if (id === mockCurationDetail.id) {
+      // CurationDetail → API 응답 형태(modifiedAt)로 변환
+      return HttpResponse.json(
+        wrapApiResponse({
+          id: mockCurationDetail.id,
+          name: mockCurationDetail.name,
+          description: mockCurationDetail.description,
+          coverImageUrl: mockCurationDetail.coverImageUrl,
+          displayOrder: mockCurationDetail.displayOrder,
+          isActive: mockCurationDetail.isActive,
+          createdAt: mockCurationDetail.createdAt,
+          modifiedAt: mockCurationDetail.updatedAt,
+          alcohols: mockCurationDetail.alcohols,
+        })
+      );
+    }
+    return HttpResponse.json(
+      {
+        success: false,
+        code: 404,
+        data: null,
+        errors: [{ code: 'CURATION_NOT_FOUND', message: '큐레이션을 찾을 수 없습니다.' }],
+        meta: {},
+      },
+      { status: 404 }
+    );
+  }),
+];
+
+// ============================================
 // Region Handlers
 // ============================================
 
@@ -519,12 +653,13 @@ export const regionHandlers = [
     );
   }),
 
-  // PATCH 정렬 순서 변경 (상세보다 먼저 매칭되도록)
-  http.patch(`${REGION_BASE}/:id/sort-order`, ({ params }) => {
+  // PATCH 정렬순서 일괄 변경
+  http.patch(`${REGION_BASE}/bulk/reorder`, async ({ request }) => {
+    const body = (await request.json()) as { ids: number[] };
     return HttpResponse.json(
       wrapApiResponse({
-        ...mockRegionSortOrderResponse,
-        targetId: Number(params.id),
+        ...mockRegionBulkReorderResponse,
+        targetId: body.ids[0] ?? 0,
       })
     );
   }),
@@ -589,6 +724,8 @@ export const handlers = [
   ...bannerHandlers,
   ...alcoholHandlers,
   ...userHandlers,
+  ...reviewHandlers,
   ...distilleryHandlers,
+  ...curationHandlers,
   ...regionHandlers,
 ];

@@ -13,3 +13,4 @@ export * from './banner.api';
 export * from './curation-old.api';
 export * from './curation.api';
 export * from './user.api';
+export * from './review.api';

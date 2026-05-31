@@ -219,4 +219,16 @@ export const menuConfig: MenuGroup[] = [
       },
     ],
   },
+  {
+    id: 'review',
+    items: [
+      {
+        id: 'review-management',
+        label: '리뷰 관리',
+        icon: MessageSquare,
+        path: '/reviews',
+        roles: ['ROOT_ADMIN'],
+      },
+    ],
+  },
 ];

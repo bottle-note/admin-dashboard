@@ -5,19 +5,14 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useApiQuery } from './useApiQuery';
 import { useApiMutation, type UseApiMutationOptions } from './useApiMutation';
-import {
-  regionService,
-  regionKeys,
-  type RegionListResponse,
-} from '@/services/region.service';
+import { regionService, regionKeys, type RegionListResponse } from '@/services/region.service';
 import type {
   RegionSearchParams,
   RegionDetail,
   RegionFormData,
   RegionFormResponse,
   RegionDeleteResponse,
-  RegionSortOrderRequest,
-  RegionSortOrderResponse,
+  RegionBulkReorderResponse,
 } from '@/types/api';
 
 /**
@@ -47,14 +42,10 @@ export function useRegionList(params?: RegionSearchParams) {
  * 지역 상세 조회 훅
  */
 export function useRegionDetail(id: number | undefined) {
-  return useApiQuery<RegionDetail>(
-    regionKeys.detail(id ?? 0),
-    () => regionService.detail(id!),
-    {
-      enabled: id !== undefined,
-      staleTime: 1000 * 60 * 5,
-    }
-  );
+  return useApiQuery<RegionDetail>(regionKeys.detail(id ?? 0), () => regionService.detail(id!), {
+    enabled: id !== undefined,
+    staleTime: 1000 * 60 * 5,
+  });
 }
 
 /**
@@ -66,19 +57,22 @@ export function useRegionCreate(
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<RegionFormResponse, RegionFormData>(
-    regionService.create,
-    {
-      successMessage: '지역이 등록되었습니다.',
-      ...restOptions,
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries({ queryKey: regionKeys.lists() });
-        if (onSuccess) {
-          (onSuccess as (data: RegionFormResponse, variables: RegionFormData, context: unknown) => void)(data, variables, context);
-        }
-      },
-    }
-  );
+  return useApiMutation<RegionFormResponse, RegionFormData>(regionService.create, {
+    successMessage: '지역이 등록되었습니다.',
+    ...restOptions,
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: regionKeys.lists() });
+      if (onSuccess) {
+        (
+          onSuccess as (
+            data: RegionFormResponse,
+            variables: RegionFormData,
+            context: unknown
+          ) => void
+        )(data, variables, context);
+      }
+    },
+  });
 }
 
 export interface RegionUpdateVariables {
@@ -104,7 +98,13 @@ export function useRegionUpdate(
         queryClient.invalidateQueries({ queryKey: regionKeys.lists() });
         queryClient.invalidateQueries({ queryKey: regionKeys.details() });
         if (onSuccess) {
-          (onSuccess as (data: RegionFormResponse, variables: RegionUpdateVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: RegionFormResponse,
+              variables: RegionUpdateVariables,
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }
@@ -120,52 +120,50 @@ export function useRegionDelete(
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<RegionDeleteResponse, number>(
-    regionService.delete,
-    {
-      successMessage: '지역이 삭제되었습니다.',
-      ...restOptions,
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries({ queryKey: regionKeys.lists() });
-        if (onSuccess) {
-          (onSuccess as (data: RegionDeleteResponse, variables: number, context: unknown) => void)(data, variables, context);
-        }
-      },
-    }
-  );
+  return useApiMutation<RegionDeleteResponse, number>(regionService.delete, {
+    successMessage: '지역이 삭제되었습니다.',
+    ...restOptions,
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: regionKeys.lists() });
+      if (onSuccess) {
+        (onSuccess as (data: RegionDeleteResponse, variables: number, context: unknown) => void)(
+          data,
+          variables,
+          context
+        );
+      }
+    },
+  });
 }
 
-export interface RegionSortOrderVariables {
-  id: number;
-  data: RegionSortOrderRequest;
-}
-
-/**
- * 지역 정렬 순서 변경 훅
- */
-export function useRegionSortOrderUpdate(
+/** 지역 정렬순서 일괄 변경 훅 */
+export function useRegionBulkReorder(
   options?: Omit<
-    UseApiMutationOptions<RegionSortOrderResponse, RegionSortOrderVariables>,
+    UseApiMutationOptions<RegionBulkReorderResponse, { ids: number[] }>,
     'successMessage'
   >
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<RegionSortOrderResponse, RegionSortOrderVariables>(
-    ({ id, data }) => regionService.updateSortOrder(id, data),
+  return useApiMutation<RegionBulkReorderResponse, { ids: number[] }>(
+    ({ ids }) => regionService.bulkReorder(ids),
     {
       successMessage: '지역 순서가 변경되었습니다.',
       ...restOptions,
       onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries({ queryKey: regionKeys.lists() });
-        queryClient.invalidateQueries({ queryKey: regionKeys.detail(variables.id) });
+        queryClient.invalidateQueries({
+          queryKey: regionKeys.lists(),
+          refetchType: 'none',
+        });
         if (onSuccess) {
-          (onSuccess as (
-            data: RegionSortOrderResponse,
-            variables: RegionSortOrderVariables,
-            context: unknown
-          ) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: RegionBulkReorderResponse,
+              variables: { ids: number[] },
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }

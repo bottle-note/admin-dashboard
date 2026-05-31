@@ -20,8 +20,7 @@ import type {
   CurationDeleteResponse,
   CurationToggleStatusRequest,
   CurationToggleStatusResponse,
-  CurationUpdateDisplayOrderRequest,
-  CurationUpdateDisplayOrderResponse,
+  CurationBulkReorderResponse,
   CurationAddAlcoholsRequest,
   CurationAddAlcoholsResponse,
   CurationRemoveAlcoholResponse,
@@ -262,48 +261,36 @@ export function useCurationToggleStatus(
   );
 }
 
-/**
- * 큐레이션 노출 순서 변경 mutation 변수 타입
- */
-export interface CurationUpdateDisplayOrderVariables {
-  curationId: number;
-  data: CurationUpdateDisplayOrderRequest;
-}
-
-/**
- * 큐레이션 노출 순서 변경 훅
- *
- * @example
- * ```tsx
- * const updateOrderMutation = useCurationUpdateDisplayOrder({
- *   onSuccess: () => {
- *     console.log('순서 변경 완료');
- *   },
- * });
- *
- * updateOrderMutation.mutate({
- *   curationId: 1,
- *   data: { displayOrder: 5 },
- * });
- * ```
- */
-export function useCurationUpdateDisplayOrder(
-  options?: Omit<UseApiMutationOptions<CurationUpdateDisplayOrderResponse, CurationUpdateDisplayOrderVariables>, 'successMessage'>
+/** 큐레이션 노출순서 일괄 변경 훅 */
+export function useCurationBulkReorder(
+  options?: Omit<
+    UseApiMutationOptions<CurationBulkReorderResponse, { ids: number[] }>,
+    'successMessage'
+  >
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<CurationUpdateDisplayOrderResponse, CurationUpdateDisplayOrderVariables>(
-    ({ curationId, data }) => curationService.updateDisplayOrder(curationId, data),
+  return useApiMutation<CurationBulkReorderResponse, { ids: number[] }>(
+    ({ ids }) => curationService.bulkReorder(ids),
     {
-      successMessage: '노출 순서가 변경되었습니다.',
+      successMessage: '큐레이션 순서가 변경되었습니다.',
       ...restOptions,
       onSuccess: (data, variables, context) => {
         // 목록 캐시 무효화
-        queryClient.invalidateQueries({ queryKey: curationKeys.lists() });
+        queryClient.invalidateQueries({
+          queryKey: curationKeys.lists(),
+          refetchType: 'none',
+        });
         // 원래 onSuccess 콜백 호출
         if (onSuccess) {
-          (onSuccess as (data: CurationUpdateDisplayOrderResponse, variables: CurationUpdateDisplayOrderVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: CurationBulkReorderResponse,
+              variables: { ids: number[] },
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }

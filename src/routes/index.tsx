@@ -30,6 +30,7 @@ import {
 import { InquiryListPage } from '@/pages/inquiries/InquiryList';
 import { PolicyListPage } from '@/pages/policies/PolicyList';
 import { UserListPage } from '@/pages/users/UserList';
+import { ReviewListPage } from '@/pages/reviews/ReviewList';
 import { DistilleryListPage } from '@/pages/distilleries/DistilleryList';
 import { DistilleryDetailPage } from '@/pages/distilleries/DistilleryDetail';
 import { RegionListPage } from '@/pages/regions/RegionList';
@@ -295,6 +296,16 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
               <UserListPage />
+            </RoleProtectedRoute>
+          }
+        />
+
+        {/* Reviews - ROOT_ADMIN only */}
+        <Route
+          path="reviews"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <ReviewListPage />
             </RoleProtectedRoute>
           }
         />

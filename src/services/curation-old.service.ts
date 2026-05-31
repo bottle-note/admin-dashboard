@@ -18,8 +18,8 @@ import {
   type CurationDeleteResponse,
   type CurationToggleStatusRequest,
   type CurationToggleStatusResponse,
-  type CurationUpdateDisplayOrderRequest,
-  type CurationUpdateDisplayOrderResponse,
+  type CurationBulkReorderRequest,
+  type CurationBulkReorderResponse,
   type CurationAddAlcoholsRequest,
   type CurationAddAlcoholsResponse,
   type CurationRemoveAlcoholResponse,
@@ -135,11 +135,13 @@ export const curationService = {
   },
 
   /**
-   * 큐레이션 노출 순서 변경
+   * 큐레이션 노출순서 일괄 변경
    */
-  updateDisplayOrder: async (curationId: number, data: CurationUpdateDisplayOrderRequest): Promise<CurationUpdateDisplayOrderResponse> => {
-    const endpoint = CurationApi.updateDisplayOrder.endpoint.replace(':curationId', String(curationId));
-    return apiClient.patch<CurationUpdateDisplayOrderResponse, CurationUpdateDisplayOrderRequest>(endpoint, data);
+  bulkReorder: async (ids: number[]): Promise<CurationBulkReorderResponse> => {
+    return apiClient.patch<CurationBulkReorderResponse, CurationBulkReorderRequest>(
+      CurationApi.bulkReorder.endpoint,
+      { ids }
+    );
   },
 
   /**
