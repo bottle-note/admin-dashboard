@@ -33,7 +33,7 @@ import {
   useCurationList,
   useCurationToggleStatus,
   useCurationBulkReorder,
-} from '@/hooks/useCurations';
+} from '@/hooks/useCurationOld';
 import type { CurationSearchParams, CurationListItem } from '@/types/api';
 
 const IS_ACTIVE_OPTIONS = [

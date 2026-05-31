@@ -28,6 +28,13 @@ export const menuConfig: MenuGroup[] = [
         icon: LayoutDashboard,
         path: '/',
       },
+      {
+        id: 'dashboard-curation',
+        label: '큐레이션',
+        icon: Layers,
+        path: '/dashboard/curations',
+        roles: ['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER'],
+      },
     ],
   },
   {
