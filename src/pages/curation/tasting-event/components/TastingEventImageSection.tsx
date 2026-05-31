@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { S3UploadPath, useImageUpload } from '@/hooks/useImageUpload';
 
-import type { CurationTastingEventFormValues } from '../tasting-event.schema';
+import type { TastingEventCreateFormState } from '../tasting-event.schema';
 
 const MAX_IMAGE_COUNT = 3;
 const IMAGE_UPLOAD_ACCEPT = 'image/png,image/jpeg,image/webp';
@@ -17,7 +17,7 @@ interface TastingEventImageSectionProps {
 }
 
 export function TastingEventImageSection({ onUploadingChange }: TastingEventImageSectionProps) {
-  const form = useFormContext<CurationTastingEventFormValues>();
+  const form = useFormContext<TastingEventCreateFormState>();
   const imageUploadInputRef = useRef<HTMLInputElement>(null);
   const imageUrlsRef = useRef<string[]>([]);
   const localImageUrlsRef = useRef<Set<string>>(new Set());

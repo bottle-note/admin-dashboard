@@ -23,7 +23,9 @@ export interface CurationWhiskyCardListFormValues {
   alcohols: CurationWhiskyCardValue[];
 }
 
-export interface CurationWhiskyCardListContract {
+export interface CurationWhiskyCardListFieldModel {
+  key: string;
+  kind: 'alcohol-card-list';
   label: string;
   required: boolean;
   minItems: number;

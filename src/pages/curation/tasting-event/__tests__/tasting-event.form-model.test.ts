@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { CurationV2Spec } from '@/types/api';
 
-import { createTastingEventFormContract } from '../tasting-event.contract';
+import { createTastingEventFormModel } from '../tasting-event.form-model';
 
 const tastingEventSpec: CurationV2Spec = {
   id: 3,
@@ -125,22 +125,41 @@ const tastingEventSpec: CurationV2Spec = {
   },
 };
 
-describe('createTastingEventFormContract', () => {
-  it('시음회 requestSpec의 라벨과 제약을 form contract로 변환한다', () => {
-    const contract = createTastingEventFormContract(tastingEventSpec);
+describe('createTastingEventFormModel', () => {
+  it('시음회 requestSpec의 라벨과 제약을 form model로 변환한다', () => {
+    const formModel = createTastingEventFormModel(tastingEventSpec);
+    const fieldsByKey = Object.fromEntries(
+      formModel.payloadFields.map((field) => [field.key, field])
+    );
 
-    expect(contract.barAddress.label).toBe('장소 및 바(bar) 주소');
-    expect(contract.entryFee.label).toBe('참가비(1인당)');
-    expect(contract.isRecruiting.required).toBe(false);
-    expect(contract.capacity).toMatchObject({
+    expect(fieldsByKey.barAddress).toMatchObject({
+      label: '장소 및 바(bar) 주소',
+      kind: 'text',
+    });
+    expect(fieldsByKey.entryFee).toMatchObject({
+      label: '참가비(1인당)',
+      suffix: '원',
+    });
+    expect(fieldsByKey.isRecruiting).toMatchObject({
+      required: false,
+      kind: 'boolean-radio',
+      trueLabel: '네',
+      falseLabel: '아니요, 광고만 하겠습니다.',
+    });
+    expect(fieldsByKey.capacity).toMatchObject({
       label: '총 모집 인원수',
       required: true,
       minimum: 1,
       maximum: 999,
+      suffix: '명',
     });
-    expect(contract.applicationLink.maxLength).toBe(2048);
-    expect(contract.guideText.maxLength).toBe(1000);
-    expect(contract.alcohols).toMatchObject({
+    expect(fieldsByKey.applicationLink).toMatchObject({ maxLength: 2048 });
+    expect(fieldsByKey.guideText).toMatchObject({
+      kind: 'textarea',
+      maxLength: 1000,
+    });
+    expect(fieldsByKey.alcohols).toMatchObject({
+      kind: 'alcohol-card-list',
       label: '시음 위스키',
       required: true,
       minItems: 1,
@@ -157,5 +176,23 @@ describe('createTastingEventFormContract', () => {
         maxLength: 500,
       },
     });
+    expect(formModel.sections.map((section) => section.id)).toEqual([
+      'dateLocation',
+      'participation',
+      'alcoholLineup',
+    ]);
+    expect(formModel.sections[0]!.fields.map(({ field }) => field.key)).toEqual([
+      'eventDate',
+      'eventTime',
+      'barAddress',
+      'detailAddress',
+    ]);
+    expect(formModel.sections[1]!.fields.map(({ field }) => field.key)).toEqual([
+      'isRecruiting',
+      'entryFee',
+      'capacity',
+      'applicationLink',
+      'guideText',
+    ]);
   });
 });

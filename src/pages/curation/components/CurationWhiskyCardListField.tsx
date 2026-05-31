@@ -15,15 +15,15 @@ import {
   createManualCurationWhiskyItem,
 } from '../curation-whisky-card-list.mapper';
 import type {
-  CurationWhiskyCardListContract,
+  CurationWhiskyCardListFieldModel,
   CurationWhiskyCardListFormValues,
 } from '../curation-whisky-card-list.types';
 
 interface CurationWhiskyCardListFieldProps {
-  contract: CurationWhiskyCardListContract;
+  fieldModel: CurationWhiskyCardListFieldModel;
 }
 
-export function CurationWhiskyCardListField({ contract }: CurationWhiskyCardListFieldProps) {
+export function CurationWhiskyCardListField({ fieldModel }: CurationWhiskyCardListFieldProps) {
   const form = useFormContext<CurationWhiskyCardListFormValues>();
   const [tagInputs, setTagInputs] = useState<Record<string, string>>({});
   const alcoholFieldArray = useFieldArray({
@@ -39,7 +39,7 @@ export function CurationWhiskyCardListField({ contract }: CurationWhiskyCardList
     .map((item) => item.alcohol.alcoholId)
     .filter((id): id is number => typeof id === 'number');
 
-  const isMaxReached = watchedAlcohols.length >= contract.maxItems;
+  const isMaxReached = watchedAlcohols.length >= fieldModel.maxItems;
 
   const handleAddBottleNoteWhisky = (whisky: SelectedWhisky) => {
     if (isMaxReached) return;
@@ -61,7 +61,7 @@ export function CurationWhiskyCardListField({ contract }: CurationWhiskyCardList
 
     const path = `alcohols.${index}.alcohol.selectedTags` as const;
     const currentTags = form.getValues(path);
-    if (currentTags.includes(value) || currentTags.length >= contract.selectedTags.maxItems) {
+    if (currentTags.includes(value) || currentTags.length >= fieldModel.selectedTags.maxItems) {
       setTagInputs((prev) => ({ ...prev, [fieldId]: '' }));
       return;
     }
@@ -90,8 +90,8 @@ export function CurationWhiskyCardListField({ contract }: CurationWhiskyCardList
     <Card>
       <CardHeader>
         <CardTitle>
-          {contract.label}
-          {contract.required && <span className="ml-1 text-destructive">*</span>}
+          {fieldModel.label}
+          {fieldModel.required && <span className="ml-1 text-destructive">*</span>}
           {watchedAlcohols.length > 0 && (
             <Badge variant="secondary" className="ml-2">
               {watchedAlcohols.length}
@@ -99,7 +99,7 @@ export function CurationWhiskyCardListField({ contract }: CurationWhiskyCardList
           )}
         </CardTitle>
         <CardDescription>
-          {contract.minItems}-{contract.maxItems}개까지 등록할 수 있습니다. 검색 추가와 직접 입력을
+          {fieldModel.minItems}-{fieldModel.maxItems}개까지 등록할 수 있습니다. 검색 추가와 직접 입력을
           지원하며, 테이스팅 태그 순서가 앱 노출 순서입니다.
         </CardDescription>
       </CardHeader>
@@ -241,8 +241,8 @@ export function CurationWhiskyCardListField({ contract }: CurationWhiskyCardList
                     )}
 
                     <FormField
-                      label={contract.selectedTags.label}
-                      required={contract.selectedTags.required}
+                      label={fieldModel.selectedTags.label}
+                      required={fieldModel.selectedTags.required}
                       error={itemError?.alcohol?.selectedTags?.message}
                     >
                       <div className="space-y-2">
@@ -258,14 +258,14 @@ export function CurationWhiskyCardListField({ contract }: CurationWhiskyCardList
                               }
                             }}
                             placeholder="태그 입력 후 Enter"
-                            disabled={tags.length >= contract.selectedTags.maxItems}
+                            disabled={tags.length >= fieldModel.selectedTags.maxItems}
                           />
                           <Button
                             type="button"
                             variant="outline"
                             onClick={() => handleAddTag(index, field.id)}
                             disabled={
-                              !tagInput.trim() || tags.length >= contract.selectedTags.maxItems
+                              !tagInput.trim() || tags.length >= fieldModel.selectedTags.maxItems
                             }
                           >
                             <Plus className="h-4 w-4" />
@@ -293,14 +293,14 @@ export function CurationWhiskyCardListField({ contract }: CurationWhiskyCardList
                     </FormField>
 
                     <FormField
-                      label={contract.comment.label}
-                      required={contract.comment.required}
+                      label={fieldModel.comment.label}
+                      required={fieldModel.comment.required}
                       error={itemError?.comment?.message}
                     >
                       <Textarea
                         aria-label={`${itemName} 기대평`}
                         rows={3}
-                        maxLength={contract.comment.maxLength}
+                        maxLength={fieldModel.comment.maxLength}
                         {...form.register(`alcohols.${index}.comment` as const)}
                         placeholder="첫 잔으로 가볍게 시작하는 위스키"
                       />

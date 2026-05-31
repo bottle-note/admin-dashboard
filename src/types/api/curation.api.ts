@@ -81,10 +81,14 @@ export type JsonSchemaObject = JsonSchemaNode;
 // 공통 타입
 // ============================================
 
+export const CurationSpecCode = {
+  WHISKY_TASTING_EVENT: 'WHISKY_TASTING_EVENT',
+  RECOMMENDED_WHISKY: 'RECOMMENDED_WHISKY',
+  WHISKY_PAIRING: 'WHISKY_PAIRING',
+} as const;
+
 export type KnownCurationV2SpecCode =
-  | 'WHISKY_TASTING_EVENT'
-  | 'RECOMMENDED_WHISKY'
-  | 'WHISKY_PAIRING';
+  (typeof CurationSpecCode)[keyof typeof CurationSpecCode];
 
 export type CurationV2SpecCode = KnownCurationV2SpecCode | (string & {});
 
