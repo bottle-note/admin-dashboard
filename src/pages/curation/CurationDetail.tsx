@@ -9,6 +9,7 @@ import { useCurationDetail } from '@/hooks/useCurations';
 import { CurationSpecCode, type CurationV2Detail } from '@/types/api';
 
 import { CurationTastingEventEditPage } from './tasting-event/CurationTastingEventCreate';
+import { CurationWhiskyCardEditPage } from './whisky-card/CurationWhiskyCardCreate';
 import {
   formatCurationDateTime,
   formatCurationExposurePeriod,
@@ -25,6 +26,15 @@ export function CurationDetailPage() {
 
   if (!isLoading && !isError && curation?.spec.code === CurationSpecCode.WHISKY_TASTING_EVENT) {
     return <CurationTastingEventEditPage curation={curation} />;
+  }
+
+  if (
+    !isLoading &&
+    !isError &&
+    (curation?.spec.code === CurationSpecCode.RECOMMENDED_WHISKY ||
+      curation?.spec.code === CurationSpecCode.WHISKY_PAIRING)
+  ) {
+    return <CurationWhiskyCardEditPage curation={curation} />;
   }
 
   return (
