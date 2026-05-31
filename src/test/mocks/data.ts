@@ -16,6 +16,7 @@ import type {
   BannerUpdateStatusResponse,
   BannerBulkReorderResponse,
   UserListItem,
+  ReviewListItem,
   DistilleryListItem,
   DistilleryDetail,
   DistilleryFormResponse,
@@ -331,6 +332,55 @@ export const mockUserListItems: UserListItem[] = [
     picksCount: 1,
     createAt: '2024-02-01T12:00:00',
     lastLoginAt: null,
+  },
+];
+
+// ============================================
+// Review Mock Data
+// ============================================
+
+export const mockReviewListItems: ReviewListItem[] = [
+  {
+    reviewId: 1,
+    alcoholId: 101,
+    alcoholName: '맥캘란 12년',
+    userId: 1,
+    userNickname: '위스키러버',
+    content: '셰리 오크의 풍미가 일품입니다.',
+    reviewRating: 4.5,
+    activeStatus: 'ACTIVE',
+    displayStatus: 'PUBLIC',
+    replyCount: 3,
+    createAt: '2024-05-01T10:00:00',
+    lastModifyAt: '2024-05-02T11:00:00',
+  },
+  {
+    reviewId: 2,
+    alcoholId: 102,
+    alcoholName: '글렌피딕 15년',
+    userId: 2,
+    userNickname: '몰트마니아',
+    content: '가성비 좋은 입문용 위스키.',
+    reviewRating: 4.0,
+    activeStatus: 'ACTIVE',
+    displayStatus: 'PRIVATE',
+    replyCount: 0,
+    createAt: '2024-05-10T14:30:00',
+    lastModifyAt: null,
+  },
+  {
+    reviewId: 3,
+    alcoholId: 101,
+    alcoholName: '맥캘란 12년',
+    userId: 3,
+    userNickname: '신고당한유저',
+    content: '부적절한 내용으로 삭제된 리뷰',
+    reviewRating: 1.0,
+    activeStatus: 'DELETED',
+    displayStatus: 'PUBLIC',
+    replyCount: 1,
+    createAt: '2024-05-15T09:00:00',
+    lastModifyAt: '2024-05-16T09:00:00',
   },
 ];
 

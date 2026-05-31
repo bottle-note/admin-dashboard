@@ -17,6 +17,7 @@ import {
   mockBannerUpdateStatusResponse,
   mockBannerBulkReorderResponse,
   mockUserListItems,
+  mockReviewListItems,
   mockDistilleryListItems,
   mockDistilleryDetail,
   mockDistilleryFormResponse,
@@ -353,6 +354,58 @@ export const userHandlers = [
 ];
 
 // ============================================
+// Review Handlers
+// ============================================
+
+const REVIEW_BASE = '/admin/api/v1/reviews';
+
+export const reviewHandlers = [
+  // GET 목록
+  http.get(REVIEW_BASE, ({ request }) => {
+    const url = new URL(request.url);
+    const keyword = url.searchParams.get('keyword');
+    const activeStatus = url.searchParams.get('activeStatus');
+    const displayStatus = url.searchParams.get('displayStatus');
+    const alcoholId = url.searchParams.get('alcoholId');
+    const userId = url.searchParams.get('userId');
+    const size = Number(url.searchParams.get('size') ?? 20);
+    const page = Number(url.searchParams.get('page') ?? 0);
+
+    let items = mockReviewListItems;
+    if (keyword) {
+      items = items.filter(
+        (r) =>
+          r.content.includes(keyword) ||
+          r.userNickname.includes(keyword) ||
+          r.alcoholName.includes(keyword)
+      );
+    }
+    if (activeStatus) {
+      items = items.filter((r) => r.activeStatus === activeStatus);
+    }
+    if (displayStatus) {
+      items = items.filter((r) => r.displayStatus === displayStatus);
+    }
+    if (alcoholId) {
+      items = items.filter((r) => r.alcoholId === Number(alcoholId));
+    }
+    if (userId) {
+      items = items.filter((r) => r.userId === Number(userId));
+    }
+
+    return HttpResponse.json(
+      wrapApiResponse(items, {
+        page,
+        size,
+        totalElements: items.length,
+        totalPages: Math.ceil(items.length / size),
+        hasNext: false,
+      })
+    );
+  }),
+];
+
+// ============================================
 // Distillery Handlers
 // ============================================
 
@@ -644,6 +697,7 @@ export const handlers = [
   ...bannerHandlers,
   ...alcoholHandlers,
   ...userHandlers,
+  ...reviewHandlers,
   ...distilleryHandlers,
   ...curationHandlers,
   ...regionHandlers,
