@@ -11,7 +11,7 @@ import {
   useBannerUpdate,
   useBannerDelete,
   useBannerUpdateStatus,
-  useBannerUpdateSortOrder,
+  useBannerBulkReorder,
 } from '../useBanners';
 
 const BASE = '/admin/api/v1/banners';
@@ -155,10 +155,9 @@ describe('useBanners hooks', () => {
     it('에러 시 에러 상태가 된다', async () => {
       server.use(
         http.post(BASE, () => {
-          return HttpResponse.json(
-            wrapApiError(400, 'INVALID_REQUEST', '잘못된 요청입니다.'),
-            { status: 400 }
-          );
+          return HttpResponse.json(wrapApiError(400, 'INVALID_REQUEST', '잘못된 요청입니다.'), {
+            status: 400,
+          });
         })
       );
 
@@ -294,17 +293,31 @@ describe('useBanners hooks', () => {
   });
 
   // ==========================================
-  // useBannerUpdateSortOrder
+  // useBannerBulkReorder
   // ==========================================
-  describe('useBannerUpdateSortOrder', () => {
-    it('정렬순서 변경 mutation이 성공한다', async () => {
+  describe('useBannerBulkReorder', () => {
+    it('일괄 정렬순서 변경 mutation이 성공한다', async () => {
       const onSuccess = vi.fn();
-      const { result } = renderHook(() => useBannerUpdateSortOrder({ onSuccess }));
+      const { result } = renderHook(() => useBannerBulkReorder({ onSuccess }));
 
-      result.current.mutate({ bannerId: 1, data: { sortOrder: 5 } });
+      result.current.mutate({ ids: [2, 1] });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(onSuccess).toHaveBeenCalled();
+    });
+
+    it('에러 시 에러 상태가 된다', async () => {
+      server.use(
+        http.patch(`${BASE}/bulk/reorder`, () => {
+          return HttpResponse.json(wrapApiError(500, 'SERVER_ERROR', '서버 오류'), { status: 500 });
+        })
+      );
+
+      const { result } = renderHook(() => useBannerBulkReorder());
+
+      result.current.mutate({ ids: [2, 1] });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
     });
   });
 });

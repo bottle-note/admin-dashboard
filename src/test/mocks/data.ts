@@ -14,18 +14,21 @@ import type {
   BannerUpdateResponse,
   BannerDeleteResponse,
   BannerUpdateStatusResponse,
-  BannerUpdateSortOrderResponse,
+  BannerBulkReorderResponse,
   UserListItem,
   ReviewListItem,
   DistilleryListItem,
   DistilleryDetail,
   DistilleryFormResponse,
   DistilleryDeleteResponse,
+  CurationListItem,
+  CurationDetail,
+  CurationBulkReorderResponse,
   RegionListItem,
   RegionDetail,
   RegionFormResponse,
   RegionDeleteResponse,
-  RegionSortOrderResponse,
+  RegionBulkReorderResponse,
 } from '@/types/api';
 
 export const mockTastingTagListItems: TastingTagListItem[] = [
@@ -276,10 +279,10 @@ export const mockBannerUpdateStatusResponse: BannerUpdateStatusResponse = {
   responseAt: '2024-06-01T00:00:00',
 };
 
-export const mockBannerUpdateSortOrderResponse: BannerUpdateSortOrderResponse = {
-  code: 'BANNER_SORT_ORDER_UPDATED',
+export const mockBannerBulkReorderResponse: BannerBulkReorderResponse = {
+  code: 'BANNER_REORDERED',
   message: '배너 순서가 변경되었습니다.',
-  targetId: 1,
+  targetId: 0,
   responseAt: '2024-06-01T00:00:00',
 };
 
@@ -431,6 +434,76 @@ export const mockDistilleryDeleteResponse: DistilleryDeleteResponse = {
 };
 
 // ============================================
+// Curation Mock Data
+// ============================================
+
+export const mockCurationListItems: CurationListItem[] = [
+  {
+    id: 1,
+    name: '신년 특집 큐레이션',
+    description: '새해를 맞이하는 특별한 위스키 모음',
+    coverImageUrl: 'https://example.com/curation1.jpg',
+    displayOrder: 0,
+    alcoholCount: 5,
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00',
+    updatedAt: '2024-01-01T00:00:00',
+  },
+  {
+    id: 2,
+    name: '입문자 추천 큐레이션',
+    description: null,
+    coverImageUrl: null,
+    displayOrder: 1,
+    alcoholCount: 3,
+    isActive: false,
+    createdAt: '2024-02-01T00:00:00',
+    updatedAt: '2024-02-01T00:00:00',
+  },
+];
+
+export const mockCurationDetail: CurationDetail = {
+  id: 1,
+  name: '신년 특집 큐레이션',
+  description: '새해를 맞이하는 특별한 위스키 모음',
+  coverImageUrl: 'https://example.com/curation1.jpg',
+  displayOrder: 0,
+  isActive: true,
+  createdAt: '2024-01-01T00:00:00',
+  updatedAt: '2024-01-01T00:00:00',
+  alcoholCount: 2,
+  alcohols: [
+    {
+      alcoholId: 10,
+      korName: '글렌피딕 12년',
+      engName: 'Glenfiddich 12',
+      korCategoryName: '싱글몰트',
+      engCategoryName: 'Single Malt',
+      imageUrl: 'https://example.com/glenfiddich.jpg',
+      createdAt: '2024-01-01T00:00:00',
+      modifiedAt: '2024-06-01T00:00:00',
+    },
+    {
+      alcoholId: 20,
+      korName: '맥캘란 18년',
+      engName: 'Macallan 18',
+      korCategoryName: '싱글몰트',
+      engCategoryName: 'Single Malt',
+      imageUrl: null,
+      createdAt: '2024-03-01T00:00:00',
+      modifiedAt: '2024-06-01T00:00:00',
+    },
+  ],
+};
+
+export const mockCurationBulkReorderResponse: CurationBulkReorderResponse = {
+  code: 'CURATION_REORDERED',
+  message: '큐레이션 순서가 변경되었습니다.',
+  targetId: 0,
+  responseAt: '2024-06-01T00:00:00',
+};
+
+// ============================================
 // Region Mock Data
 // ============================================
 
@@ -499,10 +572,10 @@ export const mockRegionDeleteResponse: RegionDeleteResponse = {
   responseAt: '2024-06-01T00:00:00',
 };
 
-export const mockRegionSortOrderResponse: RegionSortOrderResponse = {
-  code: 'REGION_SORT_ORDER_UPDATED',
-  message: '지역 정렬 순서가 변경되었습니다.',
-  targetId: 1,
+export const mockRegionBulkReorderResponse: RegionBulkReorderResponse = {
+  code: 'REGION_REORDERED',
+  message: '지역 순서가 변경되었습니다.',
+  targetId: 0,
   responseAt: '2024-06-01T00:00:00',
 };
 

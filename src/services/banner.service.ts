@@ -17,8 +17,8 @@ import {
   type BannerDeleteResponse,
   type BannerUpdateStatusRequest,
   type BannerUpdateStatusResponse,
-  type BannerUpdateSortOrderRequest,
-  type BannerUpdateSortOrderResponse,
+  type BannerBulkReorderRequest,
+  type BannerBulkReorderResponse,
 } from '@/types/api';
 
 // ============================================
@@ -45,10 +45,9 @@ export const bannerService = {
    * 배너 목록 조회
    */
   search: async (params?: BannerSearchParams): Promise<BannerListResponse> => {
-    const response = await apiClient.getWithMeta<BannerListItem[]>(
-      BannerApi.search.endpoint,
-      { params }
-    );
+    const response = await apiClient.getWithMeta<BannerListItem[]>(BannerApi.search.endpoint, {
+      params,
+    });
 
     return {
       items: response.data ?? [],
@@ -99,16 +98,21 @@ export const bannerService = {
   /**
    * 배너 상태 변경 (활성/비활성)
    */
-  updateStatus: async (bannerId: number, data: BannerUpdateStatusRequest): Promise<BannerUpdateStatusResponse> => {
+  updateStatus: async (
+    bannerId: number,
+    data: BannerUpdateStatusRequest
+  ): Promise<BannerUpdateStatusResponse> => {
     const endpoint = BannerApi.updateStatus.endpoint.replace(':bannerId', String(bannerId));
     return apiClient.patch<BannerUpdateStatusResponse, BannerUpdateStatusRequest>(endpoint, data);
   },
 
   /**
-   * 배너 정렬순서 변경
+   * 배너 정렬순서 일괄 변경
    */
-  updateSortOrder: async (bannerId: number, data: BannerUpdateSortOrderRequest): Promise<BannerUpdateSortOrderResponse> => {
-    const endpoint = BannerApi.updateSortOrder.endpoint.replace(':bannerId', String(bannerId));
-    return apiClient.patch<BannerUpdateSortOrderResponse, BannerUpdateSortOrderRequest>(endpoint, data);
+  bulkReorder: async (ids: number[]): Promise<BannerBulkReorderResponse> => {
+    return apiClient.patch<BannerBulkReorderResponse, BannerBulkReorderRequest>(
+      BannerApi.bulkReorder.endpoint,
+      { ids }
+    );
   },
 };

@@ -20,11 +20,10 @@ import type {
   CurationDeleteResponse,
   CurationToggleStatusRequest,
   CurationToggleStatusResponse,
-  CurationUpdateDisplayOrderRequest,
-  CurationUpdateDisplayOrderResponse,
   CurationAddAlcoholsRequest,
   CurationAddAlcoholsResponse,
   CurationRemoveAlcoholResponse,
+  CurationBulkReorderResponse,
 } from '@/types/api';
 
 /**
@@ -102,21 +101,24 @@ export function useCurationCreate(
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<CurationCreateResponse, CurationCreateRequest>(
-    curationService.create,
-    {
-      successMessage: '큐레이션이 등록되었습니다.',
-      ...restOptions,
-      onSuccess: (data, variables, context) => {
-        // 목록 캐시 무효화
-        queryClient.invalidateQueries({ queryKey: curationKeys.lists() });
-        // 원래 onSuccess 콜백 호출
-        if (onSuccess) {
-          (onSuccess as (data: CurationCreateResponse, variables: CurationCreateRequest, context: unknown) => void)(data, variables, context);
-        }
-      },
-    }
-  );
+  return useApiMutation<CurationCreateResponse, CurationCreateRequest>(curationService.create, {
+    successMessage: '큐레이션이 등록되었습니다.',
+    ...restOptions,
+    onSuccess: (data, variables, context) => {
+      // 목록 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: curationKeys.lists() });
+      // 원래 onSuccess 콜백 호출
+      if (onSuccess) {
+        (
+          onSuccess as (
+            data: CurationCreateResponse,
+            variables: CurationCreateRequest,
+            context: unknown
+          ) => void
+        )(data, variables, context);
+      }
+    },
+  });
 }
 
 /**
@@ -149,7 +151,10 @@ export interface CurationUpdateVariables {
  * ```
  */
 export function useCurationUpdate(
-  options?: Omit<UseApiMutationOptions<CurationUpdateResponse, CurationUpdateVariables>, 'successMessage'>
+  options?: Omit<
+    UseApiMutationOptions<CurationUpdateResponse, CurationUpdateVariables>,
+    'successMessage'
+  >
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
@@ -166,7 +171,13 @@ export function useCurationUpdate(
         queryClient.invalidateQueries({ queryKey: curationKeys.detail(variables.curationId) });
         // 원래 onSuccess 콜백 호출
         if (onSuccess) {
-          (onSuccess as (data: CurationUpdateResponse, variables: CurationUpdateVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: CurationUpdateResponse,
+              variables: CurationUpdateVariables,
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }
@@ -193,23 +204,24 @@ export function useCurationDelete(
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<CurationDeleteResponse, number>(
-    curationService.delete,
-    {
-      successMessage: '큐레이션이 삭제되었습니다.',
-      ...restOptions,
-      onSuccess: (data, variables, context) => {
-        // 목록 캐시 무효화
-        queryClient.invalidateQueries({ queryKey: curationKeys.lists() });
-        // 상세 캐시 무효화
-        queryClient.invalidateQueries({ queryKey: curationKeys.detail(variables) });
-        // 원래 onSuccess 콜백 호출
-        if (onSuccess) {
-          (onSuccess as (data: CurationDeleteResponse, variables: number, context: unknown) => void)(data, variables, context);
-        }
-      },
-    }
-  );
+  return useApiMutation<CurationDeleteResponse, number>(curationService.delete, {
+    successMessage: '큐레이션이 삭제되었습니다.',
+    ...restOptions,
+    onSuccess: (data, variables, context) => {
+      // 목록 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: curationKeys.lists() });
+      // 상세 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: curationKeys.detail(variables) });
+      // 원래 onSuccess 콜백 호출
+      if (onSuccess) {
+        (onSuccess as (data: CurationDeleteResponse, variables: number, context: unknown) => void)(
+          data,
+          variables,
+          context
+        );
+      }
+    },
+  });
 }
 
 /**
@@ -238,7 +250,10 @@ export interface CurationToggleStatusVariables {
  * ```
  */
 export function useCurationToggleStatus(
-  options?: Omit<UseApiMutationOptions<CurationToggleStatusResponse, CurationToggleStatusVariables>, 'successMessage'>
+  options?: Omit<
+    UseApiMutationOptions<CurationToggleStatusResponse, CurationToggleStatusVariables>,
+    'successMessage'
+  >
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
@@ -255,55 +270,13 @@ export function useCurationToggleStatus(
         queryClient.invalidateQueries({ queryKey: curationKeys.detail(variables.curationId) });
         // 원래 onSuccess 콜백 호출
         if (onSuccess) {
-          (onSuccess as (data: CurationToggleStatusResponse, variables: CurationToggleStatusVariables, context: unknown) => void)(data, variables, context);
-        }
-      },
-    }
-  );
-}
-
-/**
- * 큐레이션 노출 순서 변경 mutation 변수 타입
- */
-export interface CurationUpdateDisplayOrderVariables {
-  curationId: number;
-  data: CurationUpdateDisplayOrderRequest;
-}
-
-/**
- * 큐레이션 노출 순서 변경 훅
- *
- * @example
- * ```tsx
- * const updateOrderMutation = useCurationUpdateDisplayOrder({
- *   onSuccess: () => {
- *     console.log('순서 변경 완료');
- *   },
- * });
- *
- * updateOrderMutation.mutate({
- *   curationId: 1,
- *   data: { displayOrder: 5 },
- * });
- * ```
- */
-export function useCurationUpdateDisplayOrder(
-  options?: Omit<UseApiMutationOptions<CurationUpdateDisplayOrderResponse, CurationUpdateDisplayOrderVariables>, 'successMessage'>
-) {
-  const queryClient = useQueryClient();
-  const { onSuccess, ...restOptions } = options ?? {};
-
-  return useApiMutation<CurationUpdateDisplayOrderResponse, CurationUpdateDisplayOrderVariables>(
-    ({ curationId, data }) => curationService.updateDisplayOrder(curationId, data),
-    {
-      successMessage: '노출 순서가 변경되었습니다.',
-      ...restOptions,
-      onSuccess: (data, variables, context) => {
-        // 목록 캐시 무효화
-        queryClient.invalidateQueries({ queryKey: curationKeys.lists() });
-        // 원래 onSuccess 콜백 호출
-        if (onSuccess) {
-          (onSuccess as (data: CurationUpdateDisplayOrderResponse, variables: CurationUpdateDisplayOrderVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: CurationToggleStatusResponse,
+              variables: CurationToggleStatusVariables,
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }
@@ -336,7 +309,10 @@ export interface CurationAddAlcoholsVariables {
  * ```
  */
 export function useCurationAddAlcohols(
-  options?: Omit<UseApiMutationOptions<CurationAddAlcoholsResponse, CurationAddAlcoholsVariables>, 'successMessage'>
+  options?: Omit<
+    UseApiMutationOptions<CurationAddAlcoholsResponse, CurationAddAlcoholsVariables>,
+    'successMessage'
+  >
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
@@ -353,7 +329,13 @@ export function useCurationAddAlcohols(
         queryClient.invalidateQueries({ queryKey: curationKeys.detail(variables.curationId) });
         // 원래 onSuccess 콜백 호출
         if (onSuccess) {
-          (onSuccess as (data: CurationAddAlcoholsResponse, variables: CurationAddAlcoholsVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: CurationAddAlcoholsResponse,
+              variables: CurationAddAlcoholsVariables,
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }
@@ -386,7 +368,10 @@ export interface CurationRemoveAlcoholVariables {
  * ```
  */
 export function useCurationRemoveAlcohol(
-  options?: Omit<UseApiMutationOptions<CurationRemoveAlcoholResponse, CurationRemoveAlcoholVariables>, 'successMessage'>
+  options?: Omit<
+    UseApiMutationOptions<CurationRemoveAlcoholResponse, CurationRemoveAlcoholVariables>,
+    'successMessage'
+  >
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
@@ -403,7 +388,13 @@ export function useCurationRemoveAlcohol(
         queryClient.invalidateQueries({ queryKey: curationKeys.detail(variables.curationId) });
         // 원래 onSuccess 콜백 호출
         if (onSuccess) {
-          (onSuccess as (data: CurationRemoveAlcoholResponse, variables: CurationRemoveAlcoholVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: CurationRemoveAlcoholResponse,
+              variables: CurationRemoveAlcoholVariables,
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }
@@ -454,7 +445,47 @@ export function useCurationRemoveAlcohols(
         queryClient.invalidateQueries({ queryKey: curationKeys.detail(variables.curationId) });
         // 원래 onSuccess 콜백 호출
         if (onSuccess) {
-          (onSuccess as (data: void, variables: CurationRemoveAlcoholsVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: void,
+              variables: CurationRemoveAlcoholsVariables,
+              context: unknown
+            ) => void
+          )(data, variables, context);
+        }
+      },
+    }
+  );
+}
+
+/** 큐레이션 노출순서 일괄 변경 훅 */
+export function useCurationBulkReorder(
+  options?: Omit<
+    UseApiMutationOptions<CurationBulkReorderResponse, { ids: number[] }>,
+    'successMessage'
+  >
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...restOptions } = options ?? {};
+
+  return useApiMutation<CurationBulkReorderResponse, { ids: number[] }>(
+    ({ ids }) => curationService.bulkReorder(ids),
+    {
+      successMessage: '큐레이션 순서가 변경되었습니다.',
+      ...restOptions,
+      onSuccess: (data, variables, context) => {
+        queryClient.invalidateQueries({
+          queryKey: curationKeys.lists(),
+          refetchType: 'none',
+        });
+        if (onSuccess) {
+          (
+            onSuccess as (
+              data: CurationBulkReorderResponse,
+              variables: { ids: number[] },
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }

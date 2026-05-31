@@ -38,11 +38,6 @@ export const CurationApi = {
     endpoint: '/admin/api/v1/curations/:curationId/status',
     method: 'PATCH',
   },
-  /** 큐레이션 노출 순서 변경 */
-  updateDisplayOrder: {
-    endpoint: '/admin/api/v1/curations/:curationId/display-order',
-    method: 'PATCH',
-  },
   /** 큐레이션 위스키 추가 */
   addAlcohols: {
     endpoint: '/admin/api/v1/curations/:curationId/alcohols',
@@ -52,6 +47,11 @@ export const CurationApi = {
   removeAlcohol: {
     endpoint: '/admin/api/v1/curations/:curationId/alcohols/:alcoholId',
     method: 'DELETE',
+  },
+  /** 큐레이션 노출순서 일괄 변경 */
+  bulkReorder: {
+    endpoint: '/admin/api/v1/curations/bulk/reorder',
+    method: 'PATCH',
   },
 } as const;
 
@@ -249,25 +249,6 @@ export interface CurationApiTypes {
       responseAt: string;
     };
   };
-  /** 큐레이션 노출 순서 변경 */
-  updateDisplayOrder: {
-    /** 요청 데이터 */
-    request: {
-      /** 노출 순서 */
-      displayOrder: number;
-    };
-    /** 응답 데이터 */
-    response: {
-      /** 결과 코드 */
-      code: string;
-      /** 결과 메시지 */
-      message: string;
-      /** 수정된 큐레이션 ID */
-      targetId: number;
-      /** 응답 시간 */
-      responseAt: string;
-    };
-  };
   /** 큐레이션 위스키 추가 */
   addAlcohols: {
     /** 요청 데이터 */
@@ -298,6 +279,21 @@ export interface CurationApiTypes {
       /** 수정된 큐레이션 ID */
       targetId: number;
       /** 응답 시간 */
+      responseAt: string;
+    };
+  };
+  /** 큐레이션 노출순서 일괄 변경 */
+  bulkReorder: {
+    /** 요청 데이터 */
+    request: {
+      /** 정렬 순서대로 나열된 큐레이션 ID 목록 */
+      ids: number[];
+    };
+    /** 응답 데이터 */
+    response: {
+      code: string;
+      message: string;
+      targetId: number;
       responseAt: string;
     };
   };
@@ -367,12 +363,6 @@ export type CurationToggleStatusRequest = CurationApiTypes['toggleStatus']['requ
 /** 큐레이션 활성화 상태 토글 응답 데이터 */
 export type CurationToggleStatusResponse = CurationApiTypes['toggleStatus']['response'];
 
-/** 큐레이션 노출 순서 변경 요청 데이터 */
-export type CurationUpdateDisplayOrderRequest = CurationApiTypes['updateDisplayOrder']['request'];
-
-/** 큐레이션 노출 순서 변경 응답 데이터 */
-export type CurationUpdateDisplayOrderResponse = CurationApiTypes['updateDisplayOrder']['response'];
-
 /** 큐레이션 위스키 추가 요청 데이터 */
 export type CurationAddAlcoholsRequest = CurationApiTypes['addAlcohols']['request'];
 
@@ -381,3 +371,8 @@ export type CurationAddAlcoholsResponse = CurationApiTypes['addAlcohols']['respo
 
 /** 큐레이션 위스키 제거 응답 데이터 */
 export type CurationRemoveAlcoholResponse = CurationApiTypes['removeAlcohol']['response'];
+
+/** 큐레이션 노출순서 일괄 변경 요청 데이터 */
+export type CurationBulkReorderRequest = CurationApiTypes['bulkReorder']['request'];
+/** 큐레이션 노출순서 일괄 변경 응답 데이터 */
+export type CurationBulkReorderResponse = CurationApiTypes['bulkReorder']['response'];
