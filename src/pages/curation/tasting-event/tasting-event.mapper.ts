@@ -2,6 +2,7 @@ import type { CurationV2Detail } from '@/types/api';
 
 import type {
   CurationWhiskyCardValue,
+  CurationWhiskyStats,
   CurationWhiskySource,
 } from '../curation-whisky-card-list.types';
 import {
@@ -149,9 +150,28 @@ function normalizeTastingEventAlcohols(value: unknown): CurationWhiskyCardValue[
           ? alcohol.selectedTags.map(normalizeStringValue).filter(Boolean)
           : [],
       },
+      stats: normalizeWhiskyStats(itemRecord.stats),
       comment: normalizeStringValue(itemRecord.comment),
     };
   });
+}
+
+function normalizeWhiskyStats(value: unknown): CurationWhiskyStats | null {
+  if (!isRecord(value)) return null;
+
+  return {
+    rating: normalizeNullableNumber(value.rating),
+    totalRatingsCount: normalizeNullableNumber(value.totalRatingsCount),
+    reviewCount: normalizeNullableNumber(value.reviewCount),
+    totalPickCount: normalizeNullableNumber(value.totalPickCount),
+  };
+}
+
+function normalizeNullableNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+
+  const normalized = Number(value);
+  return Number.isFinite(normalized) ? normalized : null;
 }
 
 function normalizeWhiskySource(value: unknown): CurationWhiskySource {

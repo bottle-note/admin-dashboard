@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
-import { Plus, X } from 'lucide-react';
+import { Loader2, Plus, X } from 'lucide-react';
 
 import { FormField } from '@/components/common/FormField';
 import { WhiskySearchSelect, type SelectedWhisky } from '@/components/common/WhiskySearchSelect';
+import { useAdminAlcoholDetailLookup } from '@/hooks/useAdminAlcohols';
+import { useToast } from '@/hooks/useToast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,11 +14,14 @@ import { Textarea } from '@/components/ui/textarea';
 
 import {
   createBottleNoteCurationWhiskyItem,
+  createBottleNoteCurationWhiskyItemFromDetail,
   createManualCurationWhiskyItem,
 } from '../curation-whisky-card-list.mapper';
 import type {
   CurationWhiskyCardListFieldModel,
   CurationWhiskyCardListFormValues,
+  CurationWhiskyCardValue,
+  CurationWhiskyMirror,
 } from '../curation-whisky-card-list.types';
 
 interface CurationWhiskyCardListFieldProps {
@@ -25,7 +30,10 @@ interface CurationWhiskyCardListFieldProps {
 
 export function CurationWhiskyCardListField({ fieldModel }: CurationWhiskyCardListFieldProps) {
   const form = useFormContext<CurationWhiskyCardListFormValues>();
+  const fetchAlcoholDetail = useAdminAlcoholDetailLookup();
+  const { showToast } = useToast();
   const [tagInputs, setTagInputs] = useState<Record<string, string>>({});
+  const [pendingAlcoholId, setPendingAlcoholId] = useState<number | null>(null);
   const alcoholFieldArray = useFieldArray({
     control: form.control,
     name: 'alcohols',
@@ -40,14 +48,37 @@ export function CurationWhiskyCardListField({ fieldModel }: CurationWhiskyCardLi
     .filter((id): id is number => typeof id === 'number');
 
   const isMaxReached = watchedAlcohols.length >= fieldModel.maxItems;
+  const isAddingBottleNoteWhisky = pendingAlcoholId !== null;
+  const isAddDisabled = isMaxReached || isAddingBottleNoteWhisky;
 
-  const handleAddBottleNoteWhisky = (whisky: SelectedWhisky) => {
-    if (isMaxReached) return;
-    alcoholFieldArray.append(createBottleNoteCurationWhiskyItem(whisky), { shouldFocus: false });
+  const handleAddBottleNoteWhisky = async (whisky: SelectedWhisky) => {
+    if (isAddDisabled) return;
+
+    setPendingAlcoholId(whisky.alcoholId);
+
+    try {
+      const detail = await fetchAlcoholDetail(whisky.alcoholId);
+      const curationWhiskyItem = createBottleNoteCurationWhiskyItemFromDetail(detail);
+      curationWhiskyItem.alcohol.selectedTags = curationWhiskyItem.alcohol.selectedTags.slice(
+        0,
+        fieldModel.selectedTags.maxItems
+      );
+      alcoholFieldArray.append(curationWhiskyItem, {
+        shouldFocus: false,
+      });
+    } catch {
+      alcoholFieldArray.append(createBottleNoteCurationWhiskyItem(whisky), { shouldFocus: false });
+      showToast({
+        type: 'error',
+        message: '위스키 상세 정보를 불러오지 못해 기본 정보만 추가했습니다.',
+      });
+    } finally {
+      setPendingAlcoholId(null);
+    }
   };
 
   const handleAddManualWhisky = () => {
-    if (isMaxReached) return;
+    if (isAddDisabled) return;
     alcoholFieldArray.append(createManualCurationWhiskyItem(), { shouldFocus: false });
   };
 
@@ -55,22 +86,34 @@ export function CurationWhiskyCardListField({ fieldModel }: CurationWhiskyCardLi
     setTagInputs((prev) => ({ ...prev, [fieldId]: value }));
   };
 
-  const handleAddTag = (index: number, fieldId: string) => {
-    const value = tagInputs[fieldId]?.trim();
-    if (!value) return;
+  const handleAddTagValue = (index: number, value: string) => {
+    const trimmedValue = value.trim();
+    if (!trimmedValue) return false;
 
     const path = `alcohols.${index}.alcohol.selectedTags` as const;
-    const currentTags = form.getValues(path);
-    if (currentTags.includes(value) || currentTags.length >= fieldModel.selectedTags.maxItems) {
-      setTagInputs((prev) => ({ ...prev, [fieldId]: '' }));
-      return;
+    const currentTags = form.getValues(path) ?? [];
+    if (
+      currentTags.includes(trimmedValue) ||
+      currentTags.length >= fieldModel.selectedTags.maxItems
+    ) {
+      return false;
     }
 
-    form.setValue(path, [...currentTags, value], {
+    form.setValue(path, [...currentTags, trimmedValue], {
       shouldDirty: true,
       shouldValidate: true,
     });
-    setTagInputs((prev) => ({ ...prev, [fieldId]: '' }));
+
+    return true;
+  };
+
+  const handleAddTag = (index: number, fieldId: string) => {
+    const value = tagInputs[fieldId];
+    if (!value) return;
+
+    if (handleAddTagValue(index, value)) {
+      setTagInputs((prev) => ({ ...prev, [fieldId]: '' }));
+    }
   };
 
   const handleRemoveTag = (index: number, tag: string) => {
@@ -99,8 +142,8 @@ export function CurationWhiskyCardListField({ fieldModel }: CurationWhiskyCardLi
           )}
         </CardTitle>
         <CardDescription>
-          {fieldModel.minItems}-{fieldModel.maxItems}개까지 등록할 수 있습니다. 검색 추가와 직접 입력을
-          지원하며, 테이스팅 태그 순서가 앱 노출 순서입니다.
+          {fieldModel.minItems}-{fieldModel.maxItems}개까지 등록할 수 있습니다. 검색 추가와 직접
+          입력을 지원하며, 테이스팅 태그 순서가 앱 노출 순서입니다.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -109,18 +152,24 @@ export function CurationWhiskyCardListField({ fieldModel }: CurationWhiskyCardLi
             onSelect={handleAddBottleNoteWhisky}
             excludeIds={selectedAlcoholIds}
             placeholder="위스키 검색하여 추가..."
-            disabled={isMaxReached}
+            disabled={isAddDisabled}
           />
           <Button
             type="button"
             variant="outline"
             onClick={handleAddManualWhisky}
-            disabled={isMaxReached}
+            disabled={isAddDisabled}
           >
             <Plus className="h-4 w-4" />
             직접 입력
           </Button>
         </div>
+        {isAddingBottleNoteWhisky && (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            DB 위스키 정보를 불러오는 중입니다.
+          </p>
+        )}
 
         {form.formState.errors.alcohols?.message && (
           <p className="text-sm text-destructive">{form.formState.errors.alcohols.message}</p>
@@ -138,8 +187,10 @@ export function CurationWhiskyCardListField({ fieldModel }: CurationWhiskyCardLi
               const tags = item?.alcohol.selectedTags ?? [];
               const tagInput = tagInputs[field.id] ?? '';
               const itemName =
-                item?.alcohol.korName || (item?.source === 'MANUAL' ? '직접 입력 위스키' : '시음 위스키');
+                item?.alcohol.korName ||
+                (item?.source === 'MANUAL' ? '직접 입력 위스키' : '시음 위스키');
               const manualFieldPrefix = `${index + 1}번 수동 위스키`;
+              const whiskyMeta = getWhiskyMeta(item?.alcohol);
 
               return (
                 <div key={field.id} className="rounded-lg border p-4">
@@ -162,6 +213,11 @@ export function CurationWhiskyCardListField({ fieldModel }: CurationWhiskyCardLi
                       <p className="truncate text-sm text-muted-foreground">
                         {item?.alcohol.engName}
                       </p>
+                      {whiskyMeta && (
+                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                          {whiskyMeta}
+                        </p>
+                      )}
                     </div>
                     <Button
                       type="button"
@@ -240,6 +296,10 @@ export function CurationWhiskyCardListField({ fieldModel }: CurationWhiskyCardLi
                       </div>
                     )}
 
+                    {item?.source === 'BOTTLE_NOTE' && hasWhiskyStats(item.stats) && (
+                      <WhiskyStatsSummary stats={item.stats} />
+                    )}
+
                     <FormField
                       label={fieldModel.selectedTags.label}
                       required={fieldModel.selectedTags.required}
@@ -314,4 +374,67 @@ export function CurationWhiskyCardListField({ fieldModel }: CurationWhiskyCardLi
       </CardContent>
     </Card>
   );
+}
+
+function getWhiskyMeta(alcohol: CurationWhiskyMirror | undefined): string {
+  if (!alcohol) return '';
+
+  return [
+    formatAbv(alcohol.abv),
+    normalizeText(alcohol.volume),
+    normalizeText(alcohol.cask),
+    normalizeText(alcohol.regionName),
+    normalizeText(alcohol.korCategory),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function WhiskyStatsSummary({ stats }: { stats: NonNullable<CurationWhiskyCardValue['stats']> }) {
+  const items = [
+    { label: '평균 별점', value: formatRating(stats.rating) },
+    { label: '평점 수', value: formatCount(stats.totalRatingsCount) },
+    { label: '리뷰 수', value: formatCount(stats.reviewCount) },
+    { label: '찜 수', value: formatCount(stats.totalPickCount) },
+  ];
+
+  return (
+    <div className="grid gap-2 rounded-md border bg-muted/30 p-3 sm:grid-cols-4">
+      {items.map((item) => (
+        <div key={item.label} className="space-y-1">
+          <p className="text-xs text-muted-foreground">{item.label}</p>
+          <p className="text-sm font-medium">{item.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function hasWhiskyStats(
+  stats: CurationWhiskyCardValue['stats']
+): stats is NonNullable<CurationWhiskyCardValue['stats']> {
+  if (!stats) return false;
+
+  return [stats.rating, stats.totalRatingsCount, stats.reviewCount, stats.totalPickCount].some(
+    (value) => value !== null && value !== undefined
+  );
+}
+
+function formatRating(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(1) : '-';
+}
+
+function formatCount(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString('ko-KR') : '-';
+}
+
+function formatAbv(value: string | undefined): string {
+  const normalizedValue = normalizeText(value);
+  if (!normalizedValue) return '';
+
+  return normalizedValue.includes('%') ? normalizedValue : `${normalizedValue}%`;
+}
+
+function normalizeText(value: string | null | undefined): string {
+  return typeof value === 'string' ? value.trim() : '';
 }

@@ -36,12 +36,12 @@ export function TastingEventPreviewPanel() {
 
 function TastingEventAppPreview({ preview }: { preview: TastingEventPreviewModel }) {
   return (
-    <div className="mx-auto max-w-sm overflow-hidden rounded-[1.75rem] border bg-background shadow-sm">
-      <div className="bg-muted/40 px-4 py-3 text-center text-xs font-medium text-muted-foreground">
+    <div className="mx-auto flex h-[720px] max-h-[calc(100vh-8rem)] max-w-sm flex-col overflow-hidden rounded-[1.75rem] border bg-background shadow-sm">
+      <div className="shrink-0 bg-muted/40 px-4 py-3 text-center text-xs font-medium text-muted-foreground">
         앱 노출 예시
       </div>
 
-      <div className="space-y-5 p-4">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4">
         <div className="overflow-hidden rounded-2xl bg-muted">
           {preview.imageUrl ? (
             <img
@@ -156,6 +156,9 @@ function PreviewWhiskyItem({ whisky }: { whisky: TastingEventPreviewWhisky }) {
               {whisky.meta.join(' · ')}
             </p>
           )}
+          {getWhiskyStatsLabel(whisky) && (
+            <p className="mt-1 text-xs text-muted-foreground">{getWhiskyStatsLabel(whisky)}</p>
+          )}
         </div>
       </div>
 
@@ -176,4 +179,27 @@ function PreviewWhiskyItem({ whisky }: { whisky: TastingEventPreviewWhisky }) {
       )}
     </div>
   );
+}
+
+function getWhiskyStatsLabel(whisky: TastingEventPreviewWhisky): string {
+  const stats = whisky.stats;
+  if (!stats) return '';
+
+  return [
+    formatRating(stats.rating),
+    formatCount('리뷰', stats.reviewCount),
+    formatCount('찜', stats.totalPickCount),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function formatRating(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value) ? `평균 ${value.toFixed(1)}` : '';
+}
+
+function formatCount(label: string, value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? `${label} ${value.toLocaleString('ko-KR')}`
+    : '';
 }

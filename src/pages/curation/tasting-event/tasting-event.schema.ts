@@ -33,6 +33,15 @@ export function createTastingEventAlcoholSchema(fieldModel: CurationWhiskyCardLi
           `${fieldModel.selectedTags.label}는 최대 ${fieldModel.selectedTags.maxItems}개까지 추가할 수 있습니다.`
         ),
     }),
+    stats: z
+      .object({
+        rating: z.number().nullable().optional(),
+        totalRatingsCount: z.number().nullable().optional(),
+        reviewCount: z.number().nullable().optional(),
+        totalPickCount: z.number().nullable().optional(),
+      })
+      .nullable()
+      .optional(),
     comment: z
       .string()
       .max(

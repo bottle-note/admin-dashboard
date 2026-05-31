@@ -1,4 +1,7 @@
-import type { CurationWhiskyCardValue } from '../curation-whisky-card-list.types';
+import type {
+  CurationWhiskyCardValue,
+  CurationWhiskyStats,
+} from '../curation-whisky-card-list.types';
 import type { TastingEventCreateFormState } from './tasting-event.schema';
 
 export interface TastingEventPreviewWhisky {
@@ -9,6 +12,7 @@ export interface TastingEventPreviewWhisky {
   tags: string[];
   comment?: string;
   meta: string[];
+  stats?: CurationWhiskyStats | null;
 }
 
 export interface TastingEventPreviewModel {
@@ -72,6 +76,7 @@ function getWhiskies(values: CurationWhiskyCardValue[] | undefined): TastingEven
         getString(alcohol.regionName),
         getString(alcohol.korCategory),
       ].filter((value): value is string => Boolean(value)),
+      stats: item.stats,
     };
   });
 }

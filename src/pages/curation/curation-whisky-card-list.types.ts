@@ -13,9 +13,17 @@ export interface CurationWhiskyMirror {
   selectedTags: string[];
 }
 
+export interface CurationWhiskyStats {
+  rating?: number | null;
+  totalRatingsCount?: number | null;
+  reviewCount?: number | null;
+  totalPickCount?: number | null;
+}
+
 export interface CurationWhiskyCardValue {
   source: CurationWhiskySource;
   alcohol: CurationWhiskyMirror;
+  stats?: CurationWhiskyStats | null;
   comment?: string | null;
 }
 

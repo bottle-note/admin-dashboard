@@ -7,6 +7,7 @@ import {
   mockAlcoholConnectionResponse,
   mockAlcoholDisconnectionResponse,
   mockAlcoholListItems,
+  mockAlcoholDetails,
   mockAlcoholDeleteResponse,
   mockCategoryReferences,
   mockBannerListItems,
@@ -42,7 +43,8 @@ export const tastingTagHandlers = [
     let items = mockTastingTagListItems;
     if (keyword) {
       items = items.filter(
-        (t) => t.korName.includes(keyword) || t.engName.toLowerCase().includes(keyword.toLowerCase())
+        (t) =>
+          t.korName.includes(keyword) || t.engName.toLowerCase().includes(keyword.toLowerCase())
       );
     }
 
@@ -223,9 +225,7 @@ export const bannerHandlers = [
 
   // POST 생성
   http.post(BANNER_BASE, () => {
-    return HttpResponse.json(
-      wrapApiResponse(mockBannerCreateResponse)
-    );
+    return HttpResponse.json(wrapApiResponse(mockBannerCreateResponse));
   }),
 
   // PUT 수정
@@ -261,6 +261,27 @@ export const alcoholHandlers = [
     return HttpResponse.json(wrapApiResponse(mockCategoryReferences));
   }),
 
+  // GET 상세
+  http.get(`${ALCOHOL_BASE}/:alcoholId`, ({ params }) => {
+    const alcoholId = Number(params.alcoholId);
+    const detail = mockAlcoholDetails.find((item) => item.alcoholId === alcoholId);
+
+    if (detail) {
+      return HttpResponse.json(wrapApiResponse(detail));
+    }
+
+    return HttpResponse.json(
+      {
+        success: false,
+        code: 404,
+        data: null,
+        errors: [{ code: 'ALCOHOL_NOT_FOUND', message: '위스키를 찾을 수 없습니다.' }],
+        meta: {},
+      },
+      { status: 404 }
+    );
+  }),
+
   // GET 목록
   http.get(ALCOHOL_BASE, ({ request }) => {
     const url = new URL(request.url);
@@ -285,16 +306,23 @@ export const alcoholHandlers = [
       );
     }
     if (category) {
-      items = items.filter((item) => item.engCategoryName.toUpperCase().replace(' ', '_') === category);
+      items = items.filter(
+        (item) => item.engCategoryName.toUpperCase().replace(' ', '_') === category
+      );
     }
 
+    const totalElements = items.length;
+    const totalPages = Math.max(1, Math.ceil(totalElements / size));
+    const start = page * size;
+    const sliced = items.slice(start, start + size);
+
     return HttpResponse.json(
-      wrapApiResponse(items, {
+      wrapApiResponse(sliced, {
         page,
         size,
-        totalElements: items.length,
-        totalPages: Math.ceil(items.length / size),
-        hasNext: false,
+        totalElements,
+        totalPages,
+        hasNext: start + size < totalElements,
       })
     );
   }),
@@ -364,7 +392,8 @@ export const distilleryHandlers = [
     let items = mockDistilleryListItems;
     if (keyword) {
       items = items.filter(
-        (d) => d.korName.includes(keyword) || d.engName.toLowerCase().includes(keyword.toLowerCase())
+        (d) =>
+          d.korName.includes(keyword) || d.engName.toLowerCase().includes(keyword.toLowerCase())
       );
     }
 

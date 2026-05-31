@@ -5,11 +5,14 @@
  * - 선택 시 콜백 호출
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { useAdminAlcoholList } from '@/hooks/useAdminAlcohols';
+import {
+  flattenAdminAlcoholPages,
+  useAdminAlcoholListInfinite,
+} from '@/hooks/useAdminAlcohols';
 
 /**
  * 선택된 위스키 정보
@@ -45,6 +48,8 @@ export function WhiskySearchSelect({
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   // 디바운스 처리
   useEffect(() => {
@@ -65,17 +70,42 @@ export function WhiskySearchSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 위스키 검색 (최소 1글자 이상일 때만)
-  const { data, isLoading } = useAdminAlcoholList(
-    debouncedKeyword.length >= 1
-      ? { keyword: debouncedKeyword, size: 10 }
-      : undefined
-  );
+  const canSearch = debouncedKeyword.trim().length >= 1;
+
+  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
+    useAdminAlcoholListInfinite(
+      canSearch ? { keyword: debouncedKeyword.trim(), size: 10 } : undefined,
+      { enabled: canSearch }
+    );
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const root = scrollContainerRef.current;
+    if (!sentinel || !root || !hasNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      },
+      {
+        root,
+        rootMargin: '180px 0px',
+      }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const fetchedItems = useMemo(() => flattenAdminAlcoholPages(data), [data]);
 
   // 제외 ID를 필터링한 결과
-  const filteredItems = data?.items.filter(
-    (item) => !excludeIds.includes(item.alcoholId)
-  ) ?? [];
+  const filteredItems = useMemo(
+    () => fetchedItems.filter((item) => !excludeIds.includes(item.alcoholId)),
+    [excludeIds, fetchedItems]
+  );
 
   const handleSelect = (item: (typeof filteredItems)[0]) => {
     onSelect({
@@ -121,54 +151,69 @@ export function WhiskySearchSelect({
       </div>
 
       {/* 드롭다운 목록 */}
-      {isOpen && debouncedKeyword.length >= 1 && (
+      {isOpen && canSearch && (
         <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg">
           {isLoading ? (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          ) : filteredItems.length === 0 ? (
+          ) : filteredItems.length === 0 && !hasNextPage && !isFetchingNextPage ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
               검색 결과가 없습니다
             </div>
           ) : (
-            <ul className="max-h-64 overflow-auto py-1">
-              {filteredItems.map((item) => (
-                <li key={item.alcoholId}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelect(item)}
-                    className={cn(
-                      'flex w-full items-center gap-3 px-3 py-2 text-left',
-                      'hover:bg-accent hover:text-accent-foreground',
-                      'focus:bg-accent focus:text-accent-foreground focus:outline-none'
-                    )}
-                  >
-                    {/* 이미지 */}
-                    <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-md bg-muted">
-                      {item.imageUrl ? (
-                        <img
-                          src={item.imageUrl}
-                          alt={item.korName}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                          No
-                        </div>
+            <div ref={scrollContainerRef} className="max-h-[22rem] overflow-y-auto py-1">
+              <ul>
+                {filteredItems.map((item) => (
+                  <li key={item.alcoholId}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(item)}
+                      className={cn(
+                        'flex w-full items-center gap-3 px-3 py-2 text-left',
+                        'hover:bg-accent hover:text-accent-foreground',
+                        'focus:bg-accent focus:text-accent-foreground focus:outline-none'
                       )}
-                    </div>
-                    {/* 이름 */}
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium">{item.korName}</div>
-                      <div className="truncate text-sm text-muted-foreground">
-                        {item.engName}
+                    >
+                      {/* 이미지 */}
+                      <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-md bg-muted">
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl}
+                            alt={item.korName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                            No
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
+                      {/* 이름 */}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-medium">{item.korName}</div>
+                        <div className="truncate text-sm text-muted-foreground">
+                          {item.engName}
+                        </div>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <div
+                ref={sentinelRef}
+                className="flex min-h-10 items-center justify-center px-3 py-2"
+              >
+                {isFetchingNextPage ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                ) : hasNextPage ? (
+                  <span className="text-xs text-muted-foreground">더 불러오는 중...</span>
+                ) : (
+                  <span className="h-2" />
+                )}
+              </div>
+            </div>
           )}
         </div>
       )}

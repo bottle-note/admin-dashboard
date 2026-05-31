@@ -434,6 +434,13 @@ describe('CurationTastingEventCreatePage', () => {
 
     await user.type(screen.getByPlaceholderText('위스키 검색하여 추가...'), '글렌');
     await user.click(await screen.findByText('글렌피딕 12년'));
+    expect(await screen.findByText('평균 별점')).toBeInTheDocument();
+    expect(screen.getByText('4.2')).toBeInTheDocument();
+    expect(screen.getByText('리뷰 수')).toBeInTheDocument();
+    expect(screen.getByText('45')).toBeInTheDocument();
+    expect(screen.getAllByText('바닐라').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('꿀').length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: '바닐라 태그 삭제' }));
     await user.type(screen.getByLabelText('글렌피딕 12년 테이스팅 태그'), '셰리{enter}');
     fireEvent.change(screen.getByLabelText('글렌피딕 12년 기대평'), {
       target: { value: '첫 잔으로 가볍게 시작하는 위스키' },
@@ -464,7 +471,12 @@ describe('CurationTastingEventCreatePage', () => {
               korName: '글렌피딕 12년',
               engName: 'Glenfiddich 12',
               imageUrl: 'https://example.com/glenfiddich.jpg',
-              selectedTags: ['셰리'],
+              abv: '40',
+              cask: '오크',
+              volume: '700ml',
+              regionName: '스코틀랜드',
+              korCategory: '싱글몰트',
+              selectedTags: ['꿀', '셰리'],
             },
             comment: '첫 잔으로 가볍게 시작하는 위스키',
           },
