@@ -474,7 +474,10 @@ export function useCurationBulkReorder(
       successMessage: '큐레이션 순서가 변경되었습니다.',
       ...restOptions,
       onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries({ queryKey: curationKeys.lists() });
+        queryClient.invalidateQueries({
+          queryKey: curationKeys.lists(),
+          refetchType: 'none',
+        });
         if (onSuccess) {
           (
             onSuccess as (

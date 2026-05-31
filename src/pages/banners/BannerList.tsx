@@ -84,7 +84,7 @@ export function BannerListPage() {
     getDragHandlers,
   } = useReorderDrag<BannerListItem>({
     onReorder: (ids) => bulkReorderMutation.mutateAsync({ ids }),
-    onAfterReorder: refetch,
+    onReorderFailure: refetch,
   });
 
   const isListControlDisabled = isReorderMode || pendingReorder;

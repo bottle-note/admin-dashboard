@@ -12,7 +12,7 @@
  * @example
  * const reorder = useReorderDrag<BannerListItem>({
  *   onReorder: (ids) => bulkReorderMutation.mutateAsync({ ids }),
- *   onAfterReorder: refetch,
+ *   onReorderFailure: refetch,
  * });
  * // 전체 항목 로드 완료 후:
  * reorder.enterReorderMode(allItems);
@@ -27,8 +27,8 @@ interface ReorderItem {
 interface UseReorderDragOptions {
   /** 순서 저장 시 호출. 재배열된 전체 ID 배열(정렬 순서)을 전달 */
   onReorder: (orderedIds: number[]) => Promise<unknown>;
-  /** 순서 저장/롤백 후 호출 (주로 refetch) */
-  onAfterReorder: () => Promise<unknown>;
+  /** 저장 실패 후 호출 (주로 refetch) */
+  onReorderFailure?: () => Promise<unknown>;
 }
 
 interface DragHandlers {
@@ -42,7 +42,7 @@ interface DragHandlers {
 
 export function useReorderDrag<TItem extends ReorderItem>({
   onReorder,
-  onAfterReorder,
+  onReorderFailure,
 }: UseReorderDragOptions) {
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
@@ -75,13 +75,12 @@ export function useReorderDrag<TItem extends ReorderItem>({
     setIsReordering(true);
     try {
       await onReorder(localItems.map((item) => item.id));
-      await onAfterReorder();
       setIsReorderMode(false);
       return true;
     } catch {
       // 실패 시 원래 순서로 롤백 (모드는 유지)
       setLocalItems(originalItems);
-      await onAfterReorder();
+      await onReorderFailure?.();
       return false;
     } finally {
       setIsReordering(false);

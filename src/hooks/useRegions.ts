@@ -152,7 +152,10 @@ export function useRegionBulkReorder(
       successMessage: '지역 순서가 변경되었습니다.',
       ...restOptions,
       onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries({ queryKey: regionKeys.lists() });
+        queryClient.invalidateQueries({
+          queryKey: regionKeys.lists(),
+          refetchType: 'none',
+        });
         if (onSuccess) {
           (
             onSuccess as (

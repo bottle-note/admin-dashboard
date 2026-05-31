@@ -88,7 +88,7 @@ export function CurationListPage() {
     getDragHandlers,
   } = useReorderDrag<CurationListItem>({
     onReorder: (ids) => bulkReorderMutation.mutateAsync({ ids }),
-    onAfterReorder: refetch,
+    onReorderFailure: refetch,
   });
 
   const isListControlDisabled = isReorderMode || pendingReorder;

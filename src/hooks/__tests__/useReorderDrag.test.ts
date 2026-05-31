@@ -19,20 +19,20 @@ const ITEMS: TestItem[] = [{ id: 1 }, { id: 2 }, { id: 3 }];
 function makeDefaultHook(
   overrides: {
     onReorder?: ReturnType<typeof vi.fn>;
-    onAfterReorder?: ReturnType<typeof vi.fn>;
+    onReorderFailure?: ReturnType<typeof vi.fn>;
   } = {}
 ) {
   const onReorder = overrides.onReorder ?? vi.fn().mockResolvedValue(undefined);
-  const onAfterReorder = overrides.onAfterReorder ?? vi.fn().mockResolvedValue(undefined);
+  const onReorderFailure = overrides.onReorderFailure ?? vi.fn().mockResolvedValue(undefined);
 
   const hook = renderHook(() =>
     useReorderDrag<TestItem>({
       onReorder: onReorder as (orderedIds: number[]) => Promise<unknown>,
-      onAfterReorder: onAfterReorder as () => Promise<unknown>,
+      onReorderFailure: onReorderFailure as () => Promise<unknown>,
     })
   );
 
-  return { ...hook, onReorder, onAfterReorder };
+  return { ...hook, onReorder, onReorderFailure };
 }
 
 describe('useReorderDrag', () => {
@@ -191,15 +191,15 @@ describe('useReorderDrag', () => {
       expect(onReorder).toHaveBeenCalledWith([2, 3, 1]);
     });
 
-    it('저장 성공 후 onAfterReorder를 호출하고 모드를 종료한다', async () => {
-      const { result, onAfterReorder } = makeDefaultHook();
+    it('저장 성공 후 실패 복구 콜백 없이 모드를 종료한다', async () => {
+      const { result, onReorderFailure } = makeDefaultHook();
       act(() => result.current.enterReorderMode(ITEMS));
 
       await act(async () => {
         await result.current.saveReorder();
       });
 
-      expect(onAfterReorder).toHaveBeenCalledTimes(1);
+      expect(onReorderFailure).not.toHaveBeenCalled();
       expect(result.current.isReorderMode).toBe(false);
       expect(result.current.isReordering).toBe(false);
     });
@@ -209,9 +209,9 @@ describe('useReorderDrag', () => {
   // saveReorder 실패 → 롤백
   // ==========================================
   describe('saveReorder 실패 시 롤백', () => {
-    it('onReorder 실패 시 원래 순서로 롤백하고 onAfterReorder를 호출한다', async () => {
+    it('onReorder 실패 시 원래 순서로 롤백하고 onReorderFailure를 호출한다', async () => {
       const onReorder = vi.fn().mockRejectedValue(new Error('API 실패'));
-      const { result, onAfterReorder } = makeDefaultHook({ onReorder });
+      const { result, onReorderFailure } = makeDefaultHook({ onReorder });
 
       act(() => result.current.enterReorderMode(ITEMS));
       act(() => result.current.getDragHandlers(ITEMS[0]!).onDragStart(makeDragEvent()));
@@ -223,7 +223,7 @@ describe('useReorderDrag', () => {
       });
 
       expect(result.current.localItems.map((i) => i.id)).toEqual([1, 2, 3]);
-      expect(onAfterReorder).toHaveBeenCalledTimes(1);
+      expect(onReorderFailure).toHaveBeenCalledTimes(1);
       expect(result.current.isReordering).toBe(false);
     });
   });

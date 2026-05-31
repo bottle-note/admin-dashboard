@@ -183,7 +183,6 @@ export function RegionListPage() {
     setIsSavingOrder(true);
     try {
       await bulkReorderMutation.mutateAsync({ ids: localItems.map((item) => item.id) });
-      await refetch();
       setIsReorderMode(false);
       updateUrlParams({ size: undefined, page: undefined });
     } catch {

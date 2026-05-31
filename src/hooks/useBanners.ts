@@ -194,7 +194,10 @@ export function useBannerBulkReorder(
       successMessage: '배너 순서가 변경되었습니다.',
       ...restOptions,
       onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries({ queryKey: bannerKeys.lists() });
+        queryClient.invalidateQueries({
+          queryKey: bannerKeys.lists(),
+          refetchType: 'none',
+        });
         if (onSuccess) {
           (
             onSuccess as (
