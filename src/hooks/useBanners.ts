@@ -5,11 +5,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useApiQuery } from './useApiQuery';
 import { useApiMutation, type UseApiMutationOptions } from './useApiMutation';
-import {
-  bannerService,
-  bannerKeys,
-  type BannerListResponse,
-} from '@/services/banner.service';
+import { bannerService, bannerKeys, type BannerListResponse } from '@/services/banner.service';
 import type {
   BannerSearchParams,
   BannerDetail,
@@ -20,8 +16,7 @@ import type {
   BannerDeleteResponse,
   BannerUpdateStatusRequest,
   BannerUpdateStatusResponse,
-  BannerUpdateSortOrderRequest,
-  BannerUpdateSortOrderResponse,
+  BannerBulkReorderResponse,
 } from '@/types/api';
 
 /**
@@ -41,41 +36,37 @@ export function useBannerList(params?: BannerSearchParams) {
  * 배너 상세 조회 훅
  */
 export function useBannerDetail(id: number | undefined) {
-  return useApiQuery<BannerDetail>(
-    bannerKeys.detail(id ?? 0),
-    () => bannerService.getDetail(id!),
-    {
-      enabled: !!id,
-      staleTime: 1000 * 60 * 5,
-    }
-  );
+  return useApiQuery<BannerDetail>(bannerKeys.detail(id ?? 0), () => bannerService.getDetail(id!), {
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5,
+  });
 }
 
 /**
  * 배너 생성 훅
  */
 export function useBannerCreate(
-  options?: Omit<
-    UseApiMutationOptions<BannerCreateResponse, BannerCreateRequest>,
-    'successMessage'
-  >
+  options?: Omit<UseApiMutationOptions<BannerCreateResponse, BannerCreateRequest>, 'successMessage'>
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<BannerCreateResponse, BannerCreateRequest>(
-    bannerService.create,
-    {
-      successMessage: '배너가 등록되었습니다.',
-      ...restOptions,
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries({ queryKey: bannerKeys.lists() });
-        if (onSuccess) {
-          (onSuccess as (data: BannerCreateResponse, variables: BannerCreateRequest, context: unknown) => void)(data, variables, context);
-        }
-      },
-    }
-  );
+  return useApiMutation<BannerCreateResponse, BannerCreateRequest>(bannerService.create, {
+    successMessage: '배너가 등록되었습니다.',
+    ...restOptions,
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: bannerKeys.lists() });
+      if (onSuccess) {
+        (
+          onSuccess as (
+            data: BannerCreateResponse,
+            variables: BannerCreateRequest,
+            context: unknown
+          ) => void
+        )(data, variables, context);
+      }
+    },
+  });
 }
 
 /**
@@ -90,7 +81,10 @@ export interface BannerUpdateVariables {
  * 배너 수정 훅
  */
 export function useBannerUpdate(
-  options?: Omit<UseApiMutationOptions<BannerUpdateResponse, BannerUpdateVariables>, 'successMessage'>
+  options?: Omit<
+    UseApiMutationOptions<BannerUpdateResponse, BannerUpdateVariables>,
+    'successMessage'
+  >
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
@@ -104,7 +98,13 @@ export function useBannerUpdate(
         queryClient.invalidateQueries({ queryKey: bannerKeys.lists() });
         queryClient.invalidateQueries({ queryKey: bannerKeys.detail(variables.id) });
         if (onSuccess) {
-          (onSuccess as (data: BannerUpdateResponse, variables: BannerUpdateVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: BannerUpdateResponse,
+              variables: BannerUpdateVariables,
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }
@@ -120,19 +120,20 @@ export function useBannerDelete(
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<BannerDeleteResponse, number>(
-    bannerService.delete,
-    {
-      successMessage: '배너가 삭제되었습니다.',
-      ...restOptions,
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries({ queryKey: bannerKeys.lists() });
-        if (onSuccess) {
-          (onSuccess as (data: BannerDeleteResponse, variables: number, context: unknown) => void)(data, variables, context);
-        }
-      },
-    }
-  );
+  return useApiMutation<BannerDeleteResponse, number>(bannerService.delete, {
+    successMessage: '배너가 삭제되었습니다.',
+    ...restOptions,
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: bannerKeys.lists() });
+      if (onSuccess) {
+        (onSuccess as (data: BannerDeleteResponse, variables: number, context: unknown) => void)(
+          data,
+          variables,
+          context
+        );
+      }
+    },
+  });
 }
 
 /**
@@ -147,7 +148,10 @@ export interface BannerUpdateStatusVariables {
  * 배너 상태 변경 훅 (활성/비활성)
  */
 export function useBannerUpdateStatus(
-  options?: Omit<UseApiMutationOptions<BannerUpdateStatusResponse, BannerUpdateStatusVariables>, 'successMessage'>
+  options?: Omit<
+    UseApiMutationOptions<BannerUpdateStatusResponse, BannerUpdateStatusVariables>,
+    'successMessage'
+  >
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
@@ -161,40 +165,44 @@ export function useBannerUpdateStatus(
         queryClient.invalidateQueries({ queryKey: bannerKeys.lists() });
         queryClient.invalidateQueries({ queryKey: bannerKeys.detail(variables.bannerId) });
         if (onSuccess) {
-          (onSuccess as (data: BannerUpdateStatusResponse, variables: BannerUpdateStatusVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: BannerUpdateStatusResponse,
+              variables: BannerUpdateStatusVariables,
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }
   );
 }
 
-/**
- * 배너 정렬순서 변경 mutation 변수 타입
- */
-export interface BannerUpdateSortOrderVariables {
-  bannerId: number;
-  data: BannerUpdateSortOrderRequest;
-}
-
-/**
- * 배너 정렬순서 변경 훅
- */
-export function useBannerUpdateSortOrder(
-  options?: Omit<UseApiMutationOptions<BannerUpdateSortOrderResponse, BannerUpdateSortOrderVariables>, 'successMessage'>
+/** 배너 정렬순서 일괄 변경 훅 */
+export function useBannerBulkReorder(
+  options?: Omit<
+    UseApiMutationOptions<BannerBulkReorderResponse, { ids: number[] }>,
+    'successMessage'
+  >
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<BannerUpdateSortOrderResponse, BannerUpdateSortOrderVariables>(
-    ({ bannerId, data }) => bannerService.updateSortOrder(bannerId, data),
+  return useApiMutation<BannerBulkReorderResponse, { ids: number[] }>(
+    ({ ids }) => bannerService.bulkReorder(ids),
     {
       successMessage: '배너 순서가 변경되었습니다.',
       ...restOptions,
       onSuccess: (data, variables, context) => {
         queryClient.invalidateQueries({ queryKey: bannerKeys.lists() });
-        queryClient.invalidateQueries({ queryKey: bannerKeys.detail(variables.bannerId) });
         if (onSuccess) {
-          (onSuccess as (data: BannerUpdateSortOrderResponse, variables: BannerUpdateSortOrderVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: BannerBulkReorderResponse,
+              variables: { ids: number[] },
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }

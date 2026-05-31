@@ -9,8 +9,8 @@ import {
   useRegionDelete,
   useRegionDetail,
   useRegionList,
-  useRegionSortOrderUpdate,
   useRegionUpdate,
+  useRegionBulkReorder,
 } from '../useRegions';
 
 const BASE = '/admin/api/v1/regions';
@@ -197,18 +197,29 @@ describe('useRegions hooks', () => {
     });
   });
 
-  describe('useRegionSortOrderUpdate', () => {
-    it('정렬 순서 변경 mutation이 성공한다', async () => {
+  describe('useRegionBulkReorder', () => {
+    it('일괄 정렬순서 변경 mutation이 성공한다', async () => {
       const onSuccess = vi.fn();
-      const { result } = renderHook(() => useRegionSortOrderUpdate({ onSuccess }));
+      const { result } = renderHook(() => useRegionBulkReorder({ onSuccess }));
 
-      result.current.mutate({
-        id: 1,
-        data: { sortOrder: 2 },
-      });
+      result.current.mutate({ ids: [2, 1] });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(onSuccess).toHaveBeenCalled();
+    });
+
+    it('에러 시 에러 상태가 된다', async () => {
+      server.use(
+        http.patch(`${BASE}/bulk/reorder`, () => {
+          return HttpResponse.json(wrapApiError(500, 'SERVER_ERROR', '서버 오류'), { status: 500 });
+        })
+      );
+
+      const { result } = renderHook(() => useRegionBulkReorder());
+
+      result.current.mutate({ ids: [2, 1] });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
     });
   });
 });

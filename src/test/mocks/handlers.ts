@@ -15,17 +15,20 @@ import {
   mockBannerUpdateResponse,
   mockBannerDeleteResponse,
   mockBannerUpdateStatusResponse,
-  mockBannerUpdateSortOrderResponse,
+  mockBannerBulkReorderResponse,
   mockUserListItems,
   mockDistilleryListItems,
   mockDistilleryDetail,
   mockDistilleryFormResponse,
   mockDistilleryDeleteResponse,
+  mockCurationListItems,
+  mockCurationDetail,
+  mockCurationBulkReorderResponse,
   mockRegionListItems,
   mockRegionDetail,
   mockRegionFormResponse,
   mockRegionDeleteResponse,
-  mockRegionSortOrderResponse,
+  mockRegionBulkReorderResponse,
   wrapApiResponse,
 } from './data';
 
@@ -42,7 +45,8 @@ export const tastingTagHandlers = [
     let items = mockTastingTagListItems;
     if (keyword) {
       items = items.filter(
-        (t) => t.korName.includes(keyword) || t.engName.toLowerCase().includes(keyword.toLowerCase())
+        (t) =>
+          t.korName.includes(keyword) || t.engName.toLowerCase().includes(keyword.toLowerCase())
       );
     }
 
@@ -193,12 +197,13 @@ export const bannerHandlers = [
     );
   }),
 
-  // PATCH 정렬순서 변경
-  http.patch(`${BANNER_BASE}/:bannerId/sort-order`, ({ params }) => {
+  // PATCH 정렬순서 일괄 변경
+  http.patch(`${BANNER_BASE}/bulk/reorder`, async ({ request }) => {
+    const body = (await request.json()) as { ids: number[] };
     return HttpResponse.json(
       wrapApiResponse({
-        ...mockBannerUpdateSortOrderResponse,
-        targetId: Number(params.bannerId),
+        ...mockBannerBulkReorderResponse,
+        targetId: body.ids[0] ?? 0,
       })
     );
   }),
@@ -223,9 +228,7 @@ export const bannerHandlers = [
 
   // POST 생성
   http.post(BANNER_BASE, () => {
-    return HttpResponse.json(
-      wrapApiResponse(mockBannerCreateResponse)
-    );
+    return HttpResponse.json(wrapApiResponse(mockBannerCreateResponse));
   }),
 
   // PUT 수정
@@ -285,7 +288,9 @@ export const alcoholHandlers = [
       );
     }
     if (category) {
-      items = items.filter((item) => item.engCategoryName.toUpperCase().replace(' ', '_') === category);
+      items = items.filter(
+        (item) => item.engCategoryName.toUpperCase().replace(' ', '_') === category
+      );
     }
 
     return HttpResponse.json(
@@ -364,7 +369,8 @@ export const distilleryHandlers = [
     let items = mockDistilleryListItems;
     if (keyword) {
       items = items.filter(
-        (d) => d.korName.includes(keyword) || d.engName.toLowerCase().includes(keyword.toLowerCase())
+        (d) =>
+          d.korName.includes(keyword) || d.engName.toLowerCase().includes(keyword.toLowerCase())
       );
     }
 
@@ -447,6 +453,83 @@ export const distilleryHandlers = [
 ];
 
 // ============================================
+// Curation Handlers
+// ============================================
+
+const CURATION_BASE = '/admin/api/v1/curations';
+
+export const curationHandlers = [
+  // GET 목록
+  http.get(CURATION_BASE, ({ request }) => {
+    const url = new URL(request.url);
+    const keyword = url.searchParams.get('keyword');
+    const isActive = url.searchParams.get('isActive');
+    const size = Number(url.searchParams.get('size') ?? 20);
+    const page = Number(url.searchParams.get('page') ?? 0);
+
+    let items = mockCurationListItems;
+    if (keyword) {
+      items = items.filter((c) => c.name.includes(keyword));
+    }
+    if (isActive !== null && isActive !== '') {
+      items = items.filter((c) => c.isActive === (isActive === 'true'));
+    }
+
+    return HttpResponse.json(
+      wrapApiResponse(items, {
+        page,
+        size,
+        totalElements: items.length,
+        totalPages: Math.ceil(items.length / size),
+        hasNext: false,
+      })
+    );
+  }),
+
+  // PATCH 노출순서 일괄 변경 (상세보다 먼저)
+  http.patch(`${CURATION_BASE}/bulk/reorder`, async ({ request }) => {
+    const body = (await request.json()) as { ids: number[] };
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockCurationBulkReorderResponse,
+        targetId: body.ids[0] ?? 0,
+      })
+    );
+  }),
+
+  // GET 상세
+  http.get(`${CURATION_BASE}/:curationId`, ({ params }) => {
+    const id = Number(params.curationId);
+    if (id === mockCurationDetail.id) {
+      // CurationDetail → API 응답 형태(modifiedAt)로 변환
+      return HttpResponse.json(
+        wrapApiResponse({
+          id: mockCurationDetail.id,
+          name: mockCurationDetail.name,
+          description: mockCurationDetail.description,
+          coverImageUrl: mockCurationDetail.coverImageUrl,
+          displayOrder: mockCurationDetail.displayOrder,
+          isActive: mockCurationDetail.isActive,
+          createdAt: mockCurationDetail.createdAt,
+          modifiedAt: mockCurationDetail.updatedAt,
+          alcohols: mockCurationDetail.alcohols,
+        })
+      );
+    }
+    return HttpResponse.json(
+      {
+        success: false,
+        code: 404,
+        data: null,
+        errors: [{ code: 'CURATION_NOT_FOUND', message: '큐레이션을 찾을 수 없습니다.' }],
+        meta: {},
+      },
+      { status: 404 }
+    );
+  }),
+];
+
+// ============================================
 // Region Handlers
 // ============================================
 
@@ -490,12 +573,13 @@ export const regionHandlers = [
     );
   }),
 
-  // PATCH 정렬 순서 변경 (상세보다 먼저 매칭되도록)
-  http.patch(`${REGION_BASE}/:id/sort-order`, ({ params }) => {
+  // PATCH 정렬순서 일괄 변경
+  http.patch(`${REGION_BASE}/bulk/reorder`, async ({ request }) => {
+    const body = (await request.json()) as { ids: number[] };
     return HttpResponse.json(
       wrapApiResponse({
-        ...mockRegionSortOrderResponse,
-        targetId: Number(params.id),
+        ...mockRegionBulkReorderResponse,
+        targetId: body.ids[0] ?? 0,
       })
     );
   }),
@@ -561,5 +645,6 @@ export const handlers = [
   ...alcoholHandlers,
   ...userHandlers,
   ...distilleryHandlers,
+  ...curationHandlers,
   ...regionHandlers,
 ];

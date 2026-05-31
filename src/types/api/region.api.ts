@@ -33,9 +33,9 @@ export const RegionApi = {
     endpoint: '/admin/api/v1/regions/:id',
     method: 'DELETE',
   },
-  /** 지역 정렬 순서 변경 */
-  updateSortOrder: {
-    endpoint: '/admin/api/v1/regions/:id/sort-order',
+  /** 지역 정렬순서 일괄 변경 */
+  bulkReorder: {
+    endpoint: '/admin/api/v1/regions/bulk/reorder',
     method: 'PATCH',
   },
 } as const;
@@ -166,22 +166,18 @@ export interface RegionApiTypes {
       responseAt: string;
     };
   };
-  /** 지역 정렬 순서 변경 */
-  updateSortOrder: {
+  /** 지역 정렬순서 일괄 변경 */
+  bulkReorder: {
     /** 요청 데이터 */
     request: {
-      /** 정렬 순서 (0 이상) */
-      sortOrder: number;
+      /** 정렬 순서대로 나열된 지역 ID 목록 */
+      ids: number[];
     };
     /** 응답 데이터 */
     response: {
-      /** 결과 코드 */
       code: string;
-      /** 결과 메시지 */
       message: string;
-      /** 대상 지역 ID */
       targetId: number;
-      /** 응답 시간 */
       responseAt: string;
     };
   };
@@ -212,8 +208,7 @@ export type RegionFormResponse = RegionApiTypes['form']['response'];
 /** 지역 삭제 응답 */
 export type RegionDeleteResponse = RegionApiTypes['delete']['response'];
 
-/** 지역 정렬 순서 변경 요청 */
-export type RegionSortOrderRequest = RegionApiTypes['updateSortOrder']['request'];
-
-/** 지역 정렬 순서 변경 응답 */
-export type RegionSortOrderResponse = RegionApiTypes['updateSortOrder']['response'];
+/** 지역 정렬순서 일괄 변경 요청 데이터 */
+export type RegionBulkReorderRequest = RegionApiTypes['bulkReorder']['request'];
+/** 지역 정렬순서 일괄 변경 응답 데이터 */
+export type RegionBulkReorderResponse = RegionApiTypes['bulkReorder']['response'];

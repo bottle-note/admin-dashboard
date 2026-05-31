@@ -1,7 +1,7 @@
 /**
  * 지역 목록 페이지
  * - URL 쿼리파라미터로 검색/페이지네이션 상태 관리
- * - 순서 변경 모드에서 로컬 드래그 앤 드롭 후 완료 시 sort-order API 호출
+ * - 순서 변경 모드: 전체 로드 후 드래그 재배열, 저장 시 bulk reorder API 호출
  */
 
 import { useEffect, useState } from 'react';
@@ -26,13 +26,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Pagination } from '@/components/common/Pagination';
-import { useRegionList, useRegionSortOrderUpdate } from '@/hooks/useRegions';
+import { useRegionList, useRegionBulkReorder } from '@/hooks/useRegions';
 import type { RegionListItem, RegionSearchParams } from '@/types/api';
 
-interface StagedMove {
-  regionId: number;
-  targetSortOrder: number;
-}
+/** 순서 변경 모드에서 전체 항목을 한 번에 로드하기 위한 페이지 크기 */
+const REORDER_FETCH_SIZE = 1000;
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString('ko-KR');
@@ -53,7 +51,6 @@ export function RegionListPage() {
   const [pendingReorderMode, setPendingReorderMode] = useState(false);
   const [localItems, setLocalItems] = useState<RegionListItem[]>([]);
   const [originalItems, setOriginalItems] = useState<RegionListItem[]>([]);
-  const [stagedMoves, setStagedMoves] = useState<StagedMove[]>([]);
   const [draggedItem, setDraggedItem] = useState<RegionListItem | null>(null);
   const [dragOverId, setDragOverId] = useState<number | null>(null);
 
@@ -69,11 +66,16 @@ export function RegionListPage() {
   };
 
   const { data, isLoading, refetch } = useRegionList(searchParams);
-  const updateSortOrderMutation = useRegionSortOrderUpdate();
+  const bulkReorderMutation = useRegionBulkReorder();
 
-  const hasUnsavedOrder = stagedMoves.length > 0;
-  const isListControlDisabled = isReorderMode || hasUnsavedOrder;
-  const displayedItems = isReorderMode ? localItems : data?.items ?? [];
+  const hasUnsavedOrder =
+    isReorderMode &&
+    (localItems.length !== originalItems.length ||
+      localItems.some((item, idx) => item.id !== originalItems[idx]?.id));
+  const isListControlDisabled = isReorderMode || hasUnsavedOrder || pendingReorderMode;
+  const displayedItems = isReorderMode ? localItems : (data?.items ?? []);
+  const isFullReorderListLoaded =
+    page === 0 && size >= REORDER_FETCH_SIZE && sortOrder === 'ASC' && !keyword;
 
   const getParentDisplayName = (parentId: number | null) => {
     if (parentId == null) return '-';
@@ -105,7 +107,6 @@ export function RegionListPage() {
   const startReorderMode = (items: RegionListItem[]) => {
     setOriginalItems(items);
     setLocalItems(items);
-    setStagedMoves([]);
     setDraggedItem(null);
     setDragOverId(null);
     setIsReorderMode(true);
@@ -150,39 +151,41 @@ export function RegionListPage() {
   };
 
   const handleEnterReorderMode = () => {
-    if (sortOrder !== 'ASC' || page !== 0) {
-      setPendingReorderMode(true);
-      updateUrlParams({ sortOrder: undefined, page: '0' });
+    if (isFullReorderListLoaded && data) {
+      startReorderMode(data.items);
       return;
     }
-    startReorderMode(data?.items ?? []);
+    setPendingReorderMode(true);
+    setKeywordInput('');
+    updateUrlParams({
+      keyword: undefined,
+      sortOrder: undefined,
+      page: '0',
+      size: String(REORDER_FETCH_SIZE),
+    });
   };
 
   const handleCancelReorder = () => {
     setLocalItems(originalItems);
-    setStagedMoves([]);
     setDraggedItem(null);
     setDragOverId(null);
     setIsReorderMode(false);
+    updateUrlParams({ size: undefined, page: undefined });
   };
 
   const handleSaveReorder = async () => {
-    if (stagedMoves.length === 0) {
+    if (!hasUnsavedOrder) {
       setIsReorderMode(false);
+      updateUrlParams({ size: undefined, page: undefined });
       return;
     }
 
     setIsSavingOrder(true);
     try {
-      for (const move of stagedMoves) {
-        await updateSortOrderMutation.mutateAsync({
-          id: move.regionId,
-          data: { sortOrder: move.targetSortOrder },
-        });
-      }
+      await bulkReorderMutation.mutateAsync({ ids: localItems.map((item) => item.id) });
       await refetch();
       setIsReorderMode(false);
-      setStagedMoves([]);
+      updateUrlParams({ size: undefined, page: undefined });
     } catch {
       setLocalItems(originalItems);
       await refetch();
@@ -235,14 +238,6 @@ export function RegionListPage() {
         next.splice(draggedIndex, 1);
         next.splice(targetIndex, 0, draggedItem);
 
-        setStagedMoves((moves) => [
-          ...moves,
-          {
-            regionId: draggedItem.id,
-            targetSortOrder: page * size + targetIndex,
-          },
-        ]);
-
         return next;
       });
       setDraggedItem(null);
@@ -258,18 +253,12 @@ export function RegionListPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">지역 목록</h1>
-          <p className="text-muted-foreground">
-            위스키 원산지로 사용되는 지역을 관리합니다.
-          </p>
+          <p className="text-muted-foreground">위스키 원산지로 사용되는 지역을 관리합니다.</p>
         </div>
         <div className="flex gap-2">
           {isReorderMode ? (
             <>
-              <Button
-                variant="outline"
-                onClick={handleCancelReorder}
-                disabled={isSavingOrder}
-              >
+              <Button variant="outline" onClick={handleCancelReorder} disabled={isSavingOrder}>
                 취소
               </Button>
               <Button onClick={handleSaveReorder} disabled={isSavingOrder}>
@@ -279,9 +268,13 @@ export function RegionListPage() {
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={handleEnterReorderMode}>
+              <Button
+                variant="outline"
+                onClick={handleEnterReorderMode}
+                disabled={pendingReorderMode}
+              >
                 <ArrowUpDown className="mr-2 h-4 w-4" />
-                순서 변경
+                {pendingReorderMode ? '불러오는 중...' : '순서 변경'}
               </Button>
               <Button onClick={() => navigate('/regions/new')}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -295,16 +288,14 @@ export function RegionListPage() {
       {isReorderMode && (
         <div className="rounded-lg border border-primary/50 bg-primary/5 p-4">
           <p className="text-sm text-primary">
-            <strong>순서 변경 모드</strong> - 우측의 핸들을 드래그하여 지역 순서를
-            변경할 수 있습니다.
+            <strong>순서 변경 모드</strong> - 우측의 핸들을 드래그하여 지역 순서를 변경할 수
+            있습니다.
             {hasUnsavedOrder && (
               <span className="ml-2 text-muted-foreground">
                 (저장되지 않은 순서 변경이 있습니다.)
               </span>
             )}
-            {isSavingOrder && (
-              <span className="ml-2 text-muted-foreground">(순서 저장 중...)</span>
-            )}
+            {isSavingOrder && <span className="ml-2 text-muted-foreground">(순서 저장 중...)</span>}
           </p>
         </div>
       )}
@@ -340,7 +331,7 @@ export function RegionListPage() {
       </div>
 
       <div className="rounded-lg border">
-        <Table className="[&_th]:px-4 [&_td]:px-4">
+        <Table className="[&_td]:px-4 [&_th]:px-4">
           <TableHeader>
             <TableRow>
               <TableHead className="w-[80px]">순서</TableHead>
@@ -368,19 +359,21 @@ export function RegionListPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              displayedItems.map((item) => (
+              displayedItems.map((item, index) => (
                 <TableRow
                   key={item.id}
                   {...getDragHandlers(item)}
                   className={
                     isReorderMode
-                      ? dragOverId === item.id ? 'bg-primary/10' : ''
+                      ? dragOverId === item.id
+                        ? 'bg-primary/10'
+                        : ''
                       : 'cursor-pointer hover:bg-muted/50'
                   }
                   onClick={() => handleRowClick(item.id)}
                 >
                   <TableCell className="text-center font-mono text-sm">
-                    {item.sortOrder + 1}
+                    {isReorderMode ? index + 1 : item.sortOrder + 1}
                   </TableCell>
                   <TableCell className="font-medium">{item.korName}</TableCell>
                   <TableCell className="text-muted-foreground">{item.engName}</TableCell>

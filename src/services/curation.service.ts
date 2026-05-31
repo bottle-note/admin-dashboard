@@ -18,11 +18,11 @@ import {
   type CurationDeleteResponse,
   type CurationToggleStatusRequest,
   type CurationToggleStatusResponse,
-  type CurationUpdateDisplayOrderRequest,
-  type CurationUpdateDisplayOrderResponse,
   type CurationAddAlcoholsRequest,
   type CurationAddAlcoholsResponse,
   type CurationRemoveAlcoholResponse,
+  type CurationBulkReorderRequest,
+  type CurationBulkReorderResponse,
 } from '@/types/api';
 
 // ============================================
@@ -73,10 +73,9 @@ export const curationService = {
    * 페이지 기반 페이지네이션 (meta에 페이지 정보 포함)
    */
   search: async (params?: CurationSearchParams): Promise<CurationListResponse> => {
-    const response = await apiClient.getWithMeta<CurationListItem[]>(
-      CurationApi.search.endpoint,
-      { params }
-    );
+    const response = await apiClient.getWithMeta<CurationListItem[]>(CurationApi.search.endpoint, {
+      params,
+    });
 
     return {
       items: response.data ?? [],
@@ -113,7 +112,10 @@ export const curationService = {
   /**
    * 큐레이션 수정
    */
-  update: async (curationId: number, data: CurationUpdateRequest): Promise<CurationUpdateResponse> => {
+  update: async (
+    curationId: number,
+    data: CurationUpdateRequest
+  ): Promise<CurationUpdateResponse> => {
     const endpoint = CurationApi.update.endpoint.replace(':curationId', String(curationId));
     return apiClient.put<CurationUpdateResponse, CurationUpdateRequest>(endpoint, data);
   },
@@ -129,23 +131,24 @@ export const curationService = {
   /**
    * 큐레이션 활성화 상태 토글
    */
-  toggleStatus: async (curationId: number, data: CurationToggleStatusRequest): Promise<CurationToggleStatusResponse> => {
+  toggleStatus: async (
+    curationId: number,
+    data: CurationToggleStatusRequest
+  ): Promise<CurationToggleStatusResponse> => {
     const endpoint = CurationApi.toggleStatus.endpoint.replace(':curationId', String(curationId));
-    return apiClient.patch<CurationToggleStatusResponse, CurationToggleStatusRequest>(endpoint, data);
-  },
-
-  /**
-   * 큐레이션 노출 순서 변경
-   */
-  updateDisplayOrder: async (curationId: number, data: CurationUpdateDisplayOrderRequest): Promise<CurationUpdateDisplayOrderResponse> => {
-    const endpoint = CurationApi.updateDisplayOrder.endpoint.replace(':curationId', String(curationId));
-    return apiClient.patch<CurationUpdateDisplayOrderResponse, CurationUpdateDisplayOrderRequest>(endpoint, data);
+    return apiClient.patch<CurationToggleStatusResponse, CurationToggleStatusRequest>(
+      endpoint,
+      data
+    );
   },
 
   /**
    * 큐레이션 위스키 추가
    */
-  addAlcohols: async (curationId: number, data: CurationAddAlcoholsRequest): Promise<CurationAddAlcoholsResponse> => {
+  addAlcohols: async (
+    curationId: number,
+    data: CurationAddAlcoholsRequest
+  ): Promise<CurationAddAlcoholsResponse> => {
     const endpoint = CurationApi.addAlcohols.endpoint.replace(':curationId', String(curationId));
     return apiClient.post<CurationAddAlcoholsResponse, CurationAddAlcoholsRequest>(endpoint, data);
   },
@@ -153,7 +156,10 @@ export const curationService = {
   /**
    * 큐레이션 위스키 제거 (단건)
    */
-  removeAlcohol: async (curationId: number, alcoholId: number): Promise<CurationRemoveAlcoholResponse> => {
+  removeAlcohol: async (
+    curationId: number,
+    alcoholId: number
+  ): Promise<CurationRemoveAlcoholResponse> => {
     const endpoint = CurationApi.removeAlcohol.endpoint
       .replace(':curationId', String(curationId))
       .replace(':alcoholId', String(alcoholId));
@@ -166,9 +172,17 @@ export const curationService = {
    */
   removeAlcohols: async (curationId: number, alcoholIds: number[]): Promise<void> => {
     await Promise.all(
-      alcoholIds.map((alcoholId) =>
-        curationService.removeAlcohol(curationId, alcoholId)
-      )
+      alcoholIds.map((alcoholId) => curationService.removeAlcohol(curationId, alcoholId))
+    );
+  },
+
+  /**
+   * 큐레이션 노출순서 일괄 변경
+   */
+  bulkReorder: async (ids: number[]): Promise<CurationBulkReorderResponse> => {
+    return apiClient.patch<CurationBulkReorderResponse, CurationBulkReorderRequest>(
+      CurationApi.bulkReorder.endpoint,
+      { ids }
     );
   },
 
