@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { waitFor } from '@testing-library/react';
+import { act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { renderHook } from '@/test/test-utils';
 import { wrapApiError } from '@/test/mocks/data';
-import { useAdminAlcoholList, useCategoryReferences } from '../useAdminAlcohols';
+import {
+  flattenAdminAlcoholPages,
+  useAdminAlcoholList,
+  useAdminAlcoholListInfinite,
+  useCategoryReferences,
+} from '../useAdminAlcohols';
 import { useCategoryGroupMap } from '../useCategoryGroupMap';
 
 const BASE = '/admin/api/v1/alcohols';
@@ -71,6 +76,20 @@ describe('useAdminAlcohols hooks', () => {
       expect(result.current.data!.meta).toBeDefined();
       expect(result.current.data!.meta.page).toBe(0);
       expect(result.current.data!.meta.totalElements).toBeGreaterThan(0);
+    });
+
+    it('무한 스크롤 페이지를 순차 조회한다', async () => {
+      const { result } = renderHook(() => useAdminAlcoholListInfinite({ size: 1 }));
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.hasNextPage).toBe(true);
+
+      await act(async () => {
+        await result.current.fetchNextPage();
+      });
+
+      await waitFor(() => expect(result.current.hasNextPage).toBe(false));
+      expect(flattenAdminAlcoholPages(result.current.data)).toHaveLength(2);
     });
   });
 

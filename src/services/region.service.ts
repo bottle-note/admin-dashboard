@@ -13,8 +13,8 @@ import {
   type RegionFormData,
   type RegionFormResponse,
   type RegionDeleteResponse,
-  type RegionSortOrderRequest,
-  type RegionSortOrderResponse,
+  type RegionBulkReorderRequest,
+  type RegionBulkReorderResponse,
 } from '@/types/api';
 
 // ============================================
@@ -42,10 +42,9 @@ export const regionService = {
    * 페이지 기반 페이지네이션 (meta에 페이지 정보 포함)
    */
   list: async (params?: RegionSearchParams): Promise<RegionListResponse> => {
-    const response = await apiClient.getWithMeta<RegionListItem[]>(
-      RegionApi.list.endpoint,
-      { params }
-    );
+    const response = await apiClient.getWithMeta<RegionListItem[]>(RegionApi.list.endpoint, {
+      params,
+    });
 
     return {
       items: response.data ?? [],
@@ -71,10 +70,7 @@ export const regionService = {
    * 지역 생성
    */
   create: async (data: RegionFormData): Promise<RegionFormResponse> => {
-    return apiClient.post<RegionFormResponse, RegionFormData>(
-      RegionApi.create.endpoint,
-      data
-    );
+    return apiClient.post<RegionFormResponse, RegionFormData>(RegionApi.create.endpoint, data);
   },
 
   /**
@@ -94,16 +90,12 @@ export const regionService = {
   },
 
   /**
-   * 지역 정렬 순서 변경
+   * 지역 정렬순서 일괄 변경
    */
-  updateSortOrder: async (
-    id: number,
-    data: RegionSortOrderRequest
-  ): Promise<RegionSortOrderResponse> => {
-    const endpoint = RegionApi.updateSortOrder.endpoint.replace(':id', String(id));
-    return apiClient.patch<RegionSortOrderResponse, RegionSortOrderRequest>(
-      endpoint,
-      data
+  bulkReorder: async (ids: number[]): Promise<RegionBulkReorderResponse> => {
+    return apiClient.patch<RegionBulkReorderResponse, RegionBulkReorderRequest>(
+      RegionApi.bulkReorder.endpoint,
+      { ids }
     );
   },
 };

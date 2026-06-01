@@ -17,11 +17,20 @@ import { TastingTagDetailPage } from '@/pages/tasting-tags/TastingTagDetail';
 import { BannerListPage } from '@/pages/banners/BannerList';
 import { BannerDetailPage } from '@/pages/banners/BannerDetail';
 import { BannerCreatePage } from '@/pages/banners/BannerCreate';
-import { CurationListPage } from '@/pages/curations/CurationList';
-import { CurationDetailPage } from '@/pages/curations/CurationDetail';
+import { CurationListPage as CurationOldListPage } from '@/pages/curation-old/CurationList';
+import { CurationDetailPage as CurationOldDetailPage } from '@/pages/curation-old/CurationDetail';
+import { CurationEntryPage } from '@/pages/curation/CurationEntry';
+import { CurationListPage } from '@/pages/curation/CurationList';
+import { CurationDetailPage } from '@/pages/curation/CurationDetail';
+import { CurationTastingEventCreatePage } from '@/pages/curation/tasting-event/CurationTastingEventCreate';
+import {
+  CurationRecommendedWhiskyCreatePage,
+  CurationWhiskyPairingCreatePage,
+} from '@/pages/curation/whisky-card/CurationWhiskyCardCreate';
 import { InquiryListPage } from '@/pages/inquiries/InquiryList';
 import { PolicyListPage } from '@/pages/policies/PolicyList';
 import { UserListPage } from '@/pages/users/UserList';
+import { ReviewListPage } from '@/pages/reviews/ReviewList';
 import { DistilleryListPage } from '@/pages/distilleries/DistilleryList';
 import { DistilleryDetailPage } from '@/pages/distilleries/DistilleryDetail';
 import { RegionListPage } from '@/pages/regions/RegionList';
@@ -57,6 +66,54 @@ export function AppRoutes() {
       >
         {/* Dashboard */}
         <Route index element={<DashboardPage />} />
+        <Route
+          path="dashboard/curations"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
+              <CurationListPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="dashboard/curations/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
+              <CurationEntryPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="dashboard/curations/tasting-events/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
+              <CurationTastingEventCreatePage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="dashboard/curations/general/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
+              <CurationRecommendedWhiskyCreatePage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="dashboard/curations/pairings/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
+              <CurationWhiskyPairingCreatePage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="dashboard/curations/:id"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
+              <CurationDetailPage />
+            </RoleProtectedRoute>
+          }
+        />
 
         {/* Whisky - ROOT_ADMIN only */}
         <Route
@@ -140,7 +197,7 @@ export function AppRoutes() {
           path="curations"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <CurationListPage />
+              <CurationOldListPage />
             </RoleProtectedRoute>
           }
         />
@@ -148,7 +205,7 @@ export function AppRoutes() {
           path="curations/new"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <CurationDetailPage key="new" />
+              <CurationOldDetailPage key="new" />
             </RoleProtectedRoute>
           }
         />
@@ -156,7 +213,7 @@ export function AppRoutes() {
           path="curations/:id"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <CurationDetailPage key="edit" />
+              <CurationOldDetailPage key="edit" />
             </RoleProtectedRoute>
           }
         />
@@ -239,6 +296,16 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
               <UserListPage />
+            </RoleProtectedRoute>
+          }
+        />
+
+        {/* Reviews - ROOT_ADMIN only */}
+        <Route
+          path="reviews"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <ReviewListPage />
             </RoleProtectedRoute>
           }
         />

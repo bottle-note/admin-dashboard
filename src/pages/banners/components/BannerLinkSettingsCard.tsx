@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField } from '@/components/common/FormField';
 
 import type { BannerFormValues } from '../banner.schema';
-import { curationService } from '@/hooks/useCurations';
+import { curationService } from '@/hooks/useCurationOld';
 import type { CurationListItem } from '@/types/api';
 
 interface BannerLinkSettingsCardProps {

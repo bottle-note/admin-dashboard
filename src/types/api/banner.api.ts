@@ -38,9 +38,9 @@ export const BannerApi = {
     endpoint: '/admin/api/v1/banners/:bannerId/status',
     method: 'PATCH',
   },
-  /** 배너 정렬순서 변경 */
-  updateSortOrder: {
-    endpoint: '/admin/api/v1/banners/:bannerId/sort-order',
+  /** 배너 정렬순서 일괄 변경 */
+  bulkReorder: {
+    endpoint: '/admin/api/v1/banners/bulk/reorder',
     method: 'PATCH',
   },
 } as const;
@@ -319,22 +319,18 @@ export interface BannerApiTypes {
       responseAt: string;
     };
   };
-  /** 배너 정렬순서 변경 */
-  updateSortOrder: {
+  /** 배너 정렬순서 일괄 변경 */
+  bulkReorder: {
     /** 요청 데이터 */
     request: {
-      /** 정렬 순서 (0 이상) */
-      sortOrder: number;
+      /** 정렬 순서대로 나열된 배너 ID 목록 */
+      ids: number[];
     };
     /** 응답 데이터 */
     response: {
-      /** 결과 코드 */
       code: string;
-      /** 결과 메시지 */
       message: string;
-      /** 배너 ID */
       targetId: number;
-      /** 응답 시간 */
       responseAt: string;
     };
   };
@@ -377,8 +373,7 @@ export type BannerUpdateStatusRequest = BannerApiTypes['updateStatus']['request'
 /** 배너 상태 변경 응답 데이터 */
 export type BannerUpdateStatusResponse = BannerApiTypes['updateStatus']['response'];
 
-/** 배너 정렬순서 변경 요청 데이터 */
-export type BannerUpdateSortOrderRequest = BannerApiTypes['updateSortOrder']['request'];
-
-/** 배너 정렬순서 변경 응답 데이터 */
-export type BannerUpdateSortOrderResponse = BannerApiTypes['updateSortOrder']['response'];
+/** 배너 정렬순서 일괄 변경 요청 데이터 */
+export type BannerBulkReorderRequest = BannerApiTypes['bulkReorder']['request'];
+/** 배너 정렬순서 일괄 변경 응답 데이터 */
+export type BannerBulkReorderResponse = BannerApiTypes['bulkReorder']['response'];

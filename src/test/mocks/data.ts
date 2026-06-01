@@ -6,6 +6,7 @@ import type {
   TastingTagAlcoholConnectionResponse,
   TastingTagAlcohol,
   AlcoholListItem,
+  AlcoholDetail,
   AlcoholDeleteResponse,
   CategoryReferenceMap,
   BannerListItem,
@@ -14,17 +15,21 @@ import type {
   BannerUpdateResponse,
   BannerDeleteResponse,
   BannerUpdateStatusResponse,
-  BannerUpdateSortOrderResponse,
+  BannerBulkReorderResponse,
   UserListItem,
+  ReviewListItem,
   DistilleryListItem,
   DistilleryDetail,
   DistilleryFormResponse,
   DistilleryDeleteResponse,
+  CurationListItem,
+  CurationDetail,
+  CurationBulkReorderResponse,
   RegionListItem,
   RegionDetail,
   RegionFormResponse,
   RegionDeleteResponse,
-  RegionSortOrderResponse,
+  RegionBulkReorderResponse,
 } from '@/types/api';
 
 export const mockTastingTagListItems: TastingTagListItem[] = [
@@ -162,6 +167,70 @@ export const mockAlcoholListItems: AlcoholListItem[] = [
   },
 ];
 
+export const mockAlcoholDetails: AlcoholDetail[] = [
+  {
+    alcoholId: 10,
+    korName: '글렌피딕 12년',
+    engName: 'Glenfiddich 12',
+    imageUrl: 'https://example.com/glenfiddich.jpg',
+    type: 'WHISKY',
+    korCategory: '싱글몰트',
+    engCategory: 'Single Malt',
+    categoryGroup: 'SINGLE_MALT',
+    abv: '40',
+    age: '12',
+    cask: '오크',
+    volume: '700ml',
+    description: '스코틀랜드의 대표적인 싱글몰트 위스키',
+    regionId: 1,
+    korRegion: '스코틀랜드',
+    engRegion: 'Scotland',
+    distilleryId: 1,
+    korDistillery: '글렌피딕',
+    engDistillery: 'Glenfiddich',
+    tastingTags: [
+      { id: 1, korName: '바닐라', engName: 'Vanilla' },
+      { id: 2, korName: '꿀', engName: 'Honey' },
+    ],
+    avgRating: 4.2,
+    totalRatingsCount: 150,
+    reviewCount: 45,
+    pickCount: 200,
+    createdAt: '2024-01-01T00:00:00',
+    modifiedAt: '2024-06-01T00:00:00',
+    deletedAt: null,
+  },
+  {
+    alcoholId: 20,
+    korName: '맥캘란 18년',
+    engName: 'Macallan 18',
+    imageUrl: null,
+    type: 'WHISKY',
+    korCategory: '싱글몰트',
+    engCategory: 'Single Malt',
+    categoryGroup: 'SINGLE_MALT',
+    abv: '43',
+    age: '18',
+    cask: '셰리 캐스크',
+    volume: '700ml',
+    description: '셰리 캐스크 싱글몰트 위스키',
+    regionId: 1,
+    korRegion: '스코틀랜드',
+    engRegion: 'Scotland',
+    distilleryId: 2,
+    korDistillery: '맥캘란',
+    engDistillery: 'Macallan',
+    tastingTags: [{ id: 3, korName: '셰리', engName: 'Sherry' }],
+    avgRating: 4.8,
+    totalRatingsCount: 80,
+    reviewCount: 20,
+    pickCount: 90,
+    createdAt: '2024-03-01T00:00:00',
+    modifiedAt: '2024-06-01T00:00:00',
+    deletedAt: null,
+  },
+];
+
 export const mockAlcoholDeleteResponse: AlcoholDeleteResponse = {
   code: 'ALCOHOL_DELETED',
   message: '위스키가 삭제되었습니다.',
@@ -275,10 +344,10 @@ export const mockBannerUpdateStatusResponse: BannerUpdateStatusResponse = {
   responseAt: '2024-06-01T00:00:00',
 };
 
-export const mockBannerUpdateSortOrderResponse: BannerUpdateSortOrderResponse = {
-  code: 'BANNER_SORT_ORDER_UPDATED',
+export const mockBannerBulkReorderResponse: BannerBulkReorderResponse = {
+  code: 'BANNER_REORDERED',
   message: '배너 순서가 변경되었습니다.',
-  targetId: 1,
+  targetId: 0,
   responseAt: '2024-06-01T00:00:00',
 };
 
@@ -332,6 +401,55 @@ export const mockUserListItems: UserListItem[] = [
 ];
 
 // ============================================
+// Review Mock Data
+// ============================================
+
+export const mockReviewListItems: ReviewListItem[] = [
+  {
+    reviewId: 1,
+    alcoholId: 101,
+    alcoholName: '맥캘란 12년',
+    userId: 1,
+    userNickname: '위스키러버',
+    content: '셰리 오크의 풍미가 일품입니다.',
+    reviewRating: 4.5,
+    activeStatus: 'ACTIVE',
+    displayStatus: 'PUBLIC',
+    replyCount: 3,
+    createAt: '2024-05-01T10:00:00',
+    lastModifyAt: '2024-05-02T11:00:00',
+  },
+  {
+    reviewId: 2,
+    alcoholId: 102,
+    alcoholName: '글렌피딕 15년',
+    userId: 2,
+    userNickname: '몰트마니아',
+    content: '가성비 좋은 입문용 위스키.',
+    reviewRating: 4.0,
+    activeStatus: 'ACTIVE',
+    displayStatus: 'PRIVATE',
+    replyCount: 0,
+    createAt: '2024-05-10T14:30:00',
+    lastModifyAt: null,
+  },
+  {
+    reviewId: 3,
+    alcoholId: 101,
+    alcoholName: '맥캘란 12년',
+    userId: 3,
+    userNickname: '신고당한유저',
+    content: '부적절한 내용으로 삭제된 리뷰',
+    reviewRating: 1.0,
+    activeStatus: 'DELETED',
+    displayStatus: 'PUBLIC',
+    replyCount: 1,
+    createAt: '2024-05-15T09:00:00',
+    lastModifyAt: '2024-05-16T09:00:00',
+  },
+];
+
+// ============================================
 // Distillery Mock Data
 // ============================================
 
@@ -377,6 +495,76 @@ export const mockDistilleryDeleteResponse: DistilleryDeleteResponse = {
   code: 'DISTILLERY_DELETED',
   message: '증류소가 삭제되었습니다.',
   targetId: 1,
+  responseAt: '2024-06-01T00:00:00',
+};
+
+// ============================================
+// Curation Mock Data
+// ============================================
+
+export const mockCurationListItems: CurationListItem[] = [
+  {
+    id: 1,
+    name: '신년 특집 큐레이션',
+    description: '새해를 맞이하는 특별한 위스키 모음',
+    coverImageUrl: 'https://example.com/curation1.jpg',
+    displayOrder: 0,
+    alcoholCount: 5,
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00',
+    updatedAt: '2024-01-01T00:00:00',
+  },
+  {
+    id: 2,
+    name: '입문자 추천 큐레이션',
+    description: null,
+    coverImageUrl: null,
+    displayOrder: 1,
+    alcoholCount: 3,
+    isActive: false,
+    createdAt: '2024-02-01T00:00:00',
+    updatedAt: '2024-02-01T00:00:00',
+  },
+];
+
+export const mockCurationDetail: CurationDetail = {
+  id: 1,
+  name: '신년 특집 큐레이션',
+  description: '새해를 맞이하는 특별한 위스키 모음',
+  coverImageUrl: 'https://example.com/curation1.jpg',
+  displayOrder: 0,
+  isActive: true,
+  createdAt: '2024-01-01T00:00:00',
+  updatedAt: '2024-01-01T00:00:00',
+  alcoholCount: 2,
+  alcohols: [
+    {
+      alcoholId: 10,
+      korName: '글렌피딕 12년',
+      engName: 'Glenfiddich 12',
+      korCategoryName: '싱글몰트',
+      engCategoryName: 'Single Malt',
+      imageUrl: 'https://example.com/glenfiddich.jpg',
+      createdAt: '2024-01-01T00:00:00',
+      modifiedAt: '2024-06-01T00:00:00',
+    },
+    {
+      alcoholId: 20,
+      korName: '맥캘란 18년',
+      engName: 'Macallan 18',
+      korCategoryName: '싱글몰트',
+      engCategoryName: 'Single Malt',
+      imageUrl: null,
+      createdAt: '2024-03-01T00:00:00',
+      modifiedAt: '2024-06-01T00:00:00',
+    },
+  ],
+};
+
+export const mockCurationBulkReorderResponse: CurationBulkReorderResponse = {
+  code: 'CURATION_REORDERED',
+  message: '큐레이션 순서가 변경되었습니다.',
+  targetId: 0,
   responseAt: '2024-06-01T00:00:00',
 };
 
@@ -449,10 +637,10 @@ export const mockRegionDeleteResponse: RegionDeleteResponse = {
   responseAt: '2024-06-01T00:00:00',
 };
 
-export const mockRegionSortOrderResponse: RegionSortOrderResponse = {
-  code: 'REGION_SORT_ORDER_UPDATED',
-  message: '지역 정렬 순서가 변경되었습니다.',
-  targetId: 1,
+export const mockRegionBulkReorderResponse: RegionBulkReorderResponse = {
+  code: 'REGION_REORDERED',
+  message: '지역 순서가 변경되었습니다.',
+  targetId: 0,
   responseAt: '2024-06-01T00:00:00',
 };
 

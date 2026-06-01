@@ -28,6 +28,13 @@ export const menuConfig: MenuGroup[] = [
         icon: LayoutDashboard,
         path: '/',
       },
+      {
+        id: 'dashboard-curation',
+        label: '큐레이션',
+        icon: Layers,
+        path: '/dashboard/curations',
+        roles: ['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER'],
+      },
     ],
   },
   {
@@ -208,6 +215,18 @@ export const menuConfig: MenuGroup[] = [
         label: '사용자 관리',
         icon: Users,
         path: '/users',
+        roles: ['ROOT_ADMIN'],
+      },
+    ],
+  },
+  {
+    id: 'review',
+    items: [
+      {
+        id: 'review-management',
+        label: '리뷰 관리',
+        icon: MessageSquare,
+        path: '/reviews',
         roles: ['ROOT_ADMIN'],
       },
     ],

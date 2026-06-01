@@ -153,6 +153,10 @@ E2E tests require `VITE_E2E_TEST_ID` and `VITE_E2E_TEST_PW`.
 - Pagination is 0-based because that is the backend API contract.
 - Toast messages and user-facing admin copy should be Korean unless nearby UI
   establishes otherwise.
+- Prefer ratio-, fraction-, and container-based responsive layouts over fixed
+  pixel widths for page grids and major layout columns. Use fixed dimensions
+  only for intrinsic UI elements such as icons, controls, thumbnails, or when a
+  product/design constraint explicitly requires it.
 - Use `useMemo` and `useCallback` only when they solve a real referential
   stability or measured performance problem.
 - Leave unrelated worktree changes alone.

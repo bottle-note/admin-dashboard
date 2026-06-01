@@ -2,9 +2,12 @@
  * 어드민 Alcohol API 커스텀 훅
  */
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useApiQuery } from './useApiQuery';
 import { useApiMutation, type UseApiMutationOptions } from './useApiMutation';
+import { useToast } from './useToast';
+import { getErrorMessage, type ApiError } from '@/lib/api-error';
 import {
   adminAlcoholService,
   adminAlcoholKeys,
@@ -45,6 +48,45 @@ export function useAdminAlcoholList(params?: AlcoholSearchParams) {
   );
 }
 
+export type AdminAlcoholInfiniteParams = Omit<AlcoholSearchParams, 'page'>;
+
+const DEFAULT_ALCOHOL_INFINITE_PAGE_SIZE = 10;
+
+export function useAdminAlcoholListInfinite(
+  params?: AdminAlcoholInfiniteParams,
+  options: { enabled?: boolean } = {}
+) {
+  const { showToast } = useToast();
+  const size = params?.size ?? DEFAULT_ALCOHOL_INFINITE_PAGE_SIZE;
+
+  return useInfiniteQuery<AlcoholListResponse, ApiError>({
+    queryKey: adminAlcoholKeys.list({ ...params, size, infinite: true }),
+    queryFn: async ({ pageParam }) => {
+      try {
+        return await adminAlcoholService.search({
+          ...params,
+          size,
+          page: pageParam as number,
+        });
+      } catch (error) {
+        showToast({ type: 'error', message: getErrorMessage(error) });
+        throw error;
+      }
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.hasNext ? lastPage.meta.page + 1 : undefined,
+    staleTime: 1000 * 60,
+    enabled: options.enabled ?? true,
+  });
+}
+
+export function flattenAdminAlcoholPages(
+  data: { pages: AlcoholListResponse[] } | undefined
+) {
+  return data?.pages.flatMap((page) => page.items) ?? [];
+}
+
 /**
  * 술 상세 조회 훅
  *
@@ -66,6 +108,20 @@ export function useAdminAlcoholDetail(alcoholId: number | undefined) {
       enabled: !!alcoholId && alcoholId > 0,
       staleTime: 1000 * 60, // 1분
     }
+  );
+}
+
+export function useAdminAlcoholDetailLookup() {
+  const queryClient = useQueryClient();
+
+  return useCallback(
+    (alcoholId: number) =>
+      queryClient.fetchQuery({
+        queryKey: adminAlcoholKeys.detail(alcoholId),
+        queryFn: () => adminAlcoholService.getDetail(alcoholId),
+        staleTime: 1000 * 60,
+      }),
+    [queryClient]
   );
 }
 
