@@ -20,6 +20,10 @@ import { CurationWhiskyCardListField } from './CurationWhiskyCardListField';
 interface CurationFormFieldRendererProps {
   field: CurationFieldModel;
   className?: string;
+  sectionHeader?: {
+    stepNumber?: number;
+    description?: string;
+  };
 }
 
 type StandardFieldRendererProps = {
@@ -43,9 +47,13 @@ const STANDARD_FIELD_RENDERER_REGISTRY: Record<
 };
 
 // 4. renderer registry 레이어: field model의 kind에 맞는 입력 컴포넌트를 선택해 렌더링합니다.
-export function CurationFormFieldRenderer({ field, className }: CurationFormFieldRendererProps) {
+export function CurationFormFieldRenderer({
+  field,
+  className,
+  sectionHeader,
+}: CurationFormFieldRendererProps) {
   if (field.kind === 'alcohol-card-list') {
-    return <CurationWhiskyCardListField fieldModel={field} />;
+    return <CurationWhiskyCardListField fieldModel={field} sectionHeader={sectionHeader} />;
   }
 
   return <StandardCurationFormFieldRenderer field={field} className={className} />;

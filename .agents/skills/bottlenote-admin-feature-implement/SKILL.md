@@ -33,6 +33,14 @@ truth is `docs/features/<feature-slug>/plan.md`.
    - Keep list search/filter/pagination in URL params.
    - For page grids and major layout columns, prefer ratio-, fraction-, and
      container-based responsive utilities over fixed pixel widths.
+   - Reuse design-system tokens from `tailwind.config.js`, `src/index.css`,
+     and shadcn CSS variables for colors, borders, backgrounds, and text. Avoid
+     arbitrary hex Tailwind classes such as `border-[#d9d9d9]` unless the
+     feature plan documents an explicit design exception and no suitable token
+     exists.
+   - Keep one React component per file for newly added or modified local
+     components. Split shared subcomponents into their own files instead of
+     colocating multiple component declarations in one file.
    - Do not modify `src/components/ui`.
    - Do not add barrel files unless required by an existing boundary.
 

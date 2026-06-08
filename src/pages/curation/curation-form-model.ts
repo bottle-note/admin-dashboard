@@ -56,6 +56,8 @@ export interface CurationSectionFieldModel {
 export interface CurationFormSectionModel {
   id: string;
   title: string;
+  stepNumber?: number;
+  description?: string;
   contentClassName?: string;
   fields: CurationSectionFieldModel[];
 }

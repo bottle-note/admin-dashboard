@@ -186,6 +186,12 @@ describe('createTastingEventFormModel', () => {
       'participation',
       'alcoholLineup',
     ]);
+    expect(formModel.sections.map((section) => section.stepNumber)).toEqual([2, 3, 4]);
+    expect(formModel.sections.map((section) => section.description)).toEqual([
+      '날짜 및 장소를 입력해주세요.',
+      '참가비, 모집 인원, 신청 링크와 안내사항을 입력해주세요.',
+      '앱에 노출될 시음회 위스키 라인업을 등록해주세요.',
+    ]);
     expect(formModel.sections[0]!.fields.map(({ field }) => field.key)).toEqual([
       'eventDate',
       'eventTime',

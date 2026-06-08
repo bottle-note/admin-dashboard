@@ -225,7 +225,10 @@ describe('CurationTastingEventCreatePage', () => {
     render(<CurationTastingEventCreatePage />);
 
     expect(await screen.findByRole('heading', { name: '시음회 작성' })).toBeInTheDocument();
-    expect(await screen.findByText('날짜 및 장소 정보')).toBeInTheDocument();
+    expect(await screen.findByText('기본정보')).toBeInTheDocument();
+    expect(screen.getByText('모든 큐레이션에 공통으로 들어갑니다.')).toBeInTheDocument();
+    expect(screen.getByText('날짜 및 장소')).toBeInTheDocument();
+    expect(screen.getByText('날짜 및 장소를 입력해주세요.')).toBeInTheDocument();
     expect(screen.getByText('참가 정보')).toBeInTheDocument();
     expect(screen.getAllByText('시음 위스키').length).toBeGreaterThan(0);
     expect(screen.getByText('장소 및 바(bar) 주소')).toBeInTheDocument();
@@ -276,20 +279,23 @@ describe('CurationTastingEventCreatePage', () => {
 
     await user.click(screen.getByRole('radio', { name: '아니요, 광고만 하겠습니다.' }));
 
-    expect(screen.getByRole('radio', { name: '네' })).toHaveAttribute('aria-checked', 'false');
-    expect(screen.getByRole('radio', { name: '아니요, 광고만 하겠습니다.' })).toHaveAttribute(
-      'aria-checked',
-      'true'
-    );
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: '네' })).toHaveAttribute('aria-checked', 'false');
+      expect(screen.getByRole('radio', { name: '아니요, 광고만 하겠습니다.' })).toHaveAttribute(
+        'aria-checked',
+        'true'
+      );
+    });
   });
 
   it('이미지 단일 업로드 영역에서 3장까지 등록하고 드래그 앤 드롭으로 순서를 변경한다', async () => {
+    const user = userEvent.setup();
     mockSpecSuccess();
     mockImageUpload();
 
     render(<CurationTastingEventCreatePage />);
 
-    await screen.findByLabelText('큐레이션 이미지 파일 선택');
+    const imageFileInput = await screen.findByLabelText('큐레이션 이미지 파일 선택');
 
     const files = [
       new File(['1'], 'one.jpg', { type: 'image/jpeg' }),
@@ -298,12 +304,7 @@ describe('CurationTastingEventCreatePage', () => {
       new File(['4'], 'four.png', { type: 'image/png' }),
     ];
 
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('큐레이션 이미지 파일 선택'), {
-        target: { files },
-      });
-      await Promise.resolve();
-    });
+    await user.upload(imageFileInput, files);
 
     await waitFor(() => {
       const images = screen.getAllByRole('img', { name: /큐레이션 이미지/ });
@@ -320,14 +321,18 @@ describe('CurationTastingEventCreatePage', () => {
       getData: vi.fn(() => '1'),
     };
 
-    fireEvent.dragStart(screen.getByLabelText('큐레이션 이미지 2 순서 변경'), { dataTransfer });
-    fireEvent.dragOver(screen.getByLabelText('큐레이션 이미지 1 순서 변경'), { dataTransfer });
-    fireEvent.drop(screen.getByLabelText('큐레이션 이미지 1 순서 변경'), { dataTransfer });
+    await act(async () => {
+      fireEvent.dragStart(screen.getByLabelText('큐레이션 이미지 2 순서 변경'), { dataTransfer });
+      fireEvent.dragOver(screen.getByLabelText('큐레이션 이미지 1 순서 변경'), { dataTransfer });
+      fireEvent.drop(screen.getByLabelText('큐레이션 이미지 1 순서 변경'), { dataTransfer });
+    });
 
-    const reorderedImages = screen.getAllByRole('img', { name: /큐레이션 이미지/ });
-    expect(reorderedImages[0]).toHaveAttribute('src', 'https://cdn.example.com/curation/2.jpg');
-    expect(reorderedImages[1]).toHaveAttribute('src', 'https://cdn.example.com/curation/1.jpg');
-    expect(reorderedImages[2]).toHaveAttribute('src', 'https://cdn.example.com/curation/3.jpg');
+    await waitFor(() => {
+      const reorderedImages = screen.getAllByRole('img', { name: /큐레이션 이미지/ });
+      expect(reorderedImages[0]).toHaveAttribute('src', 'https://cdn.example.com/curation/2.jpg');
+      expect(reorderedImages[1]).toHaveAttribute('src', 'https://cdn.example.com/curation/1.jpg');
+      expect(reorderedImages[2]).toHaveAttribute('src', 'https://cdn.example.com/curation/3.jpg');
+    });
   });
 
   it('스펙 상세 조회가 403이면 작성 폼과 저장 버튼을 표시하지 않는다', async () => {

@@ -1,7 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
 import type { CurationFormSectionModel } from '../curation-form-model';
 import { CurationFormFieldRenderer } from './CurationFormFieldRenderer';
+import { CurationSectionCard } from './CurationSectionCard';
 
 interface CurationFormSectionProps {
   section: CurationFormSectionModel;
@@ -12,19 +11,27 @@ export function CurationFormSection({ section }: CurationFormSectionProps) {
   const firstField = section.fields[0]?.field;
 
   if (section.fields.length === 1 && firstField?.kind === 'alcohol-card-list') {
-    return <CurationFormFieldRenderer field={firstField} />;
+    return (
+      <CurationFormFieldRenderer
+        field={firstField}
+        sectionHeader={{
+          stepNumber: section.stepNumber,
+          description: section.description,
+        }}
+      />
+    );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{section.title}</CardTitle>
-      </CardHeader>
-      <CardContent className={section.contentClassName}>
-        {section.fields.map(({ field, className }) => (
-          <CurationFormFieldRenderer key={field.key} field={field} className={className} />
-        ))}
-      </CardContent>
-    </Card>
+    <CurationSectionCard
+      stepNumber={section.stepNumber}
+      title={section.title}
+      description={section.description}
+      contentClassName={section.contentClassName}
+    >
+      {section.fields.map(({ field, className }) => (
+        <CurationFormFieldRenderer key={field.key} field={field} className={className} />
+      ))}
+    </CurationSectionCard>
   );
 }
