@@ -227,6 +227,8 @@ describe('CurationTastingEventCreatePage', () => {
     expect(await screen.findByRole('heading', { name: '시음회 작성' })).toBeInTheDocument();
     expect(await screen.findByText('기본정보')).toBeInTheDocument();
     expect(screen.getByText('모든 큐레이션에 공통으로 들어갑니다.')).toBeInTheDocument();
+    expect(screen.getByText('큐레이션 내용')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '모집기간 안내' })).toBeInTheDocument();
     expect(screen.getByText('날짜 및 장소')).toBeInTheDocument();
     expect(screen.getByText('날짜 및 장소를 입력해주세요.')).toBeInTheDocument();
     expect(screen.getByText('참가 정보')).toBeInTheDocument();

@@ -7,16 +7,20 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 
 import { CurationSectionCard } from '../../components/CurationSectionCard';
+import { RecruitmentPeriodTooltip } from './RecruitmentPeriodTooltip';
+import { TastingEventImageUploadField } from './TastingEventImageUploadField';
 import type { TastingEventCreateFormState } from '../tasting-event.schema';
 
 interface TastingEventBasicInfoSectionProps {
   isRootAdmin: boolean;
   isEditMode?: boolean;
+  onImageUploadingChange?: (isUploading: boolean) => void;
 }
 
 export function TastingEventBasicInfoSection({
   isRootAdmin,
   isEditMode = false,
+  onImageUploadingChange,
 }: TastingEventBasicInfoSectionProps) {
   const form = useFormContext<TastingEventCreateFormState>();
   const isActive = useWatch({
@@ -30,43 +34,87 @@ export function TastingEventBasicInfoSection({
       stepNumber={1}
       title="기본정보"
       description="모든 큐레이션에 공통으로 들어갑니다."
-      contentClassName="space-y-4"
+      contentClassName="space-y-6"
     >
-      <div className="grid gap-4 md:grid-cols-2">
-        <FormField label="큐레이션명" required error={form.formState.errors.name?.message}>
-          <Input
-            aria-label="큐레이션명"
-            {...form.register('name')}
-            placeholder="예: 6월 싱글몰트 시음회"
-          />
-        </FormField>
-        <FormField
-          label="노출 시작일"
-          required={!isNullableBasicInfoAllowed}
-          error={form.formState.errors.exposureStartDate?.message}
-        >
-          <Input aria-label="노출 시작일" type="date" {...form.register('exposureStartDate')} />
-        </FormField>
-        <FormField
-          label="노출 종료일"
-          required={!isNullableBasicInfoAllowed}
-          error={form.formState.errors.exposureEndDate?.message}
-        >
-          <Input aria-label="노출 종료일" type="date" {...form.register('exposureEndDate')} />
-        </FormField>
+      <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField label="큐레이션명" required error={form.formState.errors.name?.message}>
+            <Input
+              aria-label="큐레이션명"
+              {...form.register('name')}
+              placeholder="예: 6월 싱글몰트 시음회"
+            />
+          </FormField>
+          <FormField
+            label="큐레이션 내용"
+            required={!isNullableBasicInfoAllowed}
+            error={form.formState.errors.description?.message}
+            className="md:col-span-2"
+          >
+            <Textarea
+              aria-label="설명"
+              rows={4}
+              {...form.register('description')}
+              placeholder="시음회 큐레이션에 대한 설명을 입력하세요."
+            />
+          </FormField>
+          {onImageUploadingChange && (
+            <div className="space-y-2 md:col-span-2">
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-medium">
+                    이미지
+                    {!isNullableBasicInfoAllowed && (
+                      <span className="ml-1 text-destructive">*</span>
+                    )}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  최대 3장까지 등록할 수 있고, 등록된 순서대로 노출됩니다.
+                </p>
+              </div>
+              <TastingEventImageUploadField onUploadingChange={onImageUploadingChange} />
+            </div>
+          )}
+          <div className="space-y-2 md:col-span-2">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3">
+              <div className="min-w-0 space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-medium">
+                    노출 시작일
+                    {!isNullableBasicInfoAllowed && (
+                      <span className="ml-1 text-destructive">*</span>
+                    )}
+                  </span>
+                  <RecruitmentPeriodTooltip />
+                </div>
+                <Input
+                  aria-label="노출 시작일"
+                  type="date"
+                  {...form.register('exposureStartDate')}
+                />
+                {form.formState.errors.exposureStartDate?.message && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.exposureStartDate.message}
+                  </p>
+                )}
+              </div>
+              <span className="pt-9 text-sm font-medium text-muted-foreground" aria-hidden="true">
+                ~
+              </span>
+              <FormField
+                label="노출 종료일"
+                required={!isNullableBasicInfoAllowed}
+                error={form.formState.errors.exposureEndDate?.message}
+                className="min-w-0"
+              >
+                <Input aria-label="노출 종료일" type="date" {...form.register('exposureEndDate')} />
+              </FormField>
+            </div>
+          </div>
+        </div>
       </div>
-      <FormField
-        label="설명"
-        required={!isNullableBasicInfoAllowed}
-        error={form.formState.errors.description?.message}
-      >
-        <Textarea
-          aria-label="설명"
-          rows={4}
-          {...form.register('description')}
-          placeholder="시음회 큐레이션에 대한 설명을 입력하세요."
-        />
-      </FormField>
+
       {isRootAdmin && (
         <div className="space-y-4 border-t pt-4">
           <div>
