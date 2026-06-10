@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, createEvent, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 
@@ -259,6 +259,90 @@ describe('CurationTastingEventCreatePage', () => {
     expect(whiskySearchInput).toBeDisabled();
   });
 
+  it('시음 위스키 카드에 우측 핸들을 표시하고 드래그 앤 드롭으로 순서를 변경한다', async () => {
+    const user = userEvent.setup();
+    mockSpecSuccess();
+
+    render(<CurationTastingEventCreatePage />);
+
+    const whiskySearchInput = await screen.findByPlaceholderText('위스키 검색하여 추가...');
+
+    await user.type(whiskySearchInput, '글렌');
+    await user.click(await screen.findByText('글렌피딕 12년'));
+    expect(await screen.findByText('위스키 1')).toBeInTheDocument();
+    expect(await screen.findByLabelText('글렌피딕 12년 순서 변경')).toBeInTheDocument();
+
+    await user.type(whiskySearchInput, '맥');
+    await user.click(await screen.findByText('맥캘란 18년'));
+    expect(await screen.findByText('위스키 2')).toBeInTheDocument();
+    expect(await screen.findByLabelText('맥캘란 18년 순서 변경')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: '삭제' })).toHaveLength(2);
+
+    expect(
+      screen
+        .getAllByRole('button', { name: /순서 변경/ })
+        .map((button) => button.getAttribute('aria-label'))
+    ).toEqual(['글렌피딕 12년 순서 변경', '맥캘란 18년 순서 변경']);
+
+    const dataTransfer = {
+      effectAllowed: '',
+      dropEffect: '',
+      setData: vi.fn(),
+      getData: vi.fn(() => '1'),
+    };
+    const targetHandle = screen.getByLabelText('맥캘란 18년 순서 변경');
+
+    expect(targetHandle.closest('[draggable="true"]')).toBeInTheDocument();
+    expect(targetHandle).not.toHaveAttribute('draggable');
+
+    await act(async () => {
+      fireEvent.dragStart(targetHandle, { dataTransfer });
+      fireEvent.dragOver(screen.getByLabelText('글렌피딕 12년 순서 변경'), { dataTransfer });
+      fireEvent.drop(screen.getByLabelText('글렌피딕 12년 순서 변경'), { dataTransfer });
+    });
+
+    expect(dataTransfer.setData).toHaveBeenCalledWith('text/plain', '1');
+
+    await waitFor(() => {
+      expect(
+        screen
+          .getAllByRole('button', { name: /순서 변경/ })
+          .map((button) => button.getAttribute('aria-label'))
+      ).toEqual(['맥캘란 18년 순서 변경', '글렌피딕 12년 순서 변경']);
+    });
+  });
+
+  it('시음 위스키 카드 내부 입력 영역에서는 드래그 정렬을 시작하지 않는다', async () => {
+    const user = userEvent.setup();
+    mockSpecSuccess();
+
+    render(<CurationTastingEventCreatePage />);
+
+    const whiskySearchInput = await screen.findByPlaceholderText('위스키 검색하여 추가...');
+
+    await user.type(whiskySearchInput, '글렌');
+    await user.click(await screen.findByText('글렌피딕 12년'));
+
+    const tagInput = await screen.findByLabelText('글렌피딕 12년 테이스팅 태그');
+    const commentTextarea = screen.getByLabelText('글렌피딕 12년 기대평');
+    const dataTransfer = {
+      effectAllowed: '',
+      dropEffect: '',
+      setData: vi.fn(),
+      getData: vi.fn(() => ''),
+    };
+
+    const tagInputDragStart = createEvent.dragStart(tagInput, { dataTransfer });
+    fireEvent(tagInput, tagInputDragStart);
+
+    const commentDragStart = createEvent.dragStart(commentTextarea, { dataTransfer });
+    fireEvent(commentTextarea, commentDragStart);
+
+    expect(tagInputDragStart.defaultPrevented).toBe(true);
+    expect(commentDragStart.defaultPrevented).toBe(true);
+    expect(dataTransfer.setData).not.toHaveBeenCalled();
+  });
+
   it('ROOT_ADMIN에게만 관리자 전용 설정을 표시한다', async () => {
     setCurrentUserRoles(['ROOT_ADMIN']);
     mockSpecSuccess();
@@ -441,14 +525,25 @@ describe('CurationTastingEventCreatePage', () => {
 
     await user.type(screen.getByPlaceholderText('위스키 검색하여 추가...'), '글렌');
     await user.click(await screen.findByText('글렌피딕 12년'));
-    expect(await screen.findByText('평균 별점')).toBeInTheDocument();
-    expect(screen.getByText('4.2')).toBeInTheDocument();
-    expect(screen.getByText('리뷰 수')).toBeInTheDocument();
-    expect(screen.getByText('45')).toBeInTheDocument();
+    expect(await screen.findByText('도수 40% · 싱글몰트')).toBeInTheDocument();
+    expect(screen.getByText('평균별점 4.2 (유저평가 150)')).toBeInTheDocument();
+    expect(screen.queryByText('리뷰 수')).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('테이스팅 태그검색 후 추가')).toBeInTheDocument();
+    expect(screen.getByText('2/12')).toBeInTheDocument();
     expect(screen.getAllByText('바닐라').length).toBeGreaterThan(0);
     expect(screen.getAllByText('꿀').length).toBeGreaterThan(0);
+    const tagInput = screen.getByLabelText('글렌피딕 12년 테이스팅 태그');
+    await user.type(tagInput, '바');
+    expect(await screen.findByText('검색 결과가 없습니다')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '바닐라 태그 선택' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '태그 검색어 지우기' }));
+    await user.type(tagInput, '과');
+    await user.click(await screen.findByRole('button', { name: '과일 태그 선택' }));
+    expect(screen.getAllByText('과일').length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: '바닐라 태그 삭제' }));
-    await user.type(screen.getByLabelText('글렌피딕 12년 테이스팅 태그'), '셰리{enter}');
+    await user.type(tagInput, '셰리');
+    await user.click(await screen.findByRole('button', { name: '"셰리" 직접 추가' }));
+    expect(screen.getByText('3/12')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('글렌피딕 12년 기대평'), {
       target: { value: '첫 잔으로 가볍게 시작하는 위스키' },
     });
@@ -483,7 +578,7 @@ describe('CurationTastingEventCreatePage', () => {
               volume: '700ml',
               regionName: '스코틀랜드',
               korCategory: '싱글몰트',
-              selectedTags: ['꿀', '셰리'],
+              selectedTags: ['꿀', '과일', '셰리'],
             },
             comment: '첫 잔으로 가볍게 시작하는 위스키',
           },

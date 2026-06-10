@@ -146,7 +146,7 @@ function createTastingEventFormSections(fields: CurationFieldModel[]): CurationF
       id: 'participation',
       title: '참가 정보',
       stepNumber: 3,
-      description: '참가비, 모집 인원, 신청 링크와 안내사항을 입력해주세요.',
+      description: '참가비, 인원수, 신청 링크(구글폼, 오픈채팅방 주소) 등을 입력해주세요.',
       contentClassName: 'grid gap-4 md:grid-cols-2',
       fields: participationFields.map((field) => ({
         field,
@@ -157,7 +157,6 @@ function createTastingEventFormSections(fields: CurationFieldModel[]): CurationF
       id: 'alcoholLineup',
       title: '시음 위스키',
       stepNumber: 4,
-      description: '앱에 노출될 시음회 위스키 라인업을 등록해주세요.',
       contentClassName: 'space-y-4',
       fields: alcoholLineupFields.map((field) => ({ field })),
     },

@@ -47,6 +47,10 @@ export function useTastingTagList(params?: TastingTagSearchParams) {
 /** 무한 스크롤용 page 인자 제외 파라미터 */
 export type TastingTagInfiniteParams = Omit<TastingTagSearchParams, 'page'>;
 
+export interface TastingTagInfiniteOptions {
+  enabled?: boolean;
+}
+
 const DEFAULT_INFINITE_PAGE_SIZE = 20;
 
 /**
@@ -66,7 +70,10 @@ const DEFAULT_INFINITE_PAGE_SIZE = 20;
  * const allItems = data?.pages.flatMap((p) => p.items) ?? [];
  * ```
  */
-export function useTastingTagListInfinite(params?: TastingTagInfiniteParams) {
+export function useTastingTagListInfinite(
+  params?: TastingTagInfiniteParams,
+  options: TastingTagInfiniteOptions = {}
+) {
   const { showToast } = useToast();
   const size = params?.size ?? DEFAULT_INFINITE_PAGE_SIZE;
 
@@ -87,6 +94,7 @@ export function useTastingTagListInfinite(params?: TastingTagInfiniteParams) {
     initialPageParam: 0,
     getNextPageParam: (lastPage) =>
       lastPage.meta.hasNext ? lastPage.meta.page + 1 : undefined,
+    enabled: options.enabled ?? true,
     staleTime: 1000 * 60 * 5,
   });
 }
