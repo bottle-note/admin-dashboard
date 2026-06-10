@@ -85,6 +85,7 @@ export function createTastingEventFormStateFromCuration(
         break;
       case 'textarea':
       case 'text':
+      case 'address':
         formState[field.key] = normalizeStringValue(value);
         break;
     }

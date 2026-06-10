@@ -136,6 +136,10 @@ describe('createTastingEventFormModel', () => {
 
     expect(fieldsByKey.barAddress).toMatchObject({
       label: '장소 및 바(bar) 주소',
+      kind: 'address',
+    });
+    expect(fieldsByKey.detailAddress).toMatchObject({
+      label: '상세 주소',
       kind: 'text',
     });
     expect(fieldsByKey.entryFee).toMatchObject({

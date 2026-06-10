@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { FieldValues } from 'react-hook-form';
 import { useFormContext, useWatch } from 'react-hook-form';
 
+import { AddressSearchInput } from '@/components/common/AddressSearchInput';
 import { FormField } from '@/components/common/FormField';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,6 +42,7 @@ const STANDARD_FIELD_RENDERER_REGISTRY: Record<
   text: renderTextInput,
   date: renderTextInput,
   time: renderTextInput,
+  address: renderAddressInput,
   textarea: renderTextAreaInput,
   number: renderNumberInput,
   'boolean-radio': renderBooleanRadioInput,
@@ -95,6 +97,13 @@ function renderTextInput({ field, form, name }: StandardFieldRendererProps) {
   return <TextInputField field={field} form={form} name={name} />;
 }
 
+// address field model을 주소 검색 input renderer로 위임합니다.
+function renderAddressInput({ field, form, name }: StandardFieldRendererProps) {
+  if (field.kind !== 'address') return null;
+
+  return <AddressField field={field} form={form} name={name} />;
+}
+
 // textarea field model을 Textarea renderer로 위임합니다.
 function renderTextAreaInput({ field, form, name }: StandardFieldRendererProps) {
   if (field.kind !== 'textarea') return null;
@@ -133,6 +142,29 @@ function TextInputField({
       maxLength={field.maxLength}
       placeholder={field.placeholder}
       {...form.register(name)}
+    />
+  );
+}
+
+// address field model을 주소 검색 입력 컴포넌트로 렌더링합니다.
+function AddressField({
+  field,
+  form,
+  name,
+}: {
+  field: CurationTextFieldModel;
+  form: ReturnType<typeof useFormContext<FieldValues>>;
+  name: string;
+}) {
+  return (
+    <AddressSearchInput
+      aria-label={field.label}
+      placeholder={field.placeholder}
+      maxLength={field.maxLength}
+      registration={form.register(name)}
+      onAddressSelect={(next) =>
+        form.setValue(name, next, { shouldDirty: true, shouldValidate: true })
+      }
     />
   );
 }

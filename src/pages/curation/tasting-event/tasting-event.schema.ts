@@ -155,6 +155,7 @@ function createDefaultTastingEventPayloadFieldValue(field: CurationFieldModel): 
     case 'time':
     case 'textarea':
     case 'text':
+    case 'address':
       return '';
   }
 }

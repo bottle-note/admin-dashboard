@@ -7,6 +7,7 @@ export type CurationFieldKind =
   | 'textarea'
   | 'date'
   | 'time'
+  | 'address'
   | 'number'
   | 'boolean-radio'
   | 'alcohol-card-list';
@@ -23,7 +24,7 @@ export interface CurationBaseFieldModel {
 }
 
 export interface CurationTextFieldModel extends CurationBaseFieldModel {
-  kind: 'text' | 'textarea' | 'date' | 'time';
+  kind: 'text' | 'textarea' | 'date' | 'time' | 'address';
   maxLength?: number;
 }
 
@@ -150,6 +151,7 @@ function resolveSchemaKind(
 ): CurationFieldKind {
   if (fieldStyle === 'long-text') return 'textarea';
   if (fieldStyle === 'plain-text') return 'text';
+  if (fieldStyle === 'address-search') return 'address';
   if (fieldStyle === 'alcohol-card-list') return 'alcohol-card-list';
   if (fieldStyle === 'time') return 'time';
   if (fieldStyle === 'date') return 'date';
@@ -199,6 +201,7 @@ export function createCurationBasicFieldModel(
     case 'textarea':
     case 'date':
     case 'time':
+    case 'address':
     case 'text':
       return {
         ...base,

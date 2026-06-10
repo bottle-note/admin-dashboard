@@ -86,7 +86,11 @@ function applyTastingEventFieldOverrides(field: CurationBasicFieldModel): Curati
         : field;
     case 'barAddress':
       return field.kind === 'text'
-        ? { ...field, placeholder: '예: 서울 강남구 테헤란로 123' }
+        ? ({
+            ...field,
+            kind: 'address',
+            placeholder: '예: 서울 강남구 테헤란로 123',
+          } satisfies CurationTextFieldModel)
         : field;
     case 'detailAddress':
       return field.kind === 'text' ? { ...field, placeholder: '예: 2층 도시남 바' } : field;
