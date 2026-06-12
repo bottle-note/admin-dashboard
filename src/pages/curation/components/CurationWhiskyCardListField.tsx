@@ -44,6 +44,7 @@ export function CurationWhiskyCardListField({
   const fetchAlcoholDetail = useAdminAlcoholDetailLookup();
   const { showToast } = useToast();
   const [tagInputs, setTagInputs] = useState<Record<string, string>>({});
+  const [manualInputFieldIds, setManualInputFieldIds] = useState<Set<string>>(() => new Set());
   const [pendingAlcoholId, setPendingAlcoholId] = useState<number | null>(null);
   const [draggedAlcoholIndex, setDraggedAlcoholIndex] = useState<number | null>(null);
   const [dragOverAlcoholIndex, setDragOverAlcoholIndex] = useState<number | null>(null);
@@ -66,8 +67,13 @@ export function CurationWhiskyCardListField({
   const isAddDisabled = isMaxReached || isAddingBottleNoteWhisky;
   const limitDescription = `${fieldModel.minItems}-${fieldModel.maxItems}개까지 등록할 수 있습니다. 검색 추가와 직접 입력을 지원하며, 테이스팅 태그 순서가 앱 노출 순서입니다.`;
 
-  const handleAddBottleNoteWhisky = async (whisky: SelectedWhisky) => {
+  const handleAddEmptyWhisky = () => {
     if (isAddDisabled) return;
+    alcoholFieldArray.append(createManualCurationWhiskyItem(), { shouldFocus: false });
+  };
+
+  const handleSelectBottleNoteWhisky = async (index: number, whisky: SelectedWhisky) => {
+    if (pendingAlcoholId !== null) return;
 
     setPendingAlcoholId(whisky.alcoholId);
 
@@ -78,11 +84,15 @@ export function CurationWhiskyCardListField({
         0,
         fieldModel.selectedTags.maxItems
       );
-      alcoholFieldArray.append(curationWhiskyItem, {
-        shouldFocus: false,
+      form.setValue(`alcohols.${index}` as const, curationWhiskyItem, {
+        shouldDirty: true,
+        shouldValidate: true,
       });
     } catch {
-      alcoholFieldArray.append(createBottleNoteCurationWhiskyItem(whisky), { shouldFocus: false });
+      form.setValue(`alcohols.${index}` as const, createBottleNoteCurationWhiskyItem(whisky), {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
       showToast({
         type: 'error',
         message: '위스키 상세 정보를 불러오지 못해 기본 정보만 추가했습니다.',
@@ -92,9 +102,21 @@ export function CurationWhiskyCardListField({
     }
   };
 
-  const handleAddManualWhisky = () => {
-    if (isAddDisabled) return;
-    alcoholFieldArray.append(createManualCurationWhiskyItem(), { shouldFocus: false });
+  const handleUseManualInput = (fieldId: string, index: number) => {
+    const currentItem = form.getValues(`alcohols.${index}` as const);
+
+    if (!currentItem || currentItem.source !== 'MANUAL') {
+      form.setValue(`alcohols.${index}` as const, createManualCurationWhiskyItem(), {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+
+    setManualInputFieldIds((prev) => {
+      const next = new Set(prev);
+      next.add(fieldId);
+      return next;
+    });
   };
 
   const handleTagInputChange = (fieldId: string, value: string) => {
@@ -226,23 +248,6 @@ export function CurationWhiskyCardListField({
       }
       contentClassName="space-y-4"
     >
-      <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-        <WhiskySearchSelect
-          onSelect={handleAddBottleNoteWhisky}
-          excludeIds={selectedAlcoholIds}
-          placeholder="위스키 검색하여 추가..."
-          disabled={isAddDisabled}
-        />
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleAddManualWhisky}
-          disabled={isAddDisabled}
-        >
-          <Plus className="h-4 w-4" />
-          직접 입력
-        </Button>
-      </div>
       {isAddingBottleNoteWhisky && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -269,8 +274,18 @@ export function CurationWhiskyCardListField({
               item?.alcohol.korName ||
               (item?.source === 'MANUAL' ? '직접 입력 위스키' : '시음 위스키');
             const manualFieldPrefix = `${index + 1}번 수동 위스키`;
+            const hasWhiskyValidationError = Boolean(
+              itemError?.alcohol?.korName || itemError?.alcohol?.selectedTags
+            );
+            const isManualInput =
+              item?.source === 'MANUAL' &&
+              (manualInputFieldIds.has(field.id) ||
+                hasManualWhiskyValue(item.alcohol) ||
+                hasWhiskyValidationError);
+            const isEmptyWhiskyCard = item?.source === 'MANUAL' && !isManualInput;
             const whiskyProfile = getWhiskyProfile(item?.alcohol);
             const whiskyRating = getWhiskyRating(item?.stats);
+            const whiskyImageUrl = normalizeImageUrl(item?.alcohol.imageUrl);
             const tagError = itemError?.alcohol?.selectedTags?.message;
             const commentError = itemError?.comment?.message;
 
@@ -306,182 +321,229 @@ export function CurationWhiskyCardListField({
                   </Button>
                 </div>
 
-                <div className="mt-5 grid gap-4 md:grid-cols-[7rem_minmax(0,1fr)_2.5rem]">
-                  <div className="flex h-40 items-center justify-center overflow-hidden rounded-md bg-background">
-                    {item?.alcohol.imageUrl ? (
-                      <img
-                        src={item.alcohol.imageUrl}
-                        alt={itemName}
-                        className="h-full max-h-40 w-full object-contain"
-                      />
-                    ) : (
-                      <div className="flex h-24 w-20 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
-                        No
+                {isEmptyWhiskyCard ? (
+                  <div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_2.5rem]">
+                    <div className="min-w-0">
+                      <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+                        <WhiskySearchSelect
+                          onSelect={(whisky) => handleSelectBottleNoteWhisky(index, whisky)}
+                          excludeIds={selectedAlcoholIds}
+                          placeholder="위스키 검색 ..."
+                          disabled={pendingAlcoholId !== null}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => handleUseManualInput(field.id, index)}
+                          disabled={pendingAlcoholId !== null}
+                        >
+                          직접 입력
+                        </Button>
                       </div>
-                    )}
-                  </div>
-
-                  <div className="min-w-0 space-y-3">
-                    <div className="space-y-1">
-                      <p className="truncate text-base font-semibold text-foreground">{itemName}</p>
-                      {item?.alcohol.engName && (
-                        <p className="truncate text-sm text-foreground">{item.alcohol.engName}</p>
-                      )}
-                      {whiskyProfile && <p className="text-sm text-foreground">{whiskyProfile}</p>}
-                      {whiskyRating && <p className="text-sm text-foreground">{whiskyRating}</p>}
                     </div>
-
-                    {item?.source === 'MANUAL' && (
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <FormField
-                          label="위스키 한글명"
-                          required
-                          error={itemError?.alcohol?.korName?.message}
-                        >
-                          <Input
-                            aria-label={`${manualFieldPrefix} 한글명`}
-                            {...form.register(`alcohols.${index}.alcohol.korName` as const)}
-                            placeholder="예: 글렌드로낙 오리지널 12년"
+                    <button
+                      type="button"
+                      data-whisky-drag-handle="true"
+                      aria-label={`${itemName} 순서 변경`}
+                      className="flex h-10 w-10 cursor-grab items-center justify-center justify-self-end text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:cursor-grabbing"
+                      onPointerDown={(event) => handleWhiskyDragHandlePointerDown(index, event)}
+                      onPointerUp={handleWhiskyDragHandlePointerEnd}
+                      onPointerCancel={handleWhiskyDragHandlePointerEnd}
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mt-5 grid gap-4 md:grid-cols-[7rem_minmax(0,1fr)_2.5rem]">
+                      <div className="flex h-40 items-center justify-center overflow-hidden rounded-md bg-background">
+                        {whiskyImageUrl ? (
+                          <img
+                            key={whiskyImageUrl}
+                            src={whiskyImageUrl}
+                            alt={itemName}
+                            className="h-full max-h-40 w-full object-contain"
                           />
-                        </FormField>
-                        <FormField label="위스키 영문명">
-                          <Input
-                            aria-label={`${manualFieldPrefix} 영문명`}
-                            {...form.register(`alcohols.${index}.alcohol.engName` as const)}
-                            placeholder="예: GLENDRONACH ORIGINAL 12Y"
-                          />
-                        </FormField>
-                        <FormField label="이미지 URL" className="md:col-span-2">
-                          <Input
-                            aria-label={`${manualFieldPrefix} 이미지 URL`}
-                            {...form.register(`alcohols.${index}.alcohol.imageUrl` as const)}
-                            placeholder="https://img.example.com/alcohols/1.png"
-                          />
-                        </FormField>
-                        <FormField label="도수">
-                          <Input
-                            aria-label={`${manualFieldPrefix} 도수`}
-                            {...form.register(`alcohols.${index}.alcohol.abv` as const)}
-                            placeholder="예: 43"
-                          />
-                        </FormField>
-                        <FormField label="용량">
-                          <Input
-                            aria-label={`${manualFieldPrefix} 용량`}
-                            {...form.register(`alcohols.${index}.alcohol.volume` as const)}
-                            placeholder="예: 700ml"
-                          />
-                        </FormField>
-                        <FormField label="캐스크">
-                          <Input
-                            aria-label={`${manualFieldPrefix} 캐스크`}
-                            {...form.register(`alcohols.${index}.alcohol.cask` as const)}
-                            placeholder="예: 셰리 캐스크"
-                          />
-                        </FormField>
-                        <FormField label="지역">
-                          <Input
-                            aria-label={`${manualFieldPrefix} 지역`}
-                            {...form.register(`alcohols.${index}.alcohol.regionName` as const)}
-                            placeholder="예: 스코틀랜드/하이랜드"
-                          />
-                        </FormField>
-                        <FormField label="카테고리">
-                          <Input
-                            aria-label={`${manualFieldPrefix} 카테고리`}
-                            {...form.register(`alcohols.${index}.alcohol.korCategory` as const)}
-                            placeholder="예: 싱글 몰트"
-                          />
-                        </FormField>
+                        ) : (
+                          <div className="flex h-24 w-20 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
+                            No
+                          </div>
+                        )}
                       </div>
-                    )}
 
-                    <div className="space-y-2">
-                      <div className="flex max-w-md items-center justify-between gap-3">
-                        <p className="text-sm font-medium text-foreground">
-                          {fieldModel.selectedTags.label}
-                          {fieldModel.selectedTags.required && (
-                            <span className="ml-1 text-destructive">*</span>
+                      <div className="min-w-0 space-y-3">
+                        <div className="space-y-1">
+                          <p className="truncate text-base font-semibold text-foreground">
+                            {itemName}
+                          </p>
+                          {item?.alcohol.engName && (
+                            <p className="truncate text-sm text-foreground">
+                              {item.alcohol.engName}
+                            </p>
                           )}
-                        </p>
-                        <span
-                          className={cn(
-                            'text-xs font-medium text-muted-foreground',
-                            tags.length >= fieldModel.selectedTags.maxItems && 'text-destructive'
+                          {whiskyProfile && (
+                            <p className="text-sm text-foreground">{whiskyProfile}</p>
                           )}
-                        >
-                          {tags.length}/{fieldModel.selectedTags.maxItems}
-                        </span>
-                      </div>
-                      <TastingTagSearchSelect
-                        ariaLabel={`${itemName} 테이스팅 태그`}
-                        value={tagInput}
-                        onValueChange={(value) => handleTagInputChange(field.id, value)}
-                        onSelect={(tag) => {
-                          handleAddTagValue(index, tag.korName);
-                        }}
-                        onCreate={(value) => handleAddTagValue(index, value)}
-                        selectedTagNames={tags}
-                        placeholder="테이스팅 태그검색 후 추가"
-                        disabled={tags.length >= fieldModel.selectedTags.maxItems}
-                        className="max-w-md"
-                      />
-                      {tagError && <p className="text-sm text-destructive">{tagError}</p>}
-                      {tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {tags.map((tag) => (
-                            <Badge
-                              key={tag}
-                              variant="outline"
-                              className="h-7 gap-1 rounded-md border-border bg-background px-2 text-xs font-normal text-foreground hover:bg-background"
-                            >
-                              {tag}
-                              <button
-                                type="button"
-                                className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-background hover:bg-foreground/80"
-                                onClick={() => handleRemoveTag(index, tag)}
-                                aria-label={`${tag} 태그 삭제`}
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          ))}
+                          {whiskyRating && (
+                            <p className="text-sm text-foreground">{whiskyRating}</p>
+                          )}
                         </div>
-                      )}
+
+                        {isManualInput && (
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <FormField
+                              label="위스키 한글명"
+                              required
+                              error={itemError?.alcohol?.korName?.message}
+                            >
+                              <Input
+                                aria-label={`${manualFieldPrefix} 한글명`}
+                                {...form.register(`alcohols.${index}.alcohol.korName` as const)}
+                                placeholder="예: 글렌드로낙 오리지널 12년"
+                              />
+                            </FormField>
+                            <FormField label="위스키 영문명">
+                              <Input
+                                aria-label={`${manualFieldPrefix} 영문명`}
+                                {...form.register(`alcohols.${index}.alcohol.engName` as const)}
+                                placeholder="예: GLENDRONACH ORIGINAL 12Y"
+                              />
+                            </FormField>
+                            <FormField label="이미지 URL" className="md:col-span-2">
+                              <Input
+                                aria-label={`${manualFieldPrefix} 이미지 URL`}
+                                {...form.register(`alcohols.${index}.alcohol.imageUrl` as const)}
+                                placeholder="https://img.example.com/alcohols/1.png"
+                              />
+                            </FormField>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <div className="flex max-w-md items-center justify-between gap-3">
+                            <p className="text-sm font-medium text-foreground">
+                              {fieldModel.selectedTags.label}
+                              {fieldModel.selectedTags.required && (
+                                <span className="ml-1 text-destructive">*</span>
+                              )}
+                            </p>
+                            <span
+                              className={cn(
+                                'text-xs font-medium text-muted-foreground',
+                                tags.length >= fieldModel.selectedTags.maxItems &&
+                                  'text-destructive'
+                              )}
+                            >
+                              {tags.length}/{fieldModel.selectedTags.maxItems}
+                            </span>
+                          </div>
+                          <TastingTagSearchSelect
+                            ariaLabel={`${itemName} 테이스팅 태그`}
+                            value={tagInput}
+                            onValueChange={(value) => handleTagInputChange(field.id, value)}
+                            onSelect={(tag) => {
+                              handleAddTagValue(index, tag.korName);
+                            }}
+                            onCreate={(value) => handleAddTagValue(index, value)}
+                            selectedTagNames={tags}
+                            placeholder="테이스팅 태그검색 후 추가"
+                            disabled={tags.length >= fieldModel.selectedTags.maxItems}
+                            className="max-w-md"
+                          />
+                          {tagError && <p className="text-sm text-destructive">{tagError}</p>}
+                          {tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {tags.map((tag) => (
+                                <Badge
+                                  key={tag}
+                                  variant="outline"
+                                  className="h-7 gap-1 rounded-md border-border bg-background px-2 text-xs font-normal text-foreground hover:bg-background"
+                                >
+                                  {tag}
+                                  <button
+                                    type="button"
+                                    className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-background hover:bg-foreground/80"
+                                    onClick={() => handleRemoveTag(index, tag)}
+                                    aria-label={`${tag} 태그 삭제`}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        data-whisky-drag-handle="true"
+                        aria-label={`${itemName} 순서 변경`}
+                        className="flex h-10 w-10 cursor-grab items-center justify-center justify-self-end text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:cursor-grabbing md:h-40 md:items-start md:pt-8"
+                        onPointerDown={(event) => handleWhiskyDragHandlePointerDown(index, event)}
+                        onPointerUp={handleWhiskyDragHandlePointerEnd}
+                        onPointerCancel={handleWhiskyDragHandlePointerEnd}
+                      >
+                        <GripVertical className="h-4 w-4" />
+                      </button>
                     </div>
-                  </div>
 
-                  <button
-                    type="button"
-                    data-whisky-drag-handle="true"
-                    aria-label={`${itemName} 순서 변경`}
-                    className="flex h-10 w-10 cursor-grab items-center justify-center justify-self-end text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:cursor-grabbing md:h-40 md:items-start md:pt-8"
-                    onPointerDown={(event) => handleWhiskyDragHandlePointerDown(index, event)}
-                    onPointerUp={handleWhiskyDragHandlePointerEnd}
-                    onPointerCancel={handleWhiskyDragHandlePointerEnd}
-                  >
-                    <GripVertical className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <div className="mt-4 space-y-2">
-                  <Textarea
-                    aria-label={`${itemName} 기대평`}
-                    rows={4}
-                    maxLength={fieldModel.comment.maxLength}
-                    {...form.register(`alcohols.${index}.comment` as const)}
-                    placeholder="위스키에 대한 설명을 작성해주세요."
-                    className="min-h-24 resize-none rounded-[10px] border-border"
-                  />
-                  {commentError && <p className="text-sm text-destructive">{commentError}</p>}
-                </div>
+                    <div className="mt-4 space-y-2">
+                      <Textarea
+                        aria-label={`${itemName} 기대평`}
+                        rows={4}
+                        maxLength={fieldModel.comment.maxLength}
+                        {...form.register(`alcohols.${index}.comment` as const)}
+                        placeholder="위스키에 대한 설명을 작성해주세요."
+                        className="min-h-24 resize-none rounded-[10px] border-border"
+                      />
+                      {commentError && <p className="text-sm text-destructive">{commentError}</p>}
+                    </div>
+                  </>
+                )}
               </div>
             );
           })}
         </div>
       )}
+      <Button
+        type="button"
+        variant="secondary"
+        className="h-14 w-full rounded-[10px] text-base font-semibold"
+        onClick={handleAddEmptyWhisky}
+        disabled={isAddDisabled}
+        aria-label="시음 위스키 추가"
+      >
+        <Plus className="h-5 w-5" />
+        추가
+      </Button>
     </CurationSectionCard>
   );
+}
+
+function hasManualWhiskyValue(alcohol: CurationWhiskyMirror | undefined): boolean {
+  if (!alcohol) return false;
+
+  return Boolean(
+    normalizeText(alcohol.korName) ||
+    normalizeText(alcohol.engName) ||
+    normalizeText(alcohol.imageUrl)
+  );
+}
+
+function normalizeImageUrl(value: string | null | undefined): string {
+  const normalizedValue = normalizeText(value);
+  if (!normalizedValue) return '';
+
+  if (/^(https?:|blob:|data:image\/)/i.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  if (normalizedValue.startsWith('//')) {
+    return `https:${normalizedValue}`;
+  }
+
+  return `https://${normalizedValue}`;
 }
 
 function getWhiskyProfile(alcohol: CurationWhiskyMirror | undefined): string {

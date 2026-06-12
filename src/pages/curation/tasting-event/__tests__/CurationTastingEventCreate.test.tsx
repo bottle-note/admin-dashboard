@@ -169,21 +169,29 @@ function mockImageUpload(
     'https://cdn.example.com/curation/3.jpg',
   ]
 ) {
+  let issuedUploadCount = 0;
+
   server.use(
     http.get(S3_BASE, ({ request }) => {
       const url = new URL(request.url);
       const uploadSize = Number(url.searchParams.get('uploadSize') ?? '1');
+      const startIndex = issuedUploadCount;
+      issuedUploadCount += uploadSize;
 
       return HttpResponse.json(
         wrapApiResponse({
           bucketName: 'test-bucket',
           expiryTime: 15,
           uploadSize,
-          imageUploadInfo: Array.from({ length: uploadSize }, (_, index) => ({
-            order: index,
-            viewUrl: viewUrls[index] ?? `https://cdn.example.com/curation/${index + 1}.jpg`,
-            uploadUrl: `https://s3.amazonaws.com/test-bucket/curation/${index + 1}.jpg?presigned=true`,
-          })),
+          imageUploadInfo: Array.from({ length: uploadSize }, (_, index) => {
+            const uploadIndex = startIndex + index;
+            return {
+              order: index,
+              viewUrl:
+                viewUrls[uploadIndex] ?? `https://cdn.example.com/curation/${uploadIndex + 1}.jpg`,
+              uploadUrl: `https://s3.amazonaws.com/test-bucket/curation/${uploadIndex + 1}.jpg?presigned=true`,
+            };
+          }),
         })
       );
     }),
@@ -252,11 +260,12 @@ describe('CurationTastingEventCreatePage', () => {
 
     expect(await screen.findByText(/1-1개까지 등록할 수 있습니다/)).toBeInTheDocument();
 
-    const whiskySearchInput = screen.getByPlaceholderText('위스키 검색하여 추가...');
+    await user.click(screen.getByRole('button', { name: '시음 위스키 추가' }));
+    const whiskySearchInput = screen.getByPlaceholderText('위스키 검색 ...');
     await user.type(whiskySearchInput, '글렌');
     await user.click(await screen.findByText('글렌피딕 12년'));
 
-    expect(whiskySearchInput).toBeDisabled();
+    expect(screen.getByRole('button', { name: '시음 위스키 추가' })).toBeDisabled();
   });
 
   it('시음 위스키 카드에 우측 핸들을 표시하고 드래그 앤 드롭으로 순서를 변경한다', async () => {
@@ -265,13 +274,16 @@ describe('CurationTastingEventCreatePage', () => {
 
     render(<CurationTastingEventCreatePage />);
 
-    const whiskySearchInput = await screen.findByPlaceholderText('위스키 검색하여 추가...');
+    await user.click(await screen.findByRole('button', { name: '시음 위스키 추가' }));
+    let whiskySearchInput = await screen.findByPlaceholderText('위스키 검색 ...');
 
     await user.type(whiskySearchInput, '글렌');
     await user.click(await screen.findByText('글렌피딕 12년'));
     expect(await screen.findByText('위스키 1')).toBeInTheDocument();
     expect(await screen.findByLabelText('글렌피딕 12년 순서 변경')).toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: '시음 위스키 추가' }));
+    whiskySearchInput = await screen.findByPlaceholderText('위스키 검색 ...');
     await user.type(whiskySearchInput, '맥');
     await user.click(await screen.findByText('맥캘란 18년'));
     expect(await screen.findByText('위스키 2')).toBeInTheDocument();
@@ -318,7 +330,8 @@ describe('CurationTastingEventCreatePage', () => {
 
     render(<CurationTastingEventCreatePage />);
 
-    const whiskySearchInput = await screen.findByPlaceholderText('위스키 검색하여 추가...');
+    await user.click(await screen.findByRole('button', { name: '시음 위스키 추가' }));
+    const whiskySearchInput = await screen.findByPlaceholderText('위스키 검색 ...');
 
     await user.type(whiskySearchInput, '글렌');
     await user.click(await screen.findByText('글렌피딕 12년'));
@@ -362,6 +375,11 @@ describe('CurationTastingEventCreatePage', () => {
 
     expect(await screen.findByText('시음회 참여자를 모집할 목적이신가요?')).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: '네' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByLabelText('신청링크')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('신청링크'), {
+      target: { value: 'https://forms.example.com/tasting' },
+    });
 
     await user.click(screen.getByRole('radio', { name: '아니요, 광고만 하겠습니다.' }));
 
@@ -372,6 +390,29 @@ describe('CurationTastingEventCreatePage', () => {
         'true'
       );
     });
+    expect(screen.queryByLabelText('신청링크')).not.toBeInTheDocument();
+    expect(screen.queryByText('https://forms.example.com/tasting')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('radio', { name: '네' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: '네' })).toHaveAttribute('aria-checked', 'true');
+    });
+    expect(screen.getByLabelText('신청링크')).toHaveValue('');
+  });
+
+  it('참여자 모집 상태에서는 신청링크를 필수로 검사한다', async () => {
+    const user = userEvent.setup();
+    mockSpecSuccess();
+
+    render(<CurationTastingEventCreatePage />);
+
+    expect(await screen.findByLabelText('신청링크')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '네' })).toHaveAttribute('aria-checked', 'true');
+
+    await user.click(screen.getByRole('button', { name: /저장/ }));
+
+    expect(await screen.findByText('신청링크는 필수입니다.')).toBeInTheDocument();
   });
 
   it('이미지 단일 업로드 영역에서 3장까지 등록하고 드래그 앤 드롭으로 순서를 변경한다', async () => {
@@ -523,7 +564,8 @@ describe('CurationTastingEventCreatePage', () => {
       target: { value: '시작 10분 전 입장해 주세요.' },
     });
 
-    await user.type(screen.getByPlaceholderText('위스키 검색하여 추가...'), '글렌');
+    await user.click(screen.getByRole('button', { name: '시음 위스키 추가' }));
+    await user.type(screen.getByPlaceholderText('위스키 검색 ...'), '글렌');
     await user.click(await screen.findByText('글렌피딕 12년'));
     expect(await screen.findByText('도수 40% · 싱글몰트')).toBeInTheDocument();
     expect(screen.getByText('평균별점 4.2 (유저평가 150)')).toBeInTheDocument();
@@ -588,6 +630,83 @@ describe('CurationTastingEventCreatePage', () => {
     expect(screen.queryByText('BOTTLE_NOTE')).not.toBeInTheDocument();
   });
 
+  it('광고 전용 시음회는 신청링크 없이 저장하고 payload에는 빈 문자열을 전송한다', async () => {
+    const user = userEvent.setup();
+    let capturedBody: CurationV2CreateRequest | null = null;
+    mockSpecSuccess();
+    server.use(
+      http.post(CURATION_BASE, async ({ request }) => {
+        capturedBody = (await request.json()) as CurationV2CreateRequest;
+        return HttpResponse.json(
+          wrapApiResponse({
+            code: 'CURATION_CREATED',
+            message: '큐레이션이 등록되었습니다.',
+            targetId: 12,
+            responseAt: '2026-05-31T09:00:00',
+          })
+        );
+      })
+    );
+
+    render(<CurationTastingEventCreatePage />);
+
+    await screen.findByLabelText('큐레이션명');
+
+    fireEvent.change(screen.getByLabelText('큐레이션명'), {
+      target: { value: '6월 싱글몰트 시음회' },
+    });
+    fireEvent.change(screen.getByLabelText('설명'), {
+      target: { value: '소규모 위스키 시음회' },
+    });
+    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2026-06-01' } });
+    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2026-06-30' } });
+    fireEvent.change(screen.getByLabelText('시음회 날짜'), { target: { value: '2026-06-15' } });
+    fireEvent.change(screen.getByLabelText('시음회 시간'), { target: { value: '19:30' } });
+    fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
+      target: { value: '서울 강남구 테헤란로 123' },
+    });
+    fireEvent.change(screen.getByLabelText('상세 주소'), { target: { value: '2층 도시남 바' } });
+    fireEvent.change(screen.getByLabelText('참가비(1인당)'), { target: { value: '75000' } });
+    fireEvent.change(screen.getByLabelText('총 모집 인원수'), { target: { value: '20' } });
+    fireEvent.change(screen.getByLabelText('신청링크'), {
+      target: { value: 'https://forms.example.com/tasting' },
+    });
+    fireEvent.change(screen.getByLabelText('안내사항'), {
+      target: { value: '시작 10분 전 입장해 주세요.' },
+    });
+    await user.click(screen.getByRole('radio', { name: '아니요, 광고만 하겠습니다.' }));
+    await waitFor(() => {
+      expect(screen.queryByLabelText('신청링크')).not.toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: '시음 위스키 추가' }));
+    await user.click(screen.getByRole('button', { name: '직접 입력' }));
+    fireEvent.change(screen.getByLabelText('1번 수동 위스키 한글명'), {
+      target: { value: '오픈 몰트 12년' },
+    });
+    fireEvent.change(screen.getByLabelText('1번 수동 위스키 영문명'), {
+      target: { value: 'Open Malt 12' },
+    });
+    fireEvent.change(screen.getByLabelText('1번 수동 위스키 이미지 URL'), {
+      target: { value: 'images.example.com/open-malt-12.png' },
+    });
+    await user.type(screen.getByLabelText('오픈 몰트 12년 테이스팅 태그'), '버번{enter}');
+    fireEvent.change(screen.getByLabelText('오픈 몰트 12년 기대평'), {
+      target: { value: '직접 섭외한 한정 위스키' },
+    });
+
+    await user.click(screen.getByRole('button', { name: /저장/ }));
+
+    await waitFor(() => expect(capturedBody).not.toBeNull());
+    expect(capturedBody).toMatchObject({
+      specId: 3,
+      payload: {
+        isRecruiting: false,
+        applicationLink: '',
+      },
+    });
+  });
+
   it('직접 입력 위스키를 MANUAL source와 alcoholId null payload로 전송한다', async () => {
     const user = userEvent.setup();
     let capturedBody: CurationV2CreateRequest | null = null;
@@ -633,6 +752,7 @@ describe('CurationTastingEventCreatePage', () => {
       target: { value: '시작 10분 전 입장해 주세요.' },
     });
 
+    await user.click(screen.getByRole('button', { name: '시음 위스키 추가' }));
     await user.click(screen.getByRole('button', { name: '직접 입력' }));
     fireEvent.change(screen.getByLabelText('1번 수동 위스키 한글명'), {
       target: { value: '오픈 몰트 12년' },
@@ -640,9 +760,21 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('1번 수동 위스키 영문명'), {
       target: { value: 'Open Malt 12' },
     });
-    fireEvent.change(screen.getByLabelText('1번 수동 위스키 도수'), {
-      target: { value: '46' },
+    fireEvent.change(screen.getByLabelText('1번 수동 위스키 이미지 URL'), {
+      target: { value: 'images.example.com/open-malt-12.png' },
     });
+    expect(screen.getAllByRole('img', { name: '오픈 몰트 12년' })).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: 'https://images.example.com/open-malt-12.png',
+        }),
+      ])
+    );
+    expect(screen.queryByLabelText('1번 수동 위스키 도수')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('1번 수동 위스키 용량')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('1번 수동 위스키 캐스크')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('1번 수동 위스키 지역')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('1번 수동 위스키 카테고리')).not.toBeInTheDocument();
     await user.type(screen.getByLabelText('오픈 몰트 12년 테이스팅 태그'), '버번{enter}');
     fireEvent.change(screen.getByLabelText('오픈 몰트 12년 기대평'), {
       target: { value: '직접 섭외한 한정 위스키' },
@@ -661,7 +793,7 @@ describe('CurationTastingEventCreatePage', () => {
               alcoholId: null,
               korName: '오픈 몰트 12년',
               engName: 'Open Malt 12',
-              abv: '46',
+              imageUrl: 'images.example.com/open-malt-12.png',
               selectedTags: ['버번'],
             },
             comment: '직접 섭외한 한정 위스키',

@@ -49,9 +49,16 @@ export type CurationBasicFieldModel =
 
 export type CurationFieldModel = CurationBasicFieldModel | CurationWhiskyCardListFieldModel;
 
+export interface CurationFieldVisibilityCondition {
+  fieldKey: string;
+  equals: unknown;
+  hiddenValue?: unknown;
+}
+
 export interface CurationSectionFieldModel {
   field: CurationFieldModel;
   className?: string;
+  visibleWhen?: CurationFieldVisibilityCondition;
 }
 
 export interface CurationFormSectionModel {

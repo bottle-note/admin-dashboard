@@ -36,6 +36,11 @@ export function buildTastingEventPayload(
       return payload;
     }
 
+    if (key === 'applicationLink' && values.isRecruiting === false) {
+      payload[key] = '';
+      return payload;
+    }
+
     payload[key] = normalizePayloadValue(value);
     return payload;
   }, {});

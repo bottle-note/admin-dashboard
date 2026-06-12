@@ -61,7 +61,28 @@ function createTastingEventCreatePayloadFieldSchema(field: CurationFieldModel) {
       .max(field.maxItems, `${field.label}는 최대 ${field.maxItems}개까지 추가할 수 있습니다.`);
   }
 
+  if (field.key === 'applicationLink') {
+    return createConditionalApplicationLinkValueSchema(field);
+  }
+
   return createCurationFieldValueSchema(field);
+}
+
+function createConditionalApplicationLinkValueSchema(field: CurationFieldModel) {
+  if (field.kind !== 'text') {
+    return z.unknown();
+  }
+
+  let schema = z.string();
+
+  if (field.maxLength) {
+    schema = schema.max(
+      field.maxLength,
+      `${field.label}는 최대 ${field.maxLength}자까지 입력할 수 있습니다.`
+    );
+  }
+
+  return schema.optional();
 }
 
 // requestSpec 기반 form model의 payloadFields를 순회해 동적 payload Zod shape을 생성합니다.
@@ -81,6 +102,9 @@ export function createCurationTastingEventFormSchema(
   options: { mode?: 'create' | 'edit' } = {}
 ): z.ZodType<TastingEventCreateFormState> {
   const isEditMode = options.mode === 'edit';
+  const applicationLinkField = formModel.payloadFields.find(
+    (field) => field.key === 'applicationLink'
+  );
 
   return z.object({
     name: z.string().min(1, '큐레이션명은 필수입니다.'),
@@ -94,6 +118,18 @@ export function createCurationTastingEventFormSchema(
       .min(0, '노출 순서는 0 이상이어야 합니다.'),
     isActive: z.boolean(),
     ...createTastingEventCreatePayloadShape(formModel),
+  }).superRefine((values, context) => {
+    const formValues = values as Record<string, unknown>;
+    if (!applicationLinkField?.required || formValues.isRecruiting === false) return;
+
+    const applicationLink = formValues.applicationLink;
+    if (typeof applicationLink === 'string' && applicationLink.trim()) return;
+
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['applicationLink'],
+      message: `${applicationLinkField.label}는 필수입니다.`,
+    });
   }) as unknown as z.ZodType<TastingEventCreateFormState>;
 }
 

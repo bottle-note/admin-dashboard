@@ -150,9 +150,10 @@ export function TastingTagSearchSelect({
     [fetchedItems, selectedTagNameSet]
   );
   const trimmedValue = value.trim();
-  const hasNoDbResults =
-    canSearch && !isLoading && !isFetchingNextPage && !hasNextPage && fetchedItems.length === 0;
-  const canCreateDirectly = Boolean(onCreate && trimmedValue && hasNoDbResults);
+  const normalizedTrimmedValue = normalizeTagName(trimmedValue);
+  const canCreateDirectly = Boolean(
+    onCreate && normalizedTrimmedValue && !selectedTagNameSet.has(normalizedTrimmedValue)
+  );
 
   const handleSelect = (tag: TastingTagListItem) => {
     onSelect(tag);
@@ -205,17 +206,7 @@ export function TastingTagSearchSelect({
               <div className="space-y-3 px-3 py-4 text-center">
                 <p className="text-sm text-muted-foreground">검색 결과가 없습니다</p>
                 {canCreateDirectly && (
-                  <button
-                    type="button"
-                    onClick={handleCreate}
-                    className={cn(
-                      'w-full rounded-md border border-dashed px-3 py-2 text-sm font-medium text-foreground',
-                      'hover:bg-accent hover:text-accent-foreground',
-                      'focus:bg-accent focus:text-accent-foreground focus:outline-none'
-                    )}
-                  >
-                    "{trimmedValue}" 직접 추가
-                  </button>
+                  <CreateTagButton value={trimmedValue} onClick={handleCreate} />
                 )}
               </div>
             ) : (
@@ -269,6 +260,11 @@ export function TastingTagSearchSelect({
                     <span className="h-2" />
                   )}
                 </div>
+                {canCreateDirectly && (
+                  <div className="border-t px-3 py-2">
+                    <CreateTagButton value={trimmedValue} onClick={handleCreate} />
+                  </div>
+                )}
               </div>
             )}
           </div>,
@@ -304,6 +300,22 @@ export function TastingTagSearchSelect({
       )}
       {dropdown}
     </div>
+  );
+}
+
+function CreateTagButton({ value, onClick }: { value: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'w-full rounded-md border border-dashed px-3 py-2 text-sm font-medium text-foreground',
+        'hover:bg-accent hover:text-accent-foreground',
+        'focus:bg-accent focus:text-accent-foreground focus:outline-none'
+      )}
+    >
+      "{value}" 직접 추가
+    </button>
   );
 }
 

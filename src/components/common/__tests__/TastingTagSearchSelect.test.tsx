@@ -123,6 +123,23 @@ describe('TastingTagSearchSelect', () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
+  it('검색 결과가 있어도 입력 문자열을 직접 추가할 수 있다', async () => {
+    const onCreate = vi.fn(() => true);
+    const onSelect = vi.fn();
+
+    render(<ControlledTastingTagSearchSelect onCreate={onCreate} onSelect={onSelect} />);
+
+    fireEvent.change(screen.getByLabelText('테이스팅 태그'), {
+      target: { value: '과' },
+    });
+
+    expect(await screen.findByRole('button', { name: '과일 태그 선택' })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: '"과" 직접 추가' }));
+
+    expect(onCreate).toHaveBeenCalledWith('과');
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
   it('이미 선택한 태그는 검색 결과에서 제외한다', async () => {
     render(<ControlledTastingTagSearchSelect selectedTagNames={['바닐라']} />);
 
