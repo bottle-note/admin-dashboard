@@ -3,7 +3,6 @@ import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import { GripVertical, Loader2, Plus, X } from 'lucide-react';
 
 import { FormField } from '@/components/common/FormField';
-import { TastingTagSearchSelect } from '@/components/common/TastingTagSearchSelect';
 import { WhiskySearchSelect, type SelectedWhisky } from '@/components/common/WhiskySearchSelect';
 import { useAdminAlcoholDetailLookup } from '@/hooks/useAdminAlcohols';
 import { useToast } from '@/hooks/useToast';
@@ -24,6 +23,7 @@ import type {
   CurationWhiskyCardValue,
   CurationWhiskyMirror,
 } from '../curation-whisky-card-list.types';
+import { CurationTastingTagCombobox } from './CurationTastingTagCombobox';
 import { CurationSectionCard } from './CurationSectionCard';
 
 const WHISKY_DRAG_HANDLE_SELECTOR = '[data-whisky-drag-handle="true"]';
@@ -454,7 +454,7 @@ export function CurationWhiskyCardListField({
                               {tags.length}/{fieldModel.selectedTags.maxItems}
                             </span>
                           </div>
-                          <TastingTagSearchSelect
+                          <CurationTastingTagCombobox
                             ariaLabel={`${itemName} 테이스팅 태그`}
                             value={tagInput}
                             onValueChange={(value) => handleTagInputChange(field.id, value)}

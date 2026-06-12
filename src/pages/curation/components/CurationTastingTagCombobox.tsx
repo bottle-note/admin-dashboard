@@ -21,7 +21,7 @@ const VIEWPORT_PADDING = 8;
 const DROPDOWN_MAX_HEIGHT = 22 * 16;
 const DROPDOWN_MIN_HEIGHT = 96;
 
-interface TastingTagSearchSelectProps {
+interface CurationTastingTagComboboxProps {
   value: string;
   onValueChange: (value: string) => void;
   onSelect: (tag: TastingTagListItem) => void;
@@ -34,7 +34,7 @@ interface TastingTagSearchSelectProps {
   inputClassName?: string;
 }
 
-export function TastingTagSearchSelect({
+export function CurationTastingTagCombobox({
   value,
   onValueChange,
   onSelect,
@@ -45,7 +45,7 @@ export function TastingTagSearchSelect({
   disabled = false,
   className,
   inputClassName,
-}: TastingTagSearchSelectProps) {
+}: CurationTastingTagComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
   const [dropdownMaxHeight, setDropdownMaxHeight] = useState(DROPDOWN_MAX_HEIGHT);

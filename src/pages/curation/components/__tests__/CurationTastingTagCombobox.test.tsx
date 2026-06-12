@@ -5,9 +5,9 @@ import { fireEvent, screen } from '@testing-library/react';
 import { render } from '@/test/test-utils';
 import type { TastingTagListItem } from '@/types/api';
 
-import { TastingTagSearchSelect } from '../TastingTagSearchSelect';
+import { CurationTastingTagCombobox } from '../CurationTastingTagCombobox';
 
-function ControlledTastingTagSearchSelect({
+function ControlledCurationTastingTagCombobox({
   selectedTagNames = [],
   onSelect = vi.fn(),
   onCreate = vi.fn(() => true),
@@ -19,7 +19,7 @@ function ControlledTastingTagSearchSelect({
   const [value, setValue] = useState('');
 
   return (
-    <TastingTagSearchSelect
+    <CurationTastingTagCombobox
       ariaLabel="테이스팅 태그"
       value={value}
       onValueChange={setValue}
@@ -31,14 +31,14 @@ function ControlledTastingTagSearchSelect({
   );
 }
 
-describe('TastingTagSearchSelect', () => {
+describe('CurationTastingTagCombobox', () => {
   it('아래 공간이 부족하고 위 공간이 더 넓으면 드롭다운을 위쪽에 표시한다', async () => {
     Object.defineProperty(window, 'innerHeight', {
       configurable: true,
       value: 500,
     });
 
-    render(<ControlledTastingTagSearchSelect />);
+    render(<ControlledCurationTastingTagCombobox />);
 
     const input = screen.getByPlaceholderText('테이스팅 태그검색 후 추가');
     const container = input.parentElement;
@@ -76,7 +76,7 @@ describe('TastingTagSearchSelect', () => {
       value: 500,
     });
 
-    render(<ControlledTastingTagSearchSelect selectedTagNames={['바닐라']} />);
+    render(<ControlledCurationTastingTagCombobox selectedTagNames={['바닐라']} />);
 
     const input = screen.getByPlaceholderText('테이스팅 태그검색 후 추가');
     const container = input.parentElement;
@@ -110,7 +110,7 @@ describe('TastingTagSearchSelect', () => {
     const onCreate = vi.fn(() => true);
     const onSelect = vi.fn();
 
-    render(<ControlledTastingTagSearchSelect onCreate={onCreate} onSelect={onSelect} />);
+    render(<ControlledCurationTastingTagCombobox onCreate={onCreate} onSelect={onSelect} />);
 
     fireEvent.change(screen.getByLabelText('테이스팅 태그'), {
       target: { value: '셰리' },
@@ -127,7 +127,7 @@ describe('TastingTagSearchSelect', () => {
     const onCreate = vi.fn(() => true);
     const onSelect = vi.fn();
 
-    render(<ControlledTastingTagSearchSelect onCreate={onCreate} onSelect={onSelect} />);
+    render(<ControlledCurationTastingTagCombobox onCreate={onCreate} onSelect={onSelect} />);
 
     fireEvent.change(screen.getByLabelText('테이스팅 태그'), {
       target: { value: '과' },
@@ -141,7 +141,7 @@ describe('TastingTagSearchSelect', () => {
   });
 
   it('이미 선택한 태그는 검색 결과에서 제외한다', async () => {
-    render(<ControlledTastingTagSearchSelect selectedTagNames={['바닐라']} />);
+    render(<ControlledCurationTastingTagCombobox selectedTagNames={['바닐라']} />);
 
     fireEvent.change(screen.getByLabelText('테이스팅 태그'), {
       target: { value: '바' },
