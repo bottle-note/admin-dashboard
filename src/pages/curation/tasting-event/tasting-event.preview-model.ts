@@ -44,7 +44,7 @@ export function createTastingEventPreviewModel(
   return {
     title: getString(values.name) || '큐레이션명',
     description: getString(values.description) || '설명 입력 시 앱 미리보기에 표시됩니다.',
-    imageUrl: imageUrls[0],
+    imageUrl: normalizeImageUrl(imageUrls[0]),
     imageCount: imageUrls.length,
     scheduleLabel: [eventDate, eventTime].filter(Boolean).join(' ') || '일정 미정',
     locationLabel: [barAddress, detailAddress].filter(Boolean).join(' ') || '장소 미정',
@@ -66,7 +66,7 @@ function getWhiskies(values: CurationWhiskyCardValue[] | undefined): TastingEven
       id: `${item.source}-${alcohol.alcoholId ?? index}`,
       name: alcohol.korName.trim() || '위스키명 미입력',
       englishName: getString(alcohol.engName),
-      imageUrl: getString(alcohol.imageUrl),
+      imageUrl: normalizeImageUrl(alcohol.imageUrl),
       tags,
       comment: getString(item.comment),
       meta: [
@@ -83,6 +83,21 @@ function getWhiskies(values: CurationWhiskyCardValue[] | undefined): TastingEven
 
 function getString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeImageUrl(value: unknown): string {
+  const normalizedValue = getString(value);
+  if (!normalizedValue) return '';
+
+  if (/^(https?:|blob:|data:image\/)/i.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  if (normalizedValue.startsWith('//')) {
+    return `https:${normalizedValue}`;
+  }
+
+  return `https://${normalizedValue}`;
 }
 
 function getStringArray(value: unknown): string[] {

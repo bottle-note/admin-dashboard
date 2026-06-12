@@ -57,6 +57,7 @@ export function createCurationFieldValueSchema(field: CurationBasicFieldModel): 
     case 'textarea':
     case 'date':
     case 'time':
+    case 'address':
       return createTextFieldValueSchema(field);
   }
 }

@@ -146,6 +146,54 @@ describe('s3Service', () => {
     });
   });
 
+  describe('uploadImages', () => {
+    it('각 파일별 contentType으로 presign을 발급하고 같은 Content-Type으로 PUT 업로드한다', async () => {
+      const capturedPresignContentTypes: Array<string | null> = [];
+      const capturedUploadContentTypes: Array<string | null> = [];
+
+      server.use(
+        http.get(S3_ENDPOINT, ({ request }) => {
+          const url = new URL(request.url);
+          const contentType = url.searchParams.get('contentType');
+          const order = capturedPresignContentTypes.length;
+          capturedPresignContentTypes.push(contentType);
+
+          return HttpResponse.json({
+            ...mockPresignResponse,
+            data: {
+              ...mockPresignResponse.data,
+              imageUploadInfo: [
+                {
+                  order,
+                  viewUrl: `https://cdn.example.com/admin/curation/${order + 1}.jpg`,
+                  uploadUrl: `https://s3.amazonaws.com/test-bucket/admin/curation/${order + 1}.jpg?presigned=true`,
+                },
+              ],
+            },
+          });
+        }),
+        http.put('https://s3.amazonaws.com/*', ({ request }) => {
+          capturedUploadContentTypes.push(request.headers.get('Content-Type'));
+          return new HttpResponse(null, { status: 200 });
+        })
+      );
+
+      const files = [
+        new File(['png'], 'one.png', { type: 'image/png' }),
+        new File(['webp'], 'two.webp', { type: 'image/webp' }),
+      ];
+
+      const viewUrls = await s3Service.uploadImages(files, 'admin/curation');
+
+      expect(capturedPresignContentTypes).toEqual(['image/png', 'image/webp']);
+      expect(capturedUploadContentTypes).toEqual(['image/png', 'image/webp']);
+      expect(viewUrls).toEqual([
+        'https://cdn.example.com/admin/curation/1.jpg',
+        'https://cdn.example.com/admin/curation/2.jpg',
+      ]);
+    });
+  });
+
   describe('uploadToS3', () => {
     it('업로드 실패 시 에러를 던진다', async () => {
       server.use(

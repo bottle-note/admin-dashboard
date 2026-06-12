@@ -29,7 +29,7 @@ describe('createTastingEventPreviewModel', () => {
             alcoholId: null,
             korName: ' 글렌드로낙 12년 ',
             engName: 'Glendronach 12',
-            imageUrl: 'https://img.example.com/whisky.png',
+            imageUrl: 'img.example.com/whisky.png',
             abv: '43',
             cask: '셰리 캐스크',
             volume: '700ml',
@@ -57,6 +57,7 @@ describe('createTastingEventPreviewModel', () => {
     });
     expect(preview.whiskies[0]).toMatchObject({
       name: '글렌드로낙 12년',
+      imageUrl: 'https://img.example.com/whisky.png',
       tags: ['달콤한', '묵직한'],
       comment: '첫 잔으로 소개합니다.',
       meta: ['43%', '700ml', '셰리 캐스크', '하이랜드', '싱글 몰트'],

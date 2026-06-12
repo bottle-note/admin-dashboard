@@ -136,6 +136,10 @@ describe('createTastingEventFormModel', () => {
 
     expect(fieldsByKey.barAddress).toMatchObject({
       label: '장소 및 바(bar) 주소',
+      kind: 'address',
+    });
+    expect(fieldsByKey.detailAddress).toMatchObject({
+      label: '상세 주소',
       kind: 'text',
     });
     expect(fieldsByKey.entryFee).toMatchObject({
@@ -186,6 +190,12 @@ describe('createTastingEventFormModel', () => {
       'participation',
       'alcoholLineup',
     ]);
+    expect(formModel.sections.map((section) => section.stepNumber)).toEqual([2, 3, 4]);
+    expect(formModel.sections.map((section) => section.description)).toEqual([
+      '날짜 및 장소를 입력해주세요.',
+      '참가비, 인원수, 안내사항 등을 입력해주세요.',
+      '시음회에 사용될 위스키를 입력해주세요.',
+    ]);
     expect(formModel.sections[0]!.fields.map(({ field }) => field.key)).toEqual([
       'eventDate',
       'eventTime',
@@ -199,5 +209,12 @@ describe('createTastingEventFormModel', () => {
       'applicationLink',
       'guideText',
     ]);
+    expect(formModel.sections[1]!.fields.find(({ field }) => field.key === 'applicationLink')).toMatchObject({
+      visibleWhen: {
+        fieldKey: 'isRecruiting',
+        equals: true,
+        hiddenValue: '',
+      },
+    });
   });
 });

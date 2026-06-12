@@ -36,6 +36,11 @@ export function buildTastingEventPayload(
       return payload;
     }
 
+    if (key === 'applicationLink' && values.isRecruiting === false) {
+      payload[key] = '';
+      return payload;
+    }
+
     payload[key] = normalizePayloadValue(value);
     return payload;
   }, {});
@@ -85,6 +90,7 @@ export function createTastingEventFormStateFromCuration(
         break;
       case 'textarea':
       case 'text':
+      case 'address':
         formState[field.key] = normalizeStringValue(value);
         break;
     }

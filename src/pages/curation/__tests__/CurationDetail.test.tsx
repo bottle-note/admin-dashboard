@@ -216,7 +216,7 @@ describe('CurationDetailPage', () => {
     expect(screen.getByLabelText('설명')).toHaveValue('');
     expect(screen.getByLabelText('노출 시작일')).toHaveValue('');
     expect(screen.getByLabelText('노출 종료일')).toHaveValue('');
-    expect(screen.getByText('날짜 및 장소 정보')).toBeInTheDocument();
+    expect(screen.getByText('날짜 및 장소')).toBeInTheDocument();
     expect(screen.getByText('참가 정보')).toBeInTheDocument();
     expect(screen.getAllByText('시음 위스키').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('시음회 날짜')).toHaveValue('2026-06-15');
