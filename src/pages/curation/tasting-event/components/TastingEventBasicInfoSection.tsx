@@ -1,3 +1,4 @@
+import type { ChangeEvent } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 
 import { FormField } from '@/components/common/FormField';
@@ -28,6 +29,25 @@ export function TastingEventBasicInfoSection({
     name: 'isActive',
   });
   const isNullableBasicInfoAllowed = isEditMode;
+  const exposureStartDateRegistration = form.register('exposureStartDate');
+  const exposureEndDateRegistration = form.register('exposureEndDate');
+
+  const handleExposureDateChange = (
+    event: ChangeEvent<HTMLInputElement>,
+    onChange: (event: ChangeEvent<HTMLInputElement>) => void | Promise<boolean | void>,
+    otherFieldName: 'exposureStartDate' | 'exposureEndDate'
+  ) => {
+    void onChange(event);
+
+    const currentValue = event.target.value;
+    if (currentValue.length !== 0 && currentValue.length !== 10) return;
+
+    const otherValue = form.getValues(otherFieldName);
+    const shouldValidateRange = typeof otherValue === 'string' && otherValue.length === 10;
+    void form.trigger(
+      shouldValidateRange ? ['exposureStartDate', 'exposureEndDate'] : event.target.name
+    );
+  };
 
   return (
     <CurationSectionCard
@@ -91,7 +111,14 @@ export function TastingEventBasicInfoSection({
                 <Input
                   aria-label="노출 시작일"
                   type="date"
-                  {...form.register('exposureStartDate')}
+                  {...exposureStartDateRegistration}
+                  onChange={(event) =>
+                    handleExposureDateChange(
+                      event,
+                      exposureStartDateRegistration.onChange,
+                      'exposureEndDate'
+                    )
+                  }
                 />
                 {form.formState.errors.exposureStartDate?.message && (
                   <p className="text-sm text-destructive">
@@ -108,7 +135,18 @@ export function TastingEventBasicInfoSection({
                 error={form.formState.errors.exposureEndDate?.message}
                 className="min-w-0"
               >
-                <Input aria-label="노출 종료일" type="date" {...form.register('exposureEndDate')} />
+                <Input
+                  aria-label="노출 종료일"
+                  type="date"
+                  {...exposureEndDateRegistration}
+                  onChange={(event) =>
+                    handleExposureDateChange(
+                      event,
+                      exposureEndDateRegistration.onChange,
+                      'exposureStartDate'
+                    )
+                  }
+                />
               </FormField>
             </div>
           </div>

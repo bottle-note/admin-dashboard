@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { validateDateRange } from '@/lib/date-validation';
+
 import { createCurationFieldValueSchema } from '../curation-form-schema';
 import type { CurationFieldModel } from '../curation-form-model';
 import type {
@@ -120,6 +122,21 @@ export function createCurationTastingEventFormSchema(
     ...createTastingEventCreatePayloadShape(formModel),
   }).superRefine((values, context) => {
     const formValues = values as Record<string, unknown>;
+    const dateIssues = validateDateRange({
+      startDate: typeof formValues.exposureStartDate === 'string' ? formValues.exposureStartDate : '',
+      endDate: typeof formValues.exposureEndDate === 'string' ? formValues.exposureEndDate : '',
+      startDateLabel: '노출 시작일',
+      endDateLabel: '노출 종료일',
+    });
+
+    for (const issue of dateIssues) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [issue.field === 'startDate' ? 'exposureStartDate' : 'exposureEndDate'],
+        message: issue.message,
+      });
+    }
+
     if (!applicationLinkField?.required || formValues.isRecruiting === false) return;
 
     const applicationLink = formValues.applicationLink;

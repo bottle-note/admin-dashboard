@@ -268,6 +268,24 @@ describe('CurationTastingEventCreatePage', () => {
     expect(screen.getByRole('button', { name: '시음 위스키 추가' })).toBeDisabled();
   });
 
+  it('직접 입력 카드 삭제 후 다시 추가하면 검색 카드로 시작한다', async () => {
+    const user = userEvent.setup();
+    mockSpecSuccess();
+
+    render(<CurationTastingEventCreatePage />);
+
+    await user.click(await screen.findByRole('button', { name: '시음 위스키 추가' }));
+    await user.click(screen.getByRole('button', { name: '직접 입력' }));
+
+    expect(screen.getByLabelText('1번 수동 위스키 한글명')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '삭제' }));
+    await user.click(screen.getByRole('button', { name: '시음 위스키 추가' }));
+
+    expect(screen.getByPlaceholderText('위스키 검색 ...')).toBeInTheDocument();
+    expect(screen.queryByLabelText('1번 수동 위스키 한글명')).not.toBeInTheDocument();
+  });
+
   it('시음 위스키 카드에 우측 핸들을 표시하고 드래그 앤 드롭으로 순서를 변경한다', async () => {
     const user = userEvent.setup();
     mockSpecSuccess();
@@ -415,6 +433,34 @@ describe('CurationTastingEventCreatePage', () => {
     expect(await screen.findByText('신청링크는 필수입니다.')).toBeInTheDocument();
   });
 
+  it('노출 시작일이나 종료일이 과거 날짜이면 저장 전 validation을 표시한다', async () => {
+    mockSpecSuccess();
+
+    render(<CurationTastingEventCreatePage />);
+
+    await screen.findByLabelText('노출 시작일');
+
+    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2000-01-01' } });
+    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2099-06-30' } });
+
+    expect(await screen.findByText('노출 시작일은 오늘 이후 날짜로 입력해주세요.')).toBeInTheDocument();
+  });
+
+  it('노출 종료일이 시작일보다 빠르면 저장 전 validation을 표시한다', async () => {
+    mockSpecSuccess();
+
+    render(<CurationTastingEventCreatePage />);
+
+    await screen.findByLabelText('노출 시작일');
+
+    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2099-06-30' } });
+    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2099-06-01' } });
+
+    expect(
+      await screen.findByText('노출 종료일은 노출 시작일보다 빠를 수 없습니다.')
+    ).toBeInTheDocument();
+  });
+
   it('이미지 단일 업로드 영역에서 3장까지 등록하고 드래그 앤 드롭으로 순서를 변경한다', async () => {
     const user = userEvent.setup();
     mockSpecSuccess();
@@ -495,8 +541,8 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('설명'), {
       target: { value: '소규모 위스키 시음회' },
     });
-    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2026-06-01' } });
-    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2026-06-30' } });
+    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2099-06-01' } });
+    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2099-06-30' } });
     fireEvent.change(screen.getByLabelText('시음회 날짜'), { target: { value: '2026-06-15' } });
     fireEvent.change(screen.getByLabelText('시음회 시간'), { target: { value: '19:30' } });
     fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
@@ -547,8 +593,8 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('설명'), {
       target: { value: '소규모 위스키 시음회' },
     });
-    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2026-06-01' } });
-    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2026-06-30' } });
+    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2099-06-01' } });
+    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2099-06-30' } });
     fireEvent.change(screen.getByLabelText('시음회 날짜'), { target: { value: '2026-06-15' } });
     fireEvent.change(screen.getByLabelText('시음회 시간'), { target: { value: '19:30' } });
     fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
@@ -658,8 +704,8 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('설명'), {
       target: { value: '소규모 위스키 시음회' },
     });
-    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2026-06-01' } });
-    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2026-06-30' } });
+    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2099-06-01' } });
+    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2099-06-30' } });
     fireEvent.change(screen.getByLabelText('시음회 날짜'), { target: { value: '2026-06-15' } });
     fireEvent.change(screen.getByLabelText('시음회 시간'), { target: { value: '19:30' } });
     fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
@@ -735,8 +781,8 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('설명'), {
       target: { value: '소규모 위스키 시음회' },
     });
-    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2026-06-01' } });
-    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2026-06-30' } });
+    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2099-06-01' } });
+    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2099-06-30' } });
     fireEvent.change(screen.getByLabelText('시음회 날짜'), { target: { value: '2026-06-15' } });
     fireEvent.change(screen.getByLabelText('시음회 시간'), { target: { value: '19:30' } });
     fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {

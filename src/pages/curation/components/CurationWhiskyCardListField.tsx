@@ -69,6 +69,7 @@ export function CurationWhiskyCardListField({
 
   const handleAddEmptyWhisky = () => {
     if (isAddDisabled) return;
+    form.clearErrors('alcohols');
     alcoholFieldArray.append(createManualCurationWhiskyItem(), { shouldFocus: false });
   };
 
@@ -155,6 +156,22 @@ export function CurationWhiskyCardListField({
         shouldValidate: true,
       }
     );
+  };
+
+  const handleRemoveWhisky = (fieldId: string, index: number) => {
+    form.clearErrors('alcohols');
+    alcoholFieldArray.remove(index);
+    resetWhiskyDragState();
+    setManualInputFieldIds((prev) => {
+      const next = new Set(prev);
+      next.delete(fieldId);
+      return next;
+    });
+    setTagInputs((prev) => {
+      const next = { ...prev };
+      delete next[fieldId];
+      return next;
+    });
   };
 
   const resetWhiskyDragState = () => {
@@ -315,7 +332,7 @@ export function CurationWhiskyCardListField({
                     variant="ghost"
                     size="sm"
                     className="h-7 rounded-md bg-destructive/20 px-2 text-xs font-medium text-destructive hover:bg-destructive/30 hover:text-destructive"
-                    onClick={() => alcoholFieldArray.remove(index)}
+                    onClick={() => handleRemoveWhisky(field.id, index)}
                   >
                     삭제
                   </Button>
