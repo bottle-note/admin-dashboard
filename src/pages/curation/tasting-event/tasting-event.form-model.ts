@@ -86,7 +86,11 @@ function applyTastingEventFieldOverrides(field: CurationBasicFieldModel): Curati
         : field;
     case 'barAddress':
       return field.kind === 'text'
-        ? { ...field, placeholder: '예: 서울 강남구 테헤란로 123' }
+        ? ({
+            ...field,
+            kind: 'address',
+            placeholder: '예: 서울 강남구 테헤란로 123',
+          } satisfies CurationTextFieldModel)
         : field;
     case 'detailAddress':
       return field.kind === 'text' ? { ...field, placeholder: '예: 2층 도시남 바' } : field;
@@ -128,7 +132,9 @@ function createTastingEventFormSections(fields: CurationFieldModel[]): CurationF
   return [
     {
       id: 'dateLocation',
-      title: '날짜 및 장소 정보',
+      title: '날짜 및 장소',
+      stepNumber: 2,
+      description: '날짜 및 장소를 입력해주세요.',
       contentClassName: 'grid gap-4 md:grid-cols-2',
       fields: dateLocationFields.map((field) => ({
         field,
@@ -139,15 +145,23 @@ function createTastingEventFormSections(fields: CurationFieldModel[]): CurationF
     {
       id: 'participation',
       title: '참가 정보',
+      stepNumber: 3,
+      description: '참가비, 인원수, 안내사항 등을 입력해주세요.',
       contentClassName: 'grid gap-4 md:grid-cols-2',
       fields: participationFields.map((field) => ({
         field,
         className: getTastingEventParticipationFieldClassName(field),
+        visibleWhen:
+          field.key === 'applicationLink'
+            ? { fieldKey: 'isRecruiting', equals: true, hiddenValue: '' }
+            : undefined,
       })),
     },
     {
       id: 'alcoholLineup',
       title: '시음 위스키',
+      stepNumber: 4,
+      description: '시음회에 사용될 위스키를 입력해주세요.',
       contentClassName: 'space-y-4',
       fields: alcoholLineupFields.map((field) => ({ field })),
     },

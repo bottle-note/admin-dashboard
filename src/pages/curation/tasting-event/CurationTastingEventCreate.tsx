@@ -20,7 +20,6 @@ import {
 
 import { useCurationSpecFormModel } from '../useCurationSpecFormModel';
 import { TastingEventBasicInfoSection } from './components/TastingEventBasicInfoSection';
-import { TastingEventImageSection } from './components/TastingEventImageSection';
 import { TastingEventPreviewPanel } from './components/TastingEventPreviewPanel';
 import {
   createTastingEventFormModel,
@@ -261,8 +260,11 @@ function TastingEventReadyForm({
       <FormProvider {...form}>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start">
           <div className="min-w-0 space-y-6">
-            <TastingEventBasicInfoSection isRootAdmin={isRootAdmin} isEditMode={isEditMode} />
-            <TastingEventImageSection onUploadingChange={setIsImageUploading} />
+            <TastingEventBasicInfoSection
+              isRootAdmin={isRootAdmin}
+              isEditMode={isEditMode}
+              onImageUploadingChange={setIsImageUploading}
+            />
             {formModel.sections.map((section) => (
               <CurationFormSection key={section.id} section={section} />
             ))}

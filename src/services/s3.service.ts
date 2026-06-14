@@ -4,11 +4,7 @@
  */
 
 import { apiClient } from '@/lib/api-client';
-import {
-  S3Api,
-  type PresignUrlParams,
-  type PresignUrlResponse,
-} from '@/types/api/s3.api';
+import { S3Api, type PresignUrlParams, type PresignUrlResponse } from '@/types/api/s3.api';
 
 // ============================================
 // Service
@@ -89,24 +85,6 @@ export const s3Service = {
   uploadImages: async (files: File[], rootPath: string): Promise<string[]> => {
     if (files.length === 0) return [];
 
-    // 1. Presigned URL 일괄 발급
-    const presignResponse = await s3Service.getPresignedUrls({
-      rootPath,
-      uploadSize: files.length,
-    });
-
-    // 2. 병렬 업로드
-    const uploadPromises = presignResponse.imageUploadInfo.map(
-      async (info, index) => {
-        const file = files[index];
-        if (!file) {
-          throw new Error(`파일 인덱스 ${index} 누락`);
-        }
-        await s3Service.uploadToS3(info.uploadUrl, file);
-        return info.viewUrl;
-      }
-    );
-
-    return Promise.all(uploadPromises);
+    return Promise.all(files.map((file) => s3Service.uploadImage(file, rootPath)));
   },
 };
