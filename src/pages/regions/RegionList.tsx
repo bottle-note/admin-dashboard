@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/table';
 import { Pagination } from '@/components/common/Pagination';
 import { useRegionList, useRegionBulkReorder } from '@/hooks/useRegions';
+import { isNonComposingEnterKey } from '@/lib/keyboard';
 import type { RegionListItem, RegionSearchParams } from '@/types/api';
 
 /** 순서 변경 모드에서 전체 항목을 한 번에 로드하기 위한 페이지 크기 */
@@ -127,7 +128,7 @@ export function RegionListPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (isNonComposingEnterKey(e)) {
       handleSearch();
     }
   };

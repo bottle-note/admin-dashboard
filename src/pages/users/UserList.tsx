@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Pagination } from '@/components/common/Pagination';
 import { useUserList } from '@/hooks/useUsers';
+import { isNonComposingEnterKey } from '@/lib/keyboard';
 import type { UserSearchParams, UserStatus, UserSortType, UserSortOrder } from '@/types/api';
 
 const STATUS_OPTIONS = [
@@ -116,7 +117,7 @@ export function UserListPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (isNonComposingEnterKey(e)) {
       handleSearch();
     }
   };

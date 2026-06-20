@@ -13,6 +13,7 @@ import { Loader2, Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { flattenTastingTagPages, useTastingTagListInfinite } from '@/hooks/useTastingTags';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { isNonComposingEnterKey } from '@/lib/keyboard';
 import { cn } from '@/lib/utils';
 import type { TastingTagListItem } from '@/types/api';
 
@@ -182,7 +183,7 @@ export function CurationTastingTagCombobox({
       return;
     }
 
-    if (event.key !== 'Enter') return;
+    if (!isNonComposingEnterKey(event)) return;
 
     event.preventDefault();
     if (!trimmedValue || !onCreate) return;

@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 import type { FieldValues } from 'react-hook-form';
 import { useFormContext, useWatch } from 'react-hook-form';
 
-import { AddressSearchInput } from '@/components/common/AddressSearchInput';
 import { FormField } from '@/components/common/FormField';
+import { PlaceSearchInput } from '@/components/common/PlaceSearchInput';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -105,7 +105,7 @@ function renderTextInput({ field, form, name }: StandardFieldRendererProps) {
   return <TextInputField field={field} form={form} name={name} />;
 }
 
-// address field model을 주소 검색 input renderer로 위임합니다.
+// address field model을 장소 검색 input renderer로 위임합니다.
 function renderAddressInput({ field, form, name }: StandardFieldRendererProps) {
   if (field.kind !== 'address') return null;
 
@@ -154,7 +154,7 @@ function TextInputField({
   );
 }
 
-// address field model을 주소 검색 입력 컴포넌트로 렌더링합니다.
+// address field model을 장소 검색 입력 컴포넌트로 렌더링합니다.
 function AddressField({
   field,
   form,
@@ -165,7 +165,7 @@ function AddressField({
   name: string;
 }) {
   return (
-    <AddressSearchInput
+    <PlaceSearchInput
       aria-label={field.label}
       placeholder={field.placeholder}
       maxLength={field.maxLength}
@@ -173,6 +173,14 @@ function AddressField({
       onAddressSelect={(next) =>
         form.setValue(name, next, { shouldDirty: true, shouldValidate: true })
       }
+      onPlaceSelect={(place) => {
+        if (name !== 'barAddress') return;
+
+        form.setValue('placeName', place.placeName, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }}
     />
   );
 }

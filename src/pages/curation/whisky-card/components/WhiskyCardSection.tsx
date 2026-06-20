@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useAdminAlcoholDetailLookup } from '@/hooks/useAdminAlcohols';
 import { useToast } from '@/hooks/useToast';
+import { isNonComposingEnterKey } from '@/lib/keyboard';
 
 import {
   createBottleNoteCurationWhiskyItem,
@@ -289,7 +290,7 @@ export function WhiskyCardSection({ formModel }: WhiskyCardSectionProps) {
                       value={tagInput}
                       onChange={(event) => setTagInput(event.target.value)}
                       onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
+                        if (isNonComposingEnterKey(event)) {
                           event.preventDefault();
                           handleAddTag();
                         }

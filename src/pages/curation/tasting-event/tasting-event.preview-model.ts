@@ -36,6 +36,7 @@ export function createTastingEventPreviewModel(
   const imageUrls = getStringArray(values.imageUrls);
   const eventDate = formatDate(getString(values.eventDate));
   const eventTime = getString(values.eventTime);
+  const placeName = getString(values.placeName);
   const barAddress = getString(values.barAddress);
   const detailAddress = getString(values.detailAddress);
   const entryFee = getNumber(values.entryFee);
@@ -47,7 +48,7 @@ export function createTastingEventPreviewModel(
     imageUrl: normalizeImageUrl(imageUrls[0]),
     imageCount: imageUrls.length,
     scheduleLabel: [eventDate, eventTime].filter(Boolean).join(' ') || '일정 미정',
-    locationLabel: [barAddress, detailAddress].filter(Boolean).join(' ') || '장소 미정',
+    locationLabel: [placeName, barAddress, detailAddress].filter(Boolean).join(' ') || '장소 미정',
     entryFeeLabel: formatEntryFee(entryFee),
     capacityLabel: capacity === null ? '인원 미정' : `${capacity.toLocaleString('ko-KR')}명`,
     recruitingLabel: values.isRecruiting ? '참여자 모집 중' : '광고 노출',

@@ -242,6 +242,7 @@ describe('CurationTastingEventCreatePage', () => {
     expect(screen.getByText('참가 정보')).toBeInTheDocument();
     expect(screen.getAllByText('시음 위스키').length).toBeGreaterThan(0);
     expect(screen.getByText('장소 및 바(bar) 주소')).toBeInTheDocument();
+    expect(screen.getByText('장소명')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '큐레이션 이미지 업로드' })).toBeInTheDocument();
     expect(screen.getByText(/PNG, JPG, WEBP 지원/)).toBeInTheDocument();
     expect(screen.getByText('미리보기')).toBeInTheDocument();
@@ -548,6 +549,7 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
       target: { value: '서울 강남구 테헤란로 123' },
     });
+    fireEvent.change(screen.getByLabelText('장소명'), { target: { value: '도시남 바' } });
     fireEvent.change(screen.getByLabelText('상세 주소'), { target: { value: '2층 도시남 바' } });
     fireEvent.change(screen.getByLabelText('참가비(1인당)'), { target: { value: '75000' } });
     fireEvent.change(screen.getByLabelText('총 모집 인원수'), { target: { value: '20' } });
@@ -600,6 +602,7 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
       target: { value: '서울 강남구 테헤란로 123' },
     });
+    fireEvent.change(screen.getByLabelText('장소명'), { target: { value: '도시남 바' } });
     fireEvent.change(screen.getByLabelText('상세 주소'), { target: { value: '2층 도시남 바' } });
     fireEvent.change(screen.getByLabelText('참가비(1인당)'), { target: { value: '75000' } });
     fireEvent.change(screen.getByLabelText('총 모집 인원수'), { target: { value: '20' } });
@@ -653,6 +656,7 @@ describe('CurationTastingEventCreatePage', () => {
         eventDate: '2026-06-15',
         eventTime: '19:30',
         barAddress: '서울 강남구 테헤란로 123',
+        placeName: '도시남 바',
         detailAddress: '2층 도시남 바',
         isRecruiting: true,
         entryFee: 75000,

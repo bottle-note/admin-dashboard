@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/common/Pagination';
 import { StatusToggle } from '@/components/common/StatusToggle';
+import { isNonComposingEnterKey } from '@/lib/keyboard';
 import { useReorderDrag } from '@/hooks/useReorderDrag';
 import { useBannerList, useBannerUpdateStatus, useBannerBulkReorder } from '@/hooks/useBanners';
 import { type BannerSearchParams, type BannerListItem, BANNER_TYPE_LABELS } from '@/types/api';
@@ -127,7 +128,7 @@ export function BannerListPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (isNonComposingEnterKey(e)) {
       handleSearch();
     }
   };
