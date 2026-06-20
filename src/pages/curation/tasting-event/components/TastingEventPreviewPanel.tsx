@@ -187,15 +187,16 @@ function getWhiskyStatsLabel(whisky: TastingEventPreviewWhisky): string {
 
   return [
     formatRating(stats.rating),
-    formatCount('리뷰', stats.reviewCount),
-    formatCount('찜', stats.totalPickCount),
+    formatCount('유저평가', stats.totalRatingsCount),
   ]
     .filter(Boolean)
     .join(' · ');
 }
 
 function formatRating(value: number | null | undefined): string {
-  return typeof value === 'number' && Number.isFinite(value) ? `평균 ${value.toFixed(1)}` : '';
+  return typeof value === 'number' && Number.isFinite(value)
+    ? `평균별점 ${value.toFixed(1)}`
+    : '';
 }
 
 function formatCount(label: string, value: number | null | undefined): string {

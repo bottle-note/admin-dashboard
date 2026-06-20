@@ -1,10 +1,18 @@
-import { useRef, useState, type DragEvent, type PointerEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+  type PointerEvent,
+} from 'react';
 import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
-import { GripVertical, Loader2, Plus, X } from 'lucide-react';
+import { GripVertical, Loader2, Plus, Upload, X } from 'lucide-react';
 
 import { FormField } from '@/components/common/FormField';
 import { WhiskySearchSelect, type SelectedWhisky } from '@/components/common/WhiskySearchSelect';
 import { useAdminAlcoholDetailLookup } from '@/hooks/useAdminAlcohols';
+import { S3UploadPath, useImageUpload } from '@/hooks/useImageUpload';
 import { useToast } from '@/hooks/useToast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,14 +30,19 @@ import type {
   CurationWhiskyCardListFormValues,
   CurationWhiskyCardValue,
   CurationWhiskyMirror,
+  CurationWhiskyStats,
 } from '../curation-whisky-card-list.types';
 import { CurationTastingTagCombobox } from './CurationTastingTagCombobox';
 import { CurationSectionCard } from './CurationSectionCard';
 
 const WHISKY_DRAG_HANDLE_SELECTOR = '[data-whisky-drag-handle="true"]';
+const MANUAL_WHISKY_IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp';
+const SUPPORTED_MANUAL_WHISKY_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
+type RemovableWhiskyStatsKey = Extract<keyof CurationWhiskyStats, 'rating' | 'totalRatingsCount'>;
 
 interface CurationWhiskyCardListFieldProps {
   fieldModel: CurationWhiskyCardListFieldModel;
+  onImageUploadingChange?: (isUploading: boolean) => void;
   sectionHeader?: {
     stepNumber?: number;
     description?: string;
@@ -38,17 +51,25 @@ interface CurationWhiskyCardListFieldProps {
 
 export function CurationWhiskyCardListField({
   fieldModel,
+  onImageUploadingChange,
   sectionHeader,
 }: CurationWhiskyCardListFieldProps) {
   const form = useFormContext<CurationWhiskyCardListFormValues>();
   const fetchAlcoholDetail = useAdminAlcoholDetailLookup();
+  const { upload: uploadManualWhiskyImage } = useImageUpload({
+    rootPath: S3UploadPath.CURATION,
+  });
   const { showToast } = useToast();
   const [tagInputs, setTagInputs] = useState<Record<string, string>>({});
   const [manualInputFieldIds, setManualInputFieldIds] = useState<Set<string>>(() => new Set());
+  const [uploadingManualImageFieldIds, setUploadingManualImageFieldIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [pendingAlcoholId, setPendingAlcoholId] = useState<number | null>(null);
   const [draggedAlcoholIndex, setDraggedAlcoholIndex] = useState<number | null>(null);
   const [dragOverAlcoholIndex, setDragOverAlcoholIndex] = useState<number | null>(null);
   const activeWhiskyDragHandleIndexRef = useRef<number | null>(null);
+  const localManualImageUrlsRef = useRef<Set<string>>(new Set());
   const alcoholFieldArray = useFieldArray({
     control: form.control,
     name: 'alcohols',
@@ -66,6 +87,19 @@ export function CurationWhiskyCardListField({
   const isAddingBottleNoteWhisky = pendingAlcoholId !== null;
   const isAddDisabled = isMaxReached || isAddingBottleNoteWhisky;
   const limitDescription = `${fieldModel.minItems}-${fieldModel.maxItems}개까지 등록할 수 있습니다. 검색 추가와 직접 입력을 지원하며, 테이스팅 태그 순서가 앱 노출 순서입니다.`;
+
+  useEffect(() => {
+    onImageUploadingChange?.(uploadingManualImageFieldIds.size > 0);
+  }, [onImageUploadingChange, uploadingManualImageFieldIds.size]);
+
+  useEffect(() => {
+    const localManualImageUrls = localManualImageUrlsRef.current;
+
+    return () => {
+      localManualImageUrls.forEach((url) => URL.revokeObjectURL(url));
+      localManualImageUrls.clear();
+    };
+  }, []);
 
   const handleAddEmptyWhisky = () => {
     if (isAddDisabled) return;
@@ -156,6 +190,99 @@ export function CurationWhiskyCardListField({
         shouldValidate: true,
       }
     );
+  };
+
+  const handleHideWhiskyStatsItem = (index: number, key: RemovableWhiskyStatsKey) => {
+    const currentStats = form.getValues(`alcohols.${index}.stats` as const);
+    if (!currentStats) return;
+
+    form.setValue(
+      `alcohols.${index}.stats` as const,
+      {
+        ...currentStats,
+        [key]: null,
+      },
+      {
+        shouldDirty: true,
+        shouldValidate: true,
+      }
+    );
+  };
+
+  const setManualImageUploading = (fieldId: string, isUploading: boolean) => {
+    setUploadingManualImageFieldIds((prev) => {
+      const next = new Set(prev);
+      if (isUploading) {
+        next.add(fieldId);
+      } else {
+        next.delete(fieldId);
+      }
+      return next;
+    });
+  };
+
+  const revokeLocalManualImageUrl = (url: string) => {
+    if (!localManualImageUrlsRef.current.has(url)) return;
+
+    URL.revokeObjectURL(url);
+    localManualImageUrlsRef.current.delete(url);
+  };
+
+  const handleManualWhiskyImageChange = async (
+    fieldId: string,
+    index: number,
+    event: ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!SUPPORTED_MANUAL_WHISKY_IMAGE_TYPES.has(file.type)) {
+      showToast({
+        type: 'warning',
+        message: 'PNG, JPG, WEBP 이미지만 업로드할 수 있습니다.',
+      });
+      return;
+    }
+
+    const path = `alcohols.${index}.alcohol.imageUrl` as const;
+    const previewUrl = URL.createObjectURL(file);
+    localManualImageUrlsRef.current.add(previewUrl);
+    form.setValue(path, previewUrl, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setManualImageUploading(fieldId, true);
+
+    try {
+      const uploadedUrl = await uploadManualWhiskyImage(file);
+      if (!uploadedUrl) {
+        if (form.getValues(path) === previewUrl) {
+          form.setValue(path, '', { shouldDirty: true, shouldValidate: true });
+        }
+        return;
+      }
+
+      form.setValue(path, uploadedUrl, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    } finally {
+      revokeLocalManualImageUrl(previewUrl);
+      setManualImageUploading(fieldId, false);
+    }
+  };
+
+  const handleRemoveManualWhiskyImage = (index: number) => {
+    const path = `alcohols.${index}.alcohol.imageUrl` as const;
+    const currentImageUrl = form.getValues(path);
+    if (currentImageUrl) {
+      revokeLocalManualImageUrl(currentImageUrl);
+    }
+    form.setValue(path, '', {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
   };
 
   const handleRemoveWhisky = (fieldId: string, index: number) => {
@@ -301,7 +428,7 @@ export function CurationWhiskyCardListField({
                 hasWhiskyValidationError);
             const isEmptyWhiskyCard = item?.source === 'MANUAL' && !isManualInput;
             const whiskyProfile = getWhiskyProfile(item?.alcohol);
-            const whiskyRating = getWhiskyRating(item?.stats);
+            const whiskyStatsItems = getWhiskyStatsItems(item?.stats);
             const whiskyImageUrl = normalizeImageUrl(item?.alcohol.imageUrl);
             const tagError = itemError?.alcohol?.selectedTags?.message;
             const commentError = itemError?.comment?.message;
@@ -401,8 +528,26 @@ export function CurationWhiskyCardListField({
                           {whiskyProfile && (
                             <p className="text-sm text-foreground">{whiskyProfile}</p>
                           )}
-                          {whiskyRating && (
-                            <p className="text-sm text-foreground">{whiskyRating}</p>
+                          {whiskyStatsItems.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {whiskyStatsItems.map((statsItem) => (
+                                <Badge
+                                  key={statsItem.label}
+                                  variant="secondary"
+                                  className="gap-1 rounded-md px-2 py-0.5 text-xs font-medium"
+                                >
+                                  {statsItem.label} {statsItem.value}
+                                  <button
+                                    type="button"
+                                    className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-background hover:bg-foreground/80"
+                                    aria-label={`${itemName} ${statsItem.label} 숨기기`}
+                                    onClick={() => handleHideWhiskyStatsItem(index, statsItem.key)}
+                                  >
+                                    <X className="h-3 w-3" aria-hidden="true" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
                           )}
                         </div>
 
@@ -426,11 +571,88 @@ export function CurationWhiskyCardListField({
                                 placeholder="예: GLENDRONACH ORIGINAL 12Y"
                               />
                             </FormField>
-                            <FormField label="이미지 URL" className="md:col-span-2">
+                            <FormField label="이미지" className="md:col-span-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <input
+                                  id={`${field.id}-manual-whisky-image`}
+                                  type="file"
+                                  accept={MANUAL_WHISKY_IMAGE_ACCEPT}
+                                  className="sr-only"
+                                  aria-label={`${manualFieldPrefix} 이미지 파일 선택`}
+                                  onChange={(event) =>
+                                    void handleManualWhiskyImageChange(field.id, index, event)
+                                  }
+                                  disabled={uploadingManualImageFieldIds.has(field.id)}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    document
+                                      .getElementById(`${field.id}-manual-whisky-image`)
+                                      ?.click()
+                                  }
+                                  disabled={uploadingManualImageFieldIds.has(field.id)}
+                                >
+                                  {uploadingManualImageFieldIds.has(field.id) ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Upload className="h-4 w-4" />
+                                  )}
+                                  {uploadingManualImageFieldIds.has(field.id)
+                                    ? '업로드 중'
+                                    : '이미지 업로드'}
+                                </Button>
+                                {whiskyImageUrl && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRemoveManualWhiskyImage(index)}
+                                    disabled={uploadingManualImageFieldIds.has(field.id)}
+                                  >
+                                    이미지 삭제
+                                  </Button>
+                                )}
+                                <span className="text-xs text-muted-foreground">
+                                  PNG, JPG, WEBP 지원
+                                </span>
+                              </div>
+                            </FormField>
+                            <FormField label="도수">
                               <Input
-                                aria-label={`${manualFieldPrefix} 이미지 URL`}
-                                {...form.register(`alcohols.${index}.alcohol.imageUrl` as const)}
-                                placeholder="https://img.example.com/alcohols/1.png"
+                                aria-label={`${manualFieldPrefix} 도수`}
+                                {...form.register(`alcohols.${index}.alcohol.abv` as const)}
+                                placeholder="예: 43"
+                              />
+                            </FormField>
+                            <FormField label="용량">
+                              <Input
+                                aria-label={`${manualFieldPrefix} 용량`}
+                                {...form.register(`alcohols.${index}.alcohol.volume` as const)}
+                                placeholder="예: 700ml"
+                              />
+                            </FormField>
+                            <FormField label="캐스크">
+                              <Input
+                                aria-label={`${manualFieldPrefix} 캐스크`}
+                                {...form.register(`alcohols.${index}.alcohol.cask` as const)}
+                                placeholder="예: 셰리 캐스크"
+                              />
+                            </FormField>
+                            <FormField label="지역">
+                              <Input
+                                aria-label={`${manualFieldPrefix} 지역`}
+                                {...form.register(`alcohols.${index}.alcohol.regionName` as const)}
+                                placeholder="예: 스코틀랜드/하이랜드"
+                              />
+                            </FormField>
+                            <FormField label="카테고리" className="md:col-span-2">
+                              <Input
+                                aria-label={`${manualFieldPrefix} 카테고리`}
+                                {...form.register(`alcohols.${index}.alcohol.korCategory` as const)}
+                                placeholder="예: 싱글몰트"
                               />
                             </FormField>
                           </div>
@@ -508,11 +730,11 @@ export function CurationWhiskyCardListField({
                     <div className="mt-4 space-y-2">
                       <Textarea
                         aria-label={`${itemName} 기대평`}
-                        rows={4}
+                        rows={2}
                         maxLength={fieldModel.comment.maxLength}
                         {...form.register(`alcohols.${index}.comment` as const)}
-                        placeholder="위스키에 대한 설명을 작성해주세요."
-                        className="min-h-24 resize-none rounded-[10px] border-border"
+                        placeholder="위스키 기대평을 작성해주세요."
+                        className="min-h-16 resize-none rounded-[10px] border-border"
                       />
                       {commentError && <p className="text-sm text-destructive">{commentError}</p>}
                     </div>
@@ -544,7 +766,12 @@ function hasManualWhiskyValue(alcohol: CurationWhiskyMirror | undefined): boolea
   return Boolean(
     normalizeText(alcohol.korName) ||
     normalizeText(alcohol.engName) ||
-    normalizeText(alcohol.imageUrl)
+    normalizeText(alcohol.imageUrl) ||
+    normalizeText(alcohol.abv) ||
+    normalizeText(alcohol.volume) ||
+    normalizeText(alcohol.cask) ||
+    normalizeText(alcohol.regionName) ||
+    normalizeText(alcohol.korCategory)
   );
 }
 
@@ -569,12 +796,23 @@ function getWhiskyProfile(alcohol: CurationWhiskyMirror | undefined): string {
   return [formatAbv(alcohol.abv), normalizeText(alcohol.korCategory)].filter(Boolean).join(' · ');
 }
 
-function getWhiskyRating(stats: CurationWhiskyCardValue['stats']): string {
-  if (!stats) return '';
+function getWhiskyStatsItems(stats: CurationWhiskyCardValue['stats']) {
+  if (!stats) return [];
 
-  if (stats.rating == null && stats.totalRatingsCount == null) return '';
-
-  return `평균별점 ${formatRating(stats.rating)} (유저평가 ${formatCount(stats.totalRatingsCount)})`;
+  return [
+    {
+      key: 'rating' as const,
+      label: '평균별점',
+      value: formatRating(stats.rating),
+      hidden: stats.rating == null,
+    },
+    {
+      key: 'totalRatingsCount' as const,
+      label: '유저평가',
+      value: formatCount(stats.totalRatingsCount),
+      hidden: stats.totalRatingsCount == null,
+    },
+  ].filter((item) => !item.hidden);
 }
 
 function formatRating(value: number | null | undefined): string {

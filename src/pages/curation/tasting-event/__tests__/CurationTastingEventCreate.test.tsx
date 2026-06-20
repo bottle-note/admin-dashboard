@@ -614,7 +614,13 @@ describe('CurationTastingEventCreatePage', () => {
     await user.type(screen.getByPlaceholderText('위스키 검색 ...'), '글렌');
     await user.click(await screen.findByText('글렌피딕 12년'));
     expect(await screen.findByText('도수 40% · 싱글몰트')).toBeInTheDocument();
-    expect(screen.getByText('평균별점 4.2 (유저평가 150)')).toBeInTheDocument();
+    expect(screen.getAllByText('평균별점 4.2').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('유저평가 150').length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: '글렌피딕 12년 평균별점 숨기기' }));
+    expect(screen.queryByText('평균별점 4.2')).not.toBeInTheDocument();
+    expect(screen.getAllByText('유저평가 150').length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: '글렌피딕 12년 유저평가 숨기기' }));
+    expect(screen.queryByText('유저평가 150')).not.toBeInTheDocument();
     expect(screen.queryByText('리뷰 수')).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText('테이스팅 태그검색 후 추가')).toBeInTheDocument();
     expect(screen.getByText('2/12')).toBeInTheDocument();
@@ -667,6 +673,10 @@ describe('CurationTastingEventCreatePage', () => {
               regionName: '스코틀랜드',
               korCategory: '싱글몰트',
               selectedTags: ['꿀', '과일', '셰리'],
+            },
+            stats: {
+              rating: null,
+              totalRatingsCount: null,
             },
             comment: '첫 잔으로 가볍게 시작하는 위스키',
           },
@@ -733,9 +743,6 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('1번 수동 위스키 영문명'), {
       target: { value: 'Open Malt 12' },
     });
-    fireEvent.change(screen.getByLabelText('1번 수동 위스키 이미지 URL'), {
-      target: { value: 'images.example.com/open-malt-12.png' },
-    });
     await user.type(screen.getByLabelText('오픈 몰트 12년 테이스팅 태그'), '버번{enter}');
     fireEvent.change(screen.getByLabelText('오픈 몰트 12년 기대평'), {
       target: { value: '직접 섭외한 한정 위스키' },
@@ -757,6 +764,7 @@ describe('CurationTastingEventCreatePage', () => {
     const user = userEvent.setup();
     let capturedBody: CurationV2CreateRequest | null = null;
     mockSpecSuccess();
+    mockImageUpload(['https://cdn.example.com/curation/manual-whisky.jpg']);
     server.use(
       http.post(CURATION_BASE, async ({ request }) => {
         capturedBody = (await request.json()) as CurationV2CreateRequest;
@@ -806,21 +814,34 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('1번 수동 위스키 영문명'), {
       target: { value: 'Open Malt 12' },
     });
-    fireEvent.change(screen.getByLabelText('1번 수동 위스키 이미지 URL'), {
-      target: { value: 'images.example.com/open-malt-12.png' },
-    });
-    expect(screen.getAllByRole('img', { name: '오픈 몰트 12년' })).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          src: 'https://images.example.com/open-malt-12.png',
-        }),
-      ])
+    await user.upload(
+      screen.getByLabelText('1번 수동 위스키 이미지 파일 선택'),
+      new File(['manual'], 'manual-whisky.jpg', { type: 'image/jpeg' })
     );
-    expect(screen.queryByLabelText('1번 수동 위스키 도수')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('1번 수동 위스키 용량')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('1번 수동 위스키 캐스크')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('1번 수동 위스키 지역')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('1번 수동 위스키 카테고리')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('1번 수동 위스키 도수'), {
+      target: { value: '46' },
+    });
+    fireEvent.change(screen.getByLabelText('1번 수동 위스키 용량'), {
+      target: { value: '700ml' },
+    });
+    fireEvent.change(screen.getByLabelText('1번 수동 위스키 캐스크'), {
+      target: { value: '버번 캐스크' },
+    });
+    fireEvent.change(screen.getByLabelText('1번 수동 위스키 지역'), {
+      target: { value: '스코틀랜드/아일라' },
+    });
+    fireEvent.change(screen.getByLabelText('1번 수동 위스키 카테고리'), {
+      target: { value: '싱글몰트' },
+    });
+    await waitFor(() => {
+      expect(screen.getAllByRole('img', { name: '오픈 몰트 12년' })).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            src: 'https://cdn.example.com/curation/manual-whisky.jpg',
+          }),
+        ])
+      );
+    });
     await user.type(screen.getByLabelText('오픈 몰트 12년 테이스팅 태그'), '버번{enter}');
     fireEvent.change(screen.getByLabelText('오픈 몰트 12년 기대평'), {
       target: { value: '직접 섭외한 한정 위스키' },
@@ -839,7 +860,12 @@ describe('CurationTastingEventCreatePage', () => {
               alcoholId: null,
               korName: '오픈 몰트 12년',
               engName: 'Open Malt 12',
-              imageUrl: 'images.example.com/open-malt-12.png',
+              imageUrl: 'https://cdn.example.com/curation/manual-whisky.jpg',
+              abv: '46',
+              cask: '버번 캐스크',
+              volume: '700ml',
+              regionName: '스코틀랜드/아일라',
+              korCategory: '싱글몰트',
               selectedTags: ['버번'],
             },
             comment: '직접 섭외한 한정 위스키',

@@ -21,6 +21,7 @@ import { CurationWhiskyCardListField } from './CurationWhiskyCardListField';
 interface CurationFormFieldRendererProps {
   field: CurationFieldModel;
   className?: string;
+  onImageUploadingChange?: (isUploading: boolean) => void;
   sectionHeader?: {
     stepNumber?: number;
     description?: string;
@@ -52,10 +53,17 @@ const STANDARD_FIELD_RENDERER_REGISTRY: Record<
 export function CurationFormFieldRenderer({
   field,
   className,
+  onImageUploadingChange,
   sectionHeader,
 }: CurationFormFieldRendererProps) {
   if (field.kind === 'alcohol-card-list') {
-    return <CurationWhiskyCardListField fieldModel={field} sectionHeader={sectionHeader} />;
+    return (
+      <CurationWhiskyCardListField
+        fieldModel={field}
+        onImageUploadingChange={onImageUploadingChange}
+        sectionHeader={sectionHeader}
+      />
+    );
   }
 
   return <StandardCurationFormFieldRenderer field={field} className={className} />;
