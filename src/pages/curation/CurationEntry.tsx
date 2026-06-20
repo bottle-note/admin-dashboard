@@ -15,7 +15,8 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCurationSpecs } from '@/hooks/useCurations';
-import type { CurationV2Spec, KnownCurationV2SpecCode } from '@/types/api';
+import { useToast } from '@/hooks/useToast';
+import type { CurationV2SpecListItem, KnownCurationV2SpecCode } from '@/types/api';
 
 interface CurationSpecUiConfig {
   href: string;
@@ -49,11 +50,11 @@ const CURATION_SPEC_UI_CONFIG: Record<KnownCurationV2SpecCode, CurationSpecUiCon
   },
 };
 
-function getCurationSpecUiConfig(spec: CurationV2Spec) {
+function getCurationSpecUiConfig(spec: CurationV2SpecListItem) {
   return CURATION_SPEC_UI_CONFIG[spec.code as KnownCurationV2SpecCode];
 }
 
-function compareCurationSpecs(a: CurationV2Spec, b: CurationV2Spec) {
+function compareCurationSpecs(a: CurationV2SpecListItem, b: CurationV2SpecListItem) {
   const aConfig = getCurationSpecUiConfig(a);
   const bConfig = getCurationSpecUiConfig(b);
   const aOrder = aConfig?.order ?? Number.MAX_SAFE_INTEGER;
@@ -64,6 +65,7 @@ function compareCurationSpecs(a: CurationV2Spec, b: CurationV2Spec) {
 
 export function CurationEntryPage() {
   const [selectedPreview, setSelectedPreview] = useState<string | null>(null);
+  const { showToast } = useToast();
   const { data: specs = [], isError, isLoading, refetch } = useCurationSpecs();
 
   const activeSpecs = specs.filter((spec) => spec.isActive).sort(compareCurationSpecs);
@@ -162,8 +164,17 @@ export function CurationEntryPage() {
                           </Link>
                         </Button>
                       ) : (
-                        <Button type="button" disabled>
-                          작성 준비중
+                        <Button
+                          type="button"
+                          onClick={() =>
+                            showToast({
+                              type: 'info',
+                              message: '준비중입니다',
+                            })
+                          }
+                        >
+                          작성하기
+                          <ArrowRight className="h-4 w-4" />
                         </Button>
                       )}
                     </div>

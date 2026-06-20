@@ -19,6 +19,7 @@ import type {
   CurationV2SearchParams,
   CurationV2Spec,
   CurationV2SpecCode,
+  CurationV2SpecListItem,
   CurationV2UpdateRequest,
   CurationV2UpdateResponse,
 } from '@/types/api';
@@ -27,7 +28,7 @@ import type {
  * 큐레이션 스펙 목록 조회 훅
  */
 export function useCurationSpecs() {
-  return useApiQuery<CurationV2Spec[]>(curationKeys.specs(), curationService.listSpecs, {
+  return useApiQuery<CurationV2SpecListItem[]>(curationKeys.specs(), curationService.listSpecs, {
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -55,7 +56,7 @@ export function useCurationSpec(
  * specId는 환경별로 달라질 수 있으므로 code로 조회 후 런타임에 resolve한다.
  */
 export function useCurationSpecByCode(specCode: CurationV2SpecCode | undefined) {
-  return useApiQuery<CurationV2Spec | null>(
+  return useApiQuery<CurationV2SpecListItem | null>(
     curationKeys.specByCode(specCode ?? ''),
     async () => {
       const specs = await curationService.listSpecs();

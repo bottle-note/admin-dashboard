@@ -13,6 +13,7 @@ import {
   type CurationV2SearchParams,
   type CurationV2Spec,
   type CurationV2SpecCode,
+  type CurationV2SpecListItem,
   type CurationV2UpdateRequest,
   type CurationV2UpdateResponse,
 } from '@/types/api';
@@ -47,10 +48,10 @@ export interface CurationListResponse {
 // Spec resolver
 // ============================================
 
-export function resolveCurationSpecByCode(
-  specs: CurationV2Spec[],
+export function resolveCurationSpecByCode<TSpec extends Pick<CurationV2SpecListItem, 'code'>>(
+  specs: TSpec[],
   specCode: CurationV2SpecCode
-): CurationV2Spec | null {
+): TSpec | null {
   return specs.find((spec) => spec.code === specCode) ?? null;
 }
 
@@ -62,8 +63,8 @@ export const curationService = {
   /**
    * 큐레이션 스펙 목록 조회
    */
-  listSpecs: async (): Promise<CurationV2Spec[]> => {
-    return apiClient.get<CurationV2Spec[]>(CurationV2Api.listSpecs.endpoint);
+  listSpecs: async (): Promise<CurationV2SpecListItem[]> => {
+    return apiClient.get<CurationV2SpecListItem[]>(CurationV2Api.listSpecs.endpoint);
   },
 
   /**

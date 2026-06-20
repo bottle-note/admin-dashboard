@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -6,77 +6,62 @@ import { http, HttpResponse } from 'msw';
 import { render } from '@/test/test-utils';
 import { server } from '@/test/mocks/server';
 import { wrapApiResponse } from '@/test/mocks/data';
-import type { CurationV2Spec } from '@/types/api';
+import type { CurationV2SpecListItem } from '@/types/api';
 import { CurationEntryPage } from '../CurationEntry';
 
 const SPEC_BASE = '/admin/api/v2/curation-specs';
+const mockShowToast = vi.hoisted(() => vi.fn());
 
-const mockSpecs: CurationV2Spec[] = [
+vi.mock('@/hooks/useToast', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useToast')>();
+
+  return {
+    ...actual,
+    useToast: () => ({
+      toasts: [],
+      showToast: mockShowToast,
+      dismissToast: vi.fn(),
+      clearAllToasts: vi.fn(),
+    }),
+  };
+});
+
+const mockSpecs: CurationV2SpecListItem[] = [
   {
     id: 3,
     code: 'WHISKY_PAIRING',
     name: '페어링',
     description: '위스키와 어울리는 음식/아이템 페어링을 작성합니다.',
-    hydratorKey: 'pairing',
     version: 1,
     isActive: true,
-    requestSpec: {
-      type: 'object',
-    },
-    responseSpec: {
-      type: 'object',
-    },
   },
   {
     id: 2,
     code: 'RECOMMENDED_WHISKY',
     name: '추천 위스키',
     description: '추천 위스키 카드 목록',
-    hydratorKey: 'alcohol',
     version: 1,
     isActive: true,
-    requestSpec: {
-      type: 'object',
-      required: ['source', 'alcohol'],
-    },
-    responseSpec: {
-      type: 'object',
-    },
   },
   {
     id: 1,
     code: 'WHISKY_TASTING_EVENT',
     name: '시음회',
     description: '시음회 날짜, 장소, 참가 정보와 시음 위스키 라인업',
-    hydratorKey: 'alcohol',
     version: 1,
     isActive: true,
-    requestSpec: {
-      type: 'object',
-      required: ['eventDate'],
-    },
-    responseSpec: {
-      type: 'object',
-    },
   },
   {
     id: 4,
     code: 'INACTIVE_SPEC',
     name: '비활성 스펙',
     description: '비활성 스펙',
-    hydratorKey: null,
     version: 1,
     isActive: false,
-    requestSpec: {
-      type: 'object',
-    },
-    responseSpec: {
-      type: 'object',
-    },
   },
 ];
 
-function mockSpecList(specs = mockSpecs) {
+function mockSpecList(specs: CurationV2SpecListItem[] = mockSpecs) {
   server.use(
     http.get(SPEC_BASE, () => {
       return HttpResponse.json(wrapApiResponse(specs));
@@ -85,6 +70,10 @@ function mockSpecList(specs = mockSpecs) {
 }
 
 describe('CurationEntryPage', () => {
+  beforeEach(() => {
+    mockShowToast.mockClear();
+  });
+
   const getFirstPreviewButton = async () => {
     const [firstPreviewButton] = await screen.findAllByRole('button', { name: /미리보기/ });
 
@@ -119,6 +108,32 @@ describe('CurationEntryPage', () => {
 
     expect(await screen.findAllByRole('link', { name: /작성하기/ })).toHaveLength(3);
     expect(screen.getAllByRole('button', { name: /미리보기/ })).toHaveLength(3);
+  });
+
+  it('준비되지 않은 활성 스펙의 작성하기를 누르면 준비중 안내를 표시한다', async () => {
+    const user = userEvent.setup();
+    mockSpecList([
+      ...mockSpecs,
+      {
+        id: 5,
+        code: 'SEASONAL_PICK',
+        name: '시즌 큐레이션',
+        description: '아직 작성 화면이 준비되지 않은 스펙',
+        version: 1,
+        isActive: true,
+      },
+    ]);
+
+    render(<CurationEntryPage />);
+
+    await screen.findByRole('heading', { name: '시즌 큐레이션' });
+
+    await user.click(screen.getByRole('button', { name: '작성하기' }));
+
+    expect(mockShowToast).toHaveBeenCalledWith({
+      type: 'info',
+      message: '준비중입니다',
+    });
   });
 
   it('미리보기 패널은 빈 공간을 확보한다', async () => {

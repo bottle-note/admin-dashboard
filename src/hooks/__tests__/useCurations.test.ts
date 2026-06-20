@@ -5,7 +5,11 @@ import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { wrapApiResponse } from '@/test/mocks/data';
 import { renderHook } from '@/test/test-utils';
-import type { CurationV2CreateRequest, CurationV2Spec } from '@/types/api';
+import type {
+  CurationV2CreateRequest,
+  CurationV2Spec,
+  CurationV2SpecListItem,
+} from '@/types/api';
 import {
   useCurationCreate,
   useCurationList,
@@ -41,6 +45,15 @@ const mockTastingEventSpec: CurationV2Spec = {
   },
 };
 
+const mockTastingEventSpecListItem: CurationV2SpecListItem = {
+  id: mockTastingEventSpec.id,
+  code: mockTastingEventSpec.code,
+  name: mockTastingEventSpec.name,
+  description: mockTastingEventSpec.description,
+  version: mockTastingEventSpec.version,
+  isActive: mockTastingEventSpec.isActive,
+};
+
 const createRequest: CurationV2CreateRequest = {
   specId: 3,
   name: '6월 싱글몰트 시음회',
@@ -59,7 +72,7 @@ describe('useCurations hooks', () => {
   it('큐레이션 스펙 목록을 반환한다', async () => {
     server.use(
       http.get(SPEC_BASE, () => {
-        return HttpResponse.json(wrapApiResponse([mockTastingEventSpec]));
+        return HttpResponse.json(wrapApiResponse([mockTastingEventSpecListItem]));
       })
     );
 
@@ -73,7 +86,7 @@ describe('useCurations hooks', () => {
   it('specCode로 큐레이션 스펙을 resolve한다', async () => {
     server.use(
       http.get(SPEC_BASE, () => {
-        return HttpResponse.json(wrapApiResponse([mockTastingEventSpec]));
+        return HttpResponse.json(wrapApiResponse([mockTastingEventSpecListItem]));
       })
     );
 
@@ -87,7 +100,7 @@ describe('useCurations hooks', () => {
   it('존재하지 않는 specCode는 null로 반환한다', async () => {
     server.use(
       http.get(SPEC_BASE, () => {
-        return HttpResponse.json(wrapApiResponse([mockTastingEventSpec]));
+        return HttpResponse.json(wrapApiResponse([mockTastingEventSpecListItem]));
       })
     );
 
