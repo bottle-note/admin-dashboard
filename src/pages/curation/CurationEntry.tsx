@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { useNavigate } from 'react-router';
 import {
   AlertCircle,
-  ArrowRight,
   CalendarDays,
-  Eye,
   Layers,
   Loader2,
   Utensils,
@@ -16,14 +14,20 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCurationSpecs } from '@/hooks/useCurations';
 import { useToast } from '@/hooks/useToast';
+import { cn } from '@/lib/utils';
 import type { CurationV2SpecListItem, KnownCurationV2SpecCode } from '@/types/api';
 
 interface CurationSpecUiConfig {
   href: string;
   icon: LucideIcon;
   order: number;
-  fallbackDescription: string;
-  summary: string[];
+  label: string;
+  description: string;
+  useCases: string[];
+  example: string;
+  fields: string[];
+  headerClassName: string;
+  previewButtonClassName: string;
 }
 
 const CURATION_SPEC_UI_CONFIG: Record<KnownCurationV2SpecCode, CurationSpecUiConfig> = {
@@ -31,22 +35,37 @@ const CURATION_SPEC_UI_CONFIG: Record<KnownCurationV2SpecCode, CurationSpecUiCon
     href: '/dashboard/curations/tasting-events/new',
     icon: CalendarDays,
     order: 1,
-    fallbackDescription: '일시, 장소, 모집 정보와 시음 위스키 라인업을 작성합니다.',
-    summary: ['날짜', '장소', '참가비', '정원', '시음 위스키'],
+    label: '시음회',
+    description: '특정 바에서 특정 기간 동안 위스키를 시음하는 모집을 만듭니다.',
+    useCases: ['오프라인 시음회 모집', '위스키 위주의 유료 행사', '바와 협업한 시음 이벤트'],
+    example: '도시남 X 보틀노트 시음회 — 성수 오가닉바 · 5/15 19:30',
+    fields: ['이름', '설명', '커버', '시음 기간', '장소(바)', '참가비', '정원', '위스키 목록', '참가 링크'],
+    headerClassName: 'bg-[#d87955]',
+    previewButtonClassName: 'bg-white/20 text-white hover:bg-white/30',
   },
   RECOMMENDED_WHISKY: {
     href: '/dashboard/curations/general/new',
     icon: Layers,
     order: 2,
-    fallbackDescription: '위스키 카드와 큐레이터 코멘트를 작성합니다.',
-    summary: ['위스키 카드', '태그', '코멘트', '노출 이미지'],
+    label: '일반 큐레이션',
+    description: '위스키 리스트만 노출하는 가장 단순한 큐레이션입니다.',
+    useCases: ['에디터 픽 / 입문자 추천', '계절별 추천', '주제별 위스키 모음'],
+    example: '입문자를 위한 스카치 베스트 6',
+    fields: ['이름', '설명', '커버', '위스키 목록'],
+    headerClassName: 'bg-[#d9a782]',
+    previewButtonClassName: 'bg-white/25 text-white hover:bg-white/35',
   },
   WHISKY_PAIRING: {
     href: '/dashboard/curations/pairings/new',
     icon: Utensils,
     order: 3,
-    fallbackDescription: '위스키와 어울리는 음식/아이템 페어링을 작성합니다.',
-    summary: ['위스키', '페어링 음식', '이미지', '설명'],
+    label: '페어링 · 위스키 → 음식',
+    description: '한 위스키를 기준으로 어울리는 음식들을 추천합니다.',
+    useCases: ['위스키 상세에서 어울리는 안주 추천', '브랜드 협업 페어링', '한 병의 다양한 즐기는 법'],
+    example: '라가불린 16년 — 다크초콜릿·훈제연어·블루치즈',
+    fields: ['이름', '설명', '커버', '기준 위스키 1종', '추천 음식 N개(자유 입력)'],
+    headerClassName: 'bg-[#687c53]',
+    previewButtonClassName: 'bg-white/20 text-white hover:bg-white/30',
   },
 };
 
@@ -64,6 +83,7 @@ function compareCurationSpecs(a: CurationV2SpecListItem, b: CurationV2SpecListIt
 }
 
 export function CurationEntryPage() {
+  const navigate = useNavigate();
   const [selectedPreview, setSelectedPreview] = useState<string | null>(null);
   const { showToast } = useToast();
   const { data: specs = [], isError, isLoading, refetch } = useCurationSpecs();
@@ -73,8 +93,8 @@ export function CurationEntryPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="큐레이션"
-        description="운영 목적에 맞는 큐레이션 유형을 선택해 작성합니다."
+        title="어떤 큐레이션을 만드시겠어요?"
+        description="템플릿마다 입력 항목과 모바일 노출 방식이 달라집니다. 시작 후엔 템플릿을 변경할 수 없으니 신중히 선택해주세요."
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -118,65 +138,103 @@ export function CurationEntryPage() {
             activeSpecs.map((spec) => {
               const config = getCurationSpecUiConfig(spec);
               const Icon = config?.icon ?? Layers;
-              const label = spec.name;
+              const label = config?.label ?? spec.name;
               const description =
+                config?.description ??
                 spec.description ??
-                config?.fallbackDescription ??
                 '스펙 기반 큐레이션을 작성합니다.';
-              const summary = config?.summary ?? ['스펙 기반', 'payload', '이미지', '노출 설정'];
+              const useCases = config?.useCases ?? ['스펙 기반 큐레이션 작성'];
+              const example = config?.example ?? spec.name;
+              const fields = config?.fields ?? ['이름', '설명', '커버', 'payload'];
+              const handleStart = () => {
+                if (config) {
+                  navigate(config.href);
+                  return;
+                }
+
+                showToast({
+                  type: 'info',
+                  message: '준비중입니다',
+                });
+              };
 
               return (
-                <Card key={spec.id} className="shadow-none">
-                  <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border bg-muted/40">
-                      <Icon className="h-6 w-6" aria-hidden="true" />
+                <Card
+                  key={spec.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${label} 작성하기`}
+                  className="cursor-pointer overflow-hidden shadow-none transition-colors hover:bg-muted/20 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  onClick={handleStart}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      handleStart();
+                    }
+                  }}
+                >
+                  <div
+                    className={cn(
+                      'flex min-h-16 items-center justify-between gap-4 px-5 py-4 text-white',
+                      config?.headerClassName ?? 'bg-slate-600'
+                    )}
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20">
+                        <Icon className="h-5 w-5" aria-hidden="true" />
+                      </span>
+                      <h2 className="truncate text-base font-bold">{label}</h2>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className={cn(
+                        'h-10 shrink-0 rounded-lg border-0 px-6 font-semibold shadow-none',
+                        config?.previewButtonClassName ?? 'bg-white/20 text-white hover:bg-white/30'
+                      )}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedPreview(label);
+                      }}
+                    >
+                      미리보기
+                    </Button>
+                  </div>
+
+                  <CardContent className="space-y-5 p-5">
+                    <p className="text-sm leading-6 text-foreground">{description}</p>
+
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground">이럴 때 사용</p>
+                      <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                        {useCases.map((item) => (
+                          <li key={item} className="flex gap-2">
+                            <span aria-hidden="true">·</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
 
-                    <div className="min-w-0 flex-1">
-                      <h2 className="text-base font-semibold">{label}</h2>
-                      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {summary.map((item) => (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground">예시</p>
+                      <p className="mt-2 text-sm font-medium leading-6 text-muted-foreground">
+                        {example}
+                      </p>
+                    </div>
+
+                    <div className="border-t pt-4">
+                      <p className="text-xs font-semibold text-muted-foreground">입력 항목</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {fields.map((item) => (
                           <span
                             key={item}
-                            className="inline-flex rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground"
+                            className="inline-flex rounded bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
                           >
                             {item}
                           </span>
                         ))}
                       </div>
-                    </div>
-
-                    <div className="flex shrink-0 gap-2 sm:justify-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setSelectedPreview(label)}
-                      >
-                        <Eye className="h-4 w-4" />
-                        미리보기
-                      </Button>
-                      {config ? (
-                        <Button asChild>
-                          <Link to={config.href}>
-                            작성하기
-                            <ArrowRight className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      ) : (
-                        <Button
-                          type="button"
-                          onClick={() =>
-                            showToast({
-                              type: 'info',
-                              message: '준비중입니다',
-                            })
-                          }
-                        >
-                          작성하기
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      )}
                     </div>
                   </CardContent>
                 </Card>

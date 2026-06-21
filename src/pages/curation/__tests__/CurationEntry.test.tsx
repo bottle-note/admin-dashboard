@@ -90,14 +90,17 @@ describe('CurationEntryPage', () => {
     render(<CurationEntryPage />);
 
     const typeSection = screen.getByLabelText('큐레이션 유형 선택');
-    await screen.findByRole('heading', { name: '시음회' });
+    expect(await screen.findByRole('heading', { name: '시음회' })).toBeInTheDocument();
     const headings = within(typeSection).getAllByRole('heading', { level: 2 });
 
     expect(headings.map((heading) => heading.textContent)).toEqual([
       '시음회',
-      '추천 위스키',
-      '페어링',
+      '일반 큐레이션',
+      '페어링 · 위스키 → 음식',
     ]);
+    expect(screen.getByText('특정 바에서 특정 기간 동안 위스키를 시음하는 모집을 만듭니다.')).toBeInTheDocument();
+    expect(screen.getByText('입문자를 위한 스카치 베스트 6')).toBeInTheDocument();
+    expect(screen.getByText('추천 음식 N개(자유 입력)')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '비활성 스펙' })).not.toBeInTheDocument();
   });
 
@@ -106,7 +109,7 @@ describe('CurationEntryPage', () => {
 
     render(<CurationEntryPage />);
 
-    expect(await screen.findAllByRole('link', { name: /작성하기/ })).toHaveLength(3);
+    expect(await screen.findAllByRole('button', { name: /작성하기/ })).toHaveLength(3);
     expect(screen.getAllByRole('button', { name: /미리보기/ })).toHaveLength(3);
   });
 
@@ -128,7 +131,7 @@ describe('CurationEntryPage', () => {
 
     await screen.findByRole('heading', { name: '시즌 큐레이션' });
 
-    await user.click(screen.getByRole('button', { name: '작성하기' }));
+    await user.click(screen.getByRole('button', { name: '시즌 큐레이션 작성하기' }));
 
     expect(mockShowToast).toHaveBeenCalledWith({
       type: 'info',
@@ -167,7 +170,9 @@ describe('CurationEntryPage', () => {
     await user.click(await getFirstPreviewButton());
 
     expect(screen.getByText('시음회 미리보기 선택됨')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '큐레이션' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: '어떤 큐레이션을 만드시겠어요?' })
+    ).toBeInTheDocument();
   });
 
   it('활성 스펙이 없으면 빈 상태를 표시한다', async () => {
