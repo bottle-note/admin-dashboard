@@ -140,6 +140,28 @@ describe('CurationTastingTagCombobox', () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
+  it('한글 조합 중 Enter는 직접 추가로 처리하지 않는다', () => {
+    const onCreate = vi.fn(() => true);
+
+    render(<ControlledCurationTastingTagCombobox onCreate={onCreate} />);
+
+    const input = screen.getByLabelText('테이스팅 태그');
+    fireEvent.change(input, { target: { value: '자' } });
+    fireEvent.keyDown(input, {
+      key: 'Enter',
+      code: 'Enter',
+      keyCode: 229,
+    });
+
+    expect(onCreate).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: '자두' } });
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+
+    expect(onCreate).toHaveBeenCalledTimes(1);
+    expect(onCreate).toHaveBeenCalledWith('자두');
+  });
+
   it('이미 선택한 태그는 검색 결과에서 제외한다', async () => {
     render(<ControlledCurationTastingTagCombobox selectedTagNames={['바닐라']} />);
 

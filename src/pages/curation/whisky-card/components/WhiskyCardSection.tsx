@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { Loader2, Plus, X } from 'lucide-react';
 
@@ -25,6 +25,7 @@ import {
   type WhiskyCardCurationFormModel,
   type WhiskyCardCurationFormState,
 } from '../whisky-card-curation.schema';
+import { CurationTastingTagCombobox } from '../../components/CurationTastingTagCombobox';
 
 interface WhiskyCardSectionProps {
   formModel: WhiskyCardCurationFormModel;
@@ -105,8 +106,8 @@ export function WhiskyCardSection({ formModel }: WhiskyCardSectionProps) {
     setTagInput('');
   };
 
-  const handleAddTag = () => {
-    const trimmedValue = tagInput.trim();
+  const handleAddTagValue = (value: string) => {
+    const trimmedValue = value.trim();
     if (!trimmedValue) return;
 
     const currentTags = form.getValues('alcohol.selectedTags') ?? [];
@@ -114,14 +115,14 @@ export function WhiskyCardSection({ formModel }: WhiskyCardSectionProps) {
       currentTags.includes(trimmedValue) ||
       currentTags.length >= formModel.selectedTags.maxItems
     ) {
-      return;
+      return false;
     }
 
     form.setValue('alcohol.selectedTags', [...currentTags, trimmedValue], {
       shouldDirty: true,
       shouldValidate: true,
     });
-    setTagInput('');
+    return true;
   };
 
   const handleRemoveTag = (tag: string) => {
@@ -149,23 +150,12 @@ export function WhiskyCardSection({ formModel }: WhiskyCardSectionProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-          <WhiskySearchSelect
-            onSelect={handleSelectBottleNoteWhisky}
-            excludeIds={selectedAlcoholIds}
-            placeholder="위스키 검색하여 선택..."
-            disabled={isLoadingDetail}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleManualInput}
-            disabled={isLoadingDetail}
-          >
-            <Plus className="h-4 w-4" />
-            직접 입력
-          </Button>
-        </div>
+        <WhiskySearchControls
+          selectedAlcoholIds={selectedAlcoholIds}
+          isLoadingDetail={isLoadingDetail}
+          onSelect={handleSelectBottleNoteWhisky}
+          onAddManualWhisky={handleManualInput}
+        />
 
         {isLoadingDetail && (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -175,10 +165,14 @@ export function WhiskyCardSection({ formModel }: WhiskyCardSectionProps) {
         )}
 
         {!hasVisibleWhisky ? (
-          <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-            위스키를 검색하거나 직접 입력을 눌러 추가해주세요.
-            {emptyStateError && <p className="mt-2 text-destructive">{emptyStateError}</p>}
-          </div>
+          <WhiskyGuideMessage
+            message={
+              <>
+                위스키를 검색하거나 직접 입력을 눌러 추가해주세요.
+                {emptyStateError && <p className="mt-2 text-destructive">{emptyStateError}</p>}
+              </>
+            }
+          />
         ) : (
           <div className="rounded-lg border p-4">
             <div className="flex items-start gap-3">
@@ -283,32 +277,19 @@ export function WhiskyCardSection({ formModel }: WhiskyCardSectionProps) {
                 error={alcoholError?.selectedTags?.message}
               >
                 <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <Input
-                      aria-label={`${itemName} 테이스팅 태그`}
-                      value={tagInput}
-                      onChange={(event) => setTagInput(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                          event.preventDefault();
-                          handleAddTag();
-                        }
-                      }}
-                      placeholder="태그 입력 후 Enter"
-                      disabled={selectedTags.length >= formModel.selectedTags.maxItems}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleAddTag}
-                      disabled={
-                        !tagInput.trim() || selectedTags.length >= formModel.selectedTags.maxItems
-                      }
-                    >
-                      <Plus className="h-4 w-4" />
-                      추가
-                    </Button>
-                  </div>
+                  <CurationTastingTagCombobox
+                    ariaLabel={`${itemName} 테이스팅 태그`}
+                    value={tagInput}
+                    onValueChange={setTagInput}
+                    onSelect={(tag) => {
+                      handleAddTagValue(tag.korName);
+                    }}
+                    onCreate={handleAddTagValue}
+                    selectedTagNames={selectedTags}
+                    placeholder="테이스팅 태그검색 후 추가"
+                    disabled={selectedTags.length >= formModel.selectedTags.maxItems}
+                    className="max-w-md"
+                  />
                   {selectedTags.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {selectedTags.map((tag) => (
@@ -345,8 +326,80 @@ export function WhiskyCardSection({ formModel }: WhiskyCardSectionProps) {
             </div>
           </div>
         )}
+
+        <WhiskyAddCta
+          label={formModel.whiskyLabel}
+          isLoadingDetail={isLoadingDetail}
+          onAddManualWhisky={handleManualInput}
+        />
       </CardContent>
     </Card>
+  );
+}
+
+interface WhiskySearchControlsProps {
+  selectedAlcoholIds: number[];
+  isLoadingDetail: boolean;
+  onSelect: (whisky: SelectedWhisky) => void;
+  onAddManualWhisky: () => void;
+}
+
+function WhiskySearchControls({
+  selectedAlcoholIds,
+  isLoadingDetail,
+  onSelect,
+  onAddManualWhisky,
+}: WhiskySearchControlsProps) {
+  return (
+    <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+      <WhiskySearchSelect
+        onSelect={onSelect}
+        excludeIds={selectedAlcoholIds}
+        placeholder="위스키 검색하여 선택..."
+        disabled={isLoadingDetail}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        onClick={onAddManualWhisky}
+        disabled={isLoadingDetail}
+      >
+        <Plus className="h-4 w-4" />
+        직접 입력
+      </Button>
+    </div>
+  );
+}
+
+function WhiskyGuideMessage({ message }: { message: ReactNode }) {
+  return (
+    <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+      {message}
+    </div>
+  );
+}
+
+function WhiskyAddCta({
+  label,
+  isLoadingDetail,
+  onAddManualWhisky,
+}: {
+  label: string;
+  isLoadingDetail: boolean;
+  onAddManualWhisky: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      className="h-14 w-full rounded-[10px] text-base font-semibold"
+      onClick={onAddManualWhisky}
+      disabled={isLoadingDetail}
+      aria-label={`${label} 추가`}
+    >
+      <Plus className="h-5 w-5" />
+      추가
+    </Button>
   );
 }
 

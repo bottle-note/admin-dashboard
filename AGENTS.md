@@ -98,6 +98,11 @@ Do not define duplicate API types outside `src/types/api/`. Components should
 not call `fetch`, `axios`, or service functions directly when a project hook
 should own the data flow.
 
+For mapper and payload work, avoid adding one-off utility functions solely for
+simple normalization or serialization. Prefer clear inline normalization at the
+mapping site, or extend an existing helper only when the logic is reused,
+non-trivial, or shared across modules.
+
 ## Forms
 
 Use React Hook Form + Zod schemas for forms. Place schemas in

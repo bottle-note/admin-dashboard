@@ -106,6 +106,15 @@ export interface CurationV2Spec {
   responseSpec: JsonSchemaObject;
 }
 
+export interface CurationV2SpecListItem {
+  id: number;
+  code: CurationV2SpecCode;
+  name: string;
+  description: string | null;
+  version: number;
+  isActive: boolean;
+}
+
 export interface CurationV2PageMeta {
   page: number;
   size: number;
@@ -128,7 +137,7 @@ export interface CurationV2MutationResponse {
 export interface CurationV2ApiTypes {
   /** 큐레이션 스펙 목록 조회 */
   listSpecs: {
-    response: CurationV2Spec;
+    response: CurationV2SpecListItem;
   };
   /** 큐레이션 스펙 상세 조회 */
   specDetail: {

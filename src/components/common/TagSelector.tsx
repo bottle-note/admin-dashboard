@@ -10,6 +10,7 @@ import { Plus, Search, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { isNonComposingEnterKey } from '@/lib/keyboard';
 
 /**
  * TagSelector 컴포넌트의 props
@@ -28,7 +29,6 @@ export interface TagSelectorProps {
 export function TagSelector({ selectedTags, availableTags, onTagsChange, allowCustomTags = true }: TagSelectorProps) {
   const [customTag, setCustomTag] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [isComposing, setIsComposing] = useState(false);
 
   // 선택되지 않은 태그만 필터링
   const unselectedTags = availableTags.filter((tag) => !selectedTags.includes(tag));
@@ -57,8 +57,7 @@ export function TagSelector({ selectedTags, availableTags, onTagsChange, allowCu
   };
 
   const handleCustomTagKeyDown = (e: React.KeyboardEvent) => {
-    // 한글 IME 조합 중에는 Enter 무시 (글자 중복 방지)
-    if (e.key === 'Enter' && !isComposing) {
+    if (isNonComposingEnterKey(e)) {
       e.preventDefault();
       handleAddCustomTag();
     }
@@ -99,8 +98,6 @@ export function TagSelector({ selectedTags, availableTags, onTagsChange, allowCu
               value={customTag}
               onChange={(e) => setCustomTag(e.target.value)}
               onKeyDown={handleCustomTagKeyDown}
-              onCompositionStart={() => setIsComposing(true)}
-              onCompositionEnd={() => setIsComposing(false)}
               className="h-8 flex-1"
             />
             <Button

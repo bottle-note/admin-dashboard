@@ -26,6 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/common/Pagination';
 import { useDistilleryList } from '@/hooks/useDistilleries';
+import { isNonComposingEnterKey } from '@/lib/keyboard';
 import type { DistillerySearchParams } from '@/types/api';
 
 export function DistilleryListPage() {
@@ -82,7 +83,7 @@ export function DistilleryListPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (isNonComposingEnterKey(e)) {
       handleSearch();
     }
   };

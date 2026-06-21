@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/common/Pagination';
 import { useReviewList } from '@/hooks/useReviews';
+import { isNonComposingEnterKey } from '@/lib/keyboard';
 import type {
   ReviewSearchParams,
   ReviewActiveStatus,
@@ -146,7 +147,7 @@ export function ReviewListPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (isNonComposingEnterKey(e)) {
       handleSearch();
     }
   };

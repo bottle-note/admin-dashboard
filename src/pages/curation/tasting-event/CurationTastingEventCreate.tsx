@@ -177,8 +177,10 @@ function TastingEventReadyForm({
   const navigate = useNavigate();
   const isRootAdmin = useAuthStore((state) => state.hasRole('ROOT_ADMIN'));
   const { showToast } = useToast();
-  const [isImageUploading, setIsImageUploading] = useState(false);
+  const [isCurationImageUploading, setIsCurationImageUploading] = useState(false);
+  const [isWhiskyImageUploading, setIsWhiskyImageUploading] = useState(false);
   const isEditMode = Boolean(curation);
+  const isImageUploading = isCurationImageUploading || isWhiskyImageUploading;
   const formSchema = createCurationTastingEventFormSchema(formModel, {
     mode: isEditMode ? 'edit' : 'create',
   });
@@ -263,10 +265,14 @@ function TastingEventReadyForm({
             <TastingEventBasicInfoSection
               isRootAdmin={isRootAdmin}
               isEditMode={isEditMode}
-              onImageUploadingChange={setIsImageUploading}
+              onImageUploadingChange={setIsCurationImageUploading}
             />
             {formModel.sections.map((section) => (
-              <CurationFormSection key={section.id} section={section} />
+              <CurationFormSection
+                key={section.id}
+                section={section}
+                onImageUploadingChange={setIsWhiskyImageUploading}
+              />
             ))}
           </div>
 

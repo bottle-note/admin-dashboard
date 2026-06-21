@@ -29,6 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/common/Pagination';
 import { StatusToggle } from '@/components/common/StatusToggle';
 import { useReorderDrag } from '@/hooks/useReorderDrag';
+import { isNonComposingEnterKey } from '@/lib/keyboard';
 import {
   useCurationList,
   useCurationToggleStatus,
@@ -131,7 +132,7 @@ export function CurationListPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (isNonComposingEnterKey(e)) {
       handleSearch();
     }
   };

@@ -167,7 +167,7 @@ describe('CurationWhiskyCardCreatePage', () => {
     setCurrentUserRoles([]);
   });
 
-  it('직접 입력 폼은 직접 입력 버튼을 누른 뒤 표시한다', async () => {
+  it('하단 추가 CTA를 누르면 직접 입력 폼을 표시한다', async () => {
     const user = userEvent.setup();
     mockSpecSuccess(recommendedWhiskySpec);
 
@@ -175,12 +175,14 @@ describe('CurationWhiskyCardCreatePage', () => {
 
     await screen.findByLabelText('큐레이션명');
 
-    expect(
-      screen.getByText('위스키를 검색하거나 직접 입력을 눌러 추가해주세요.')
-    ).toBeInTheDocument();
-    expect(screen.queryByLabelText('수동 위스키 한글명')).not.toBeInTheDocument();
+    const guideMessage = screen.getByText('위스키를 검색하거나 직접 입력을 눌러 추가해주세요.');
+    const addCta = screen.getByRole('button', { name: '추천 위스키 추가' });
 
-    await user.click(screen.getByRole('button', { name: '직접 입력' }));
+    expect(guideMessage).toBeInTheDocument();
+    expect(screen.queryByLabelText('수동 위스키 한글명')).not.toBeInTheDocument();
+    expect(guideMessage.compareDocumentPosition(addCta)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+    await user.click(addCta);
 
     expect(screen.getByLabelText('수동 위스키 한글명')).toBeInTheDocument();
   });

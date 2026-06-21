@@ -22,6 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useCurationList } from '@/hooks/useCurations';
+import { isNonComposingEnterKey } from '@/lib/keyboard';
 import type { CurationV2SearchParams } from '@/types/api';
 
 import { formatCurationDateTime, formatCurationSpecCode } from './curation-display-utils';
@@ -107,7 +108,7 @@ export function CurationListPage() {
             value={keywordInput}
             onChange={(event) => setKeywordInput(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') {
+              if (isNonComposingEnterKey(event)) {
                 handleSearch();
               }
             }}

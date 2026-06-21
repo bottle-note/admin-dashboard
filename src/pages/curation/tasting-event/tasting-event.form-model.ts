@@ -17,14 +17,30 @@ import {
 } from '../curation-form-model';
 import type { CurationWhiskyCardListFieldModel } from '../curation-whisky-card-list.types';
 
-const DATE_LOCATION_FIELD_KEYS = ['eventDate', 'eventTime', 'barAddress', 'detailAddress'];
+const DATE_LOCATION_FIELD_KEYS = [
+  'eventDate',
+  'eventTime',
+  'barAddress',
+  'detailAddress',
+  'placeName',
+];
+
+const TASTING_EVENT_PLACE_NAME_FIELD: CurationTextFieldModel = {
+  key: 'placeName',
+  label: '장소명',
+  required: false,
+  kind: 'text',
+  description: '시음회 장소명',
+  placeholder: '예: 도시남 바',
+  maxLength: 100,
+};
 
 export type TastingEventFormModel = CurationFormModel;
 
 // 시음회 스펙을 자동 렌더링 파이프라인의 form model로 변환합니다.
 export function createTastingEventFormModel(spec: CurationV2Spec): TastingEventFormModel {
   // 1. requestSpec 레이어: 상세 스펙의 requestSpec을 화면 생성의 단일 입력으로 사용합니다.
-  return createCurationFormModelFromRequestSpec(spec.requestSpec, {
+  const formModel = createCurationFormModelFromRequestSpec(spec.requestSpec, {
     // 2. schema parser 레이어: 공통 parser가 JSON Schema와 x-* 메타데이터를 읽습니다.
     // 3. form/field model 레이어: 공통 필드는 기본 field model로, 특수 필드는 도메인 field model로 만듭니다.
     createCustomField: createTastingEventCustomFieldModel,
@@ -32,6 +48,14 @@ export function createTastingEventFormModel(spec: CurationV2Spec): TastingEventF
     // 5. form renderer 준비 레이어: 화면 렌더러가 순회할 섹션 배치를 만듭니다.
     createSections: createTastingEventFormSections,
   });
+
+  const payloadFields = insertTastingEventPlaceNameField(formModel.payloadFields);
+
+  return {
+    ...formModel,
+    payloadFields,
+    sections: createTastingEventFormSections(payloadFields),
+  };
 }
 
 // 시음회에서 공통 field model로 표현할 수 없는 특수 필드를 도메인 field model로 변환합니다.
@@ -89,11 +113,11 @@ function applyTastingEventFieldOverrides(field: CurationBasicFieldModel): Curati
         ? ({
             ...field,
             kind: 'address',
-            placeholder: '예: 서울 강남구 테헤란로 123',
+            placeholder: '장소명을 검색해 선택하세요.',
           } satisfies CurationTextFieldModel)
         : field;
     case 'detailAddress':
-      return field.kind === 'text' ? { ...field, placeholder: '예: 2층 도시남 바' } : field;
+      return field.kind === 'text' ? { ...field, placeholder: '예: 2층 안쪽 입구' } : field;
     case 'isRecruiting':
       return field.kind === 'boolean-radio'
         ? ({
@@ -119,6 +143,23 @@ function applyTastingEventFieldOverrides(field: CurationBasicFieldModel): Curati
     default:
       return field;
   }
+}
+
+function insertTastingEventPlaceNameField(fields: CurationFieldModel[]): CurationFieldModel[] {
+  if (fields.some((field) => field.key === TASTING_EVENT_PLACE_NAME_FIELD.key)) {
+    return fields;
+  }
+
+  const detailAddressIndex = fields.findIndex((field) => field.key === 'detailAddress');
+  if (detailAddressIndex < 0) {
+    return [...fields, TASTING_EVENT_PLACE_NAME_FIELD];
+  }
+
+  return [
+    ...fields.slice(0, detailAddressIndex + 1),
+    TASTING_EVENT_PLACE_NAME_FIELD,
+    ...fields.slice(detailAddressIndex + 1),
+  ];
 }
 
 // payload 필드 목록을 시음회 화면의 날짜/참가/위스키 섹션으로 배치합니다.
