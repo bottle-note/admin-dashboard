@@ -6,7 +6,7 @@
  */
 import { useState, type FormEvent } from 'react';
 import type { UseFormRegisterReturn } from 'react-hook-form';
-import { Loader2, MapPin, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, MapPin, Search } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +23,7 @@ const KAKAO_MAPS_SDK_SCRIPT_ID = 'kakao-maps-sdk';
 const KAKAO_MAPS_SDK_URL = 'https://dapi.kakao.com/v2/maps/sdk.js';
 const KAKAO_MAPS_SDK_LOAD_ERROR_MESSAGE =
   '카카오 지도 SDK를 불러오지 못했습니다. Kakao Developers Web 플랫폼에 현재 도메인이 등록되어 있는지 확인해주세요.';
+const PLACE_SEARCH_PAGE_SIZE = 10;
 
 type KakaoPlaceSearchStatus = 'OK' | 'ZERO_RESULT' | 'ERROR';
 
@@ -45,13 +46,27 @@ interface KakaoMapsNamespace {
       Places: new () => {
         keywordSearch: (
           keyword: string,
-          callback: (data: KakaoPlaceDocument[], status: KakaoPlaceSearchStatus) => void,
-          options?: { size?: number }
+          callback: (
+            data: KakaoPlaceDocument[],
+            status: KakaoPlaceSearchStatus,
+            pagination?: KakaoPlacePagination
+          ) => void,
+          options?: { size?: number; page?: number }
         ) => void;
       };
       Status: Record<KakaoPlaceSearchStatus, KakaoPlaceSearchStatus>;
     };
   };
+}
+
+interface KakaoPlacePagination {
+  current: number;
+  first: number;
+  last: number;
+  perPage: number;
+  totalCount: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
 }
 
 declare global {
@@ -69,6 +84,14 @@ export interface SelectedPlace {
   longitude: string;
   latitude: string;
   placeUrl: string;
+}
+
+interface PlaceSearchPaginationState {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
 }
 
 export interface PlaceSearchInputProps {
@@ -94,9 +117,11 @@ export function PlaceSearchInput({
 }: PlaceSearchInputProps) {
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
+  const [searchedKeyword, setSearchedKeyword] = useState('');
   const [results, setResults] = useState<KakaoPlaceDocument[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [message, setMessage] = useState('장소명 또는 매장명을 입력해 검색하세요.');
+  const [pagination, setPagination] = useState<PlaceSearchPaginationState | null>(null);
 
   const handleSearch = (event?: FormEvent<HTMLFormElement>) => {
     event?.preventDefault();
@@ -104,42 +129,58 @@ export function PlaceSearchInput({
 
     if (!trimmedKeyword) {
       setResults([]);
+      setSearchedKeyword('');
+      setPagination(null);
       setMessage('검색할 장소명을 입력해주세요.');
       return;
     }
 
+    searchPlaces(trimmedKeyword, 1);
+  };
+
+  const searchPlaces = (trimmedKeyword: string, page: number) => {
     setIsSearching(true);
     setMessage('');
+    setSearchedKeyword(trimmedKeyword);
 
     loadKakaoMapsSdk()
       .then((kakao) => {
         const places = new kakao.maps.services.Places();
         places.keywordSearch(
           trimmedKeyword,
-          (data, status) => {
+          (data, status, nextPagination) => {
             setIsSearching(false);
 
             if (status === kakao.maps.services.Status.OK) {
               setResults(data);
+              setPagination(createPaginationState(nextPagination));
               setMessage(data.length > 0 ? '' : '검색 결과가 없습니다.');
               return;
             }
 
             setResults([]);
+            setPagination(null);
             setMessage(
               status === kakao.maps.services.Status.ZERO_RESULT
                 ? '검색 결과가 없습니다.'
                 : '장소 검색에 실패했습니다. 잠시 후 다시 시도해주세요.'
             );
           },
-          { size: 10 }
+          { size: PLACE_SEARCH_PAGE_SIZE, page }
         );
       })
       .catch((error: Error) => {
         setIsSearching(false);
         setResults([]);
+        setPagination(null);
         setMessage(error.message);
       });
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    if (!searchedKeyword || isSearching) return;
+
+    searchPlaces(searchedKeyword, nextPage);
   };
 
   const handleSelectPlace = (place: KakaoPlaceDocument) => {
@@ -157,7 +198,9 @@ export function PlaceSearchInput({
     });
     setOpen(false);
     setKeyword('');
+    setSearchedKeyword('');
     setResults([]);
+    setPagination(null);
     setMessage('장소명 또는 매장명을 입력해 검색하세요.');
   };
 
@@ -242,10 +285,58 @@ export function PlaceSearchInput({
               </div>
             )}
           </div>
+
+          {pagination && pagination.totalPages > 1 && (
+            <nav
+              aria-label="장소 검색 페이지네이션"
+              className="flex items-center justify-between gap-3"
+            >
+              <p className="text-sm text-muted-foreground">
+                총 {pagination.totalCount.toLocaleString()}개 · {pagination.currentPage} /{' '}
+                {pagination.totalPages} 페이지
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  disabled={!pagination.hasPrevious || isSearching}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  이전
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  disabled={!pagination.hasNext || isSearching}
+                >
+                  다음
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </nav>
+          )}
         </DialogContent>
       </Dialog>
     </div>
   );
+}
+
+function createPaginationState(
+  pagination?: KakaoPlacePagination
+): PlaceSearchPaginationState | null {
+  if (!pagination || pagination.totalCount <= 0) return null;
+
+  return {
+    currentPage: pagination.current,
+    totalPages: pagination.last,
+    totalCount: pagination.totalCount,
+    hasNext: pagination.hasNextPage,
+    hasPrevious: pagination.hasPrevPage,
+  };
 }
 
 function loadKakaoMapsSdk(): Promise<KakaoMapsNamespace> {
