@@ -5,6 +5,24 @@ import { useForm } from 'react-hook-form';
 import { PlaceSearchInput, type SelectedPlace } from '../PlaceSearchInput';
 
 const keywordSearchMock = vi.fn();
+const paginationPage1 = {
+  current: 1,
+  first: 1,
+  last: 2,
+  perPage: 10,
+  totalCount: 12,
+  hasNextPage: true,
+  hasPrevPage: false,
+};
+const paginationPage2 = {
+  current: 2,
+  first: 1,
+  last: 2,
+  perPage: 10,
+  totalCount: 12,
+  hasNextPage: false,
+  hasPrevPage: true,
+};
 
 function setKakaoPlacesMock() {
   class MockPlaces {
@@ -55,8 +73,9 @@ describe('PlaceSearchInput', () => {
   it('장소 검색 후 선택하면 도로명 주소가 입력값에 채워지고 장소 정보를 전달한다', async () => {
     const handlePlaceSelect = vi.fn();
     setKakaoPlacesMock();
-    keywordSearchMock.mockImplementation((keyword, callback) => {
+    keywordSearchMock.mockImplementation((keyword, callback, options) => {
       expect(keyword).toBe('도시남');
+      expect(options).toEqual({ size: 10, page: 1 });
       callback(
         [
           {
@@ -71,7 +90,13 @@ describe('PlaceSearchInput', () => {
             place_url: 'https://place.map.kakao.com/123',
           },
         ],
-        'OK'
+        'OK',
+        {
+          ...paginationPage1,
+          last: 1,
+          totalCount: 1,
+          hasNextPage: false,
+        }
       );
     });
 
@@ -98,10 +123,76 @@ describe('PlaceSearchInput', () => {
     expect(screen.queryByText('도시남 바')).not.toBeInTheDocument();
   });
 
+  it('검색 결과 하단에서 다음 페이지를 조회한다', async () => {
+    setKakaoPlacesMock();
+    keywordSearchMock.mockImplementation((keyword, callback, options) => {
+      expect(keyword).toBe('도시남');
+
+      if (options.page === 1) {
+        callback(
+          [
+            {
+              id: '123',
+              place_name: '도시남 바',
+              category_name: '음식점 > 술집',
+              phone: '02-123-4567',
+              address_name: '서울 강남구 역삼동 123-45',
+              road_address_name: '서울 강남구 테헤란로 123',
+              x: '127.0276',
+              y: '37.4979',
+              place_url: 'https://place.map.kakao.com/123',
+            },
+          ],
+          'OK',
+          paginationPage1
+        );
+        return;
+      }
+
+      callback(
+        [
+          {
+            id: '456',
+            place_name: '도시남 라운지',
+            category_name: '음식점 > 술집',
+            phone: '02-987-6543',
+            address_name: '서울 강남구 역삼동 543-21',
+            road_address_name: '서울 강남구 강남대로 456',
+            x: '127.0280',
+            y: '37.4980',
+            place_url: 'https://place.map.kakao.com/456',
+          },
+        ],
+        'OK',
+        paginationPage2
+      );
+    });
+
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole('button', { name: '장소 검색' }));
+    fireEvent.change(screen.getByLabelText('장소 검색어'), { target: { value: '도시남' } });
+    fireEvent.click(screen.getByRole('button', { name: '검색' }));
+
+    expect(await screen.findByText('도시남 바')).toBeInTheDocument();
+    expect(screen.getByText('총 12개 · 1 / 2 페이지')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '다음' }));
+
+    expect(await screen.findByText('도시남 라운지')).toBeInTheDocument();
+    expect(keywordSearchMock).toHaveBeenLastCalledWith(
+      '도시남',
+      expect.any(Function),
+      { size: 10, page: 2 }
+    );
+    expect(screen.getByText('총 12개 · 2 / 2 페이지')).toBeInTheDocument();
+  });
+
   it('검색 결과가 없으면 빈 상태 메시지를 표시한다', async () => {
     setKakaoPlacesMock();
-    keywordSearchMock.mockImplementation((keyword, callback) => {
+    keywordSearchMock.mockImplementation((keyword, callback, options) => {
       expect(keyword).toBe('없는장소');
+      expect(options).toEqual({ size: 10, page: 1 });
       callback([], 'ZERO_RESULT');
     });
 
