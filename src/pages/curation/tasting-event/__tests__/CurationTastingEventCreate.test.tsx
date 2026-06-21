@@ -247,9 +247,11 @@ describe('CurationTastingEventCreatePage', () => {
     expect(screen.getByText(/PNG, JPG, WEBP 지원/)).toBeInTheDocument();
     expect(screen.getByText('미리보기')).toBeInTheDocument();
     expect(screen.queryByText('요약')).not.toBeInTheDocument();
-    expect(screen.queryByText('관리자 전용 설정')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('노출 순서')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('활성화 상태')).not.toBeInTheDocument();
+    expect(screen.getByText('관리자 전용 설정')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '활성화 상태 안내' })).toBeInTheDocument();
+    expect(screen.getByText('노출 순서와 활성화 상태 변경은 관리자만 할 수 있습니다.')).toBeInTheDocument();
+    expect(screen.getByLabelText('노출 순서')).toBeDisabled();
+    expect(screen.getByLabelText('활성화 상태')).toBeDisabled();
     expect(screen.queryByText('BOTTLE_NOTE')).not.toBeInTheDocument();
   });
 
@@ -375,15 +377,31 @@ describe('CurationTastingEventCreatePage', () => {
     expect(dataTransfer.setData).not.toHaveBeenCalled();
   });
 
-  it('ROOT_ADMIN에게만 관리자 전용 설정을 표시한다', async () => {
+  it('ROOT_ADMIN은 관리자 전용 설정을 수정할 수 있다', async () => {
     setCurrentUserRoles(['ROOT_ADMIN']);
     mockSpecSuccess();
 
     render(<CurationTastingEventCreatePage />);
 
     expect(await screen.findByText('관리자 전용 설정')).toBeInTheDocument();
-    expect(screen.getByLabelText('노출 순서')).toBeInTheDocument();
-    expect(screen.getByLabelText('활성화 상태')).toBeInTheDocument();
+    expect(screen.getByLabelText('노출 순서')).not.toBeDisabled();
+    expect(screen.getByLabelText('활성화 상태')).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: '활성화 상태 안내' })).toBeInTheDocument();
+    expect(screen.queryByText('관리자만 조작할 수 있습니다.')).not.toBeInTheDocument();
+  });
+
+  it('관리자가 아니면 관리자 전용 설정 조작 시 안내를 표시한다', async () => {
+    mockSpecSuccess();
+
+    render(<CurationTastingEventCreatePage />);
+
+    const displayOrderInput = await screen.findByLabelText('노출 순서');
+
+    expect(displayOrderInput).toBeDisabled();
+
+    fireEvent.pointerDown(displayOrderInput);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('관리자만 조작할 수 있습니다.');
   });
 
   it('참여자 모집 목적을 광고 전용으로 선택할 수 있다', async () => {

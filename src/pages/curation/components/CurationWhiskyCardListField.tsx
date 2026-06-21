@@ -86,7 +86,7 @@ export function CurationWhiskyCardListField({
   const isMaxReached = watchedAlcohols.length >= fieldModel.maxItems;
   const isAddingBottleNoteWhisky = pendingAlcoholId !== null;
   const isAddDisabled = isMaxReached || isAddingBottleNoteWhisky;
-  const limitDescription = `${fieldModel.minItems}-${fieldModel.maxItems}개까지 등록할 수 있습니다. 검색 추가와 직접 입력을 지원하며, 테이스팅 태그 순서가 앱 노출 순서입니다.`;
+  const limitDescription = `${fieldModel.minItems}-${fieldModel.maxItems}개까지 등록할 수 있습니다.`;
 
   useEffect(() => {
     onImageUploadingChange?.(uploadingManualImageFieldIds.size > 0);
