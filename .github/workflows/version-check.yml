@@ -1,8 +1,9 @@
 name: Version Check & Release PR
 
+# Disabled: release PR creation must be opened explicitly after release governance checks.
+# Re-enable only with Master approval.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: version-check
