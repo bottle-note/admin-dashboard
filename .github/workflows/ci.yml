@@ -3,6 +3,8 @@ name: ci planet scale
 on:
   push:
   pull_request:
+    branches-ignore:
+      - 'release/dashboard'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
