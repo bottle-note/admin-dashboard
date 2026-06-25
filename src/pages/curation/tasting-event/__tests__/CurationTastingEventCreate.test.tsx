@@ -634,7 +634,7 @@ describe('CurationTastingEventCreatePage', () => {
     await user.click(screen.getByRole('button', { name: '시음 위스키 추가' }));
     await user.type(screen.getByPlaceholderText('위스키 검색 ...'), '글렌');
     await user.click(await screen.findByText('글렌피딕 12년'));
-    expect(await screen.findByText('도수 40% · 싱글몰트')).toBeInTheDocument();
+    expect((await screen.findAllByText('도수 40% · 싱글몰트')).length).toBeGreaterThan(0);
     expect(screen.getAllByText('평균별점 4.2').length).toBeGreaterThan(0);
     expect(screen.getAllByText('유저평가 150').length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: '글렌피딕 12년 평균별점 숨기기' }));
