@@ -8,10 +8,14 @@ import { CurationSectionCard } from './CurationSectionCard';
 
 interface CurationFormSectionProps {
   section: CurationFormSectionModel;
+  onImageUploadingChange?: (isUploading: boolean) => void;
 }
 
 // form renderer 레이어: section model의 필드 목록을 공통 field renderer로 렌더링합니다.
-export function CurationFormSection({ section }: CurationFormSectionProps) {
+export function CurationFormSection({
+  section,
+  onImageUploadingChange,
+}: CurationFormSectionProps) {
   const form = useFormContext<FieldValues>();
   const watchedValues = useWatch({ control: form.control }) as FieldValues | undefined;
   const firstField = section.fields[0]?.field;
@@ -38,6 +42,7 @@ export function CurationFormSection({ section }: CurationFormSectionProps) {
     return (
       <CurationFormFieldRenderer
         field={firstField}
+        onImageUploadingChange={onImageUploadingChange}
         sectionHeader={{
           stepNumber: section.stepNumber,
           description: section.description,
@@ -54,7 +59,12 @@ export function CurationFormSection({ section }: CurationFormSectionProps) {
       contentClassName={section.contentClassName}
     >
       {visibleFields.map(({ field, className }) => (
-        <CurationFormFieldRenderer key={field.key} field={field} className={className} />
+        <CurationFormFieldRenderer
+          key={field.key}
+          field={field}
+          className={className}
+          onImageUploadingChange={onImageUploadingChange}
+        />
       ))}
     </CurationSectionCard>
   );

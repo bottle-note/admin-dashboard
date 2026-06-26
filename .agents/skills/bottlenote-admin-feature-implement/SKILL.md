@@ -41,6 +41,10 @@ truth is `docs/features/<feature-slug>/plan.md`.
    - Keep one React component per file for newly added or modified local
      components. Split shared subcomponents into their own files instead of
      colocating multiple component declarations in one file.
+   - Avoid adding one-off utility functions solely for simple normalization or
+     serialization in mappers. Prefer clear inline mapping for short, local
+     transformations; create or extend helpers only when the logic is reused,
+     non-trivial, or shared across modules.
    - Do not modify `src/components/ui`.
    - Do not add barrel files unless required by an existing boundary.
 

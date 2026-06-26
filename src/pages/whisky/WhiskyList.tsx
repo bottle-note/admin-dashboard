@@ -30,6 +30,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/common/Pagination';
 import { useAdminAlcoholList } from '@/hooks/useAdminAlcohols';
+import { isNonComposingEnterKey } from '@/lib/keyboard';
 import type { AlcoholSearchParams, AlcoholCategory } from '@/types/api';
 import { ALCOHOL_CATEGORIES, CATEGORY_GROUP_LABELS } from '@/types/api';
 
@@ -101,7 +102,7 @@ export function WhiskyListPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (isNonComposingEnterKey(e)) {
       handleSearch();
     }
   };

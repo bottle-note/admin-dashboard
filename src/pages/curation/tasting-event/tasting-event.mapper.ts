@@ -112,6 +112,12 @@ function normalizePayloadValue(value: unknown): unknown {
 function mapTastingEventAlcohols(values: TastingEventCreateFormState['alcohols']) {
   return values.map((item) => {
     const comment = item.comment?.trim();
+    const stats = item.stats
+      ? {
+          rating: item.stats.rating ?? null,
+          totalRatingsCount: item.stats.totalRatingsCount ?? null,
+        }
+      : null;
     const alcohol = {
       alcoholId: item.source === 'MANUAL' ? null : item.alcohol.alcoholId,
       korName: item.alcohol.korName.trim(),
@@ -128,6 +134,7 @@ function mapTastingEventAlcohols(values: TastingEventCreateFormState['alcohols']
     return {
       source: item.source,
       alcohol,
+      ...(stats ? { stats } : {}),
       ...(comment ? { comment } : {}),
     };
   });

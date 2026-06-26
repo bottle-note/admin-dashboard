@@ -41,6 +41,11 @@ src/
 
 새 API 추가 시 이 순서로 작성: types → service → hook
 
+### Mapper / Payload 정규화
+- 단순 정규화나 직렬화를 위해 일회성 유틸 함수를 새로 추가하는 것은 최대한 지양한다.
+- 특정 mapper 한 곳에서만 쓰이는 짧은 변환은 매핑 위치에서 인라인으로 명확하게 처리한다.
+- 재사용되거나, 분기가 많거나, 여러 모듈에서 공유되는 복잡한 로직일 때만 기존 helper를 확장하거나 새 helper를 만든다.
+
 ### 폼 처리
 - React Hook Form + Zod 스키마 사용
 - 스키마는 `pages/*/*.schema.ts`에 정의

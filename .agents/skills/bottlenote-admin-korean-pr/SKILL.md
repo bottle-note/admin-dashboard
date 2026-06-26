@@ -28,12 +28,25 @@ template and accurately reflects the actual diff.
    - Preserve its sections:
      `PR 제목`, `변경 사항`, `변경 이유`, `테스트 방법`, `참고 사항`.
 
-3. Write the title.
+3. Find related workspace issues.
+   - Search `bottle-note/workspace` issues before writing the PR body when the
+     branch, commits, user prompt, docs, or prior conversation mention an issue,
+     QA item, feature request, or comment URL.
+   - Prefer exact issue/comment URLs from the user prompt. Otherwise search by
+     the feature keywords and changed domain, then inspect likely issue bodies
+     and comments.
+   - Add a `관련 이슈` section to the PR body when a related workspace issue is
+     found. Include the workspace issue link and, when the work comes from a
+     specific comment, the comment URL.
+   - If no related workspace issue is found, omit the section rather than adding
+     speculative links.
+
+4. Write the title.
    - Format: `[type] Korean summary`.
    - Use one of: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`.
    - Keep it specific to the shipped behavior.
 
-4. Write the body in Korean.
+5. Write the body in Korean.
    - Keep technical terms such as API, React, TanStack Query, MSW, Playwright,
      route, hook, service in English when clearer.
    - In `변경 사항`, list concrete code/user-facing changes.
@@ -42,7 +55,7 @@ template and accurately reflects the actual diff.
    - In `참고 사항`, mention residual risks, skipped checks, required env vars,
      or user verification steps. Use `특이사항 없음` only when true.
 
-5. Create the PR only when requested.
+6. Create the PR only when requested.
    - Use `gh pr create --base main` unless the user specifies a different base.
    - If the branch has not been pushed, push the current branch first only when
      the user asked to create the PR and the remote branch is missing.
@@ -54,6 +67,11 @@ template and accurately reflects the actual diff.
 ### PR 제목 (Title)
 
 [type] <한글 요약>
+
+### 관련 이슈
+
+- bottle-note/workspace#<번호>
+- 세부 요청: <댓글 URL>
 
 ### 변경 사항 (Changes)
 

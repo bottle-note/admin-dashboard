@@ -1,5 +1,6 @@
-import type { ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
+import { AlertCircle } from 'lucide-react';
 
 import { FormField } from '@/components/common/FormField';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 
 import { CurationSectionCard } from '../../components/CurationSectionCard';
+import { ActiveExposureTooltip } from './ActiveExposureTooltip';
 import { RecruitmentPeriodTooltip } from './RecruitmentPeriodTooltip';
 import { TastingEventImageUploadField } from './TastingEventImageUploadField';
 import type { TastingEventCreateFormState } from '../tasting-event.schema';
@@ -24,6 +26,7 @@ export function TastingEventBasicInfoSection({
   onImageUploadingChange,
 }: TastingEventBasicInfoSectionProps) {
   const form = useFormContext<TastingEventCreateFormState>();
+  const [isAdminControlAlertVisible, setIsAdminControlAlertVisible] = useState(false);
   const isActive = useWatch({
     control: form.control,
     name: 'isActive',
@@ -31,6 +34,7 @@ export function TastingEventBasicInfoSection({
   const isNullableBasicInfoAllowed = isEditMode;
   const exposureStartDateRegistration = form.register('exposureStartDate');
   const exposureEndDateRegistration = form.register('exposureEndDate');
+  const isAdminControlDisabled = !isRootAdmin;
 
   const handleExposureDateChange = (
     event: ChangeEvent<HTMLInputElement>,
@@ -47,6 +51,12 @@ export function TastingEventBasicInfoSection({
     void form.trigger(
       shouldValidateRange ? ['exposureStartDate', 'exposureEndDate'] : event.target.name
     );
+  };
+
+  const handleAdminControlAttempt = () => {
+    if (!isAdminControlDisabled) return;
+
+    setIsAdminControlAlertVisible(true);
   };
 
   return (
@@ -153,42 +163,58 @@ export function TastingEventBasicInfoSection({
         </div>
       </div>
 
-      {isRootAdmin && (
-        <div className="space-y-4 border-t pt-4">
-          <div>
+      <div className="space-y-4 border-t pt-4">
+        <div>
+          <div className="flex items-center gap-1.5">
             <h3 className="text-sm font-semibold">관리자 전용 설정</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              노출 순서와 활성화 상태는 관리자 권한에서만 수정합니다.
-            </p>
+            <ActiveExposureTooltip />
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <FormField
-              label="노출 순서"
-              required
-              error={form.formState.errors.displayOrder?.message}
-            >
-              <Input
-                aria-label="노출 순서"
-                type="number"
-                min={0}
-                {...form.register('displayOrder', { valueAsNumber: true })}
+          <p className="mt-1 text-sm text-muted-foreground">
+            노출 순서와 활성화 상태 변경은 관리자만 할 수 있습니다.
+          </p>
+        </div>
+        <div
+          className="grid gap-4 md:grid-cols-2"
+          onPointerDownCapture={handleAdminControlAttempt}
+          onKeyDownCapture={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              handleAdminControlAttempt();
+            }
+          }}
+        >
+          <FormField label="노출 순서" required error={form.formState.errors.displayOrder?.message}>
+            <Input
+              aria-label="노출 순서"
+              type="number"
+              min={0}
+              disabled={isAdminControlDisabled}
+              {...form.register('displayOrder', { valueAsNumber: true })}
+            />
+          </FormField>
+          <div className="flex items-end">
+            <div className="flex min-h-9 items-center gap-2">
+              <Switch
+                id="isActive"
+                checked={isActive}
+                disabled={isAdminControlDisabled}
+                onCheckedChange={(checked) =>
+                  form.setValue('isActive', checked, { shouldDirty: true })
+                }
               />
-            </FormField>
-            <div className="flex items-end">
-              <div className="flex min-h-9 items-center gap-2">
-                <Switch
-                  id="isActive"
-                  checked={isActive}
-                  onCheckedChange={(checked) =>
-                    form.setValue('isActive', checked, { shouldDirty: true })
-                  }
-                />
-                <Label htmlFor="isActive">활성화 상태</Label>
-              </div>
+              <Label htmlFor="isActive">활성화 상태</Label>
             </div>
           </div>
         </div>
-      )}
+        {isAdminControlAlertVisible && (
+          <div
+            className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+            role="alert"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            관리자만 조작할 수 있습니다.
+          </div>
+        )}
+      </div>
     </CurationSectionCard>
   );
 }

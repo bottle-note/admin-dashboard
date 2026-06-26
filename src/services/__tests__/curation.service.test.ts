@@ -3,7 +3,11 @@ import { http, HttpResponse } from 'msw';
 
 import { server } from '@/test/mocks/server';
 import { wrapApiResponse } from '@/test/mocks/data';
-import type { CurationV2CreateRequest, CurationV2Spec } from '@/types/api';
+import type {
+  CurationV2CreateRequest,
+  CurationV2Spec,
+  CurationV2SpecListItem,
+} from '@/types/api';
 import { curationService, resolveCurationSpecByCode } from '../curation.service';
 
 const SPEC_BASE = '/admin/api/v2/curation-specs';
@@ -47,6 +51,24 @@ const mockRecommendedSpec: CurationV2Spec = {
   name: '추천 위스키',
 };
 
+const mockRecommendedSpecListItem: CurationV2SpecListItem = {
+  id: mockRecommendedSpec.id,
+  code: mockRecommendedSpec.code,
+  name: mockRecommendedSpec.name,
+  description: mockRecommendedSpec.description,
+  version: mockRecommendedSpec.version,
+  isActive: mockRecommendedSpec.isActive,
+};
+
+const mockTastingEventSpecListItem: CurationV2SpecListItem = {
+  id: mockTastingEventSpec.id,
+  code: mockTastingEventSpec.code,
+  name: mockTastingEventSpec.name,
+  description: mockTastingEventSpec.description,
+  version: mockTastingEventSpec.version,
+  isActive: mockTastingEventSpec.isActive,
+};
+
 const createRequest: CurationV2CreateRequest = {
   specId: 3,
   name: '6월 싱글몰트 시음회',
@@ -66,7 +88,9 @@ describe('curationService', () => {
   it('큐레이션 스펙 목록을 조회한다', async () => {
     server.use(
       http.get(SPEC_BASE, () => {
-        return HttpResponse.json(wrapApiResponse([mockRecommendedSpec, mockTastingEventSpec]));
+        return HttpResponse.json(
+          wrapApiResponse([mockRecommendedSpecListItem, mockTastingEventSpecListItem])
+        );
       })
     );
 
@@ -74,7 +98,7 @@ describe('curationService', () => {
 
     expect(result).toHaveLength(2);
     expect(result[1]!.code).toBe('WHISKY_TASTING_EVENT');
-    expect(result[1]!.requestSpec.properties?.eventDate?.['x-label']).toBe('시음회 날짜');
+    expect(result[1]).not.toHaveProperty('requestSpec');
   });
 
   it('큐레이션 스펙 상세를 조회한다', async () => {
@@ -103,7 +127,10 @@ describe('curationService', () => {
   });
 
   it('존재하지 않는 specCode는 null을 반환한다', () => {
-    const result = resolveCurationSpecByCode([mockRecommendedSpec], 'WHISKY_TASTING_EVENT');
+    const result = resolveCurationSpecByCode(
+      [mockRecommendedSpecListItem],
+      'WHISKY_TASTING_EVENT'
+    );
 
     expect(result).toBeNull();
   });
