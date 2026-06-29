@@ -3,8 +3,6 @@ name: ci planet scale
 on:
   push:
   pull_request:
-    branches-ignore:
-      - 'release/dashboard'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,12 +12,12 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # pnpm 버전은 package.json 의 `packageManager` 필드를 따른다
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: 'pnpm'
