@@ -1,0 +1,197 @@
+name: deploy dashboard release applications
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: deploy-dashboard-production-${{ github.event.release.tag_name }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: bottlenote-admin-dashboard
+
+jobs:
+  release-gate:
+    name: gate dashboard release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      release-tag: ${{ steps.release.outputs.release-tag }}
+      version: ${{ steps.release.outputs.version }}
+      image-tag: ${{ steps.release.outputs.image-tag }}
+      tag-sha: ${{ steps.release.outputs.tag-sha }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: validate published dashboard release
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+        run: |
+          set -euo pipefail
+          [[ -n "$RELEASE_TAG" ]] || { echo "::error::release tag is required"; exit 1; }
+          [[ "$RELEASE_TAG" =~ ^dashboard/v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::dashboard release tag required, got: $RELEASE_TAG"; exit 1; }
+
+          version="${RELEASE_TAG#dashboard/v}"
+          image_tag="dashboard_${version}"
+
+          git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          git fetch --tags origin
+          git rev-parse -q --verify "refs/tags/${RELEASE_TAG}" >/dev/null || { echo "::error::release tag not found: $RELEASE_TAG"; exit 1; }
+          tag_sha="$(git rev-list -n 1 "$RELEASE_TAG")"
+          git merge-base --is-ancestor "$tag_sha" origin/main || { echo "::error::tag commit is not contained in origin/main: $tag_sha"; exit 1; }
+
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          event_path = os.environ['GITHUB_EVENT_PATH']
+          release_tag = os.environ['RELEASE_TAG']
+          with open(event_path, encoding='utf-8') as event_file:
+              event = json.load(event_file)
+          release = event.get('release') or {}
+
+          if release.get('tag_name') != release_tag:
+              print(f"::error::release payload tag mismatch: {release.get('tag_name')} != {release_tag}", file=sys.stderr)
+              sys.exit(1)
+          if release.get('draft'):
+              print('::error::release must be published before production deploy', file=sys.stderr)
+              sys.exit(1)
+          if release.get('prerelease'):
+              print('::error::production release must not be prerelease', file=sys.stderr)
+              sys.exit(1)
+          body = (release.get('body') or '').strip()
+          if len(body) < 80:
+              print('::error::release changelog is empty or too short', file=sys.stderr)
+              sys.exit(1)
+          print(f"release_id={release.get('id')} body_length={len(body)}")
+          PY
+
+          {
+            echo "release-tag=$RELEASE_TAG"
+            echo "version=$version"
+            echo "image-tag=$image_tag"
+            echo "tag-sha=$tag_sha"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Dashboard Production Release Gate"
+            echo "- Release tag: \`${RELEASE_TAG}\`"
+            echo "- Version: \`${version}\`"
+            echo "- Image tag: \`${image_tag}\`"
+            echo "- Tag commit: \`${tag_sha}\`"
+            echo "- Main ancestry: \`passed\`"
+            echo "- Release metadata/changelog: \`passed\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "[dashboard-release-gate] passed release_tag=$RELEASE_TAG version=$version image_tag=$image_tag tag_sha=$tag_sha"
+
+  build-dashboard-image:
+    name: build and push dashboard image
+    needs: release-gate
+    runs-on: ubuntu-24.04-arm
+    outputs:
+      image-digest: ${{ steps.build.outputs.image-digest }}
+    steps:
+      - name: checkout release tag with submodules
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-gate.outputs.release-tag }}
+          submodules: true
+          token: ${{ secrets.GIT_ACCESS_TOKEN }}
+
+      - name: build and push docker image
+        id: build
+        uses: ./.github/actions/docker-build-push
+        with:
+          registry-url: ${{ secrets.REGISTRY_ADDRESS }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-password: ${{ secrets.REGISTRY_PASSWORD }}
+          image-name: ${{ env.IMAGE_NAME }}
+          image-tag: ${{ needs.release-gate.outputs.image-tag }}
+          dockerfile: Dockerfile
+          context: .
+          platforms: linux/arm64
+          cache-scope: dashboard-prod
+          image-title: "BottleNote Admin Dashboard"
+          image-description: "BottleNote Admin Dashboard Frontend"
+          image-vendor: "BottleNote"
+          image-authors: "BottleNote Team"
+          build-args: |
+            ENV_FILE=git.environment-variables/application.vite/prod.sops.env
+          build-secrets: |
+            age_key=${{ secrets.SOPS_AGE_SECRET_KEY }}
+          sign-image: 'true'
+          cosign-key-path: 'git.environment-variables/storage/docker-registry/cosign.key'
+          cosign-password: ${{ secrets.COSIGN_PASSWORD }}
+
+  update-production:
+    name: update dashboard production image
+    needs:
+      - release-gate
+      - build-dashboard-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository with submodules
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-gate.outputs.release-tag }}
+          submodules: true
+          token: ${{ secrets.GIT_ACCESS_TOKEN }}
+
+      - name: setup kustomize
+        uses: imranismail/setup-kustomize@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: update production image tag
+        run: |
+          set -euo pipefail
+          IMAGE_TAG="${{ needs.release-gate.outputs.image-tag }}"
+          REGISTRY="${{ secrets.REGISTRY_ADDRESS }}"
+
+          cd git.environment-variables
+          git checkout main
+
+          cd deploy/overlays/production
+          kustomize edit set image \
+            bottlenote-admin-dashboard=${REGISTRY}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}
+
+      - name: commit and push with retry
+        run: |
+          set -euo pipefail
+          cd git.environment-variables
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add deploy/overlays/production/kustomization.yaml
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore(dashboard): update production image tag to ${{ needs.release-gate.outputs.image-tag }}
+
+          Updated by GitHub Actions
+          Release: ${{ needs.release-gate.outputs.release-tag }}
+          Image digest: ${{ needs.build-dashboard-image.outputs.image-digest }}
+          Workflow: ${{ github.workflow }}"
+
+          for i in {1..5}; do
+            git pull --rebase origin main && git push origin main && break
+            echo "Push failed, retry $i/5..."
+            sleep $((i * 2))
+          done
