@@ -32,8 +32,7 @@ export class BannerListPage extends BasePage {
   readonly createButton = () => this.page.getByRole('button', { name: '배너 등록' });
 
   /** 배너 타입 필터 드롭다운 트리거 */
-  readonly typeFilterTrigger = () =>
-    this.page.locator('button[role="combobox"]').filter({ hasText: /전체|설문조사|큐레이션|광고|제휴|기타/ });
+  readonly typeFilterTrigger = () => this.page.locator('button[role="combobox"]').nth(0);
 
   /** 테이블 */
   readonly table = () => this.page.locator('table');
@@ -51,8 +50,7 @@ export class BannerListPage extends BasePage {
   readonly noResultMessage = () => this.page.getByText('검색 결과가 없습니다.');
 
   /** 특정 배너명을 포함한 행 */
-  readonly rowWithName = (name: string) =>
-    this.page.locator('tbody tr').filter({ hasText: name });
+  readonly rowWithName = (name: string) => this.page.locator('tbody tr').filter({ hasText: name });
 
   /** 순서 변경 버튼 */
   readonly reorderButton = () => this.page.getByRole('button', { name: /순서 변경/ });
@@ -61,7 +59,7 @@ export class BannerListPage extends BasePage {
   readonly reorderModeBanner = () => this.page.getByText('순서 변경 모드');
 
   /** 드래그 핸들 (순서 변경 모드에서만 표시) */
-  readonly dragHandles = () => this.page.locator('tbody tr td:last-child svg');
+  readonly dragHandles = () => this.page.locator('tbody tr td.cursor-grab svg');
 
   /* ============================================
    * Actions
@@ -79,7 +77,9 @@ export class BannerListPage extends BasePage {
    * 로딩 완료 대기
    */
   async waitForLoadingComplete() {
-    await this.loadingState().waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
+    await this.loadingState()
+      .waitFor({ state: 'hidden', timeout: 10000 })
+      .catch(() => {});
   }
 
   /**
@@ -87,10 +87,11 @@ export class BannerListPage extends BasePage {
    */
   async search(keyword: string) {
     await this.searchInput().fill(keyword);
-    const responsePromise = this.page.waitForResponse(
-      (resp) => resp.url().includes('/banners') && resp.status() === 200,
-      { timeout: 10000 }
-    ).catch(() => {});
+    const responsePromise = this.page
+      .waitForResponse((resp) => resp.url().includes('/banners') && resp.status() === 200, {
+        timeout: 10000,
+      })
+      .catch(() => {});
     await this.searchInput().press('Enter');
     await responsePromise;
     await this.waitForLoadingComplete();
@@ -101,10 +102,11 @@ export class BannerListPage extends BasePage {
    */
   async searchWithButton(keyword: string) {
     await this.searchInput().fill(keyword);
-    const responsePromise = this.page.waitForResponse(
-      (resp) => resp.url().includes('/banners') && resp.status() === 200,
-      { timeout: 10000 }
-    ).catch(() => {});
+    const responsePromise = this.page
+      .waitForResponse((resp) => resp.url().includes('/banners') && resp.status() === 200, {
+        timeout: 10000,
+      })
+      .catch(() => {});
     await this.searchButton().click();
     await responsePromise;
     await this.waitForLoadingComplete();
@@ -115,10 +117,11 @@ export class BannerListPage extends BasePage {
    */
   async selectTypeFilter(type: '전체' | '설문조사' | '큐레이션' | '광고' | '제휴' | '기타') {
     await this.typeFilterTrigger().click();
-    const responsePromise = this.page.waitForResponse(
-      (resp) => resp.url().includes('/banners') && resp.status() === 200,
-      { timeout: 10000 }
-    ).catch(() => {});
+    const responsePromise = this.page
+      .waitForResponse((resp) => resp.url().includes('/banners') && resp.status() === 200, {
+        timeout: 10000,
+      })
+      .catch(() => {});
     await this.page.getByRole('option', { name: type, exact: true }).click();
     await responsePromise;
     await this.waitForLoadingComplete();
@@ -149,7 +152,9 @@ export class BannerListPage extends BasePage {
    * 테이블 행 개수 반환
    */
   async getRowCount() {
-    const noResult = await this.noResultMessage().isVisible().catch(() => false);
+    const noResult = await this.noResultMessage()
+      .isVisible()
+      .catch(() => false);
     if (noResult) return 0;
     return await this.clickableRows().count();
   }
@@ -167,6 +172,11 @@ export class BannerListPage extends BasePage {
   async enterReorderMode() {
     await this.reorderButton().click();
     await this.reorderModeBanner().waitFor({ state: 'visible', timeout: 5000 });
+    await this.waitForLoadingComplete();
+    await this.dragHandles()
+      .first()
+      .waitFor({ state: 'visible', timeout: 10000 })
+      .catch(() => {});
   }
 
   /**

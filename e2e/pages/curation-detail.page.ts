@@ -26,12 +26,10 @@ export class CurationDetailPage extends BasePage {
   readonly pageTitle = () => this.page.getByRole('heading', { level: 1 });
 
   /** 뒤로가기 버튼 (아이콘 전용 버튼 - 헤더 영역의 첫 번째 버튼) */
-  readonly backButton = () =>
-    this.page.locator('main button').first();
+  readonly backButton = () => this.page.locator('main button').first();
 
   /** 저장/등록 버튼 */
-  readonly saveButton = () =>
-    this.page.getByRole('button', { name: /등록|저장/ });
+  readonly saveButton = () => this.page.getByRole('button', { name: /등록|저장/ });
 
   /** 삭제 버튼 */
   readonly deleteButton = () => this.page.getByRole('button', { name: '삭제' });
@@ -45,7 +43,8 @@ export class CurationDetailPage extends BasePage {
   readonly nameInput = () => this.page.getByPlaceholder('큐레이션명을 입력하세요');
 
   /** 설명 입력 */
-  readonly descriptionTextarea = () => this.page.getByPlaceholder('큐레이션에 대한 설명을 입력하세요');
+  readonly descriptionTextarea = () =>
+    this.page.getByPlaceholder('큐레이션에 대한 설명을 입력하세요');
 
   /** 노출 순서 입력 */
   readonly displayOrderInput = () => this.page.locator('input#displayOrder');
@@ -111,7 +110,9 @@ export class CurationDetailPage extends BasePage {
    * 로딩 완료 대기
    */
   async waitForLoadingComplete() {
-    await this.loadingState().waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {});
+    await this.loadingState()
+      .waitFor({ state: 'hidden', timeout: 15000 })
+      .catch(() => {});
   }
 
   /**
@@ -146,11 +147,7 @@ export class CurationDetailPage extends BasePage {
   /**
    * 기본 정보 폼 입력 (필수/선택 필드)
    */
-  async fillBasicInfo(data: {
-    name: string;
-    description?: string;
-    displayOrder?: number;
-  }) {
+  async fillBasicInfo(data: { name: string; description?: string; displayOrder?: number }) {
     await this.nameInput().fill(data.name);
     if (data.description) {
       await this.descriptionTextarea().fill(data.description);
@@ -194,7 +191,9 @@ export class CurationDetailPage extends BasePage {
    * 커버 이미지가 없으면 테스트 이미지 업로드
    */
   async ensureCoverImage() {
-    const hasImage = await this.uploadedImage().isVisible().catch(() => false);
+    const hasImage = await this.uploadedImage()
+      .isVisible()
+      .catch(() => false);
     if (!hasImage) {
       await this.uploadTestImage();
     }
@@ -221,18 +220,21 @@ export class CurationDetailPage extends BasePage {
   async searchWhisky(keyword: string) {
     await this.whiskySearchInput().fill(keyword);
     // 컴포넌트 debounce (300ms) + API 응답 대기
-    await this.page.waitForResponse(
-      (resp) => resp.url().includes('/alcohols') && resp.status() === 200,
-      { timeout: 10000 }
-    ).catch(() => {});
+    await this.page
+      .waitForResponse((resp) => resp.url().includes('/alcohols') && resp.status() === 200, {
+        timeout: 10000,
+      })
+      .catch(() => {});
     // 드롭다운 렌더링 대기: 목록이 실제로 표시될 때까지 대기
-    await this.whiskyDropdownList().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+    await this.whiskyDropdownList()
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .catch(() => {});
   }
 
   /**
    * 위스키 검색 드롭다운 목록 (ul > li > button 구조)
    */
-  readonly whiskyDropdownList = () => this.page.locator('ul.max-h-64');
+  readonly whiskyDropdownList = () => this.page.getByTestId('whisky-search-dropdown');
 
   /**
    * 드롭다운에서 첫 번째 위스키 선택
@@ -260,7 +262,9 @@ export class CurationDetailPage extends BasePage {
    * 선택된 위스키 개수 확인
    */
   async getWhiskyCount() {
-    const isEmpty = await this.whiskyEmptyState().isVisible().catch(() => false);
+    const isEmpty = await this.whiskyEmptyState()
+      .isVisible()
+      .catch(() => false);
     if (isEmpty) return 0;
     return await this.whiskyList().count();
   }

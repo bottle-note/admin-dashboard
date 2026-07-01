@@ -31,12 +31,26 @@ import { StatusToggle } from '@/components/common/StatusToggle';
 import { isNonComposingEnterKey } from '@/lib/keyboard';
 import { useReorderDrag } from '@/hooks/useReorderDrag';
 import { useBannerList, useBannerUpdateStatus, useBannerBulkReorder } from '@/hooks/useBanners';
-import { type BannerSearchParams, type BannerListItem, BANNER_TYPE_LABELS } from '@/types/api';
+import {
+  type BannerSearchParams,
+  type BannerListItem,
+  type BannerType,
+  BANNER_TYPE_LABELS,
+} from '@/types/api';
 
 const IS_ACTIVE_OPTIONS = [
   { value: 'ALL', label: '전체' },
   { value: 'true', label: '활성' },
   { value: 'false', label: '비활성' },
+];
+
+const BANNER_TYPE_OPTIONS: Array<{ value: BannerType | 'ALL'; label: string }> = [
+  { value: 'ALL', label: '전체' },
+  { value: 'SURVEY', label: BANNER_TYPE_LABELS.SURVEY },
+  { value: 'CURATION', label: BANNER_TYPE_LABELS.CURATION },
+  { value: 'AD', label: BANNER_TYPE_LABELS.AD },
+  { value: 'PARTNERSHIP', label: BANNER_TYPE_LABELS.PARTNERSHIP },
+  { value: 'ETC', label: BANNER_TYPE_LABELS.ETC },
 ];
 
 /** 순서 변경 모드에서 전체 항목을 한 번에 로드하기 위한 페이지 크기 */
@@ -48,6 +62,7 @@ export function BannerListPage() {
 
   // URL에서 검색 파라미터 읽기
   const keyword = urlParams.get('keyword') ?? '';
+  const bannerTypeParam = urlParams.get('bannerType') as BannerType | null;
   const isActiveParam = urlParams.get('isActive');
   const page = Number(urlParams.get('page')) || 0;
   const size = Number(urlParams.get('size')) || 20;
@@ -65,6 +80,7 @@ export function BannerListPage() {
   // API 요청용 파라미터
   const searchParams: BannerSearchParams = {
     keyword: keyword || undefined,
+    bannerType: bannerTypeParam ?? undefined,
     isActive: isActiveParam === 'true' ? true : isActiveParam === 'false' ? false : undefined,
     page,
     size,
@@ -91,7 +107,11 @@ export function BannerListPage() {
   const isListControlDisabled = isReorderMode || pendingReorder;
   const displayedItems = isReorderMode ? localItems : (data?.items ?? []);
   const isFullReorderListLoaded =
-    page === 0 && size >= REORDER_FETCH_SIZE && !keyword && isActiveParam === null;
+    page === 0 &&
+    size >= REORDER_FETCH_SIZE &&
+    !keyword &&
+    bannerTypeParam === null &&
+    isActiveParam === null;
 
   // 전체 로드가 완료되면 순서 변경 모드로 진입
   useEffect(() => {
@@ -141,6 +161,14 @@ export function BannerListPage() {
     });
   };
 
+  const handleBannerTypeChange = (value: string) => {
+    if (isListControlDisabled) return;
+    updateUrlParams({
+      bannerType: value === 'ALL' ? undefined : value,
+      page: '0',
+    });
+  };
+
   const handlePageChange = (newPage: number) => {
     updateUrlParams({ page: String(newPage) });
   };
@@ -162,6 +190,7 @@ export function BannerListPage() {
       size: String(REORDER_FETCH_SIZE),
       page: '0',
       keyword: undefined,
+      bannerType: undefined,
       isActive: undefined,
     });
   };
@@ -254,6 +283,22 @@ export function BannerListPage() {
             disabled={isListControlDisabled}
           />
         </div>
+        <Select
+          value={bannerTypeParam ?? 'ALL'}
+          onValueChange={handleBannerTypeChange}
+          disabled={isListControlDisabled}
+        >
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="배너 타입" />
+          </SelectTrigger>
+          <SelectContent>
+            {BANNER_TYPE_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select
           value={isActiveParam ?? 'ALL'}
           onValueChange={handleIsActiveChange}

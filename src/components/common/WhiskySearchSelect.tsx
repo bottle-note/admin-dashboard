@@ -180,6 +180,7 @@ export function WhiskySearchSelect({
       ? createPortal(
           <div
             ref={dropdownRef}
+            data-testid="whisky-search-dropdown"
             className="fixed z-[100] rounded-md border bg-popover shadow-lg"
             style={dropdownStyle}
           >

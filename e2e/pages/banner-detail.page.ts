@@ -14,11 +14,9 @@ export class BannerDetailPage extends BasePage {
 
   readonly pageTitle = () => this.page.getByRole('heading', { level: 1 });
 
-  readonly backButton = () =>
-    this.page.locator('main button').first();
+  readonly backButton = () => this.page.locator('main button').first();
 
-  readonly saveButton = () =>
-    this.page.getByRole('button', { name: /등록|저장/ });
+  readonly saveButton = () => this.page.getByRole('button', { name: /등록|저장/ });
 
   readonly deleteButton = () => this.page.getByRole('button', { name: '삭제' });
 
@@ -27,7 +25,9 @@ export class BannerDetailPage extends BasePage {
   readonly nameInput = () => this.page.getByPlaceholder('설명을 입력하세요');
 
   readonly bannerTypeSelect = () =>
-    this.page.locator('button[role="combobox"]').filter({ hasText: /^\s*(설문조사|큐레이션|광고|제휴|기타|배너 타입 선택)\s*$/ });
+    this.page
+      .locator('button[role="combobox"]')
+      .filter({ hasText: /^\s*(설문조사|큐레이션|광고|제휴|기타|배너 타입 선택)\s*$/ });
 
   readonly isActiveSwitch = () => this.page.locator('button#isActive');
 
@@ -36,7 +36,9 @@ export class BannerDetailPage extends BasePage {
   readonly descriptionBInput = () => this.page.getByPlaceholder('제목 두번째줄을 입력하세요');
 
   readonly textPositionSelect = () =>
-    this.page.locator('button[role="combobox"]').filter({ hasText: /좌측 상단|좌측 하단|우측 상단|우측 하단|중앙|텍스트 위치 선택/ });
+    this.page
+      .locator('button[role="combobox"]')
+      .filter({ hasText: /좌측 상단|좌측 하단|우측 상단|우측 하단|중앙|텍스트 위치 선택/ });
 
   readonly nameFontColorInput = () => this.page.locator('input#nameFontColor');
 
@@ -60,9 +62,9 @@ export class BannerDetailPage extends BasePage {
 
   readonly uploadedImage = () => this.page.locator('img[alt="업로드된 이미지"]');
 
-  readonly uploadedVideo = () => this.page.locator('video');
+  readonly uploadedVideo = () => this.page.locator('video').first();
 
-  readonly uploadedMedia = () => this.page.locator('img[alt="업로드된 이미지"], video');
+  readonly uploadedMedia = () => this.page.locator('img[alt="업로드된 이미지"], video').first();
 
   readonly deleteDialog = () => this.page.getByRole('alertdialog');
 
@@ -81,7 +83,9 @@ export class BannerDetailPage extends BasePage {
   }
 
   async waitForLoadingComplete() {
-    await this.loadingState().waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {});
+    await this.loadingState()
+      .waitFor({ state: 'hidden', timeout: 15000 })
+      .catch(() => {});
   }
 
   async goBack() {
@@ -106,7 +110,9 @@ export class BannerDetailPage extends BasePage {
     await this.page.getByRole('option', { name: type, exact: true }).click();
   }
 
-  async selectTextPosition(position: '좌측 상단' | '좌측 하단' | '우측 상단' | '우측 하단' | '중앙') {
+  async selectTextPosition(
+    position: '좌측 상단' | '좌측 하단' | '우측 상단' | '우측 하단' | '중앙'
+  ) {
     await this.textPositionSelect().click();
     await this.page.getByRole('option', { name: position, exact: true }).click();
   }
@@ -134,7 +140,8 @@ export class BannerDetailPage extends BasePage {
   }
 
   async checkAlwaysVisible() {
-    const isChecked = await this.isAlwaysVisibleCheckbox().getAttribute('data-state') === 'checked';
+    const isChecked =
+      (await this.isAlwaysVisibleCheckbox().getAttribute('data-state')) === 'checked';
     if (!isChecked) {
       await this.isAlwaysVisibleCheckbox().click();
     }
@@ -142,7 +149,8 @@ export class BannerDetailPage extends BasePage {
 
   async setTargetUrl(url: string, isExternal = false) {
     if (isExternal) {
-      const isChecked = await this.isExternalUrlCheckbox().getAttribute('data-state') === 'checked';
+      const isChecked =
+        (await this.isExternalUrlCheckbox().getAttribute('data-state')) === 'checked';
       if (!isChecked) {
         await this.isExternalUrlCheckbox().click();
       }
@@ -163,7 +171,9 @@ export class BannerDetailPage extends BasePage {
   }
 
   async ensureImage() {
-    const hasMedia = await this.uploadedMedia().isVisible().catch(() => false);
+    const hasMedia = await this.uploadedMedia()
+      .isVisible()
+      .catch(() => false);
     if (!hasMedia) {
       await this.uploadTestImage();
     }
