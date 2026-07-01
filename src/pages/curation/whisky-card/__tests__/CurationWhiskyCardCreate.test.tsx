@@ -185,6 +185,8 @@ describe('CurationWhiskyCardCreatePage', () => {
     render(<CurationRecommendedWhiskyCreatePage />);
 
     await screen.findByLabelText('큐레이션명');
+    expect(screen.getByLabelText('앱 미리보기 프레임')).toBeInTheDocument();
+    expect(screen.getByText('큐레이션 위스키')).toBeInTheDocument();
 
     const guideMessage = screen.getByText('위스키를 검색하거나 직접 입력을 눌러 추가해주세요.');
     const addCta = screen.getByRole('button', { name: '추천 위스키 추가' });
@@ -226,6 +228,8 @@ describe('CurationWhiskyCardCreatePage', () => {
     await user.click(await screen.findByText('글렌피딕 12년'));
 
     expect(await screen.findByText('평균 별점')).toBeInTheDocument();
+    expect(screen.getByText('이번 주 추천 위스키')).toBeInTheDocument();
+    expect(screen.getAllByText('글렌피딕 12년').length).toBeGreaterThan(0);
     expect(screen.getAllByText('4.2').length).toBeGreaterThan(0);
     expect(screen.getAllByText('바닐라').length).toBeGreaterThan(0);
     expect(screen.getAllByText('꿀').length).toBeGreaterThan(0);
@@ -291,6 +295,7 @@ describe('CurationWhiskyCardCreatePage', () => {
 
     expect(await screen.findByRole('heading', { name: '위스키 페어링 작성' })).toBeInTheDocument();
     await screen.findByLabelText('큐레이션명');
+    expect(screen.getByLabelText('앱 미리보기 프레임')).toBeInTheDocument();
     fillBasicInfo();
 
     await user.type(screen.getByPlaceholderText('위스키 검색하여 선택...'), '글렌');
@@ -307,6 +312,11 @@ describe('CurationWhiskyCardCreatePage', () => {
     fireEvent.change(screen.getByLabelText('1번 페어링 설명'), {
       target: { value: '꿀과 바닐라 향을 더 부드럽게 이어줍니다.' },
     });
+
+    expect(screen.getAllByText('바닐라 아이스크림').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('꿀과 바닐라 향을 더 부드럽게 이어줍니다.').length).toBeGreaterThan(
+      0
+    );
 
     await user.click(screen.getByRole('button', { name: /저장/ }));
 

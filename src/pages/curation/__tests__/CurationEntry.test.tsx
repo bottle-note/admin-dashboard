@@ -98,7 +98,9 @@ describe('CurationEntryPage', () => {
       '일반 큐레이션',
       '페어링 · 위스키 → 음식',
     ]);
-    expect(screen.getByText('특정 바에서 특정 기간 동안 위스키를 시음하는 모집을 만듭니다.')).toBeInTheDocument();
+    expect(
+      screen.getByText('특정 바에서 특정 기간 동안 위스키를 시음하는 모집을 만듭니다.')
+    ).toBeInTheDocument();
     expect(screen.getByText('입문자를 위한 스카치 베스트 6')).toBeInTheDocument();
     expect(screen.getByText('추천 음식 N개(자유 입력)')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '비활성 스펙' })).not.toBeInTheDocument();
@@ -139,7 +141,7 @@ describe('CurationEntryPage', () => {
     });
   });
 
-  it('미리보기 패널은 빈 공간을 확보한다', async () => {
+  it('미리보기 패널은 기본 시음회 앱 프레임을 표시한다', async () => {
     mockSpecList();
 
     render(<CurationEntryPage />);
@@ -147,18 +149,29 @@ describe('CurationEntryPage', () => {
     await screen.findByRole('heading', { name: '시음회' });
 
     expect(screen.getByRole('heading', { name: '미리보기' })).toBeInTheDocument();
-    expect(screen.getByLabelText('비어 있는 미리보기 공간')).toBeInTheDocument();
+    expect(screen.getByLabelText('앱 미리보기 프레임')).toBeInTheDocument();
+    expect(screen.getByText('시음회 미리보기 선택됨')).toBeInTheDocument();
+    expect(screen.getByText('도시남 X 보틀노트 시음회')).toBeInTheDocument();
   });
 
-  it.skip('미리보기 버튼을 누르면 선택한 유형의 미리보기 이미지를 표시한다', async () => {
+  it('미리보기 버튼을 누르면 선택한 유형의 앱 미리보기를 표시한다', async () => {
     const user = userEvent.setup();
     mockSpecList();
 
     render(<CurationEntryPage />);
 
-    await user.click(await getFirstPreviewButton());
+    await screen.findByRole('heading', { name: '시음회' });
+    const previewButtons = screen.getAllByRole('button', { name: /미리보기/ });
+    const generalPreviewButton = previewButtons[1];
 
-    expect(screen.getByRole('img', { name: '시음회 미리보기' })).toBeInTheDocument();
+    if (!generalPreviewButton) {
+      throw new Error('일반 큐레이션 미리보기 버튼을 찾을 수 없습니다.');
+    }
+
+    await user.click(generalPreviewButton);
+
+    expect(screen.getByText('일반 큐레이션 미리보기 선택됨')).toBeInTheDocument();
+    expect(screen.getAllByText('입문자를 위한 스카치 베스트 6').length).toBeGreaterThan(0);
   });
 
   it('미리보기 버튼을 누르면 선택된 타입만 표시한다', async () => {
