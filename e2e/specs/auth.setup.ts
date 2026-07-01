@@ -4,7 +4,13 @@ import { AUTH_FILE } from '../fixtures/auth.fixture';
 import { LoginPage } from '../pages/login.page';
 
 // .env에서 테스트 계정 정보 로드 (ensure-env.sh가 생성한 .env 파일)
-const env = loadEnv('', process.cwd(), '');
+const defaultEnv = loadEnv('', process.cwd(), '');
+const devEnv = loadEnv('dev', process.cwd(), '');
+const env = {
+  ...devEnv,
+  ...defaultEnv,
+  ...process.env,
+};
 
 /**
  * 인증 Setup
@@ -24,7 +30,7 @@ setup('authenticate', async ({ page }) => {
   if (!email || !password) {
     throw new Error(
       'E2E 테스트 계정 정보가 없습니다. ' +
-      '.env 파일에 VITE_E2E_TEST_ID, VITE_E2E_TEST_PW를 설정하세요.'
+        '.env 파일에 VITE_E2E_TEST_ID, VITE_E2E_TEST_PW를 설정하세요.'
     );
   }
 

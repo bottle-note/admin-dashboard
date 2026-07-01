@@ -214,8 +214,11 @@ describe('CurationDetailPage', () => {
 
     expect(screen.getByLabelText('큐레이션명')).toHaveValue('6월 싱글몰트 시음회');
     expect(screen.getByLabelText('설명')).toHaveValue('');
-    expect(screen.getByLabelText('노출 시작일')).toHaveValue('');
-    expect(screen.getByLabelText('노출 종료일')).toHaveValue('');
+    expect(screen.getByLabelText('광고노출 시작일')).toHaveValue('');
+    expect(screen.getByLabelText('광고노출 시작일')).toBeDisabled();
+    expect(screen.getByText('광고노출 시작일은 등록 후 변경할 수 없습니다.')).toBeInTheDocument();
+    expect(screen.getByLabelText('광고노출 종료일')).toHaveValue('');
+    expect(screen.getByLabelText('광고노출 종료일')).not.toBeDisabled();
     expect(screen.getByText('날짜 및 장소')).toBeInTheDocument();
     expect(screen.getByText('참가 정보')).toBeInTheDocument();
     expect(screen.getAllByText('시음 위스키').length).toBeGreaterThan(0);

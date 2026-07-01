@@ -52,8 +52,7 @@ export class CurationListPage extends BasePage {
   readonly noResultMessage = () => this.page.getByText('검색 결과가 없습니다.');
 
   /** 특정 큐레이션명을 포함한 행 */
-  readonly rowWithName = (name: string) =>
-    this.page.locator('tbody tr').filter({ hasText: name });
+  readonly rowWithName = (name: string) => this.page.locator('tbody tr').filter({ hasText: name });
 
   /**
    * 특정 행의 상태 토글 스위치
@@ -69,7 +68,7 @@ export class CurationListPage extends BasePage {
   readonly reorderModeBanner = () => this.page.getByText('순서 변경 모드');
 
   /** 드래그 핸들 (순서 변경 모드에서만 표시) */
-  readonly dragHandles = () => this.page.locator('tbody tr td:last-child svg');
+  readonly dragHandles = () => this.page.locator('tbody tr td.cursor-grab svg');
 
   /** 특정 행의 순서 번호 (순서 변경 모드 시 첫 번째 컬럼) */
   readonly orderColumn = (rowLocator: ReturnType<typeof this.rowWithName>) =>
@@ -91,7 +90,9 @@ export class CurationListPage extends BasePage {
    * 로딩 완료 대기
    */
   async waitForLoadingComplete() {
-    await this.loadingState().waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
+    await this.loadingState()
+      .waitFor({ state: 'hidden', timeout: 10000 })
+      .catch(() => {});
   }
 
   /**
@@ -100,10 +101,11 @@ export class CurationListPage extends BasePage {
   async search(keyword: string) {
     await this.searchInput().fill(keyword);
     // API 응답 대기 준비
-    const responsePromise = this.page.waitForResponse(
-      (resp) => resp.url().includes('/curations') && resp.status() === 200,
-      { timeout: 10000 }
-    ).catch(() => {});
+    const responsePromise = this.page
+      .waitForResponse((resp) => resp.url().includes('/curations') && resp.status() === 200, {
+        timeout: 10000,
+      })
+      .catch(() => {});
     await this.searchInput().press('Enter');
     await responsePromise;
     await this.waitForLoadingComplete();
@@ -115,10 +117,11 @@ export class CurationListPage extends BasePage {
   async searchWithButton(keyword: string) {
     await this.searchInput().fill(keyword);
     // API 응답 대기 준비
-    const responsePromise = this.page.waitForResponse(
-      (resp) => resp.url().includes('/curations') && resp.status() === 200,
-      { timeout: 10000 }
-    ).catch(() => {});
+    const responsePromise = this.page
+      .waitForResponse((resp) => resp.url().includes('/curations') && resp.status() === 200, {
+        timeout: 10000,
+      })
+      .catch(() => {});
     await this.searchButton().click();
     await responsePromise;
     await this.waitForLoadingComplete();
@@ -131,10 +134,11 @@ export class CurationListPage extends BasePage {
   async selectStatusFilter(status: '전체' | '활성' | '비활성') {
     await this.statusFilterTrigger().click();
     // API 응답 대기 준비
-    const responsePromise = this.page.waitForResponse(
-      (resp) => resp.url().includes('/curations') && resp.status() === 200,
-      { timeout: 10000 }
-    ).catch(() => {});
+    const responsePromise = this.page
+      .waitForResponse((resp) => resp.url().includes('/curations') && resp.status() === 200, {
+        timeout: 10000,
+      })
+      .catch(() => {});
     await this.page.getByRole('option', { name: status, exact: true }).click();
     await responsePromise;
     await this.waitForLoadingComplete();
@@ -165,7 +169,9 @@ export class CurationListPage extends BasePage {
    * 테이블 행 개수 반환
    */
   async getRowCount() {
-    const noResult = await this.noResultMessage().isVisible().catch(() => false);
+    const noResult = await this.noResultMessage()
+      .isVisible()
+      .catch(() => false);
     if (noResult) return 0;
     return await this.clickableRows().count();
   }
@@ -198,6 +204,11 @@ export class CurationListPage extends BasePage {
   async enterReorderMode() {
     await this.reorderButton().click();
     await this.reorderModeBanner().waitFor({ state: 'visible', timeout: 5000 });
+    await this.waitForLoadingComplete();
+    await this.dragHandles()
+      .first()
+      .waitFor({ state: 'visible', timeout: 10000 })
+      .catch(() => {});
   }
 
   /**
@@ -212,7 +223,9 @@ export class CurationListPage extends BasePage {
    * 순서 변경 모드 여부 확인
    */
   async isReorderMode() {
-    return await this.reorderModeBanner().isVisible().catch(() => false);
+    return await this.reorderModeBanner()
+      .isVisible()
+      .catch(() => false);
   }
 
   /**

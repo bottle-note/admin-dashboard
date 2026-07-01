@@ -222,7 +222,7 @@ export function TastingEventImageUploadField({
           이미지를 드래그하거나 클릭하여 업로드
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          PNG, JPG, WEBP 지원 · {imageUrls.length}/{MAX_IMAGE_COUNT}
+          PNG, JPG, WEBP 지원 · 대표/2번/3번 순서로 노출 · {imageUrls.length}/{MAX_IMAGE_COUNT}
         </p>
       </div>
 
@@ -237,45 +237,56 @@ export function TastingEventImageUploadField({
       />
 
       {imageUrls.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-3">
-          {imageUrls.map((imageUrl, index) => (
-            <div
-              key={imageUrl}
-              draggable
-              aria-label={`큐레이션 이미지 ${index + 1} 순서 변경`}
-              className={`group relative overflow-hidden rounded-lg border bg-muted transition-colors ${
-                dragOverImageIndex === index ? 'border-primary bg-primary/5' : ''
-              }`}
-              onDragStart={(event) => handleImageDragStart(index, event)}
-              onDragOver={(event) => handleImageDragOver(index, event)}
-              onDragLeave={() => setDragOverImageIndex(null)}
-              onDrop={(event) => handleImageDrop(index, event)}
-              onDragEnd={handleImageDragEnd}
-            >
-              <img
-                src={imageUrl}
-                alt={`큐레이션 이미지 ${index + 1}`}
-                className="aspect-video w-full object-cover"
-              />
-              <div className="absolute left-2 top-2 rounded bg-background/90 px-2 py-1 text-xs font-medium shadow">
-                {index === 0 ? '대표' : index + 1}
-              </div>
-              <GripVertical
-                className="absolute bottom-2 left-2 h-4 w-4 text-background drop-shadow"
-                aria-hidden="true"
-              />
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="absolute right-2 top-2 h-7 w-7"
-                aria-label={`큐레이션 이미지 ${index + 1} 삭제`}
-                onClick={() => handleRemoveImage(index)}
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            카드를 끌어 원하는 위치에 놓으면 대표/2번/3번 순서가 바뀝니다.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {imageUrls.map((imageUrl, index) => (
+              <div
+                key={imageUrl}
+                draggable
+                aria-label={`큐레이션 이미지 ${index + 1} 순서 변경`}
+                className={`group relative cursor-grab overflow-hidden rounded-lg border bg-muted transition-colors active:cursor-grabbing ${
+                  dragOverImageIndex === index ? 'border-primary bg-primary/5' : ''
+                }`}
+                onDragStart={(event) => handleImageDragStart(index, event)}
+                onDragOver={(event) => handleImageDragOver(index, event)}
+                onDragLeave={() => setDragOverImageIndex(null)}
+                onDrop={(event) => handleImageDrop(index, event)}
+                onDragEnd={handleImageDragEnd}
               >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
+                <img
+                  src={imageUrl}
+                  alt={`큐레이션 이미지 ${index + 1}`}
+                  draggable={false}
+                  className="aspect-video w-full object-cover"
+                />
+                <div className="absolute left-2 top-2 rounded bg-background/90 px-2 py-1 text-xs font-medium shadow">
+                  {getImagePositionLabel(index)}
+                </div>
+                {dragOverImageIndex === index && draggedImageIndex !== index && (
+                  <div className="absolute inset-x-2 bottom-2 rounded bg-primary px-2 py-1 text-center text-xs font-semibold text-primary-foreground shadow">
+                    {getImagePositionLabel(index)}으로 이동
+                  </div>
+                )}
+                <GripVertical
+                  className="absolute bottom-2 left-2 h-4 w-4 text-background drop-shadow"
+                  aria-hidden="true"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute right-2 top-2 h-7 w-7"
+                  aria-label={`큐레이션 이미지 ${index + 1} 삭제`}
+                  onClick={() => handleRemoveImage(index)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -285,4 +296,8 @@ export function TastingEventImageUploadField({
       {isImageUploading && <p className="text-sm text-muted-foreground">이미지 업로드 중...</p>}
     </div>
   );
+}
+
+function getImagePositionLabel(index: number): string {
+  return index === 0 ? '대표' : `${index + 1}번`;
 }

@@ -27,13 +27,16 @@ test.describe('배너 목록', () => {
     await expect(listPage.table()).toBeVisible();
   });
 
-  test('검색으로 배너를 필터링할 수 있다', async ({ page }) => {
+  test('검색으로 배너를 필터링할 수 있다', async () => {
     await listPage.goto();
 
     await listPage.search('테스트');
 
     const rowCount = await listPage.getRowCount();
-    const hasNoResultMessage = await listPage.noResultMessage().isVisible().catch(() => false);
+    const hasNoResultMessage = await listPage
+      .noResultMessage()
+      .isVisible()
+      .catch(() => false);
 
     expect(rowCount > 0 || hasNoResultMessage).toBe(true);
   });
@@ -85,7 +88,7 @@ test.describe('배너 상세', () => {
     detailPage = new BannerDetailPage(page);
   });
 
-  test('상세 페이지에서 배너 정보를 볼 수 있다', async ({ page }) => {
+  test('상세 페이지에서 배너 정보를 볼 수 있다', async () => {
     await listPage.goto();
     const rowCount = await listPage.getRowCount();
 
@@ -228,7 +231,7 @@ test.describe('배너 CRUD 플로우', () => {
     ]);
 
     // 11. 목록으로 리다이렉트 확인
-    await expect(page).toHaveURL(/.*banners$/, { timeout: 10000 });
+    await expect(page).toHaveURL(/.*\/banners(\?.*)?$/, { timeout: 10000 });
   });
 });
 
@@ -269,7 +272,7 @@ test.describe('배너 순서 변경', () => {
     listPage = new BannerListPage(page);
   });
 
-  test('순서 변경 버튼을 클릭하면 순서 변경 모드로 진입한다', async ({ page }) => {
+  test('순서 변경 버튼을 클릭하면 순서 변경 모드로 진입한다', async () => {
     await listPage.goto();
 
     const rowCount = await listPage.getRowCount();
@@ -301,10 +304,10 @@ test.describe('배너 순서 변경', () => {
     await listPage.tableRows().first().click();
 
     // URL이 변경되지 않아야 함
-    await expect(page).toHaveURL(/.*banners$/);
+    await expect(page).toHaveURL(/.*\/banners(\?.*)?$/);
   });
 
-  test('순서 변경 완료 버튼을 클릭하면 일반 모드로 돌아간다', async ({ page }) => {
+  test('순서 변경 완료 버튼을 클릭하면 일반 모드로 돌아간다', async () => {
     await listPage.goto();
 
     const rowCount = await listPage.getRowCount();
@@ -323,7 +326,7 @@ test.describe('배너 순서 변경', () => {
     await expect(listPage.reorderButton()).not.toContainText('완료');
   });
 
-  test('순서 변경 모드에서 드래그하면 sort-order API가 호출된다', async ({ page }) => {
+  test('순서 변경 모드에서 드래그 후 완료하면 bulk reorder API가 호출된다', async ({ page }) => {
     await listPage.goto();
 
     const rowCount = await listPage.getRowCount();
@@ -337,14 +340,15 @@ test.describe('배너 순서 변경', () => {
     const firstRow = listPage.tableRows().first();
     const secondRow = listPage.tableRows().nth(1);
 
-    const sortOrderPromise = page.waitForResponse(
-      (resp) => resp.url().includes('/sort-order') && resp.request().method() === 'PATCH',
-      { timeout: 10000 }
-    );
-
     await firstRow.dragTo(secondRow);
 
+    const sortOrderPromise = page.waitForResponse(
+      (resp) => resp.url().includes('/bulk/reorder') && resp.request().method() === 'PATCH',
+      { timeout: 10000 }
+    );
+    await listPage.reorderButton().click();
     const response = await sortOrderPromise;
     expect(response.ok()).toBe(true);
+    await expect(listPage.reorderModeBanner()).not.toBeVisible();
   });
 });

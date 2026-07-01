@@ -158,8 +158,19 @@ function fillBasicInfo() {
   fireEvent.change(screen.getByLabelText('설명'), {
     target: { value: '앱 홈에 노출할 추천 위스키' },
   });
-  fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2026-06-01' } });
-  fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2026-06-30' } });
+  fireEvent.change(screen.getByLabelText('광고노출 시작일'), { target: { value: '2026-06-01' } });
+  fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2026-06-30' } });
+}
+
+async function typeTastingTagSearch(
+  user: ReturnType<typeof userEvent.setup>,
+  comboboxName: string,
+  value: string
+) {
+  await user.click(screen.getByRole('combobox', { name: comboboxName }));
+  const searchInput = await screen.findByLabelText(`${comboboxName} 검색어`);
+  await user.type(searchInput, value);
+  return searchInput;
 }
 
 describe('CurationWhiskyCardCreatePage', () => {
@@ -174,6 +185,8 @@ describe('CurationWhiskyCardCreatePage', () => {
     render(<CurationRecommendedWhiskyCreatePage />);
 
     await screen.findByLabelText('큐레이션명');
+    expect(screen.getByLabelText('앱 미리보기 프레임')).toBeInTheDocument();
+    expect(screen.getByText('큐레이션 위스키')).toBeInTheDocument();
 
     const guideMessage = screen.getByText('위스키를 검색하거나 직접 입력을 눌러 추가해주세요.');
     const addCta = screen.getByRole('button', { name: '추천 위스키 추가' });
@@ -215,12 +228,14 @@ describe('CurationWhiskyCardCreatePage', () => {
     await user.click(await screen.findByText('글렌피딕 12년'));
 
     expect(await screen.findByText('평균 별점')).toBeInTheDocument();
+    expect(screen.getByText('이번 주 추천 위스키')).toBeInTheDocument();
+    expect(screen.getAllByText('글렌피딕 12년').length).toBeGreaterThan(0);
     expect(screen.getAllByText('4.2').length).toBeGreaterThan(0);
     expect(screen.getAllByText('바닐라').length).toBeGreaterThan(0);
     expect(screen.getAllByText('꿀').length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('button', { name: '바닐라 태그 삭제' }));
-    await user.type(screen.getByLabelText('글렌피딕 12년 테이스팅 태그'), '셰리{enter}');
+    await typeTastingTagSearch(user, '글렌피딕 12년 테이스팅 태그', '셰리{enter}');
     fireEvent.change(screen.getByLabelText('추천 코멘트'), {
       target: { value: '밸런스가 좋아 첫 추천으로 적합합니다.' },
     });
@@ -280,6 +295,7 @@ describe('CurationWhiskyCardCreatePage', () => {
 
     expect(await screen.findByRole('heading', { name: '위스키 페어링 작성' })).toBeInTheDocument();
     await screen.findByLabelText('큐레이션명');
+    expect(screen.getByLabelText('앱 미리보기 프레임')).toBeInTheDocument();
     fillBasicInfo();
 
     await user.type(screen.getByPlaceholderText('위스키 검색하여 선택...'), '글렌');
@@ -296,6 +312,11 @@ describe('CurationWhiskyCardCreatePage', () => {
     fireEvent.change(screen.getByLabelText('1번 페어링 설명'), {
       target: { value: '꿀과 바닐라 향을 더 부드럽게 이어줍니다.' },
     });
+
+    expect(screen.getAllByText('바닐라 아이스크림').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('꿀과 바닐라 향을 더 부드럽게 이어줍니다.').length).toBeGreaterThan(
+      0
+    );
 
     await user.click(screen.getByRole('button', { name: /저장/ }));
 
@@ -366,6 +387,9 @@ describe('CurationWhiskyCardCreatePage', () => {
 
     expect(await screen.findByRole('heading', { name: '추천 위스키 수정' })).toBeInTheDocument();
     expect(screen.getByLabelText('큐레이션명')).toHaveValue('기존 추천 위스키');
+    expect(screen.getByLabelText('광고노출 시작일')).toBeDisabled();
+    expect(screen.getByLabelText('광고노출 종료일')).not.toBeDisabled();
+    expect(screen.getByText('광고노출 시작일은 등록 후 변경할 수 없습니다.')).toBeInTheDocument();
     expect(screen.getByLabelText('수동 위스키 한글명')).toHaveValue('수동 추천 위스키');
     expect(screen.getAllByText('스모키').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('추천 코멘트')).toHaveValue('기존 코멘트');

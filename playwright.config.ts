@@ -7,7 +7,13 @@ import { loadEnv } from 'vite';
  */
 
 // .env 파일에서 환경변수 로드 (ensure-env.sh가 생성한 .env 파일)
-const env = loadEnv('', process.cwd(), '');
+const defaultEnv = loadEnv('', process.cwd(), '');
+const devEnv = loadEnv('dev', process.cwd(), '');
+const env = {
+  ...devEnv,
+  ...defaultEnv,
+  ...process.env,
+};
 
 export default defineConfig({
   testDir: './e2e/specs',
@@ -22,10 +28,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
 
   /* Reporter 설정 */
-  reporter: [
-    ['html', { outputFolder: 'e2e/reports' }],
-    ['list'],
-  ],
+  reporter: [['html', { outputFolder: 'e2e/reports' }], ['list']],
 
   /* 공통 설정 */
   use: {

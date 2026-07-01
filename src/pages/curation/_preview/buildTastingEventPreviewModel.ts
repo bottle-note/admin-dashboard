@@ -112,6 +112,8 @@ export const buildTastingEventPreviewModel = (
     eventTimeLabel,
     eventDateTimeLabel: `${eventDateLabel} · ${eventTimeLabel}`,
     placeLabel: payload.placeName ?? payload.barAddress,
+    barAddress: payload.barAddress,
+    detailAddress: payload.detailAddress ?? '',
     fullAddress,
     capacityLabel: `${payload.capacity.toLocaleString('ko-KR')}명 정원`,
     entryFeeLabel:

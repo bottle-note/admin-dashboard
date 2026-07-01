@@ -32,6 +32,15 @@ function ControlledCurationTastingTagCombobox({
 }
 
 describe('CurationTastingTagCombobox', () => {
+  it('드롭다운을 열면 검색어 없이도 기존 태그를 먼저 표시한다', async () => {
+    render(<ControlledCurationTastingTagCombobox />);
+
+    fireEvent.click(screen.getByRole('combobox', { name: '테이스팅 태그' }));
+
+    expect(await screen.findByRole('button', { name: '바닐라 태그 선택' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '과일 태그 선택' })).toBeInTheDocument();
+  });
+
   it('아래 공간이 부족하고 위 공간이 더 넓으면 드롭다운을 위쪽에 표시한다', async () => {
     Object.defineProperty(window, 'innerHeight', {
       configurable: true,
@@ -40,8 +49,8 @@ describe('CurationTastingTagCombobox', () => {
 
     render(<ControlledCurationTastingTagCombobox />);
 
-    const input = screen.getByPlaceholderText('테이스팅 태그검색 후 추가');
-    const container = input.parentElement;
+    const trigger = screen.getByRole('combobox', { name: '테이스팅 태그' });
+    const container = trigger.parentElement;
 
     expect(container).toBeInstanceOf(HTMLElement);
     vi.spyOn(container as HTMLElement, 'getBoundingClientRect').mockReturnValue({
@@ -56,6 +65,8 @@ describe('CurationTastingTagCombobox', () => {
       toJSON: vi.fn(),
     } as DOMRect);
 
+    fireEvent.click(trigger);
+    const input = await screen.findByLabelText('테이스팅 태그 검색어');
     fireEvent.change(input, { target: { value: '과' } });
 
     const dropdownItem = await screen.findByRole('button', { name: '과일 태그 선택' });
@@ -78,8 +89,8 @@ describe('CurationTastingTagCombobox', () => {
 
     render(<ControlledCurationTastingTagCombobox selectedTagNames={['바닐라']} />);
 
-    const input = screen.getByPlaceholderText('테이스팅 태그검색 후 추가');
-    const container = input.parentElement;
+    const trigger = screen.getByRole('combobox', { name: '테이스팅 태그' });
+    const container = trigger.parentElement;
 
     expect(container).toBeInstanceOf(HTMLElement);
     vi.spyOn(container as HTMLElement, 'getBoundingClientRect').mockReturnValue({
@@ -94,6 +105,8 @@ describe('CurationTastingTagCombobox', () => {
       toJSON: vi.fn(),
     } as DOMRect);
 
+    fireEvent.click(trigger);
+    const input = await screen.findByLabelText('테이스팅 태그 검색어');
     fireEvent.change(input, { target: { value: '바' } });
 
     const emptyMessage = await screen.findByText('검색 결과가 없습니다');
@@ -112,7 +125,8 @@ describe('CurationTastingTagCombobox', () => {
 
     render(<ControlledCurationTastingTagCombobox onCreate={onCreate} onSelect={onSelect} />);
 
-    fireEvent.change(screen.getByLabelText('테이스팅 태그'), {
+    fireEvent.click(screen.getByRole('combobox', { name: '테이스팅 태그' }));
+    fireEvent.change(await screen.findByLabelText('테이스팅 태그 검색어'), {
       target: { value: '셰리' },
     });
 
@@ -129,7 +143,8 @@ describe('CurationTastingTagCombobox', () => {
 
     render(<ControlledCurationTastingTagCombobox onCreate={onCreate} onSelect={onSelect} />);
 
-    fireEvent.change(screen.getByLabelText('테이스팅 태그'), {
+    fireEvent.click(screen.getByRole('combobox', { name: '테이스팅 태그' }));
+    fireEvent.change(await screen.findByLabelText('테이스팅 태그 검색어'), {
       target: { value: '과' },
     });
 
@@ -140,12 +155,13 @@ describe('CurationTastingTagCombobox', () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it('한글 조합 중 Enter는 직접 추가로 처리하지 않는다', () => {
+  it('한글 조합 중 Enter는 직접 추가로 처리하지 않는다', async () => {
     const onCreate = vi.fn(() => true);
 
     render(<ControlledCurationTastingTagCombobox onCreate={onCreate} />);
 
-    const input = screen.getByLabelText('테이스팅 태그');
+    fireEvent.click(screen.getByRole('combobox', { name: '테이스팅 태그' }));
+    const input = await screen.findByLabelText('테이스팅 태그 검색어');
     fireEvent.change(input, { target: { value: '자' } });
     fireEvent.keyDown(input, {
       key: 'Enter',
@@ -165,7 +181,8 @@ describe('CurationTastingTagCombobox', () => {
   it('이미 선택한 태그는 검색 결과에서 제외한다', async () => {
     render(<ControlledCurationTastingTagCombobox selectedTagNames={['바닐라']} />);
 
-    fireEvent.change(screen.getByLabelText('테이스팅 태그'), {
+    fireEvent.click(screen.getByRole('combobox', { name: '테이스팅 태그' }));
+    fireEvent.change(await screen.findByLabelText('테이스팅 태그 검색어'), {
       target: { value: '바' },
     });
 

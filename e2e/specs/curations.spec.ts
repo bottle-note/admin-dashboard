@@ -27,7 +27,7 @@ test.describe('큐레이션 목록', () => {
     await expect(listPage.table()).toBeVisible();
   });
 
-  test('검색으로 큐레이션을 필터링할 수 있다', async ({ page }) => {
+  test('검색으로 큐레이션을 필터링할 수 있다', async () => {
     await listPage.goto();
 
     // 검색 수행
@@ -35,7 +35,10 @@ test.describe('큐레이션 목록', () => {
 
     // 검색 결과가 있거나 "검색 결과가 없습니다" 메시지가 보여야 함
     const rowCount = await listPage.getRowCount();
-    const hasNoResultMessage = await listPage.noResultMessage().isVisible().catch(() => false);
+    const hasNoResultMessage = await listPage
+      .noResultMessage()
+      .isVisible()
+      .catch(() => false);
 
     expect(rowCount > 0 || hasNoResultMessage).toBe(true);
   });
@@ -80,7 +83,7 @@ test.describe('큐레이션 목록', () => {
     await expect(page).toHaveURL(/.*curations\/new/);
   });
 
-  test('인라인 스위치로 상태를 토글할 수 있다', async ({ page }) => {
+  test('인라인 스위치로 상태를 토글할 수 있다', async () => {
     await listPage.goto();
 
     const rowCount = await listPage.getRowCount();
@@ -95,7 +98,7 @@ test.describe('큐레이션 목록', () => {
     const statusSwitch = listPage.statusSwitch(firstRow);
 
     // 현재 스위치 상태 확인
-    const isCurrentlyChecked = await statusSwitch.getAttribute('data-state') === 'checked';
+    const isCurrentlyChecked = (await statusSwitch.getAttribute('data-state')) === 'checked';
     const expectedNewState = isCurrentlyChecked ? 'unchecked' : 'checked';
 
     // 스위치 클릭
@@ -115,7 +118,7 @@ test.describe('큐레이션 상세', () => {
     detailPage = new CurationDetailPage(page);
   });
 
-  test('상세 페이지에서 큐레이션 정보를 볼 수 있다', async ({ page }) => {
+  test('상세 페이지에서 큐레이션 정보를 볼 수 있다', async () => {
     // 목록에서 첫 번째 큐레이션으로 이동
     await listPage.goto();
     const rowCount = await listPage.getRowCount();
@@ -265,7 +268,7 @@ test.describe('큐레이션 CRUD 플로우', () => {
     ]);
 
     // 11. 목록으로 리다이렉트 확인
-    await expect(page).toHaveURL(/.*curations$/, { timeout: 10000 });
+    await expect(page).toHaveURL(/.*\/curations(\?.*)?$/, { timeout: 10000 });
   });
 });
 
@@ -276,7 +279,7 @@ test.describe('큐레이션 순서 변경', () => {
     listPage = new CurationListPage(page);
   });
 
-  test('순서 변경 버튼을 클릭하면 순서 변경 모드로 진입한다', async ({ page }) => {
+  test('순서 변경 버튼을 클릭하면 순서 변경 모드로 진입한다', async () => {
     await listPage.goto();
 
     const rowCount = await listPage.getRowCount();
@@ -315,10 +318,10 @@ test.describe('큐레이션 순서 변경', () => {
     await listPage.tableRows().first().click();
 
     // URL이 변경되지 않아야 함 (상세 페이지로 이동하지 않음)
-    await expect(page).toHaveURL(/.*curations$/);
+    await expect(page).toHaveURL(/.*\/curations(\?.*)?$/);
   });
 
-  test('순서 변경 완료 버튼을 클릭하면 일반 모드로 돌아간다', async ({ page }) => {
+  test('순서 변경 완료 버튼을 클릭하면 일반 모드로 돌아간다', async () => {
     await listPage.goto();
 
     const rowCount = await listPage.getRowCount();
@@ -342,7 +345,7 @@ test.describe('큐레이션 순서 변경', () => {
     await expect(listPage.reorderButton()).not.toContainText('완료');
   });
 
-  test('순서 변경 모드에서 드래그하면 displayOrder API가 호출된다', async ({ page }) => {
+  test('순서 변경 모드에서 드래그 후 완료하면 bulk reorder API가 호출된다', async ({ page }) => {
     await listPage.goto();
 
     const rowCount = await listPage.getRowCount();
@@ -358,22 +361,26 @@ test.describe('큐레이션 순서 변경', () => {
     const firstRow = listPage.tableRows().first();
     const secondRow = listPage.tableRows().nth(1);
 
-    // displayOrder API 호출 대기 준비 (PATCH /curations/:id/display-order)
-    const displayOrderPromise = page.waitForResponse(
-      (resp) => resp.url().includes('/display-order') && resp.request().method() === 'PATCH',
-      { timeout: 10000 }
-    );
-
     // 첫 번째 행을 두 번째 행 위치로 드래그
     await firstRow.dragTo(secondRow);
+
+    // 완료 버튼을 눌러 저장하면 bulk reorder API가 호출됨
+    const displayOrderPromise = page.waitForResponse(
+      (resp) => resp.url().includes('/bulk/reorder') && resp.request().method() === 'PATCH',
+      { timeout: 10000 }
+    );
+    await listPage.reorderButton().click();
 
     // API 호출 확인
     const response = await displayOrderPromise;
     expect(response.ok()).toBe(true);
+    await expect(listPage.reorderModeBanner()).not.toBeVisible();
   });
 });
 
 test.describe('큐레이션 위스키 관리', () => {
+  test.describe.configure({ mode: 'serial' });
+
   let listPage: CurationListPage;
   let detailPage: CurationDetailPage;
 
@@ -405,7 +412,7 @@ test.describe('큐레이션 위스키 관리', () => {
     await detailPage.searchWhisky('글렌');
 
     // 드롭다운 아이템 대기
-    const dropdownList = page.locator('ul.max-h-64');
+    const dropdownList = detailPage.whiskyDropdownList();
     const firstOption = dropdownList.locator('li button').first();
 
     await expect(dropdownList).toBeVisible({ timeout: 10000 });
@@ -460,23 +467,27 @@ test.describe('큐레이션 위스키 관리', () => {
     // 현재 위스키 개수 확인
     let currentCount = await detailPage.getWhiskyCount();
 
-    // 위스키가 없으면 먼저 추가
-    if (currentCount === 0) {
-      await detailPage.searchWhisky('글렌');
+    // 제거 후에도 최소 1개 위스키가 남도록 사전 데이터를 보강
+    let shouldSavePreparedWhiskies = false;
+    while (currentCount < 2) {
+      const added = await detailPage.addFirstWhiskyBySearch('글렌');
 
-      const dropdownList = page.locator('ul.max-h-64');
-      const firstOption = dropdownList.locator('li button').first();
-
-      await expect(dropdownList).toBeVisible({ timeout: 10000 });
-      const hasOptions = await firstOption.isVisible().catch(() => false);
-
-      if (!hasOptions) {
+      if (!added) {
         test.skip();
         return;
       }
 
-      // 위스키 선택 및 저장
-      await firstOption.click();
+      const nextCount = await detailPage.getWhiskyCount();
+      if (nextCount <= currentCount) {
+        test.skip();
+        return;
+      }
+
+      currentCount = nextCount;
+      shouldSavePreparedWhiskies = true;
+    }
+
+    if (shouldSavePreparedWhiskies) {
       await Promise.all([
         page.waitForResponse(
           (resp) => resp.url().includes('/curations/') && resp.request().method() === 'PUT',
@@ -485,6 +496,8 @@ test.describe('큐레이션 위스키 관리', () => {
         detailPage.clickSave(),
       ]);
 
+      await page.reload();
+      await detailPage.waitForLoadingComplete();
       currentCount = await detailPage.getWhiskyCount();
     }
 

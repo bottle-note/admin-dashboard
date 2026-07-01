@@ -108,46 +108,51 @@ export function createCurationTastingEventFormSchema(
     (field) => field.key === 'applicationLink'
   );
 
-  return z.object({
-    name: z.string().min(1, '큐레이션명은 필수입니다.'),
-    description: isEditMode ? z.string() : z.string().min(1, '설명은 필수입니다.'),
-    imageUrls: z.array(z.string()).max(3, '이미지는 최대 3개까지 등록할 수 있습니다.'),
-    exposureStartDate: isEditMode ? z.string() : z.string().min(1, '노출 시작일은 필수입니다.'),
-    exposureEndDate: isEditMode ? z.string() : z.string().min(1, '노출 종료일은 필수입니다.'),
-    displayOrder: z
-      .number()
-      .int('노출 순서는 정수로 입력해주세요.')
-      .min(0, '노출 순서는 0 이상이어야 합니다.'),
-    isActive: z.boolean(),
-    ...createTastingEventCreatePayloadShape(formModel),
-  }).superRefine((values, context) => {
-    const formValues = values as Record<string, unknown>;
-    const dateIssues = validateDateRange({
-      startDate: typeof formValues.exposureStartDate === 'string' ? formValues.exposureStartDate : '',
-      endDate: typeof formValues.exposureEndDate === 'string' ? formValues.exposureEndDate : '',
-      startDateLabel: '노출 시작일',
-      endDateLabel: '노출 종료일',
-    });
+  return z
+    .object({
+      name: z.string().min(1, '큐레이션명은 필수입니다.'),
+      description: isEditMode ? z.string() : z.string().min(1, '설명은 필수입니다.'),
+      imageUrls: z.array(z.string()).max(3, '이미지는 최대 3개까지 등록할 수 있습니다.'),
+      exposureStartDate: isEditMode
+        ? z.string()
+        : z.string().min(1, '광고노출 시작일은 필수입니다.'),
+      exposureEndDate: isEditMode ? z.string() : z.string().min(1, '광고노출 종료일은 필수입니다.'),
+      displayOrder: z
+        .number()
+        .int('노출 순서는 정수로 입력해주세요.')
+        .min(0, '노출 순서는 0 이상이어야 합니다.'),
+      isActive: z.boolean(),
+      ...createTastingEventCreatePayloadShape(formModel),
+    })
+    .superRefine((values, context) => {
+      const formValues = values as Record<string, unknown>;
+      const dateIssues = validateDateRange({
+        startDate:
+          typeof formValues.exposureStartDate === 'string' ? formValues.exposureStartDate : '',
+        endDate: typeof formValues.exposureEndDate === 'string' ? formValues.exposureEndDate : '',
+        startDateLabel: '광고노출 시작일',
+        endDateLabel: '광고노출 종료일',
+      });
 
-    for (const issue of dateIssues) {
+      for (const issue of dateIssues) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [issue.field === 'startDate' ? 'exposureStartDate' : 'exposureEndDate'],
+          message: issue.message,
+        });
+      }
+
+      if (!applicationLinkField?.required || formValues.isRecruiting === false) return;
+
+      const applicationLink = formValues.applicationLink;
+      if (typeof applicationLink === 'string' && applicationLink.trim()) return;
+
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        path: [issue.field === 'startDate' ? 'exposureStartDate' : 'exposureEndDate'],
-        message: issue.message,
+        path: ['applicationLink'],
+        message: `${applicationLinkField.label}는 필수입니다.`,
       });
-    }
-
-    if (!applicationLinkField?.required || formValues.isRecruiting === false) return;
-
-    const applicationLink = formValues.applicationLink;
-    if (typeof applicationLink === 'string' && applicationLink.trim()) return;
-
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['applicationLink'],
-      message: `${applicationLinkField.label}는 필수입니다.`,
-    });
-  }) as unknown as z.ZodType<TastingEventCreateFormState>;
+    }) as unknown as z.ZodType<TastingEventCreateFormState>;
 }
 
 export interface TastingEventCreateFormState extends CurationWhiskyCardListFormValues {
