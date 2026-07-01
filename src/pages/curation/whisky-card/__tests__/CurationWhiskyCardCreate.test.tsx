@@ -158,8 +158,19 @@ function fillBasicInfo() {
   fireEvent.change(screen.getByLabelText('설명'), {
     target: { value: '앱 홈에 노출할 추천 위스키' },
   });
-  fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2026-06-01' } });
-  fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2026-06-30' } });
+  fireEvent.change(screen.getByLabelText('광고노출 시작일'), { target: { value: '2026-06-01' } });
+  fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2026-06-30' } });
+}
+
+async function typeTastingTagSearch(
+  user: ReturnType<typeof userEvent.setup>,
+  comboboxName: string,
+  value: string
+) {
+  await user.click(screen.getByRole('combobox', { name: comboboxName }));
+  const searchInput = await screen.findByLabelText(`${comboboxName} 검색어`);
+  await user.type(searchInput, value);
+  return searchInput;
 }
 
 describe('CurationWhiskyCardCreatePage', () => {
@@ -220,7 +231,7 @@ describe('CurationWhiskyCardCreatePage', () => {
     expect(screen.getAllByText('꿀').length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('button', { name: '바닐라 태그 삭제' }));
-    await user.type(screen.getByLabelText('글렌피딕 12년 테이스팅 태그'), '셰리{enter}');
+    await typeTastingTagSearch(user, '글렌피딕 12년 테이스팅 태그', '셰리{enter}');
     fireEvent.change(screen.getByLabelText('추천 코멘트'), {
       target: { value: '밸런스가 좋아 첫 추천으로 적합합니다.' },
     });
@@ -366,6 +377,9 @@ describe('CurationWhiskyCardCreatePage', () => {
 
     expect(await screen.findByRole('heading', { name: '추천 위스키 수정' })).toBeInTheDocument();
     expect(screen.getByLabelText('큐레이션명')).toHaveValue('기존 추천 위스키');
+    expect(screen.getByLabelText('광고노출 시작일')).toBeDisabled();
+    expect(screen.getByLabelText('광고노출 종료일')).not.toBeDisabled();
+    expect(screen.getByText('광고노출 시작일은 등록 후 변경할 수 없습니다.')).toBeInTheDocument();
     expect(screen.getByLabelText('수동 위스키 한글명')).toHaveValue('수동 추천 위스키');
     expect(screen.getAllByText('스모키').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('추천 코멘트')).toHaveValue('기존 코멘트');

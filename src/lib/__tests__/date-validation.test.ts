@@ -15,13 +15,13 @@ describe('date-validation', () => {
         startDate: '2026-06-11',
         endDate: '2026-06-12',
         today,
-        startDateLabel: '노출 시작일',
-        endDateLabel: '노출 종료일',
+        startDateLabel: '광고노출 시작일',
+        endDateLabel: '광고노출 종료일',
       })
     ).toEqual([
       {
         field: 'startDate',
-        message: '노출 시작일은 오늘 이후 날짜로 입력해주세요.',
+        message: '광고노출 시작일은 오늘 이후 날짜로 입력해주세요.',
       },
     ]);
 
@@ -30,17 +30,17 @@ describe('date-validation', () => {
         startDate: '2026-06-12',
         endDate: '2026-06-11',
         today,
-        startDateLabel: '노출 시작일',
-        endDateLabel: '노출 종료일',
+        startDateLabel: '광고노출 시작일',
+        endDateLabel: '광고노출 종료일',
       })
     ).toEqual([
       {
         field: 'endDate',
-        message: '노출 종료일은 오늘 이후 날짜로 입력해주세요.',
+        message: '광고노출 종료일은 오늘 이후 날짜로 입력해주세요.',
       },
       {
         field: 'endDate',
-        message: '노출 종료일은 노출 시작일보다 빠를 수 없습니다.',
+        message: '광고노출 종료일은 광고노출 시작일보다 빠를 수 없습니다.',
       },
     ]);
   });
@@ -51,13 +51,13 @@ describe('date-validation', () => {
         startDate: '2026-06-20',
         endDate: '2026-06-19',
         today,
-        startDateLabel: '노출 시작일',
-        endDateLabel: '노출 종료일',
+        startDateLabel: '광고노출 시작일',
+        endDateLabel: '광고노출 종료일',
       })
     ).toEqual([
       {
         field: 'endDate',
-        message: '노출 종료일은 노출 시작일보다 빠를 수 없습니다.',
+        message: '광고노출 종료일은 광고노출 시작일보다 빠를 수 없습니다.',
       },
     ]);
   });

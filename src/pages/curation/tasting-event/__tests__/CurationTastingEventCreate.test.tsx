@@ -214,6 +214,17 @@ function setCurrentUserRoles(roles: Array<'ROOT_ADMIN' | 'BAR_OWNER' | 'COMMUNIT
   state.isAuthenticated = roles.length > 0;
 }
 
+async function typeTastingTagSearch(
+  user: ReturnType<typeof userEvent.setup>,
+  comboboxName: string,
+  value: string
+) {
+  await user.click(screen.getByRole('combobox', { name: comboboxName }));
+  const searchInput = await screen.findByLabelText(`${comboboxName} 검색어`);
+  await user.type(searchInput, value);
+  return searchInput;
+}
+
 describe('CurationTastingEventCreatePage', () => {
   beforeEach(() => {
     setCurrentUserRoles([]);
@@ -249,7 +260,9 @@ describe('CurationTastingEventCreatePage', () => {
     expect(screen.queryByText('요약')).not.toBeInTheDocument();
     expect(screen.getByText('관리자 전용 설정')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '활성화 상태 안내' })).toBeInTheDocument();
-    expect(screen.getByText('노출 순서와 활성화 상태 변경은 관리자만 할 수 있습니다.')).toBeInTheDocument();
+    expect(
+      screen.getByText('노출 순서와 활성화 상태 변경은 관리자만 할 수 있습니다.')
+    ).toBeInTheDocument();
     expect(screen.getByLabelText('노출 순서')).toBeDisabled();
     expect(screen.getByLabelText('활성화 상태')).toBeDisabled();
     expect(screen.queryByText('BOTTLE_NOTE')).not.toBeInTheDocument();
@@ -289,7 +302,7 @@ describe('CurationTastingEventCreatePage', () => {
     expect(screen.queryByLabelText('1번 수동 위스키 한글명')).not.toBeInTheDocument();
   });
 
-  it('시음 위스키 카드에 우측 핸들을 표시하고 드래그 앤 드롭으로 순서를 변경한다', async () => {
+  it('시음 위스키 카드 라벨 앞에 핸들을 표시하고 드래그 앤 드롭으로 순서를 변경한다', async () => {
     const user = userEvent.setup();
     mockSpecSuccess();
 
@@ -452,31 +465,33 @@ describe('CurationTastingEventCreatePage', () => {
     expect(await screen.findByText('신청링크는 필수입니다.')).toBeInTheDocument();
   });
 
-  it('노출 시작일이나 종료일이 과거 날짜이면 저장 전 validation을 표시한다', async () => {
+  it('광고노출 시작일이나 종료일이 과거 날짜이면 저장 전 validation을 표시한다', async () => {
     mockSpecSuccess();
 
     render(<CurationTastingEventCreatePage />);
 
-    await screen.findByLabelText('노출 시작일');
+    await screen.findByLabelText('광고노출 시작일');
 
-    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2000-01-01' } });
-    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2099-06-30' } });
-
-    expect(await screen.findByText('노출 시작일은 오늘 이후 날짜로 입력해주세요.')).toBeInTheDocument();
-  });
-
-  it('노출 종료일이 시작일보다 빠르면 저장 전 validation을 표시한다', async () => {
-    mockSpecSuccess();
-
-    render(<CurationTastingEventCreatePage />);
-
-    await screen.findByLabelText('노출 시작일');
-
-    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2099-06-30' } });
-    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2099-06-01' } });
+    fireEvent.change(screen.getByLabelText('광고노출 시작일'), { target: { value: '2000-01-01' } });
+    fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2099-06-30' } });
 
     expect(
-      await screen.findByText('노출 종료일은 노출 시작일보다 빠를 수 없습니다.')
+      await screen.findByText('광고노출 시작일은 오늘 이후 날짜로 입력해주세요.')
+    ).toBeInTheDocument();
+  });
+
+  it('광고노출 종료일이 시작일보다 빠르면 저장 전 validation을 표시한다', async () => {
+    mockSpecSuccess();
+
+    render(<CurationTastingEventCreatePage />);
+
+    await screen.findByLabelText('광고노출 시작일');
+
+    fireEvent.change(screen.getByLabelText('광고노출 시작일'), { target: { value: '2099-06-30' } });
+    fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2099-06-01' } });
+
+    expect(
+      await screen.findByText('광고노출 종료일은 광고노출 시작일보다 빠를 수 없습니다.')
     ).toBeInTheDocument();
   });
 
@@ -560,8 +575,8 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('설명'), {
       target: { value: '소규모 위스키 시음회' },
     });
-    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2099-06-01' } });
-    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2099-06-30' } });
+    fireEvent.change(screen.getByLabelText('광고노출 시작일'), { target: { value: '2099-06-01' } });
+    fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2099-06-30' } });
     fireEvent.change(screen.getByLabelText('시음회 날짜'), { target: { value: '2026-06-15' } });
     fireEvent.change(screen.getByLabelText('시음회 시간'), { target: { value: '19:30' } });
     fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
@@ -613,8 +628,8 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('설명'), {
       target: { value: '소규모 위스키 시음회' },
     });
-    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2099-06-01' } });
-    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2099-06-30' } });
+    fireEvent.change(screen.getByLabelText('광고노출 시작일'), { target: { value: '2099-06-01' } });
+    fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2099-06-30' } });
     fireEvent.change(screen.getByLabelText('시음회 날짜'), { target: { value: '2026-06-15' } });
     fireEvent.change(screen.getByLabelText('시음회 시간'), { target: { value: '19:30' } });
     fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
@@ -643,20 +658,21 @@ describe('CurationTastingEventCreatePage', () => {
     await user.click(screen.getByRole('button', { name: '글렌피딕 12년 유저평가 숨기기' }));
     expect(screen.queryByText('유저평가 150')).not.toBeInTheDocument();
     expect(screen.queryByText('리뷰 수')).not.toBeInTheDocument();
-    expect(screen.getByPlaceholderText('테이스팅 태그검색 후 추가')).toBeInTheDocument();
+    expect(
+      screen.getByRole('combobox', { name: '글렌피딕 12년 테이스팅 태그' })
+    ).toBeInTheDocument();
     expect(screen.getByText('2/12')).toBeInTheDocument();
     expect(screen.getAllByText('바닐라').length).toBeGreaterThan(0);
     expect(screen.getAllByText('꿀').length).toBeGreaterThan(0);
-    const tagInput = screen.getByLabelText('글렌피딕 12년 테이스팅 태그');
-    await user.type(tagInput, '바');
+    await typeTastingTagSearch(user, '글렌피딕 12년 테이스팅 태그', '바');
     expect(await screen.findByText('검색 결과가 없습니다')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '바닐라 태그 선택' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '태그 검색어 지우기' }));
-    await user.type(tagInput, '과');
+    await user.type(screen.getByLabelText('글렌피딕 12년 테이스팅 태그 검색어'), '과');
     await user.click(await screen.findByRole('button', { name: '과일 태그 선택' }));
     expect(screen.getAllByText('과일').length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: '바닐라 태그 삭제' }));
-    await user.type(tagInput, '셰리');
+    await typeTastingTagSearch(user, '글렌피딕 12년 테이스팅 태그', '셰리');
     await user.click(await screen.findByRole('button', { name: '"셰리" 직접 추가' }));
     expect(screen.getByText('3/12')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('글렌피딕 12년 기대평'), {
@@ -736,8 +752,8 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('설명'), {
       target: { value: '소규모 위스키 시음회' },
     });
-    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2099-06-01' } });
-    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2099-06-30' } });
+    fireEvent.change(screen.getByLabelText('광고노출 시작일'), { target: { value: '2099-06-01' } });
+    fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2099-06-30' } });
     fireEvent.change(screen.getByLabelText('시음회 날짜'), { target: { value: '2026-06-15' } });
     fireEvent.change(screen.getByLabelText('시음회 시간'), { target: { value: '19:30' } });
     fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
@@ -765,7 +781,7 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('1번 수동 위스키 영문명'), {
       target: { value: 'Open Malt 12' },
     });
-    await user.type(screen.getByLabelText('오픈 몰트 12년 테이스팅 태그'), '버번{enter}');
+    await typeTastingTagSearch(user, '오픈 몰트 12년 테이스팅 태그', '버번{enter}');
     fireEvent.change(screen.getByLabelText('오픈 몰트 12년 기대평'), {
       target: { value: '직접 섭외한 한정 위스키' },
     });
@@ -811,8 +827,8 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('설명'), {
       target: { value: '소규모 위스키 시음회' },
     });
-    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2099-06-01' } });
-    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2099-06-30' } });
+    fireEvent.change(screen.getByLabelText('광고노출 시작일'), { target: { value: '2099-06-01' } });
+    fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2099-06-30' } });
     fireEvent.change(screen.getByLabelText('시음회 날짜'), { target: { value: '2026-06-15' } });
     fireEvent.change(screen.getByLabelText('시음회 시간'), { target: { value: '19:30' } });
     fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
@@ -849,12 +865,10 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('1번 수동 위스키 캐스크'), {
       target: { value: '버번 캐스크' },
     });
-    fireEvent.change(screen.getByLabelText('1번 수동 위스키 지역'), {
-      target: { value: '스코틀랜드/아일라' },
-    });
-    fireEvent.change(screen.getByLabelText('1번 수동 위스키 카테고리'), {
-      target: { value: '싱글몰트' },
-    });
+    await user.click(screen.getByRole('combobox', { name: '1번 수동 위스키 지역' }));
+    await user.click(await screen.findByText('스코틀랜드'));
+    await user.click(screen.getByRole('combobox', { name: '1번 수동 위스키 카테고리' }));
+    await user.click(await screen.findByText('싱글 몰트 (Single Malt) · 싱글몰트'));
     await waitFor(() => {
       expect(screen.getAllByRole('img', { name: '오픈 몰트 12년' })).toEqual(
         expect.arrayContaining([
@@ -864,7 +878,7 @@ describe('CurationTastingEventCreatePage', () => {
         ])
       );
     });
-    await user.type(screen.getByLabelText('오픈 몰트 12년 테이스팅 태그'), '버번{enter}');
+    await typeTastingTagSearch(user, '오픈 몰트 12년 테이스팅 태그', '버번{enter}');
     fireEvent.change(screen.getByLabelText('오픈 몰트 12년 기대평'), {
       target: { value: '직접 섭외한 한정 위스키' },
     });
@@ -886,8 +900,8 @@ describe('CurationTastingEventCreatePage', () => {
               abv: '46',
               cask: '버번 캐스크',
               volume: '700ml',
-              regionName: '스코틀랜드/아일라',
-              korCategory: '싱글몰트',
+              regionName: '스코틀랜드',
+              korCategory: '싱글 몰트',
               selectedTags: ['버번'],
             },
             comment: '직접 섭외한 한정 위스키',

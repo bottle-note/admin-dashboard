@@ -50,6 +50,7 @@ export interface SearchableSelectProps {
   emptyMessage?: string;
   disabled?: boolean;
   className?: string;
+  ariaLabel?: string;
 }
 
 export function SearchableSelect({
@@ -61,6 +62,7 @@ export function SearchableSelect({
   emptyMessage = '결과가 없습니다.',
   disabled = false,
   className,
+  ariaLabel,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
 
@@ -72,6 +74,7 @@ export function SearchableSelect({
         <Button
           variant="outline"
           role="combobox"
+          aria-label={ariaLabel}
           aria-expanded={open}
           disabled={disabled}
           className={cn(

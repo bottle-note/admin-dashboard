@@ -111,7 +111,7 @@ export function TastingEventBasicInfoSection({
               <div className="min-w-0 space-y-2">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-medium">
-                    노출 시작일
+                    광고노출 시작일
                     {!isNullableBasicInfoAllowed && (
                       <span className="ml-1 text-destructive">*</span>
                     )}
@@ -119,8 +119,9 @@ export function TastingEventBasicInfoSection({
                   <RecruitmentPeriodTooltip />
                 </div>
                 <Input
-                  aria-label="노출 시작일"
+                  aria-label="광고노출 시작일"
                   type="date"
+                  disabled={isEditMode}
                   {...exposureStartDateRegistration}
                   onChange={(event) =>
                     handleExposureDateChange(
@@ -130,6 +131,9 @@ export function TastingEventBasicInfoSection({
                     )
                   }
                 />
+                <p className="text-xs text-muted-foreground">
+                  광고노출 시작일은 등록 후 변경할 수 없습니다.
+                </p>
                 {form.formState.errors.exposureStartDate?.message && (
                   <p className="text-sm text-destructive">
                     {form.formState.errors.exposureStartDate.message}
@@ -140,13 +144,13 @@ export function TastingEventBasicInfoSection({
                 ~
               </span>
               <FormField
-                label="노출 종료일"
+                label="광고노출 종료일"
                 required={!isNullableBasicInfoAllowed}
                 error={form.formState.errors.exposureEndDate?.message}
                 className="min-w-0"
               >
                 <Input
-                  aria-label="노출 종료일"
+                  aria-label="광고노출 종료일"
                   type="date"
                   {...exposureEndDateRegistration}
                   onChange={(event) =>

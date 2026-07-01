@@ -216,7 +216,9 @@ describe('createTastingEventFormModel', () => {
       'applicationLink',
       'guideText',
     ]);
-    expect(formModel.sections[1]!.fields.find(({ field }) => field.key === 'applicationLink')).toMatchObject({
+    expect(
+      formModel.sections[1]!.fields.find(({ field }) => field.key === 'applicationLink')
+    ).toMatchObject({
       visibleWhen: {
         fieldKey: 'isRecruiting',
         equals: true,

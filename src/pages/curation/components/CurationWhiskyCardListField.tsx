@@ -10,15 +10,22 @@ import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import { GripVertical, Loader2, Plus, Upload, X } from 'lucide-react';
 
 import { FormField } from '@/components/common/FormField';
+import { SearchableSelect, type SelectOption } from '@/components/common/SearchableSelect';
 import { WhiskySearchSelect, type SelectedWhisky } from '@/components/common/WhiskySearchSelect';
-import { useAdminAlcoholDetailLookup } from '@/hooks/useAdminAlcohols';
+import { useAdminAlcoholDetailLookup, useCategoryReferences } from '@/hooks/useAdminAlcohols';
 import { S3UploadPath, useImageUpload } from '@/hooks/useImageUpload';
+import { useRegionList } from '@/hooks/useRegions';
 import { useToast } from '@/hooks/useToast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import {
+  CATEGORY_GROUP_LABELS,
+  EMPTY_CATEGORY_REFERENCE_MAP,
+  type CategoryReferenceMap,
+} from '@/types/api';
 
 import {
   createBottleNoteCurationWhiskyItem,
@@ -56,6 +63,8 @@ export function CurationWhiskyCardListField({
 }: CurationWhiskyCardListFieldProps) {
   const form = useFormContext<CurationWhiskyCardListFormValues>();
   const fetchAlcoholDetail = useAdminAlcoholDetailLookup();
+  const { data: categoryReferenceData } = useCategoryReferences();
+  const { data: regionData } = useRegionList({ size: 200, sortOrder: 'ASC' });
   const { upload: uploadManualWhiskyImage } = useImageUpload({
     rootPath: S3UploadPath.CURATION,
   });
@@ -87,6 +96,11 @@ export function CurationWhiskyCardListField({
   const isAddingBottleNoteWhisky = pendingAlcoholId !== null;
   const isAddDisabled = isMaxReached || isAddingBottleNoteWhisky;
   const limitDescription = `${fieldModel.minItems}-${fieldModel.maxItems}개까지 등록할 수 있습니다.`;
+  const manualCategoryOptions = getCategoryOptions(
+    categoryReferenceData ?? EMPTY_CATEGORY_REFERENCE_MAP
+  );
+  const manualRegionOptions =
+    regionData?.items.map((region) => ({ value: region.korName, label: region.korName })) ?? [];
 
   useEffect(() => {
     onImageUploadingChange?.(uploadingManualImageFieldIds.size > 0);
@@ -432,6 +446,16 @@ export function CurationWhiskyCardListField({
             const whiskyImageUrl = normalizeImageUrl(item?.alcohol.imageUrl);
             const tagError = itemError?.alcohol?.selectedTags?.message;
             const commentError = itemError?.comment?.message;
+            const manualRegionValue = normalizeText(item?.alcohol.regionName);
+            const manualCategoryValue = normalizeText(item?.alcohol.korCategory);
+            const manualRegionOptionsForValue = ensureCurrentOption(
+              manualRegionOptions,
+              manualRegionValue
+            );
+            const manualCategoryOptionsForValue = ensureCurrentOption(
+              manualCategoryOptions,
+              manualCategoryValue
+            );
 
             return (
               <div
@@ -450,10 +474,23 @@ export function CurationWhiskyCardListField({
                 onDragEnd={resetWhiskyDragState}
               >
                 <div className="flex items-start justify-between gap-4">
-                  <h3 className="text-base font-semibold text-foreground">
-                    위스키 {index + 1}
-                    {fieldModel.required && <span className="ml-1 text-destructive">*</span>}
-                  </h3>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <button
+                      type="button"
+                      data-whisky-drag-handle="true"
+                      aria-label={`${itemName} 순서 변경`}
+                      className="flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:cursor-grabbing"
+                      onPointerDown={(event) => handleWhiskyDragHandlePointerDown(index, event)}
+                      onPointerUp={handleWhiskyDragHandlePointerEnd}
+                      onPointerCancel={handleWhiskyDragHandlePointerEnd}
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </button>
+                    <h3 className="text-base font-semibold text-foreground">
+                      위스키 {index + 1}
+                      {fieldModel.required && <span className="ml-1 text-destructive">*</span>}
+                    </h3>
+                  </div>
                   <Button
                     type="button"
                     variant="ghost"
@@ -466,7 +503,7 @@ export function CurationWhiskyCardListField({
                 </div>
 
                 {isEmptyWhiskyCard ? (
-                  <div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_2.5rem]">
+                  <div className="mt-5">
                     <div className="min-w-0">
                       <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
                         <WhiskySearchSelect
@@ -485,21 +522,10 @@ export function CurationWhiskyCardListField({
                         </Button>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      data-whisky-drag-handle="true"
-                      aria-label={`${itemName} 순서 변경`}
-                      className="flex h-10 w-10 cursor-grab items-center justify-center justify-self-end text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:cursor-grabbing"
-                      onPointerDown={(event) => handleWhiskyDragHandlePointerDown(index, event)}
-                      onPointerUp={handleWhiskyDragHandlePointerEnd}
-                      onPointerCancel={handleWhiskyDragHandlePointerEnd}
-                    >
-                      <GripVertical className="h-4 w-4" />
-                    </button>
                   </div>
                 ) : (
                   <>
-                    <div className="mt-5 grid gap-4 md:grid-cols-[7rem_minmax(0,1fr)_2.5rem]">
+                    <div className="mt-5 grid gap-4 md:grid-cols-[7rem_minmax(0,1fr)]">
                       <div className="flex h-40 items-center justify-center overflow-hidden rounded-md bg-background">
                         {whiskyImageUrl ? (
                           <img
@@ -642,17 +668,43 @@ export function CurationWhiskyCardListField({
                               />
                             </FormField>
                             <FormField label="지역">
-                              <Input
-                                aria-label={`${manualFieldPrefix} 지역`}
-                                {...form.register(`alcohols.${index}.alcohol.regionName` as const)}
-                                placeholder="예: 스코틀랜드/하이랜드"
+                              <SearchableSelect
+                                ariaLabel={`${manualFieldPrefix} 지역`}
+                                value={manualRegionValue}
+                                onChange={(value) =>
+                                  form.setValue(
+                                    `alcohols.${index}.alcohol.regionName` as const,
+                                    value,
+                                    {
+                                      shouldDirty: true,
+                                      shouldValidate: true,
+                                    }
+                                  )
+                                }
+                                options={manualRegionOptionsForValue}
+                                placeholder="지역 선택"
+                                searchPlaceholder="지역 검색..."
+                                emptyMessage="지역을 찾을 수 없습니다."
                               />
                             </FormField>
                             <FormField label="카테고리" className="md:col-span-2">
-                              <Input
-                                aria-label={`${manualFieldPrefix} 카테고리`}
-                                {...form.register(`alcohols.${index}.alcohol.korCategory` as const)}
-                                placeholder="예: 싱글몰트"
+                              <SearchableSelect
+                                ariaLabel={`${manualFieldPrefix} 카테고리`}
+                                value={manualCategoryValue}
+                                onChange={(value) =>
+                                  form.setValue(
+                                    `alcohols.${index}.alcohol.korCategory` as const,
+                                    value,
+                                    {
+                                      shouldDirty: true,
+                                      shouldValidate: true,
+                                    }
+                                  )
+                                }
+                                options={manualCategoryOptionsForValue}
+                                placeholder="카테고리 선택"
+                                searchPlaceholder="카테고리 검색..."
+                                emptyMessage="카테고리를 찾을 수 없습니다."
                               />
                             </FormField>
                           </div>
@@ -713,18 +765,6 @@ export function CurationWhiskyCardListField({
                           )}
                         </div>
                       </div>
-
-                      <button
-                        type="button"
-                        data-whisky-drag-handle="true"
-                        aria-label={`${itemName} 순서 변경`}
-                        className="flex h-10 w-10 cursor-grab items-center justify-center justify-self-end text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:cursor-grabbing md:h-40 md:items-start md:pt-8"
-                        onPointerDown={(event) => handleWhiskyDragHandlePointerDown(index, event)}
-                        onPointerUp={handleWhiskyDragHandlePointerEnd}
-                        onPointerCancel={handleWhiskyDragHandlePointerEnd}
-                      >
-                        <GripVertical className="h-4 w-4" />
-                      </button>
                     </div>
 
                     <div className="mt-4 space-y-2">
@@ -773,6 +813,23 @@ function hasManualWhiskyValue(alcohol: CurationWhiskyMirror | undefined): boolea
     normalizeText(alcohol.regionName) ||
     normalizeText(alcohol.korCategory)
   );
+}
+
+function getCategoryOptions(categoryReferencesByGroup: CategoryReferenceMap): SelectOption[] {
+  return Object.entries(categoryReferencesByGroup).flatMap(([group, categories]) =>
+    categories.map((category) => ({
+      value: category.korCategory,
+      label: `${category.korCategory} (${category.engCategory}) · ${CATEGORY_GROUP_LABELS[group as keyof typeof CATEGORY_GROUP_LABELS]}`,
+    }))
+  );
+}
+
+function ensureCurrentOption(options: SelectOption[], currentValue: string): SelectOption[] {
+  if (!currentValue || options.some((option) => option.value === currentValue)) {
+    return options;
+  }
+
+  return [{ value: currentValue, label: `${currentValue} (현재 값)` }, ...options];
 }
 
 function normalizeImageUrl(value: string | null | undefined): string {
