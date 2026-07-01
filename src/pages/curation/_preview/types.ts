@@ -62,6 +62,8 @@ export interface TastingEventPreviewModel {
   eventTimeLabel: string;
   eventDateTimeLabel: string;
   placeLabel: string;
+  barAddress: string;
+  detailAddress: string;
   fullAddress: string;
   capacityLabel: string;
   entryFeeLabel: string;

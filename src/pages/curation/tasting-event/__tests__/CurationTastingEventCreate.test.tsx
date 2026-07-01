@@ -257,6 +257,7 @@ describe('CurationTastingEventCreatePage', () => {
     expect(screen.getByRole('button', { name: '큐레이션 이미지 업로드' })).toBeInTheDocument();
     expect(screen.getByText(/PNG, JPG, WEBP 지원/)).toBeInTheDocument();
     expect(screen.getByText('미리보기')).toBeInTheDocument();
+    expect(screen.getByLabelText('앱 미리보기 프레임')).toBeInTheDocument();
     expect(screen.queryByText('요약')).not.toBeInTheDocument();
     expect(screen.getByText('관리자 전용 설정')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '활성화 상태 안내' })).toBeInTheDocument();

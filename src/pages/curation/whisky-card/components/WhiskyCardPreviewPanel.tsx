@@ -8,6 +8,7 @@ import type {
   CurationWhiskyMirror,
   CurationWhiskyStats,
 } from '../../curation-whisky-card-list.types';
+import { CurationPreviewFrame } from '../../_preview';
 import type {
   PairingFoodValue,
   WhiskyCardCurationFormModel,
@@ -33,7 +34,9 @@ export function WhiskyCardPreviewPanel({ formModel }: WhiskyCardPreviewPanelProp
         <CardDescription>앱 노출 예시를 기준으로 작성 내용을 확인합니다.</CardDescription>
       </CardHeader>
       <CardContent>
-        <WhiskyCardAppPreview formModel={formModel} values={previewValues} />
+        <CurationPreviewFrame title={formModel.spec.name}>
+          <WhiskyCardAppPreview formModel={formModel} values={previewValues} />
+        </CurationPreviewFrame>
       </CardContent>
     </Card>
   );
@@ -51,45 +54,39 @@ function WhiskyCardAppPreview({
   const heroImageUrl = values.imageUrls[0];
 
   return (
-    <div className="mx-auto flex h-[720px] max-h-[calc(100vh-8rem)] max-w-sm flex-col overflow-hidden rounded-[1.75rem] border bg-background shadow-sm">
-      <div className="shrink-0 bg-muted/40 px-4 py-3 text-center text-xs font-medium text-muted-foreground">
-        앱 노출 예시
-      </div>
-
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4">
-        <div className="overflow-hidden rounded-2xl bg-muted">
-          {heroImageUrl ? (
-            <img
-              src={heroImageUrl}
-              alt="큐레이션 대표 이미지 미리보기"
-              className="aspect-[4/3] w-full object-cover"
-            />
-          ) : (
-            <div className="flex aspect-[4/3] items-center justify-center text-sm text-muted-foreground">
-              대표 이미지
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">{formModel.spec.name}</Badge>
-            {values.imageUrls.length > 1 && (
-              <Badge variant="outline">이미지 {values.imageUrls.length}</Badge>
-            )}
+    <div className="space-y-5 p-4">
+      <div className="overflow-hidden rounded-2xl bg-muted">
+        {heroImageUrl ? (
+          <img
+            src={heroImageUrl}
+            alt="큐레이션 대표 이미지 미리보기"
+            className="aspect-[4/3] w-full object-cover"
+          />
+        ) : (
+          <div className="flex aspect-[4/3] items-center justify-center text-sm text-muted-foreground">
+            대표 이미지
           </div>
-          <h2 className="line-clamp-2 text-xl font-bold leading-tight">{title}</h2>
-          {description && (
-            <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">{description}</p>
-          )}
-        </div>
-
-        <PreviewWhiskyCard alcohol={values.alcohol} stats={values.stats} comment={values.comment} />
-
-        {formModel.pairings && (
-          <PreviewPairings pairings={values.pairings} title={formModel.pairings.label} />
         )}
       </div>
+
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">{formModel.spec.name}</Badge>
+          {values.imageUrls.length > 1 && (
+            <Badge variant="outline">이미지 {values.imageUrls.length}</Badge>
+          )}
+        </div>
+        <h2 className="line-clamp-2 text-xl font-bold leading-tight">{title}</h2>
+        {description && (
+          <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">{description}</p>
+        )}
+      </div>
+
+      <PreviewWhiskyCard alcohol={values.alcohol} stats={values.stats} comment={values.comment} />
+
+      {formModel.pairings && (
+        <PreviewPairings pairings={values.pairings} title={formModel.pairings.label} />
+      )}
     </div>
   );
 }
