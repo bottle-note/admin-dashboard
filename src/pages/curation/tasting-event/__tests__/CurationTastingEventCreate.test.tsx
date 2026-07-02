@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, createEvent, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -14,6 +14,40 @@ import { CurationTastingEventCreatePage } from '../CurationTastingEventCreate';
 const SPEC_BASE = '/admin/api/v2/curation-specs';
 const CURATION_BASE = '/admin/api/v2/curations';
 const S3_BASE = '/admin/api/v1/s3/presign-url';
+const placeSearchPagination = {
+  current: 1,
+  first: 1,
+  last: 1,
+  perPage: 10,
+  totalCount: 1,
+  hasNextPage: false,
+  hasPrevPage: false,
+};
+
+type KakaoPlaceSearchCallback = (
+  data: Array<{
+    id: string;
+    place_name: string;
+    category_name: string;
+    phone: string;
+    address_name: string;
+    road_address_name: string;
+    x: string;
+    y: string;
+    place_url: string;
+  }>,
+  status: 'OK',
+  pagination: typeof placeSearchPagination
+) => void;
+
+const keywordSearchMock =
+  vi.fn<
+    (
+      keyword: string,
+      callback: KakaoPlaceSearchCallback,
+      options?: { size?: number; page?: number }
+    ) => void
+  >();
 
 const tastingEventSpec: CurationV2Spec = {
   id: 3,
@@ -214,6 +248,26 @@ function setCurrentUserRoles(roles: Array<'ROOT_ADMIN' | 'BAR_OWNER' | 'COMMUNIT
   state.isAuthenticated = roles.length > 0;
 }
 
+function setKakaoPlacesMock() {
+  class MockPlaces {
+    keywordSearch = keywordSearchMock;
+  }
+
+  window.kakao = {
+    maps: {
+      load: (callback: () => void) => callback(),
+      services: {
+        Places: MockPlaces,
+        Status: {
+          OK: 'OK',
+          ZERO_RESULT: 'ZERO_RESULT',
+          ERROR: 'ERROR',
+        },
+      },
+    },
+  };
+}
+
 async function typeTastingTagSearch(
   user: ReturnType<typeof userEvent.setup>,
   comboboxName: string,
@@ -238,6 +292,11 @@ describe('CurationTastingEventCreatePage', () => {
     });
   });
 
+  afterEach(() => {
+    keywordSearchMock.mockReset();
+    delete window.kakao;
+  });
+
   it('스펙 목록과 상세 조회 후 시음회 작성 폼을 렌더링한다', async () => {
     mockSpecSuccess();
 
@@ -254,6 +313,16 @@ describe('CurationTastingEventCreatePage', () => {
     expect(screen.getAllByText('시음 위스키').length).toBeGreaterThan(0);
     expect(screen.getByText('장소 및 바(bar) 주소')).toBeInTheDocument();
     expect(screen.getByText('장소명')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '장소 검색' })).toBeInTheDocument();
+    expect(screen.getByLabelText('장소명')).toHaveAttribute('readonly');
+    expect(
+      Boolean(
+        screen
+          .getByLabelText('장소명')
+          .compareDocumentPosition(screen.getByLabelText('장소 및 바(bar) 주소')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+      )
+    ).toBe(true);
     expect(screen.getByRole('button', { name: '큐레이션 이미지 업로드' })).toBeInTheDocument();
     expect(screen.getByText(/PNG, JPG, WEBP 지원/)).toBeInTheDocument();
     expect(screen.getByText('미리보기')).toBeInTheDocument();
@@ -267,6 +336,65 @@ describe('CurationTastingEventCreatePage', () => {
     expect(screen.getByLabelText('노출 순서')).toBeDisabled();
     expect(screen.getByLabelText('활성화 상태')).toBeDisabled();
     expect(screen.queryByText('BOTTLE_NOTE')).not.toBeInTheDocument();
+  });
+
+  it('장소명 input 클릭으로 장소 검색을 열고 선택한 장소명을 빈 상세 주소에만 채운다', async () => {
+    const user = userEvent.setup();
+    mockSpecSuccess();
+    setKakaoPlacesMock();
+    keywordSearchMock.mockImplementation((keyword, callback, options) => {
+      expect(options).toEqual({ size: 10, page: 1 });
+
+      const placeName = keyword === '도시남' ? '도시남 바' : '다른 바';
+      callback(
+        [
+          {
+            id: keyword === '도시남' ? '123' : '456',
+            place_name: placeName,
+            category_name: '음식점 > 술집',
+            phone: '02-123-4567',
+            address_name: '서울 강남구 역삼동 123-45',
+            road_address_name:
+              keyword === '도시남' ? '서울 강남구 테헤란로 123' : '서울 강남구 강남대로 456',
+            x: '127.0276',
+            y: '37.4979',
+            place_url: `https://place.map.kakao.com/${keyword}`,
+          },
+        ],
+        'OK',
+        placeSearchPagination
+      );
+    });
+
+    render(<CurationTastingEventCreatePage />);
+
+    const placeNameInput = await screen.findByLabelText('장소명');
+    await user.click(placeNameInput);
+    expect(
+      screen.getByText('매장명이나 장소명을 검색한 뒤 시음회 장소를 선택하세요.')
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('장소 검색어'), { target: { value: '도시남' } });
+    await user.click(screen.getByRole('button', { name: '검색' }));
+    await user.click(await screen.findByText('도시남 바'));
+
+    expect(placeNameInput).toHaveValue('도시남 바');
+    expect(placeNameInput).not.toHaveAttribute('readonly');
+    expect(screen.getByLabelText('장소 및 바(bar) 주소')).toHaveValue('서울 강남구 테헤란로 123');
+    expect(screen.getByLabelText('상세 주소')).toHaveValue('도시남 바');
+
+    fireEvent.change(placeNameInput, { target: { value: '도시남 바 수정' } });
+    expect(placeNameInput).toHaveValue('도시남 바 수정');
+
+    fireEvent.change(screen.getByLabelText('상세 주소'), { target: { value: '2층 별실' } });
+    await user.click(screen.getByRole('button', { name: '장소 검색' }));
+    fireEvent.change(screen.getByLabelText('장소 검색어'), { target: { value: '다른' } });
+    await user.click(screen.getByRole('button', { name: '검색' }));
+    await user.click(await screen.findByText('다른 바'));
+
+    expect(placeNameInput).toHaveValue('다른 바');
+    expect(screen.getByLabelText('장소 및 바(bar) 주소')).toHaveValue('서울 강남구 강남대로 456');
+    expect(screen.getByLabelText('상세 주소')).toHaveValue('2층 별실');
   });
 
   it('상세 스펙의 alcohols maxItems로 위스키 추가 안내와 제한을 적용한다', async () => {
@@ -679,7 +807,7 @@ describe('CurationTastingEventCreatePage', () => {
     expect(screen.getAllByText('과일').length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: '바닐라 태그 삭제' }));
     await typeTastingTagSearch(user, '글렌피딕 12년 테이스팅 태그', '셰리');
-    await user.click(await screen.findByRole('button', { name: '"셰리" 직접 추가' }));
+    await user.click(await screen.findByRole('button', { name: '추가' }));
     expect(screen.getByText('3/12')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('글렌피딕 12년 기대평'), {
       target: { value: '첫 잔으로 가볍게 시작하는 위스키' },
@@ -765,6 +893,7 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
       target: { value: '서울 강남구 테헤란로 123' },
     });
+    fireEvent.change(screen.getByLabelText('장소명'), { target: { value: '도시남 바' } });
     fireEvent.change(screen.getByLabelText('상세 주소'), { target: { value: '2층 도시남 바' } });
     fireEvent.change(screen.getByLabelText('참가비(1인당)'), { target: { value: '75000' } });
     fireEvent.change(screen.getByLabelText('총 모집 인원수'), { target: { value: '20' } });
@@ -840,6 +969,7 @@ describe('CurationTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
       target: { value: '서울 강남구 테헤란로 123' },
     });
+    fireEvent.change(screen.getByLabelText('장소명'), { target: { value: '도시남 바' } });
     fireEvent.change(screen.getByLabelText('상세 주소'), { target: { value: '2층 도시남 바' } });
     fireEvent.change(screen.getByLabelText('참가비(1인당)'), { target: { value: '75000' } });
     fireEvent.change(screen.getByLabelText('총 모집 인원수'), { target: { value: '20' } });

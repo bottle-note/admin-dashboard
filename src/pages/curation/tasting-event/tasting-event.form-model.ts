@@ -20,18 +20,17 @@ import type { CurationWhiskyCardListFieldModel } from '../curation-whisky-card-l
 const DATE_LOCATION_FIELD_KEYS = [
   'eventDate',
   'eventTime',
+  'placeName',
   'barAddress',
   'detailAddress',
-  'placeName',
 ];
 
 const TASTING_EVENT_PLACE_NAME_FIELD: CurationTextFieldModel = {
   key: 'placeName',
   label: '장소명',
-  required: false,
+  required: true,
   kind: 'text',
-  description: '시음회 장소명',
-  placeholder: '예: 도시남 바',
+  placeholder: '장소명을 입력하거나 검색하세요.',
   maxLength: 100,
 };
 
@@ -110,11 +109,7 @@ function applyTastingEventFieldOverrides(field: CurationBasicFieldModel): Curati
         : field;
     case 'barAddress':
       return field.kind === 'text'
-        ? ({
-            ...field,
-            kind: 'address',
-            placeholder: '장소명을 검색해 선택하세요.',
-          } satisfies CurationTextFieldModel)
+        ? { ...field, placeholder: '장소 검색 선택 시 자동 입력됩니다.' }
         : field;
     case 'detailAddress':
       return field.kind === 'text' ? { ...field, placeholder: '예: 2층 안쪽 입구' } : field;
@@ -146,19 +141,36 @@ function applyTastingEventFieldOverrides(field: CurationBasicFieldModel): Curati
 }
 
 function insertTastingEventPlaceNameField(fields: CurationFieldModel[]): CurationFieldModel[] {
-  if (fields.some((field) => field.key === TASTING_EVENT_PLACE_NAME_FIELD.key)) {
-    return fields;
+  const existingPlaceNameField = fields.find(
+    (field) => field.key === TASTING_EVENT_PLACE_NAME_FIELD.key
+  );
+  const placeNameField = existingPlaceNameField
+    ? ({ ...existingPlaceNameField, required: true } satisfies CurationFieldModel)
+    : TASTING_EVENT_PLACE_NAME_FIELD;
+  const fieldsWithoutPlaceName = fields.filter(
+    (field) => field.key !== TASTING_EVENT_PLACE_NAME_FIELD.key
+  );
+
+  const barAddressIndex = fieldsWithoutPlaceName.findIndex((field) => field.key === 'barAddress');
+  if (barAddressIndex >= 0) {
+    return [
+      ...fieldsWithoutPlaceName.slice(0, barAddressIndex),
+      placeNameField,
+      ...fieldsWithoutPlaceName.slice(barAddressIndex),
+    ];
   }
 
-  const detailAddressIndex = fields.findIndex((field) => field.key === 'detailAddress');
+  const detailAddressIndex = fieldsWithoutPlaceName.findIndex(
+    (field) => field.key === 'detailAddress'
+  );
   if (detailAddressIndex < 0) {
-    return [...fields, TASTING_EVENT_PLACE_NAME_FIELD];
+    return [...fieldsWithoutPlaceName, placeNameField];
   }
 
   return [
-    ...fields.slice(0, detailAddressIndex + 1),
-    TASTING_EVENT_PLACE_NAME_FIELD,
-    ...fields.slice(detailAddressIndex + 1),
+    ...fieldsWithoutPlaceName.slice(0, detailAddressIndex),
+    placeNameField,
+    ...fieldsWithoutPlaceName.slice(detailAddressIndex),
   ];
 }
 
@@ -180,7 +192,9 @@ function createTastingEventFormSections(fields: CurationFieldModel[]): CurationF
       fields: dateLocationFields.map((field) => ({
         field,
         className:
-          field.key === 'barAddress' || field.key === 'detailAddress' ? 'md:col-span-2' : undefined,
+          field.key === 'placeName' || field.key === 'barAddress' || field.key === 'detailAddress'
+            ? 'md:col-span-2'
+            : undefined,
       })),
     },
     {

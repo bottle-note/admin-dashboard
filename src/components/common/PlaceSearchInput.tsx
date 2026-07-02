@@ -102,6 +102,8 @@ export interface PlaceSearchInputProps {
   maxLength?: number;
   'aria-label'?: string;
   disabled?: boolean;
+  readOnly?: boolean;
+  openOnInputClick?: boolean;
 }
 
 let kakaoMapsSdkLoadPromise: Promise<KakaoMapsNamespace> | null = null;
@@ -114,6 +116,8 @@ export function PlaceSearchInput({
   maxLength,
   'aria-label': ariaLabel,
   disabled,
+  readOnly = true,
+  openOnInputClick = true,
 }: PlaceSearchInputProps) {
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
@@ -212,9 +216,9 @@ export function PlaceSearchInput({
         maxLength={maxLength}
         disabled={disabled}
         {...registration}
-        readOnly
-        onClick={disabled ? undefined : () => setOpen(true)}
-        className="cursor-pointer"
+        readOnly={readOnly}
+        onClick={disabled || !openOnInputClick ? undefined : () => setOpen(true)}
+        className={readOnly ? 'cursor-pointer' : undefined}
       />
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
@@ -346,9 +350,7 @@ function loadKakaoMapsSdk(): Promise<KakaoMapsNamespace> {
 
   const appKey = import.meta.env.VITE_KAKAO_MAP_JAVASCRIPT_KEY?.trim();
   if (!appKey) {
-    return Promise.reject(
-      new Error('VITE_KAKAO_MAP_JAVASCRIPT_KEY 환경변수를 설정해주세요.')
-    );
+    return Promise.reject(new Error('VITE_KAKAO_MAP_JAVASCRIPT_KEY 환경변수를 설정해주세요.'));
   }
 
   if (kakaoMapsSdkLoadPromise) {
@@ -392,11 +394,9 @@ function loadKakaoMapsSdk(): Promise<KakaoMapsNamespace> {
       appKey
     )}&libraries=services&autoload=false`;
     script.addEventListener('load', handleLoad, { once: true });
-    script.addEventListener(
-      'error',
-      () => reject(new Error(KAKAO_MAPS_SDK_LOAD_ERROR_MESSAGE)),
-      { once: true }
-    );
+    script.addEventListener('error', () => reject(new Error(KAKAO_MAPS_SDK_LOAD_ERROR_MESSAGE)), {
+      once: true,
+    });
     document.head.appendChild(script);
   });
 

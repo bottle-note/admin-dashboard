@@ -770,11 +770,11 @@ export function CurationWhiskyCardListField({
                     <div className="mt-4 space-y-2">
                       <Textarea
                         aria-label={`${itemName} 기대평`}
-                        rows={2}
+                        rows={5}
                         maxLength={fieldModel.comment.maxLength}
                         {...form.register(`alcohols.${index}.comment` as const)}
                         placeholder="위스키 기대평을 작성해주세요."
-                        className="min-h-16 resize-none rounded-[10px] border-border"
+                        className="min-h-40 resize-none rounded-[10px] border-border"
                       />
                       {commentError && <p className="text-sm text-destructive">{commentError}</p>}
                     </div>

@@ -102,6 +102,10 @@ function renderStandardInput(
 function renderTextInput({ field, form, name }: StandardFieldRendererProps) {
   if (field.kind !== 'text' && field.kind !== 'date' && field.kind !== 'time') return null;
 
+  if (field.kind === 'text' && field.key === 'placeName') {
+    return <PlaceNameSearchField field={field} form={form} name={name} />;
+  }
+
   return <TextInputField field={field} form={form} name={name} />;
 }
 
@@ -177,6 +181,49 @@ function AddressField({
         if (name !== 'barAddress') return;
 
         form.setValue('placeName', place.placeName, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }}
+    />
+  );
+}
+
+function PlaceNameSearchField({
+  field,
+  form,
+  name,
+}: {
+  field: CurationTextFieldModel;
+  form: ReturnType<typeof useFormContext<FieldValues>>;
+  name: string;
+}) {
+  const currentValue = useWatch({
+    control: form.control,
+    name,
+  });
+  const hasPlaceName = typeof currentValue === 'string' && currentValue.trim().length > 0;
+
+  return (
+    <PlaceSearchInput
+      aria-label={field.label}
+      placeholder={field.placeholder}
+      maxLength={field.maxLength}
+      registration={form.register(name)}
+      readOnly={!hasPlaceName}
+      openOnInputClick={!hasPlaceName}
+      onAddressSelect={(next) =>
+        form.setValue('barAddress', next, { shouldDirty: true, shouldValidate: true })
+      }
+      onPlaceSelect={(place) => {
+        form.setValue(name, place.placeName, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+        const detailAddress = form.getValues('detailAddress');
+        if (typeof detailAddress === 'string' && detailAddress.trim()) return;
+
+        form.setValue('detailAddress', place.placeName, {
           shouldDirty: true,
           shouldValidate: true,
         });
