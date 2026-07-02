@@ -136,12 +136,12 @@ describe('createTastingEventFormModel', () => {
 
     expect(fieldsByKey.barAddress).toMatchObject({
       label: '장소 및 바(bar) 주소',
-      kind: 'address',
+      kind: 'text',
     });
     expect(fieldsByKey.placeName).toMatchObject({
       label: '장소명',
       kind: 'text',
-      required: false,
+      required: true,
       maxLength: 100,
     });
     expect(fieldsByKey.detailAddress).toMatchObject({
@@ -205,9 +205,9 @@ describe('createTastingEventFormModel', () => {
     expect(formModel.sections[0]!.fields.map(({ field }) => field.key)).toEqual([
       'eventDate',
       'eventTime',
+      'placeName',
       'barAddress',
       'detailAddress',
-      'placeName',
     ]);
     expect(formModel.sections[1]!.fields.map(({ field }) => field.key)).toEqual([
       'isRecruiting',

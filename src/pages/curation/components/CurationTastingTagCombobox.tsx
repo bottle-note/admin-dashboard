@@ -221,18 +221,28 @@ export function CurationTastingTagCombobox({
                 onChange={(event) => onValueChange(event.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="태그 검색 또는 직접 추가"
-                className="h-9 rounded-md border-border pl-8 pr-8"
+                className="h-9 rounded-md border-border pl-8 pr-20"
               />
               {value && !disabled && (
                 <button
                   type="button"
                   aria-label="태그 검색어 지우기"
                   onClick={handleClear}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-14 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   <X className="h-4 w-4" />
                 </button>
               )}
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="absolute right-1 top-1/2 h-7 -translate-y-1/2 rounded px-2 text-xs font-medium"
+                onClick={handleCreate}
+                disabled={!canCreateDirectly}
+              >
+                추가
+              </Button>
             </div>
           </div>
 
@@ -243,7 +253,6 @@ export function CurationTastingTagCombobox({
           ) : filteredItems.length === 0 && !hasNextPage && !isFetchingNextPage ? (
             <div className="space-y-3 px-3 py-4 text-center">
               <p className="text-sm text-muted-foreground">검색 결과가 없습니다</p>
-              {canCreateDirectly && <CreateTagButton value={trimmedValue} onClick={handleCreate} />}
             </div>
           ) : (
             <div
@@ -296,11 +305,6 @@ export function CurationTastingTagCombobox({
                   <span className="h-2" />
                 )}
               </div>
-              {canCreateDirectly && (
-                <div className="border-t px-3 py-2">
-                  <CreateTagButton value={trimmedValue} onClick={handleCreate} />
-                </div>
-              )}
             </div>
           )}
         </div>,
@@ -329,22 +333,6 @@ export function CurationTastingTagCombobox({
       </Button>
       {dropdown}
     </div>
-  );
-}
-
-function CreateTagButton({ value, onClick }: { value: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'w-full rounded-md border border-dashed px-3 py-2 text-sm font-medium text-foreground',
-        'hover:bg-accent hover:text-accent-foreground',
-        'focus:bg-accent focus:text-accent-foreground focus:outline-none'
-      )}
-    >
-      "{value}" 직접 추가
-    </button>
   );
 }
 

@@ -327,7 +327,7 @@ function TastingEventPreviewLineupItem({
       )}
 
       {comment && (
-        <p className="mt-5 text-[13px] font-medium leading-[1.8] text-[var(--preview-main-gray)]">
+        <p className="mt-5 whitespace-pre-line text-[13px] font-medium leading-[1.8] text-[var(--preview-main-gray)]">
           {comment}
         </p>
       )}

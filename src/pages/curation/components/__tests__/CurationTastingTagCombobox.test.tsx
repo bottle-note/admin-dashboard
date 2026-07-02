@@ -37,6 +37,7 @@ describe('CurationTastingTagCombobox', () => {
 
     fireEvent.click(screen.getByRole('combobox', { name: '테이스팅 태그' }));
 
+    expect(await screen.findByRole('button', { name: '추가' })).toBeDisabled();
     expect(await screen.findByRole('button', { name: '바닐라 태그 선택' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: '과일 태그 선택' })).toBeInTheDocument();
   });
@@ -119,7 +120,7 @@ describe('CurationTastingTagCombobox', () => {
     });
   });
 
-  it('검색 결과가 없으면 API 생성 없이 입력 문자열을 직접 추가할 수 있다', async () => {
+  it('검색어가 있으면 입력창 안 추가 버튼으로 입력 문자열을 직접 추가할 수 있다', async () => {
     const onCreate = vi.fn(() => true);
     const onSelect = vi.fn();
 
@@ -131,13 +132,13 @@ describe('CurationTastingTagCombobox', () => {
     });
 
     await screen.findByText('검색 결과가 없습니다');
-    fireEvent.click(await screen.findByRole('button', { name: '"셰리" 직접 추가' }));
+    fireEvent.click(await screen.findByRole('button', { name: '추가' }));
 
     expect(onCreate).toHaveBeenCalledWith('셰리');
     expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it('검색 결과가 있어도 입력 문자열을 직접 추가할 수 있다', async () => {
+  it('검색 결과가 있어도 입력창 안 추가 버튼으로 입력 문자열을 직접 추가할 수 있다', async () => {
     const onCreate = vi.fn(() => true);
     const onSelect = vi.fn();
 
@@ -149,7 +150,7 @@ describe('CurationTastingTagCombobox', () => {
     });
 
     expect(await screen.findByRole('button', { name: '과일 태그 선택' })).toBeInTheDocument();
-    fireEvent.click(await screen.findByRole('button', { name: '"과" 직접 추가' }));
+    fireEvent.click(await screen.findByRole('button', { name: '추가' }));
 
     expect(onCreate).toHaveBeenCalledWith('과');
     expect(onSelect).not.toHaveBeenCalled();
@@ -183,10 +184,11 @@ describe('CurationTastingTagCombobox', () => {
 
     fireEvent.click(screen.getByRole('combobox', { name: '테이스팅 태그' }));
     fireEvent.change(await screen.findByLabelText('테이스팅 태그 검색어'), {
-      target: { value: '바' },
+      target: { value: '바닐라' },
     });
 
     expect(await screen.findByText('검색 결과가 없습니다')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '바닐라 태그 선택' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '추가' })).toBeDisabled();
   });
 });
