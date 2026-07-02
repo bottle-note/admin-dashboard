@@ -466,7 +466,7 @@ describe('CurationTastingEventCreatePage', () => {
     expect(await screen.findByText('신청링크는 필수입니다.')).toBeInTheDocument();
   });
 
-  it('광고노출 시작일이나 종료일이 과거 날짜이면 저장 전 validation을 표시한다', async () => {
+  it('광고노출 시작일이나 종료일이 과거 날짜여도 오늘 날짜 기준 validation을 표시하지 않는다', async () => {
     mockSpecSuccess();
 
     render(<CurationTastingEventCreatePage />);
@@ -474,11 +474,16 @@ describe('CurationTastingEventCreatePage', () => {
     await screen.findByLabelText('광고노출 시작일');
 
     fireEvent.change(screen.getByLabelText('광고노출 시작일'), { target: { value: '2000-01-01' } });
-    fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2099-06-30' } });
+    fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2000-01-31' } });
 
-    expect(
-      await screen.findByText('광고노출 시작일은 오늘 이후 날짜로 입력해주세요.')
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByText('광고노출 시작일은 오늘 이후 날짜로 입력해주세요.')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('광고노출 종료일은 오늘 이후 날짜로 입력해주세요.')
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('광고노출 종료일이 시작일보다 빠르면 저장 전 validation을 표시한다', async () => {
