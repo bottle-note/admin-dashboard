@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { validateDateRange } from '@/lib/date-validation';
+import { compareDateInputValues } from '@/lib/date-validation';
 
 import { createCurationFieldValueSchema } from '../curation-form-schema';
 import type { CurationFieldModel } from '../curation-form-model';
@@ -126,19 +126,20 @@ export function createCurationTastingEventFormSchema(
     })
     .superRefine((values, context) => {
       const formValues = values as Record<string, unknown>;
-      const dateIssues = validateDateRange({
-        startDate:
-          typeof formValues.exposureStartDate === 'string' ? formValues.exposureStartDate : '',
-        endDate: typeof formValues.exposureEndDate === 'string' ? formValues.exposureEndDate : '',
-        startDateLabel: '광고노출 시작일',
-        endDateLabel: '광고노출 종료일',
-      });
+      const exposureStartDate =
+        typeof formValues.exposureStartDate === 'string' ? formValues.exposureStartDate : '';
+      const exposureEndDate =
+        typeof formValues.exposureEndDate === 'string' ? formValues.exposureEndDate : '';
 
-      for (const issue of dateIssues) {
+      if (
+        exposureStartDate &&
+        exposureEndDate &&
+        compareDateInputValues(exposureEndDate, exposureStartDate) < 0
+      ) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
-          path: [issue.field === 'startDate' ? 'exposureStartDate' : 'exposureEndDate'],
-          message: issue.message,
+          path: ['exposureEndDate'],
+          message: '광고노출 종료일은 광고노출 시작일보다 빠를 수 없습니다.',
         });
       }
 
