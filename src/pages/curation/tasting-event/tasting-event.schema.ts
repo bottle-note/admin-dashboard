@@ -2,7 +2,10 @@ import { z } from 'zod';
 
 import { compareDateInputValues } from '@/lib/date-validation';
 
-import { createCurationFieldValueSchema } from '../curation-form-schema';
+import {
+  createCurationFieldValueSchema,
+  formatCurationFieldTopic,
+} from '../curation-form-schema';
 import type { CurationFieldModel } from '../curation-form-model';
 import type {
   CurationWhiskyCardListFieldModel,
@@ -80,7 +83,7 @@ function createConditionalApplicationLinkValueSchema(field: CurationFieldModel) 
   if (field.maxLength) {
     schema = schema.max(
       field.maxLength,
-      `${field.label}는 최대 ${field.maxLength}자까지 입력할 수 있습니다.`
+      `${formatCurationFieldTopic(field.label)} 최대 ${field.maxLength}자까지 입력할 수 있습니다.`
     );
   }
 
@@ -151,7 +154,7 @@ export function createCurationTastingEventFormSchema(
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['applicationLink'],
-        message: `${applicationLinkField.label}는 필수입니다.`,
+        message: `${formatCurationFieldTopic(applicationLinkField.label)} 필수입니다.`,
       });
     }) as unknown as z.ZodType<TastingEventCreateFormState>;
 }

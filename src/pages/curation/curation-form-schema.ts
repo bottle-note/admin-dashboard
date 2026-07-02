@@ -6,18 +6,38 @@ import type {
   CurationTextFieldModel,
 } from './curation-form-model';
 
+function getTopicParticle(label: string): '은' | '는' {
+  const trimmedLabel = label.trim();
+  const lastChar = trimmedLabel.charAt(trimmedLabel.length - 1);
+  if (trimmedLabel.length === 0 || !lastChar) return '는';
+
+  const codePoint = lastChar.charCodeAt(0);
+  const hangulStart = 0xac00;
+  const hangulEnd = 0xd7a3;
+
+  if (codePoint < hangulStart || codePoint > hangulEnd) {
+    return '는';
+  }
+
+  return (codePoint - hangulStart) % 28 === 0 ? '는' : '은';
+}
+
+export function formatCurationFieldTopic(label: string): string {
+  return `${label}${getTopicParticle(label)}`;
+}
+
 // text/date/time/textarea field model을 문자열 Zod schema로 변환합니다.
 function createTextFieldValueSchema(field: CurationTextFieldModel): z.ZodType<unknown> {
   let schema = z.string();
 
   if (field.required) {
-    schema = schema.min(1, `${field.label}는 필수입니다.`);
+    schema = schema.min(1, `${formatCurationFieldTopic(field.label)} 필수입니다.`);
   }
 
   if (field.maxLength) {
     schema = schema.max(
       field.maxLength,
-      `${field.label}는 최대 ${field.maxLength}자까지 입력할 수 있습니다.`
+      `${formatCurationFieldTopic(field.label)} 최대 ${field.maxLength}자까지 입력할 수 있습니다.`
     );
   }
 
@@ -29,17 +49,20 @@ function createNumberFieldValueSchema(field: CurationNumberFieldModel): z.ZodTyp
   let schema = z.number();
 
   if (field.numberType === 'integer') {
-    schema = schema.int(`${field.label}는 정수로 입력해주세요.`);
+    schema = schema.int(`${formatCurationFieldTopic(field.label)} 정수로 입력해주세요.`);
   }
 
   if (typeof field.minimum === 'number') {
-    schema = schema.min(field.minimum, `${field.label}는 ${field.minimum} 이상이어야 합니다.`);
+    schema = schema.min(
+      field.minimum,
+      `${formatCurationFieldTopic(field.label)} ${field.minimum} 이상이어야 합니다.`
+    );
   }
 
   if (typeof field.maximum === 'number') {
     schema = schema.max(
       field.maximum,
-      `${field.label}는 최대 ${field.maximum}까지 입력할 수 있습니다.`
+      `${formatCurationFieldTopic(field.label)} 최대 ${field.maximum}까지 입력할 수 있습니다.`
     );
   }
 
