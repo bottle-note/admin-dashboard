@@ -273,7 +273,7 @@ function WhiskyCardCurationForm({
       />
 
       <FormProvider {...form}>
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start">
+        <div className="relative space-y-6 lg:pr-[25.5rem]">
           <div className="min-w-0 space-y-6">
             <TastingEventBasicInfoSection isRootAdmin={isRootAdmin} isEditMode={isEditMode} />
             <TastingEventImageSection onUploadingChange={setIsCurationImageUploading} />
@@ -303,7 +303,7 @@ function WhiskyCardCurationForm({
             ))}
           </div>
 
-          <aside className="lg:sticky lg:top-6">
+          <aside className="lg:fixed lg:right-6 lg:top-20 lg:mt-0 lg:w-96">
             <WhiskyCardPreviewPanel formModel={formModel} />
           </aside>
         </div>
