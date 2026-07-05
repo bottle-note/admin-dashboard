@@ -303,10 +303,8 @@ function WhiskyCardCurationForm({
             ))}
           </div>
 
-          <aside className="lg:absolute lg:right-0 lg:top-0 lg:mt-0 lg:w-96">
-            <div className="lg:sticky lg:top-6">
-              <WhiskyCardPreviewPanel formModel={formModel} />
-            </div>
+          <aside className="lg:fixed lg:right-6 lg:top-40 lg:mt-0 lg:w-96">
+            <WhiskyCardPreviewPanel formModel={formModel} />
           </aside>
         </div>
       </FormProvider>
