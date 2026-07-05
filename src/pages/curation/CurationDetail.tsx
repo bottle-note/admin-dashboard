@@ -8,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCurationDetail } from '@/hooks/useCurations';
 import { CurationSpecCode, type CurationV2Detail } from '@/types/api';
 
-import { CurationTastingEventEditPage } from './tasting-event/CurationTastingEventCreate';
-import { CurationWhiskyCardEditPage } from './whisky-card/CurationWhiskyCardCreate';
+import { CurationWhiskyTastingEventEditPage } from './whisky-tasting-event/CurationWhiskyTastingEventEdit';
+import { CurationRecommendedWhiskyEditPage } from './whisky-curation/CurationRecommendedWhiskyEdit';
+import { CurationWhiskyPairingEditPage } from './whisky-curation/CurationWhiskyPairingEdit';
 import {
   formatCurationDateTime,
   formatCurationExposurePeriod,
@@ -25,16 +26,15 @@ export function CurationDetailPage() {
   const { data: curation, isLoading, isError, refetch } = useCurationDetail(curationId);
 
   if (!isLoading && !isError && curation?.spec.code === CurationSpecCode.WHISKY_TASTING_EVENT) {
-    return <CurationTastingEventEditPage curation={curation} />;
+    return <CurationWhiskyTastingEventEditPage curation={curation} />;
   }
 
-  if (
-    !isLoading &&
-    !isError &&
-    (curation?.spec.code === CurationSpecCode.RECOMMENDED_WHISKY ||
-      curation?.spec.code === CurationSpecCode.WHISKY_PAIRING)
-  ) {
-    return <CurationWhiskyCardEditPage curation={curation} />;
+  if (!isLoading && !isError && curation?.spec.code === CurationSpecCode.RECOMMENDED_WHISKY) {
+    return <CurationRecommendedWhiskyEditPage curation={curation} />;
+  }
+
+  if (!isLoading && !isError && curation?.spec.code === CurationSpecCode.WHISKY_PAIRING) {
+    return <CurationWhiskyPairingEditPage curation={curation} />;
   }
 
   return (

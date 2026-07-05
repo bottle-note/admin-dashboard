@@ -18,27 +18,27 @@ import { cn } from '@/lib/utils';
 import {
   createEmptyPairingFood,
   type PairingFoodValue,
-  type WhiskyCardCurationFormModel,
-  type WhiskyCardCurationFormState,
-} from '../whisky-card-curation.schema';
+  type WhiskyCurationFormModel,
+  type WhiskyCurationFormState,
+} from '../whisky-curation.schema';
 
 const PAIRING_DRAG_HANDLE_SELECTOR = '[data-pairing-drag-handle="true"]';
 const PAIRING_IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp';
 const SUPPORTED_PAIRING_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
-interface WhiskyCardPairingFieldsProps {
+interface WhiskyPairingFieldsProps {
   index: number;
-  formModel: WhiskyCardCurationFormModel;
+  formModel: WhiskyCurationFormModel;
   onUploadingChange?: (isUploading: boolean) => void;
 }
 
-export function WhiskyCardPairingFields({
+export function WhiskyPairingFields({
   index,
   formModel,
   onUploadingChange,
-}: WhiskyCardPairingFieldsProps) {
+}: WhiskyPairingFieldsProps) {
   const pairingModel = formModel.pairings;
-  const form = useFormContext<WhiskyCardCurationFormState>();
+  const form = useFormContext<WhiskyCurationFormState>();
   const pairings =
     useWatch({ control: form.control, name: `alcohols.${index}.pairings` as const }) ?? [];
   const itemErrors = form.formState.errors.alcohols?.[index]?.pairings;

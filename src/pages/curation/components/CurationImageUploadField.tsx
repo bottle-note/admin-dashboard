@@ -5,21 +5,23 @@ import { GripVertical, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { S3UploadPath, useImageUpload } from '@/hooks/useImageUpload';
 
-import type { TastingEventCreateFormState } from '../tasting-event.schema';
-
 const MAX_IMAGE_COUNT = 3;
 const IMAGE_UPLOAD_ACCEPT = 'image/png,image/jpeg,image/webp';
 const SUPPORTED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 const EMPTY_IMAGE_URLS: string[] = [];
 
-interface TastingEventImageUploadFieldProps {
+interface CurationImageFormState {
+  imageUrls: string[];
+}
+
+interface CurationImageUploadFieldProps {
   onUploadingChange: (isUploading: boolean) => void;
 }
 
-export function TastingEventImageUploadField({
+export function CurationImageUploadField({
   onUploadingChange,
-}: TastingEventImageUploadFieldProps) {
-  const form = useFormContext<TastingEventCreateFormState>();
+}: CurationImageUploadFieldProps) {
+  const form = useFormContext<CurationImageFormState>();
   const imageUploadInputRef = useRef<HTMLInputElement>(null);
   const imageUrlsRef = useRef<string[]>([]);
   const localImageUrlsRef = useRef<Set<string>>(new Set());

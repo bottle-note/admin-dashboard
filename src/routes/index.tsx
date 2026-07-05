@@ -22,11 +22,9 @@ import { CurationDetailPage as CurationOldDetailPage } from '@/pages/curation-ol
 import { CurationEntryPage } from '@/pages/curation/CurationEntry';
 import { CurationListPage } from '@/pages/curation/CurationList';
 import { CurationDetailPage } from '@/pages/curation/CurationDetail';
-import { CurationTastingEventCreatePage } from '@/pages/curation/tasting-event/CurationTastingEventCreate';
-import {
-  CurationRecommendedWhiskyCreatePage,
-  CurationWhiskyPairingCreatePage,
-} from '@/pages/curation/whisky-card/CurationWhiskyCardCreate';
+import { CurationWhiskyTastingEventCreatePage } from '@/pages/curation/whisky-tasting-event/CurationWhiskyTastingEventCreate';
+import { CurationRecommendedWhiskyCreatePage } from '@/pages/curation/whisky-curation/CurationRecommendedWhiskyCreate';
+import { CurationWhiskyPairingCreatePage } from '@/pages/curation/whisky-curation/CurationWhiskyPairingCreate';
 import { InquiryListPage } from '@/pages/inquiries/InquiryList';
 import { PolicyListPage } from '@/pages/policies/PolicyList';
 import { UserListPage } from '@/pages/users/UserList';
@@ -86,7 +84,7 @@ export function AppRoutes() {
           path="dashboard/curations/tasting-events/new"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
-              <CurationTastingEventCreatePage />
+              <CurationWhiskyTastingEventCreatePage />
             </RoleProtectedRoute>
           }
         />
