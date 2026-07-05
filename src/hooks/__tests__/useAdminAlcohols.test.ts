@@ -5,7 +5,9 @@ import { server } from '@/test/mocks/server';
 import { renderHook } from '@/test/test-utils';
 import { wrapApiError } from '@/test/mocks/data';
 import {
+  flattenAdminAlcoholLookupPages,
   flattenAdminAlcoholPages,
+  useAdminAlcoholLookupInfinite,
   useAdminAlcoholList,
   useAdminAlcoholListInfinite,
   useCategoryReferences,
@@ -30,9 +32,7 @@ describe('useAdminAlcohols hooks', () => {
     });
 
     it('includeDeleted=true 시 삭제된 데이터도 포함한다', async () => {
-      const { result } = renderHook(() =>
-        useAdminAlcoholList({ includeDeleted: true })
-      );
+      const { result } = renderHook(() => useAdminAlcoholList({ includeDeleted: true }));
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -44,9 +44,7 @@ describe('useAdminAlcohols hooks', () => {
     });
 
     it('keyword로 필터링한다', async () => {
-      const { result } = renderHook(() =>
-        useAdminAlcoholList({ keyword: '글렌피딕' })
-      );
+      const { result } = renderHook(() => useAdminAlcoholList({ keyword: '글렌피딕' }));
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -90,6 +88,38 @@ describe('useAdminAlcohols hooks', () => {
 
       await waitFor(() => expect(result.current.hasNextPage).toBe(false));
       expect(flattenAdminAlcoholPages(result.current.data)).toHaveLength(2);
+    });
+
+    it('lookup API로 커서 기반 무한 스크롤을 조회한다', async () => {
+      const { result } = renderHook(() =>
+        useAdminAlcoholLookupInfinite({ keyword: '글렌', pageSize: 1 })
+      );
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(result.current.hasNextPage).toBe(false);
+      expect(flattenAdminAlcoholLookupPages(result.current.data)).toEqual([
+        expect.objectContaining({
+          alcoholId: 10,
+          korName: '글렌피딕 12년',
+        }),
+      ]);
+    });
+
+    it('lookup API의 다음 cursor로 다음 페이지를 조회한다', async () => {
+      const { result } = renderHook(() => useAdminAlcoholLookupInfinite({ pageSize: 1 }));
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.hasNextPage).toBe(true);
+
+      await act(async () => {
+        await result.current.fetchNextPage();
+      });
+
+      await waitFor(() => expect(result.current.hasNextPage).toBe(false));
+      expect(
+        flattenAdminAlcoholLookupPages(result.current.data).map((item) => item.alcoholId)
+      ).toEqual([10, 20]);
     });
   });
 

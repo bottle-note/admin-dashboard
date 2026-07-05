@@ -5,6 +5,7 @@
 import { useCallback } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useApiQuery } from './useApiQuery';
+import { useInfiniteApiQuery } from './useInfiniteApiQuery';
 import { useApiMutation, type UseApiMutationOptions } from './useApiMutation';
 import { useToast } from './useToast';
 import { getErrorMessage, type ApiError } from '@/lib/api-error';
@@ -12,9 +13,11 @@ import {
   adminAlcoholService,
   adminAlcoholKeys,
   type AlcoholListResponse,
+  type AlcoholLookupResponse,
 } from '@/services/admin-alcohol.service';
 import type {
   AlcoholSearchParams,
+  AlcoholLookupParams,
   AlcoholDetail,
   AlcoholCreateRequest,
   AlcoholCreateResponse,
@@ -74,15 +77,43 @@ export function useAdminAlcoholListInfinite(
       }
     },
     initialPageParam: 0,
-    getNextPageParam: (lastPage) =>
-      lastPage.meta.hasNext ? lastPage.meta.page + 1 : undefined,
+    getNextPageParam: (lastPage) => (lastPage.meta.hasNext ? lastPage.meta.page + 1 : undefined),
     staleTime: 1000 * 60,
     enabled: options.enabled ?? true,
   });
 }
 
-export function flattenAdminAlcoholPages(
-  data: { pages: AlcoholListResponse[] } | undefined
+export function flattenAdminAlcoholPages(data: { pages: AlcoholListResponse[] } | undefined) {
+  return data?.pages.flatMap((page) => page.items) ?? [];
+}
+
+export type AdminAlcoholLookupInfiniteParams = Omit<AlcoholLookupParams, 'cursor'>;
+
+const DEFAULT_ALCOHOL_LOOKUP_PAGE_SIZE = 10;
+
+export function useAdminAlcoholLookupInfinite(
+  params?: AdminAlcoholLookupInfiniteParams,
+  options: { enabled?: boolean } = {}
+) {
+  const pageSize = params?.pageSize ?? DEFAULT_ALCOHOL_LOOKUP_PAGE_SIZE;
+
+  return useInfiniteApiQuery(
+    adminAlcoholKeys.list({ ...params, pageSize, lookup: true }),
+    (cursor) =>
+      adminAlcoholService.lookup({
+        ...params,
+        cursor,
+        pageSize,
+      }),
+    {
+      enabled: options.enabled ?? true,
+      staleTime: 1000 * 60,
+    }
+  );
+}
+
+export function flattenAdminAlcoholLookupPages(
+  data: { pages: AlcoholLookupResponse[] } | undefined
 ) {
   return data?.pages.flatMap((page) => page.items) ?? [];
 }
@@ -153,21 +184,24 @@ export function useAdminAlcoholCreate(
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<AlcoholCreateResponse, AlcoholCreateRequest>(
-    adminAlcoholService.create,
-    {
-      successMessage: '위스키가 등록되었습니다.',
-      ...restOptions,
-      onSuccess: (data, variables, context) => {
-        // 목록 캐시 무효화
-        queryClient.invalidateQueries({ queryKey: adminAlcoholKeys.lists() });
-        // 원래 onSuccess 콜백 호출
-        if (onSuccess) {
-          (onSuccess as (data: AlcoholCreateResponse, variables: AlcoholCreateRequest, context: unknown) => void)(data, variables, context);
-        }
-      },
-    }
-  );
+  return useApiMutation<AlcoholCreateResponse, AlcoholCreateRequest>(adminAlcoholService.create, {
+    successMessage: '위스키가 등록되었습니다.',
+    ...restOptions,
+    onSuccess: (data, variables, context) => {
+      // 목록 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: adminAlcoholKeys.lists() });
+      // 원래 onSuccess 콜백 호출
+      if (onSuccess) {
+        (
+          onSuccess as (
+            data: AlcoholCreateResponse,
+            variables: AlcoholCreateRequest,
+            context: unknown
+          ) => void
+        )(data, variables, context);
+      }
+    },
+  });
 }
 
 /**
@@ -214,23 +248,24 @@ export function useAdminAlcoholDelete(
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<AlcoholDeleteResponse, number>(
-    adminAlcoholService.delete,
-    {
-      successMessage: '위스키가 삭제되었습니다.',
-      ...restOptions,
-      onSuccess: (data, variables, context) => {
-        // 목록 캐시 무효화
-        queryClient.invalidateQueries({ queryKey: adminAlcoholKeys.lists() });
-        // 상세 캐시 무효화
-        queryClient.invalidateQueries({ queryKey: adminAlcoholKeys.detail(variables) });
-        // 원래 onSuccess 콜백 호출
-        if (onSuccess) {
-          (onSuccess as (data: AlcoholDeleteResponse, variables: number, context: unknown) => void)(data, variables, context);
-        }
-      },
-    }
-  );
+  return useApiMutation<AlcoholDeleteResponse, number>(adminAlcoholService.delete, {
+    successMessage: '위스키가 삭제되었습니다.',
+    ...restOptions,
+    onSuccess: (data, variables, context) => {
+      // 목록 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: adminAlcoholKeys.lists() });
+      // 상세 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: adminAlcoholKeys.detail(variables) });
+      // 원래 onSuccess 콜백 호출
+      if (onSuccess) {
+        (onSuccess as (data: AlcoholDeleteResponse, variables: number, context: unknown) => void)(
+          data,
+          variables,
+          context
+        );
+      }
+    },
+  });
 }
 
 /**
@@ -265,7 +300,10 @@ export interface AlcoholUpdateVariables {
  * ```
  */
 export function useAdminAlcoholUpdate(
-  options?: Omit<UseApiMutationOptions<AlcoholUpdateResponse, AlcoholUpdateVariables>, 'successMessage'>
+  options?: Omit<
+    UseApiMutationOptions<AlcoholUpdateResponse, AlcoholUpdateVariables>,
+    'successMessage'
+  >
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
@@ -282,7 +320,13 @@ export function useAdminAlcoholUpdate(
         queryClient.invalidateQueries({ queryKey: adminAlcoholKeys.detail(variables.alcoholId) });
         // 원래 onSuccess 콜백 호출
         if (onSuccess) {
-          (onSuccess as (data: AlcoholUpdateResponse, variables: AlcoholUpdateVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: AlcoholUpdateResponse,
+              variables: AlcoholUpdateVariables,
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }

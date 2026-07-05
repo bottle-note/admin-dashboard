@@ -9,6 +9,8 @@ import {
   type AlcoholSearchParams,
   type AlcoholListItem,
   type AlcoholPageMeta,
+  type AlcoholLookupParams,
+  type AlcoholLookupItem,
   type AlcoholDetail,
   type AlcoholCreateRequest,
   type AlcoholCreateResponse,
@@ -16,6 +18,7 @@ import {
   type AlcoholUpdateRequest,
   type AlcoholUpdateResponse,
   type CategoryReferenceMap,
+  type Pageable,
 } from '@/types/api';
 
 // ============================================
@@ -33,6 +36,11 @@ export interface AlcoholListResponse {
   meta: AlcoholPageMeta;
 }
 
+export interface AlcoholLookupResponse {
+  items: AlcoholLookupItem[];
+  pageable: Pageable;
+}
+
 // ============================================
 // Service
 // ============================================
@@ -43,10 +51,9 @@ export const adminAlcoholService = {
    * 페이지 기반 페이지네이션 (meta에 페이지 정보 포함)
    */
   search: async (params?: AlcoholSearchParams): Promise<AlcoholListResponse> => {
-    const response = await apiClient.getWithMeta<AlcoholListItem[]>(
-      AlcoholApi.search.endpoint,
-      { params }
-    );
+    const response = await apiClient.getWithMeta<AlcoholListItem[]>(AlcoholApi.search.endpoint, {
+      params,
+    });
 
     // data는 배열, meta에 페이지 정보 직접 포함
     return {
@@ -57,6 +64,27 @@ export const adminAlcoholService = {
         totalElements: response.meta.totalElements ?? 0,
         totalPages: response.meta.totalPages ?? 0,
         hasNext: response.meta.hasNext ?? false,
+      },
+    };
+  },
+
+  /**
+   * 술 lookup 조회
+   * 선택 컴포넌트용 핵심 필드 + 커서 기반 페이지네이션
+   */
+  lookup: async (params?: AlcoholLookupParams): Promise<AlcoholLookupResponse> => {
+    const response = await apiClient.getWithMeta<AlcoholLookupItem[]>(AlcoholApi.lookup.endpoint, {
+      params,
+    });
+    const pageable = response.meta.pageable;
+
+    return {
+      items: response.data ?? [],
+      pageable: {
+        currentCursor: pageable?.currentCursor ?? params?.cursor ?? 0,
+        cursor: pageable?.cursor ?? 0,
+        pageSize: pageable?.pageSize ?? params?.pageSize ?? 20,
+        hasNext: pageable?.hasNext ?? false,
       },
     };
   },

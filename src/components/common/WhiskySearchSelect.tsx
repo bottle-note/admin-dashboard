@@ -10,7 +10,10 @@ import { createPortal } from 'react-dom';
 import { Search, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { flattenAdminAlcoholPages, useAdminAlcoholListInfinite } from '@/hooks/useAdminAlcohols';
+import {
+  flattenAdminAlcoholLookupPages,
+  useAdminAlcoholLookupInfinite,
+} from '@/hooks/useAdminAlcohols';
 
 const DROPDOWN_GAP = 4;
 const VIEWPORT_PADDING = 8;
@@ -125,8 +128,8 @@ export function WhiskySearchSelect({
   }, [canSearch, isOpen]);
 
   const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
-    useAdminAlcoholListInfinite(
-      canSearch ? { keyword: debouncedKeyword.trim(), size: 10 } : undefined,
+    useAdminAlcoholLookupInfinite(
+      canSearch ? { keyword: debouncedKeyword.trim(), pageSize: 10 } : undefined,
       { enabled: canSearch }
     );
 
@@ -151,7 +154,7 @@ export function WhiskySearchSelect({
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const fetchedItems = useMemo(() => flattenAdminAlcoholPages(data), [data]);
+  const fetchedItems = useMemo(() => flattenAdminAlcoholLookupPages(data), [data]);
 
   // 제외 ID를 필터링한 결과
   const filteredItems = useMemo(
