@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
 import type {
   CurationWhiskyCardValue,
   CurationWhiskyMirror,
-  CurationWhiskyStats,
 } from '../curation-whisky-card-list.types';
+import { CurationPreviewWhiskyCard } from './CurationPreviewWhiskyCard';
 import { tastingEventPreviewThemeStyle } from './previewTheme';
 
 export interface WhiskyCardCurationPreviewPairing {
@@ -21,7 +21,7 @@ export interface WhiskyCardCurationPreviewData {
   description?: string | null;
   imageUrls: string[];
   alcohol?: CurationWhiskyMirror;
-  stats?: CurationWhiskyStats | null;
+  stats?: CurationWhiskyCardValue['stats'];
   comment?: string | null;
   pairings?: WhiskyCardCurationPreviewPairing[];
   items?: Array<CurationWhiskyCardValue & { pairings?: WhiskyCardCurationPreviewPairing[] }>;
@@ -65,16 +65,13 @@ export function WhiskyCardCurationPreview({
             visibleItems.map((item, index) => (
               <WhiskyPreviewItem
                 key={`${item.alcohol.korName}-${index}`}
-                alcohol={item.alcohol}
-                stats={item.stats}
-                comment={item.comment}
-                pairings={item.pairings}
+                item={item}
                 pairingTitle={pairingTitle}
               />
             ))
           ) : (
             <WhiskyPreviewItem
-              alcohol={createPreviewFallbackAlcohol()}
+              item={{ source: 'MANUAL', alcohol: createPreviewFallbackAlcohol(), comment: '' }}
               pairingTitle={pairingTitle}
             />
           )}
@@ -189,92 +186,23 @@ function CurationPreviewGallery({ imageUrls }: { imageUrls: string[] }) {
 }
 
 function WhiskyPreviewItem({
-  alcohol,
-  stats,
-  comment,
-  pairings,
+  item,
   pairingTitle,
 }: {
-  alcohol: CurationWhiskyMirror;
-  stats?: CurationWhiskyStats | null;
-  comment?: string | null;
-  pairings?: WhiskyCardCurationPreviewPairing[];
+  item: CurationWhiskyCardValue & { pairings?: WhiskyCardCurationPreviewPairing[] };
   pairingTitle: string;
 }) {
-  const name = normalizeText(alcohol.korName) || '위스키명';
-  const details = [formatAbv(alcohol.abv), alcohol.korCategory].filter(Boolean);
-  const chips = [...(alcohol.selectedTags ?? []), alcohol.korCategory, alcohol.regionName].filter(
-    Boolean
-  );
-  const normalizedComment = normalizeText(comment);
   const visiblePairings =
-    pairings?.filter((pairing) => pairing.itemName.trim() || pairing.pairingNote.trim()) ?? [];
+    item.pairings?.filter((pairing) => pairing.itemName.trim() || pairing.pairingNote.trim()) ??
+    [];
 
   return (
-    <article className="py-6">
-      <div className="flex w-full overflow-hidden text-[var(--preview-main-black)]">
-        <div className="flex min-w-0 flex-1 gap-3">
-          <div className="flex h-[128px] w-[95px] shrink-0 items-center justify-center p-2">
-            <div className="relative h-full w-full">
-              {alcohol.imageUrl ? (
-                <img src={alcohol.imageUrl} alt={name} className="h-full w-full object-contain" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center rounded-lg bg-[var(--preview-section-white)] text-[11px] text-[var(--preview-main-gray)]">
-                  이미지
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex min-w-0 flex-1 flex-col items-start justify-center space-y-2">
-            <div className="min-w-0 space-y-2">
-              <h3 className="line-clamp-2 text-[15px] font-bold leading-[1.3] text-[var(--preview-main-dark-gray)]">
-                {name}
-              </h3>
-              {alcohol.engName && (
-                <p className="text-[13px] text-[var(--preview-main-dark-gray)]">
-                  {alcohol.engName.toUpperCase()}
-                </p>
-              )}
-              {details.length > 0 && (
-                <p className="text-[13px] text-[var(--preview-main-dark-gray)]">
-                  {details.join(' · ')}
-                </p>
-              )}
-            </div>
-
-            {typeof stats?.rating === 'number' && (
-              <div className="flex items-center gap-1 text-[var(--preview-main-gray)]">
-                <span className="text-[12px] font-medium">유저평균</span>
-                <span className="text-[12px] font-semibold text-[var(--preview-main-gray)]">
-                  ★ {stats.rating.toFixed(1)}
-                </span>
-                <span className="text-[11px] font-medium">({stats.totalRatingsCount ?? 0})</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {chips.length > 0 && (
-        <div className="mt-5 flex w-full flex-wrap gap-1.5">
-          {chips.map((chip, index) => (
-            <span
-              key={`${chip}-${index}`}
-              className="rounded-[4px] border border-[var(--preview-main-gray)] px-2 py-1 text-[11px] font-medium text-[var(--preview-main-gray)]"
-            >
-              {chip}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {normalizedComment && (
-        <p className="mt-5 whitespace-pre-line text-[13px] font-medium leading-[1.8] text-[var(--preview-main-gray)]">
-          {normalizedComment}
-        </p>
-      )}
-
+    <CurationPreviewWhiskyCard
+      alcohol={item.alcohol}
+      stats={item.stats}
+      comment={item.comment}
+      fallbackName="위스키명"
+    >
       {visiblePairings.length > 0 && (
         <div className="mt-5">
           <h4 className="text-[14px] font-extrabold text-[var(--preview-main-dark-gray)]">
@@ -287,7 +215,7 @@ function WhiskyPreviewItem({
           </div>
         </div>
       )}
-    </article>
+    </CurationPreviewWhiskyCard>
   );
 }
 
@@ -321,13 +249,6 @@ function PairingPreviewItem({ pairing }: { pairing: WhiskyCardCurationPreviewPai
       </div>
     </article>
   );
-}
-
-function formatAbv(value: string | undefined): string {
-  const normalizedValue = normalizeText(value);
-  if (!normalizedValue) return '';
-
-  return normalizedValue.includes('%') ? `도수 ${normalizedValue}` : `도수 ${normalizedValue}%`;
 }
 
 function normalizeText(value: string | null | undefined): string {
