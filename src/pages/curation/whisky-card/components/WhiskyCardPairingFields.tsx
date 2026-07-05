@@ -7,7 +7,7 @@ import {
   type PointerEvent,
 } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
-import { GripVertical, Loader2, Plus, Upload } from 'lucide-react';
+import { GripVertical, Loader2, Plus, Upload, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -236,19 +236,7 @@ export function WhiskyCardPairingFields({
   };
 
   return (
-    <div className="mt-4 space-y-3 rounded-md border bg-muted/20 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h4 className="text-sm font-semibold">
-            {pairingModel.label}
-            {pairingModel.minItems > 0 && <span className="ml-1 text-destructive">*</span>}
-          </h4>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {pairingModel.minItems}-{pairingModel.maxItems}개까지 등록할 수 있습니다.
-          </p>
-        </div>
-      </div>
-
+    <div className="mt-4 space-y-4">
       {typeof itemErrors?.message === 'string' && (
         <p className="text-sm text-destructive">{itemErrors.message}</p>
       )}
@@ -267,10 +255,10 @@ export function WhiskyCardPairingFields({
               draggable
               aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 순서 변경`}
               className={cn(
-                'rounded-[10px] border bg-background p-4 transition-colors',
+                'rounded-[10px] border border-transparent bg-background transition-colors',
                 dragOverPairingIndex === pairingIndex && draggedPairingIndex !== pairingIndex
                   ? 'border-primary bg-primary/5'
-                  : 'border-border'
+                  : 'border-transparent'
               )}
               onDragStart={(event) => handlePairingDragStart(pairingIndex, event)}
               onDragOver={(event) => handlePairingDragOver(pairingIndex, event)}
@@ -278,13 +266,13 @@ export function WhiskyCardPairingFields({
               onDragLeave={() => setDragOverPairingIndex(null)}
               onDragEnd={resetPairingDragState}
             >
-              <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="mb-5 flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2">
                   <button
                     type="button"
                     data-pairing-drag-handle="true"
                     aria-label={`${pairingLabel} 순서 변경`}
-                    className="flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:cursor-grabbing"
+                    className="flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:cursor-grabbing"
                     onPointerDown={(event) =>
                       handlePairingDragHandlePointerDown(pairingIndex, event)
                     }
@@ -293,41 +281,105 @@ export function WhiskyCardPairingFields({
                   >
                     <GripVertical className="h-4 w-4" />
                   </button>
-                  <h5 className="truncate text-sm font-semibold">
+                  <h5 className="truncate text-lg font-bold text-foreground">
                     {pairingLabel}
                     {pairingModel.minItems > 0 && <span className="ml-1 text-destructive">*</span>}
                   </h5>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 rounded-md bg-destructive/20 px-2 text-xs font-medium text-destructive hover:bg-destructive/30 hover:text-destructive"
-                  aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 삭제`}
-                  onClick={() =>
-                    updatePairings((currentPairings) =>
-                      currentPairings.filter((_, itemIndex) => itemIndex !== pairingIndex)
-                    )
-                  }
-                  disabled={!canRemovePairing || isImageUploading}
-                >
-                  삭제
-                </Button>
+                {canRemovePairing && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 삭제`}
+                    onClick={() =>
+                      updatePairings((currentPairings) =>
+                        currentPairings.filter((_, itemIndex) => itemIndex !== pairingIndex)
+                      )
+                    }
+                    disabled={isImageUploading}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
 
-              <div className="space-y-3 pl-10">
-                <div className="grid gap-2 md:grid-cols-[9rem_minmax(0,1fr)] md:items-center">
-                  <label
-                    htmlFor={`${getPairingKey(index, pairingIndex)}-name`}
-                    className="text-sm font-semibold text-foreground"
-                  >
-                    {pairingModel.itemNameLabel}
-                    <span className="ml-1 text-destructive">*</span>
-                  </label>
+              <div
+                className={cn(
+                  'grid gap-5 pl-10',
+                  pairingModel.hasItemImageUrl
+                    ? 'md:grid-cols-[minmax(10rem,13rem)_minmax(0,1fr)]'
+                    : 'md:grid-cols-1'
+                )}
+              >
+                {pairingModel.hasItemImageUrl && (
+                  <div className="space-y-2">
+                    <input
+                      id={imageInputId}
+                      type="file"
+                      accept={PAIRING_IMAGE_ACCEPT}
+                      className="sr-only"
+                      aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 이미지 파일 선택`}
+                      onChange={(event) => void handlePairingImageChange(pairingIndex, event)}
+                      disabled={isImageUploading}
+                    />
+                    <label
+                      htmlFor={imageInputId}
+                      className={cn(
+                        'flex min-h-[14.75rem] cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed bg-muted/10 text-muted-foreground transition-colors hover:bg-muted/20',
+                        isImageUploading && 'pointer-events-none opacity-70'
+                      )}
+                    >
+                      {pairing.itemImageUrl ? (
+                        <img
+                          src={pairing.itemImageUrl}
+                          alt={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 이미지`}
+                          className="h-full min-h-[14.75rem] w-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex flex-col items-center gap-3 text-sm font-medium">
+                          {isImageUploading ? (
+                            <Loader2 className="h-8 w-8 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <Upload className="h-8 w-8" aria-hidden="true" />
+                          )}
+                          {isImageUploading ? '업로드 중' : '이미지 업로드'}
+                        </span>
+                      )}
+                    </label>
+                    {pairing.itemImageUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-0 text-xs text-muted-foreground hover:text-destructive"
+                        onClick={() => handleRemovePairingImage(pairingIndex)}
+                        disabled={isImageUploading}
+                      >
+                        이미지 삭제
+                      </Button>
+                    )}
+                    {pairingError?.itemImageUrl?.message && (
+                      <p className="text-sm text-destructive">
+                        {pairingError.itemImageUrl.message}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex min-w-0 flex-col gap-6">
                   <div className="space-y-1">
+                    <label
+                      htmlFor={`${getPairingKey(index, pairingIndex)}-name`}
+                      className="sr-only"
+                    >
+                      {pairingModel.itemNameLabel}
+                    </label>
                     <Input
                       id={`${getPairingKey(index, pairingIndex)}-name`}
                       aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식명`}
+                      className="h-16 text-base"
                       maxLength={pairingModel.itemNameMaxLength}
                       {...form.register(
                         `alcohols.${index}.pairings.${pairingIndex}.itemName` as const
@@ -338,86 +390,18 @@ export function WhiskyCardPairingFields({
                       <p className="text-sm text-destructive">{pairingError.itemName.message}</p>
                     )}
                   </div>
-                </div>
 
-                {pairingModel.hasItemImageUrl && (
-                  <div className="grid gap-2 md:grid-cols-[9rem_minmax(0,1fr)] md:items-start">
-                    <span className="text-sm font-semibold text-foreground">
-                      {pairingModel.itemImageUrlLabel}
-                    </span>
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed bg-muted/20">
-                          {pairing.itemImageUrl ? (
-                            <img
-                              src={pairing.itemImageUrl}
-                              alt={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 이미지`}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex flex-col items-center gap-1 text-xs text-muted-foreground">
-                              <Upload className="h-5 w-5" aria-hidden="true" />
-                              음식 이미지
-                            </div>
-                          )}
-                        </div>
-                        <input
-                          id={imageInputId}
-                          type="file"
-                          accept={PAIRING_IMAGE_ACCEPT}
-                          className="sr-only"
-                          aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 이미지 파일 선택`}
-                          onChange={(event) => void handlePairingImageChange(pairingIndex, event)}
-                          disabled={isImageUploading}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => document.getElementById(imageInputId)?.click()}
-                          disabled={isImageUploading}
-                        >
-                          {isImageUploading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Upload className="h-4 w-4" />
-                          )}
-                          {isImageUploading ? '업로드 중' : '이미지 업로드'}
-                        </Button>
-                        {pairing.itemImageUrl && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemovePairingImage(pairingIndex)}
-                            disabled={isImageUploading}
-                          >
-                            이미지 삭제
-                          </Button>
-                        )}
-                      </div>
-                      {pairingError?.itemImageUrl?.message && (
-                        <p className="text-sm text-destructive">
-                          {pairingError.itemImageUrl.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid gap-2 md:grid-cols-[9rem_minmax(0,1fr)] md:items-start">
-                  <label
-                    htmlFor={`${getPairingKey(index, pairingIndex)}-note`}
-                    className="text-sm font-semibold text-foreground"
-                  >
-                    {pairingModel.pairingNoteLabel}
-                    <span className="ml-1 text-destructive">*</span>
-                  </label>
                   <div className="space-y-1">
+                    <label
+                      htmlFor={`${getPairingKey(index, pairingIndex)}-note`}
+                      className="sr-only"
+                    >
+                      {pairingModel.pairingNoteLabel}
+                    </label>
                     <Textarea
                       id={`${getPairingKey(index, pairingIndex)}-note`}
                       aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 설명`}
-                      rows={3}
+                      className="min-h-[9.5rem] resize-none text-base"
                       maxLength={pairingModel.pairingNoteMaxLength}
                       {...form.register(
                         `alcohols.${index}.pairings.${pairingIndex}.pairingNote` as const
