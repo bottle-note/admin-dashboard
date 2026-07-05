@@ -34,10 +34,10 @@ const TASTING_EVENT_PLACE_NAME_FIELD: CurationTextFieldModel = {
   maxLength: 100,
 };
 
-export type TastingEventFormModel = CurationFormModel;
+export type WhiskyTastingEventFormModel = CurationFormModel;
 
 // 시음회 스펙을 자동 렌더링 파이프라인의 form model로 변환합니다.
-export function createTastingEventFormModel(spec: CurationV2Spec): TastingEventFormModel {
+export function createWhiskyTastingEventFormModel(spec: CurationV2Spec): WhiskyTastingEventFormModel {
   // 1. requestSpec 레이어: 상세 스펙의 requestSpec을 화면 생성의 단일 입력으로 사용합니다.
   const formModel = createCurationFormModelFromRequestSpec(spec.requestSpec, {
     // 2. schema parser 레이어: 공통 parser가 JSON Schema와 x-* 메타데이터를 읽습니다.

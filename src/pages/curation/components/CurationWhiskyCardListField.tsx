@@ -108,10 +108,13 @@ export function CurationWhiskyCardListField({
     .map((item) => item.alcohol.alcoholId)
     .filter((id): id is number => typeof id === 'number');
 
-  const isMaxReached = watchedAlcohols.length >= fieldModel.maxItems;
+  const isMaxLimited = typeof fieldModel.maxItems === 'number';
+  const isMaxReached = isMaxLimited && watchedAlcohols.length >= fieldModel.maxItems!;
   const isAddingBottleNoteWhisky = pendingAlcoholId !== null;
   const isAddDisabled = isMaxReached || isAddingBottleNoteWhisky;
-  const limitDescription = `${fieldModel.minItems}-${fieldModel.maxItems}개까지 등록할 수 있습니다.`;
+  const limitDescription = isMaxLimited
+    ? `${fieldModel.minItems}-${fieldModel.maxItems}개까지 등록할 수 있습니다.`
+    : `${fieldModel.minItems}개 이상 등록할 수 있습니다.`;
   const manualCategoryOptions = getCategoryOptions(
     categoryReferenceData ?? EMPTY_CATEGORY_REFERENCE_MAP
   );

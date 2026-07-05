@@ -21,7 +21,7 @@ const exampleEvent: TastingEventPreviewData = {
     barAddress: '서울 강남구 테헤란로 123',
     detailAddress: '4층',
     isRecruiting: true,
-    applicationLink: 'https://example.com/tasting-event/apply',
+    applicationLink: 'https://example.com/whisky-tasting-event/apply',
     alcohols: [
       {
         source: 'admin-preview-1',

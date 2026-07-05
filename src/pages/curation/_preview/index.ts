@@ -2,7 +2,7 @@ export { buildTastingEventPreviewModel } from './buildTastingEventPreviewModel';
 export { CurationPreviewFrame } from './CurationPreviewFrame';
 export { TastingEventPreview } from './TastingEventPreview';
 export { TastingEventPreviewExample } from './TastingEventPreviewExample';
-export { WhiskyCardCurationPreview } from './WhiskyCardCurationPreview';
+export { WhiskyCurationPreview } from './WhiskyCurationPreview';
 export type {
   TastingEventPreviewAlcoholItem,
   TastingEventPreviewCta,
@@ -11,6 +11,6 @@ export type {
   TastingEventPreviewPayload,
 } from './types';
 export type {
-  WhiskyCardCurationPreviewData,
-  WhiskyCardCurationPreviewPairing,
-} from './WhiskyCardCurationPreview';
+  WhiskyCurationPreviewData,
+  WhiskyCurationPreviewPairing,
+} from './WhiskyCurationPreview';

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { CurationV2Spec } from '@/types/api';
 
-import { createTastingEventFormModel } from '../tasting-event.form-model';
+import { createWhiskyTastingEventFormModel } from '../whisky-tasting-event.form-model';
 
 const tastingEventSpec: CurationV2Spec = {
   id: 3,
@@ -127,9 +127,9 @@ const tastingEventSpec: CurationV2Spec = {
   },
 };
 
-describe('createTastingEventFormModel', () => {
+describe('createWhiskyTastingEventFormModel', () => {
   it('시음회 requestSpec의 라벨과 제약을 form model로 변환한다', () => {
-    const formModel = createTastingEventFormModel(tastingEventSpec);
+    const formModel = createWhiskyTastingEventFormModel(tastingEventSpec);
     const fieldsByKey = Object.fromEntries(
       formModel.payloadFields.map((field) => [field.key, field])
     );

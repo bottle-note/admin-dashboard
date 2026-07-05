@@ -8,33 +8,62 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 
-import { CurationSectionCard } from '../../components/CurationSectionCard';
-import { ActiveExposureTooltip } from './ActiveExposureTooltip';
-import { RecruitmentPeriodTooltip } from './RecruitmentPeriodTooltip';
-import { TastingEventImageUploadField } from './TastingEventImageUploadField';
-import type { TastingEventCreateFormState } from '../tasting-event.schema';
+import { CurationActiveExposureTooltip } from './CurationActiveExposureTooltip';
+import { CurationExposurePeriodTooltip } from './CurationExposurePeriodTooltip';
+import { CurationImageUploadField } from './CurationImageUploadField';
+import { CurationSectionCard } from './CurationSectionCard';
 
-interface TastingEventBasicInfoSectionProps {
-  isRootAdmin: boolean;
-  isEditMode?: boolean;
-  onImageUploadingChange?: (isUploading: boolean) => void;
+interface CurationBasicInfoFormState {
+  name: string;
+  description: string;
+  imageUrls: string[];
+  exposureStartDate: string;
+  exposureEndDate: string;
+  displayOrder: number;
+  isActive: boolean;
 }
 
-export function TastingEventBasicInfoSection({
+interface CurationBasicInfoSectionProps {
+  isRootAdmin: boolean;
+  isEditMode?: boolean;
+  canEditExposureStartDateInEditMode?: boolean;
+  onImageUploadingChange?: (isUploading: boolean) => void;
+  exposureStartDateLabel?: string;
+  exposureEndDateLabel?: string;
+  exposureStartDateHelpText?: string;
+  editableExposureStartDateHelpText?: string;
+  exposurePeriodTooltipLabel?: string;
+  exposurePeriodTooltipContent?: string;
+}
+
+export function CurationBasicInfoSection({
   isRootAdmin,
   isEditMode = false,
+  canEditExposureStartDateInEditMode = false,
   onImageUploadingChange,
-}: TastingEventBasicInfoSectionProps) {
-  const form = useFormContext<TastingEventCreateFormState>();
+  exposureStartDateLabel = '광고노출 시작일',
+  exposureEndDateLabel = '광고노출 종료일',
+  exposureStartDateHelpText = '광고노출 시작일은 등록 후 변경할 수 없습니다.',
+  editableExposureStartDateHelpText = '기존 노출 시작일이 없어 이번 수정에서만 입력할 수 있습니다.',
+  exposurePeriodTooltipLabel = '모집기간 안내',
+  exposurePeriodTooltipContent = '모집 기간동안 보틀노트 앱에서 노출됩니다.',
+}: CurationBasicInfoSectionProps) {
+  const form = useFormContext<CurationBasicInfoFormState>();
   const [isAdminControlAlertVisible, setIsAdminControlAlertVisible] = useState(false);
   const isActive = useWatch({
     control: form.control,
     name: 'isActive',
   });
   const isNullableBasicInfoAllowed = isEditMode;
+  const isExposurePeriodRequired = true;
   const exposureStartDateRegistration = form.register('exposureStartDate');
   const exposureEndDateRegistration = form.register('exposureEndDate');
   const isAdminControlDisabled = !isRootAdmin;
+  const isExposureStartDateDisabled = isEditMode && !canEditExposureStartDateInEditMode;
+  const exposureStartDateHelpMessage =
+    isEditMode && !isExposureStartDateDisabled
+      ? editableExposureStartDateHelpText
+      : exposureStartDateHelpText;
 
   const handleExposureDateChange = (
     event: ChangeEvent<HTMLInputElement>,
@@ -48,8 +77,9 @@ export function TastingEventBasicInfoSection({
 
     const otherValue = form.getValues(otherFieldName);
     const shouldValidateRange = typeof otherValue === 'string' && otherValue.length === 10;
+    const currentFieldName = event.target.name as 'exposureStartDate' | 'exposureEndDate';
     void form.trigger(
-      shouldValidateRange ? ['exposureStartDate', 'exposureEndDate'] : event.target.name
+      shouldValidateRange ? ['exposureStartDate', 'exposureEndDate'] : currentFieldName
     );
   };
 
@@ -85,7 +115,7 @@ export function TastingEventBasicInfoSection({
               aria-label="설명"
               rows={4}
               {...form.register('description')}
-              placeholder="시음회 큐레이션에 대한 설명을 입력하세요."
+              placeholder="큐레이션에 대한 설명을 입력하세요."
             />
           </FormField>
           {onImageUploadingChange && (
@@ -103,7 +133,7 @@ export function TastingEventBasicInfoSection({
                   최대 3장까지 등록할 수 있고, 등록된 순서대로 노출됩니다.
                 </p>
               </div>
-              <TastingEventImageUploadField onUploadingChange={onImageUploadingChange} />
+              <CurationImageUploadField onUploadingChange={onImageUploadingChange} />
             </div>
           )}
           <div className="space-y-2 md:col-span-2">
@@ -111,17 +141,18 @@ export function TastingEventBasicInfoSection({
               <div className="min-w-0 space-y-2">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-medium">
-                    광고노출 시작일
-                    {!isNullableBasicInfoAllowed && (
-                      <span className="ml-1 text-destructive">*</span>
-                    )}
+                    {exposureStartDateLabel}
+                    {isExposurePeriodRequired && <span className="ml-1 text-destructive">*</span>}
                   </span>
-                  <RecruitmentPeriodTooltip />
+                  <CurationExposurePeriodTooltip
+                    ariaLabel={exposurePeriodTooltipLabel}
+                    content={exposurePeriodTooltipContent}
+                  />
                 </div>
                 <Input
-                  aria-label="광고노출 시작일"
+                  aria-label={exposureStartDateLabel}
                   type="date"
-                  disabled={isEditMode}
+                  disabled={isExposureStartDateDisabled}
                   {...exposureStartDateRegistration}
                   onChange={(event) =>
                     handleExposureDateChange(
@@ -131,9 +162,7 @@ export function TastingEventBasicInfoSection({
                     )
                   }
                 />
-                <p className="text-xs text-muted-foreground">
-                  광고노출 시작일은 등록 후 변경할 수 없습니다.
-                </p>
+                <p className="text-xs text-muted-foreground">{exposureStartDateHelpMessage}</p>
                 {form.formState.errors.exposureStartDate?.message && (
                   <p className="text-sm text-destructive">
                     {form.formState.errors.exposureStartDate.message}
@@ -144,13 +173,13 @@ export function TastingEventBasicInfoSection({
                 ~
               </span>
               <FormField
-                label="광고노출 종료일"
-                required={!isNullableBasicInfoAllowed}
+                label={exposureEndDateLabel}
+                required={isExposurePeriodRequired}
                 error={form.formState.errors.exposureEndDate?.message}
                 className="min-w-0"
               >
                 <Input
-                  aria-label="광고노출 종료일"
+                  aria-label={exposureEndDateLabel}
                   type="date"
                   {...exposureEndDateRegistration}
                   onChange={(event) =>
@@ -171,7 +200,7 @@ export function TastingEventBasicInfoSection({
         <div>
           <div className="flex items-center gap-1.5">
             <h3 className="text-sm font-semibold">관리자 전용 설정</h3>
-            <ActiveExposureTooltip />
+            <CurationActiveExposureTooltip />
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             노출 순서와 활성화 상태 변경은 관리자만 할 수 있습니다.

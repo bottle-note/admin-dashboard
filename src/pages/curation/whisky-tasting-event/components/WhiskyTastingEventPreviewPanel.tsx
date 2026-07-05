@@ -3,17 +3,17 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { CurationPreviewFrame, TastingEventPreview } from '../../_preview';
-import { createTastingEventPreviewModel } from '../tasting-event.preview-model';
-import type { TastingEventCreateFormState } from '../tasting-event.schema';
+import { createWhiskyTastingEventPreviewModel } from '../whisky-tasting-event.preview-model';
+import type { WhiskyTastingEventFormState } from '../whisky-tasting-event.schema';
 
-export function TastingEventPreviewPanel() {
-  const form = useFormContext<TastingEventCreateFormState>();
+export function WhiskyTastingEventPreviewPanel() {
+  const form = useFormContext<WhiskyTastingEventFormState>();
   const watchedValues = useWatch({ control: form.control });
   const previewValues = {
     ...form.getValues(),
     ...watchedValues,
-  } as TastingEventCreateFormState;
-  const preview = createTastingEventPreviewModel(previewValues);
+  } as WhiskyTastingEventFormState;
+  const preview = createWhiskyTastingEventPreviewModel(previewValues);
 
   return (
     <Card className="shadow-sm">

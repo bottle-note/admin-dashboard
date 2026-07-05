@@ -9,13 +9,13 @@ import type {
 import { CurationPreviewWhiskyCard } from './CurationPreviewWhiskyCard';
 import { tastingEventPreviewThemeStyle } from './previewTheme';
 
-export interface WhiskyCardCurationPreviewPairing {
+export interface WhiskyCurationPreviewPairing {
   itemName: string;
   pairingNote: string;
   itemImageUrl?: string;
 }
 
-export interface WhiskyCardCurationPreviewData {
+export interface WhiskyCurationPreviewData {
   specName: string;
   name: string;
   description?: string | null;
@@ -23,21 +23,21 @@ export interface WhiskyCardCurationPreviewData {
   alcohol?: CurationWhiskyMirror;
   stats?: CurationWhiskyCardValue['stats'];
   comment?: string | null;
-  pairings?: WhiskyCardCurationPreviewPairing[];
-  items?: Array<CurationWhiskyCardValue & { pairings?: WhiskyCardCurationPreviewPairing[] }>;
+  pairings?: WhiskyCurationPreviewPairing[];
+  items?: Array<CurationWhiskyCardValue & { pairings?: WhiskyCurationPreviewPairing[] }>;
 }
 
-interface WhiskyCardCurationPreviewProps {
-  curation: WhiskyCardCurationPreviewData;
+interface WhiskyCurationPreviewProps {
+  curation: WhiskyCurationPreviewData;
   pairingTitle?: string;
   className?: string;
 }
 
-export function WhiskyCardCurationPreview({
+export function WhiskyCurationPreview({
   curation,
   pairingTitle = '페어링 음식',
   className,
-}: WhiskyCardCurationPreviewProps) {
+}: WhiskyCurationPreviewProps) {
   const visibleItems = getVisibleItems(curation);
   const coverImageUrl = curation.imageUrls[0] ?? visibleItems[0]?.alcohol.imageUrl ?? '';
   const galleryImageUrls = curation.imageUrls.filter((imageUrl) => imageUrl !== coverImageUrl);
@@ -84,8 +84,8 @@ export function WhiskyCardCurationPreview({
 }
 
 function getVisibleItems(
-  curation: WhiskyCardCurationPreviewData
-): Array<CurationWhiskyCardValue & { pairings?: WhiskyCardCurationPreviewPairing[] }> {
+  curation: WhiskyCurationPreviewData
+): Array<CurationWhiskyCardValue & { pairings?: WhiskyCurationPreviewPairing[] }> {
   const visibleItems =
     curation.items?.filter(
       (item) =>
@@ -192,7 +192,7 @@ function WhiskyPreviewItem({
   order,
   pairingTitle,
 }: {
-  item: CurationWhiskyCardValue & { pairings?: WhiskyCardCurationPreviewPairing[] };
+  item: CurationWhiskyCardValue & { pairings?: WhiskyCurationPreviewPairing[] };
   order: number;
   pairingTitle: string;
 }) {
@@ -224,7 +224,7 @@ function WhiskyPreviewItem({
   );
 }
 
-function PairingPreviewItem({ pairing }: { pairing: WhiskyCardCurationPreviewPairing }) {
+function PairingPreviewItem({ pairing }: { pairing: WhiskyCurationPreviewPairing }) {
   return (
     <article className="border-t border-[var(--preview-bg-gray)] pt-4">
       <div className="flex gap-3">

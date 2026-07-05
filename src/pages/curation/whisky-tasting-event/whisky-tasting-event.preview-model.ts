@@ -3,10 +3,10 @@ import type {
   CurationWhiskyStats,
 } from '../curation-whisky-card-list.types';
 import type { TastingEventPreviewData } from '../_preview';
-import type { TastingEventCreateFormState } from './tasting-event.schema';
+import type { WhiskyTastingEventFormState } from './whisky-tasting-event.schema';
 
-export function createTastingEventPreviewModel(
-  values: TastingEventCreateFormState
+export function createWhiskyTastingEventPreviewModel(
+  values: WhiskyTastingEventFormState
 ): TastingEventPreviewData {
   const imageUrls = getStringArray(values.imageUrls);
   const coverImageUrl = normalizeImageUrl(imageUrls[0]);

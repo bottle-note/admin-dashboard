@@ -14,11 +14,9 @@ import type {
   CurationV2UpdateRequest,
 } from '@/types/api';
 
-import {
-  CurationRecommendedWhiskyCreatePage,
-  CurationWhiskyCardEditPage,
-  CurationWhiskyPairingCreatePage,
-} from '../CurationWhiskyCardCreate';
+import { CurationRecommendedWhiskyCreatePage } from '../CurationRecommendedWhiskyCreate';
+import { CurationRecommendedWhiskyEditPage } from '../CurationRecommendedWhiskyEdit';
+import { CurationWhiskyPairingCreatePage } from '../CurationWhiskyPairingCreate';
 
 const SPEC_BASE = '/admin/api/v2/curation-specs';
 const CURATION_BASE = '/admin/api/v2/curations';
@@ -192,8 +190,8 @@ function fillBasicInfo() {
   fireEvent.change(screen.getByLabelText('설명'), {
     target: { value: '앱 홈에 노출할 추천 위스키' },
   });
-  fireEvent.change(screen.getByLabelText('광고노출 시작일'), { target: { value: '2026-06-01' } });
-  fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2026-06-30' } });
+  fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2026-06-01' } });
+  fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2026-06-30' } });
 }
 
 async function typeTastingTagSearch(
@@ -207,7 +205,7 @@ async function typeTastingTagSearch(
   return searchInput;
 }
 
-describe('CurationWhiskyCardCreatePage', () => {
+describe('whisky curation pages', () => {
   beforeEach(() => {
     setCurrentUserRoles([]);
   });
@@ -219,6 +217,10 @@ describe('CurationWhiskyCardCreatePage', () => {
     render(<CurationRecommendedWhiskyCreatePage />);
 
     await screen.findByLabelText('큐레이션명');
+    expect(screen.getByLabelText('노출 시작일')).toBeInTheDocument();
+    expect(screen.getByLabelText('노출 종료일')).toBeInTheDocument();
+    expect(screen.queryByLabelText('광고노출 시작일')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('광고노출 종료일')).not.toBeInTheDocument();
     expect(screen.getByLabelText('앱 미리보기 프레임')).toBeInTheDocument();
     expect(screen.getByText('큐레이션 위스키')).toBeInTheDocument();
 
@@ -233,6 +235,37 @@ describe('CurationWhiskyCardCreatePage', () => {
     await user.click(screen.getByRole('button', { name: '직접 입력' }));
 
     expect(screen.getByLabelText('1번 수동 위스키 한글명')).toBeInTheDocument();
+  });
+
+  it('추천 위스키는 노출 종료일이 시작일보다 빠르면 저장 전 validation을 표시한다', async () => {
+    const user = userEvent.setup();
+    let capturedBody: CurationV2CreateRequest | null = null;
+    mockSpecSuccess(recommendedWhiskySpec);
+    server.use(
+      http.post(CURATION_BASE, async ({ request }) => {
+        capturedBody = (await request.json()) as CurationV2CreateRequest;
+        return HttpResponse.json(wrapApiResponse({ targetId: 99 }));
+      })
+    );
+
+    render(<CurationRecommendedWhiskyCreatePage />);
+
+    await screen.findByLabelText('큐레이션명');
+    fireEvent.change(screen.getByLabelText('큐레이션명'), {
+      target: { value: '이번 주 추천 위스키' },
+    });
+    fireEvent.change(screen.getByLabelText('설명'), {
+      target: { value: '앱 홈에 노출할 추천 위스키' },
+    });
+    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2099-06-30' } });
+    fireEvent.change(screen.getByLabelText('노출 종료일'), { target: { value: '2099-06-01' } });
+
+    await user.click(screen.getByRole('button', { name: /저장/ }));
+
+    expect(
+      await screen.findByText('노출 종료일은 노출 시작일보다 빠를 수 없습니다.')
+    ).toBeInTheDocument();
+    expect(capturedBody).toBeNull();
   });
 
   it('추천 위스키는 DB 태그를 기본값으로 넣고 수정한 태그와 코멘트를 생성 payload로 전송한다', async () => {
@@ -534,17 +567,26 @@ describe('CurationWhiskyCardCreatePage', () => {
       })
     );
 
-    render(<CurationWhiskyCardEditPage curation={curation} />);
+    render(<CurationRecommendedWhiskyEditPage curation={curation} />);
 
     expect(await screen.findByRole('heading', { name: '추천 위스키 수정' })).toBeInTheDocument();
     expect(screen.getByLabelText('큐레이션명')).toHaveValue('기존 추천 위스키');
-    expect(screen.getByLabelText('광고노출 시작일')).toBeDisabled();
-    expect(screen.getByLabelText('광고노출 종료일')).not.toBeDisabled();
-    expect(screen.getByText('광고노출 시작일은 등록 후 변경할 수 없습니다.')).toBeInTheDocument();
+    expect(screen.getByLabelText('노출 시작일')).not.toBeDisabled();
+    expect(
+      screen.getAllByText((_, element) => element?.textContent === '노출 시작일*').length
+    ).toBeGreaterThan(0);
+    expect(screen.getByLabelText('노출 종료일')).not.toBeDisabled();
+    expect(
+      screen.getAllByText((_, element) => element?.textContent === '노출 종료일*').length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByText('기존 노출 시작일이 없어 이번 수정에서만 입력할 수 있습니다.')
+    ).toBeInTheDocument();
     expect(screen.getByLabelText('1번 수동 위스키 한글명')).toHaveValue('수동 추천 위스키');
     expect(screen.getAllByText('스모키').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('수동 추천 위스키 기대평')).toHaveValue('기존 코멘트');
 
+    fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2026-06-01' } });
     await user.clear(screen.getByLabelText('수동 추천 위스키 기대평'));
     await user.type(screen.getByLabelText('수동 추천 위스키 기대평'), '수정된 추천 코멘트');
     await user.click(screen.getByRole('button', { name: /수정/ }));
@@ -555,7 +597,7 @@ describe('CurationWhiskyCardCreatePage', () => {
       name: '기존 추천 위스키',
       description: null,
       imageUrls: [],
-      exposureStartDate: null,
+      exposureStartDate: '2026-06-01',
       exposureEndDate: null,
       displayOrder: 3,
       isActive: true,
@@ -572,5 +614,61 @@ describe('CurationWhiskyCardCreatePage', () => {
         },
       ],
     });
+  });
+
+  it('추천 위스키는 스펙에 최대 개수 제한이 없으면 10개 초과 기존 payload도 수정 저장한다', async () => {
+    const user = userEvent.setup();
+    let capturedBody: CurationV2UpdateRequest | null = null;
+    const payload = Array.from({ length: 15 }, (_, index) => ({
+      source: 'BOTTLE_NOTE',
+      alcohol: {
+        alcoholId: 200 + index,
+        korName: `추천 위스키 ${index + 1}`,
+        engName: `Recommended Whisky ${index + 1}`,
+        selectedTags: ['셰리'],
+      },
+      comment: null,
+    }));
+    const curation: CurationV2Detail = {
+      id: 16,
+      name: '셰리 추천 큐레이션',
+      description: null,
+      coverImageUrl: null,
+      imageUrls: [],
+      exposureStartDate: null,
+      exposureEndDate: null,
+      displayOrder: 0,
+      isActive: true,
+      createdAt: '2026-05-15T00:00:00',
+      modifiedAt: '2026-05-16T00:00:00',
+      spec: recommendedWhiskySpec,
+      payload,
+    };
+    server.use(
+      http.put(`${CURATION_BASE}/:curationId`, async ({ params, request }) => {
+        expect(params.curationId).toBe('16');
+        capturedBody = (await request.json()) as CurationV2UpdateRequest;
+        return HttpResponse.json(
+          wrapApiResponse({
+            code: 'CURATION_UPDATED',
+            message: '큐레이션이 수정되었습니다.',
+            targetId: 16,
+            responseAt: '2026-05-31T09:00:00',
+          })
+        );
+      })
+    );
+
+    render(<CurationRecommendedWhiskyEditPage curation={curation} />);
+
+    expect(await screen.findByRole('heading', { name: '추천 위스키 수정' })).toBeInTheDocument();
+    expect(screen.getByText('1개 이상 등록할 수 있습니다.')).toBeInTheDocument();
+    expect(screen.getAllByText('추천 위스키 15').length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: /수정/ }));
+
+    await waitFor(() => expect(capturedBody).not.toBeNull());
+    const submittedBody = capturedBody as unknown as CurationV2UpdateRequest;
+    expect(Array.isArray(submittedBody.payload) ? submittedBody.payload : []).toHaveLength(15);
   });
 });

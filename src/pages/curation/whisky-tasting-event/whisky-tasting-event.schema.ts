@@ -11,7 +11,7 @@ import type {
   CurationWhiskyCardListFieldModel,
   CurationWhiskyCardListFormValues,
 } from '../curation-whisky-card-list.types';
-import type { TastingEventFormModel } from './tasting-event.form-model';
+import type { WhiskyTastingEventFormModel } from './whisky-tasting-event.form-model';
 
 // 위스키 카드 리스트 field model을 alcohols 배열 item Zod schema로 변환합니다.
 export function createTastingEventAlcoholSchema(fieldModel: CurationWhiskyCardListFieldModel) {
@@ -58,12 +58,20 @@ export function createTastingEventAlcoholSchema(fieldModel: CurationWhiskyCardLi
 }
 
 // field model의 kind에 따라 시음회 payload 필드 Zod schema를 생성합니다.
-function createTastingEventCreatePayloadFieldSchema(field: CurationFieldModel) {
+function createWhiskyTastingEventPayloadFieldSchema(field: CurationFieldModel) {
   if (field.kind === 'alcohol-card-list') {
-    return z
+    const fieldSchema = z
       .array(createTastingEventAlcoholSchema(field))
-      .min(field.minItems, `${field.label}를 최소 ${field.minItems}개 이상 추가해주세요.`)
-      .max(field.maxItems, `${field.label}는 최대 ${field.maxItems}개까지 추가할 수 있습니다.`);
+      .min(field.minItems, `${field.label}를 최소 ${field.minItems}개 이상 추가해주세요.`);
+
+    if (typeof field.maxItems !== 'number') {
+      return fieldSchema;
+    }
+
+    return fieldSchema.max(
+      field.maxItems,
+      `${field.label}는 최대 ${field.maxItems}개까지 추가할 수 있습니다.`
+    );
   }
 
   if (field.key === 'applicationLink') {
@@ -91,21 +99,21 @@ function createConditionalApplicationLinkValueSchema(field: CurationFieldModel) 
 }
 
 // requestSpec 기반 form model의 payloadFields를 순회해 동적 payload Zod shape을 생성합니다.
-function createTastingEventCreatePayloadShape(
-  formModel: TastingEventFormModel
+function createWhiskyTastingEventPayloadShape(
+  formModel: WhiskyTastingEventFormModel
 ): Record<string, z.ZodType<unknown>> {
   return formModel.payloadFields.reduce<Record<string, z.ZodType<unknown>>>((shape, field) => {
     const key = field.key;
-    shape[key] = createTastingEventCreatePayloadFieldSchema(field);
+    shape[key] = createWhiskyTastingEventPayloadFieldSchema(field);
     return shape;
   }, {});
 }
 
 // requestSpec 기반 시음회 form model을 React Hook Form에서 사용할 전체 Zod schema로 변환합니다.
-export function createCurationTastingEventFormSchema(
-  formModel: TastingEventFormModel,
+export function createWhiskyTastingEventFormSchema(
+  formModel: WhiskyTastingEventFormModel,
   options: { mode?: 'create' | 'edit' } = {}
-): z.ZodType<TastingEventCreateFormState> {
+): z.ZodType<WhiskyTastingEventFormState> {
   const isEditMode = options.mode === 'edit';
   const applicationLinkField = formModel.payloadFields.find(
     (field) => field.key === 'applicationLink'
@@ -125,7 +133,7 @@ export function createCurationTastingEventFormSchema(
         .int('노출 순서는 정수로 입력해주세요.')
         .min(0, '노출 순서는 0 이상이어야 합니다.'),
       isActive: z.boolean(),
-      ...createTastingEventCreatePayloadShape(formModel),
+      ...createWhiskyTastingEventPayloadShape(formModel),
     })
     .superRefine((values, context) => {
       const formValues = values as Record<string, unknown>;
@@ -156,10 +164,10 @@ export function createCurationTastingEventFormSchema(
         path: ['applicationLink'],
         message: `${formatCurationFieldTopic(applicationLinkField.label)} 필수입니다.`,
       });
-    }) as unknown as z.ZodType<TastingEventCreateFormState>;
+    }) as unknown as z.ZodType<WhiskyTastingEventFormState>;
 }
 
-export interface TastingEventCreateFormState extends CurationWhiskyCardListFormValues {
+export interface WhiskyTastingEventFormState extends CurationWhiskyCardListFormValues {
   name: string;
   description: string;
   imageUrls: string[];
@@ -170,9 +178,9 @@ export interface TastingEventCreateFormState extends CurationWhiskyCardListFormV
   [key: string]: unknown;
 }
 
-export type TastingEventCreatePayload = Record<string, unknown>;
+export type WhiskyTastingEventPayload = Record<string, unknown>;
 
-const BASE_TASTING_EVENT_CREATE_FORM_STATE: TastingEventCreateFormState = {
+const BASE_TASTING_EVENT_CREATE_FORM_STATE: WhiskyTastingEventFormState = {
   name: '',
   description: '',
   imageUrls: [],
@@ -184,10 +192,10 @@ const BASE_TASTING_EVENT_CREATE_FORM_STATE: TastingEventCreateFormState = {
 };
 
 // requestSpec 기반 form model을 React Hook Form의 초기 form state로 변환합니다.
-export function createDefaultTastingEventCreateFormState(
-  formModel: TastingEventFormModel
-): TastingEventCreateFormState {
-  const formState: TastingEventCreateFormState = {
+export function createDefaultWhiskyTastingEventFormState(
+  formModel: WhiskyTastingEventFormModel
+): WhiskyTastingEventFormState {
+  const formState: WhiskyTastingEventFormState = {
     ...BASE_TASTING_EVENT_CREATE_FORM_STATE,
     imageUrls: [],
     alcohols: [],

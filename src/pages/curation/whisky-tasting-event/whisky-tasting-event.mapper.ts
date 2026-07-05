@@ -6,11 +6,11 @@ import type {
   CurationWhiskySource,
 } from '../curation-whisky-card-list.types';
 import {
-  createDefaultTastingEventCreateFormState,
-  type TastingEventCreatePayload,
-  TastingEventCreateFormState,
-} from './tasting-event.schema';
-import type { TastingEventFormModel } from './tasting-event.form-model';
+  createDefaultWhiskyTastingEventFormState,
+  type WhiskyTastingEventPayload,
+  WhiskyTastingEventFormState,
+} from './whisky-tasting-event.schema';
+import type { WhiskyTastingEventFormModel } from './whisky-tasting-event.form-model';
 
 const ALCOHOL_OPTIONAL_TEXT_FIELDS = [
   'engName',
@@ -23,11 +23,11 @@ const ALCOHOL_OPTIONAL_TEXT_FIELDS = [
 ] as const;
 
 // 6. submit mapper 레이어: form 값을 서버 payload 필드 목록에 맞춰 동적으로 조립합니다.
-export function buildTastingEventPayload(
-  values: TastingEventCreateFormState,
-  formModel: TastingEventFormModel
-): TastingEventCreatePayload {
-  return formModel.payloadFields.reduce<TastingEventCreatePayload>((payload, field) => {
+export function buildWhiskyTastingEventPayload(
+  values: WhiskyTastingEventFormState,
+  formModel: WhiskyTastingEventFormModel
+): WhiskyTastingEventPayload {
+  return formModel.payloadFields.reduce<WhiskyTastingEventPayload>((payload, field) => {
     const key = field.key;
     const value = values[key];
 
@@ -46,11 +46,11 @@ export function buildTastingEventPayload(
   }, {});
 }
 
-export function createTastingEventFormStateFromCuration(
+export function createWhiskyTastingEventFormStateFromCuration(
   curation: CurationV2Detail,
-  formModel: TastingEventFormModel
-): TastingEventCreateFormState {
-  const formState = createDefaultTastingEventCreateFormState(formModel);
+  formModel: WhiskyTastingEventFormModel
+): WhiskyTastingEventFormState {
+  const formState = createDefaultWhiskyTastingEventFormState(formModel);
   const payload = isRecord(curation.payload) ? curation.payload : {};
 
   formState.name = curation.name;
@@ -110,7 +110,7 @@ function normalizePayloadValue(value: unknown): unknown {
 }
 
 // 시음 위스키 form 값을 서버가 받는 alcohols payload 배열로 변환합니다.
-function mapTastingEventAlcohols(values: TastingEventCreateFormState['alcohols']) {
+function mapTastingEventAlcohols(values: WhiskyTastingEventFormState['alcohols']) {
   return values.map((item) => {
     const comment = item.comment?.trim();
     const stats = item.stats

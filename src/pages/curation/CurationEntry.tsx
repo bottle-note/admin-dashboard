@@ -24,9 +24,9 @@ import {
 import {
   CurationPreviewFrame,
   TastingEventPreview,
-  WhiskyCardCurationPreview,
+  WhiskyCurationPreview,
   type TastingEventPreviewData,
-  type WhiskyCardCurationPreviewData,
+  type WhiskyCurationPreviewData,
 } from './_preview';
 
 interface CurationSpecUiConfig {
@@ -299,7 +299,7 @@ function CurationEntryPreview({ specCode }: { specCode: KnownCurationV2SpecCode 
       {specCode === CurationSpecCode.WHISKY_TASTING_EVENT ? (
         <TastingEventPreview event={TASTING_EVENT_PREVIEW_SAMPLE} />
       ) : (
-        <WhiskyCardCurationPreview
+        <WhiskyCurationPreview
           curation={
             specCode === CurationSpecCode.WHISKY_PAIRING
               ? WHISKY_PAIRING_PREVIEW_SAMPLE
@@ -355,7 +355,7 @@ const TASTING_EVENT_PREVIEW_SAMPLE: TastingEventPreviewData = {
   },
 };
 
-const GENERAL_CURATION_PREVIEW_SAMPLE: WhiskyCardCurationPreviewData = {
+const GENERAL_CURATION_PREVIEW_SAMPLE: WhiskyCurationPreviewData = {
   specName: '일반 큐레이션',
   name: '입문자를 위한 스카치 베스트 6',
   description: '처음 위스키를 시작하는 사용자에게 권하기 좋은 부드러운 스카치 위스키입니다.',
@@ -368,7 +368,7 @@ const GENERAL_CURATION_PREVIEW_SAMPLE: WhiskyCardCurationPreviewData = {
   comment: '밸런스가 좋아 니트와 하이볼 모두 부담 없이 즐길 수 있습니다.',
 };
 
-const WHISKY_PAIRING_PREVIEW_SAMPLE: WhiskyCardCurationPreviewData = {
+const WHISKY_PAIRING_PREVIEW_SAMPLE: WhiskyCurationPreviewData = {
   specName: '페어링 · 위스키 → 음식',
   name: '글렌피딕 12년과 어울리는 디저트',
   description: '부드러운 과일 향과 꿀 향을 살려주는 달콤한 페어링을 추천합니다.',

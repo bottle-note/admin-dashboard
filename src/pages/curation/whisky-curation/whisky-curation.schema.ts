@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { compareDateInputValues } from '@/lib/date-validation';
 import type { CurationV2Spec, JsonSchemaNode } from '@/types/api';
 
 import type {
@@ -27,11 +28,11 @@ export interface PairingFoodValue {
   itemImageUrl?: string;
 }
 
-export interface WhiskyCardCurationItemFormState extends CurationWhiskyCardValue {
+export interface WhiskyCurationItemFormState extends CurationWhiskyCardValue {
   pairings: PairingFoodValue[];
 }
 
-export interface WhiskyCardCurationFormState extends CurationWhiskyCardListFormValues {
+export interface WhiskyCurationFormState extends CurationWhiskyCardListFormValues {
   name: string;
   description: string;
   imageUrls: string[];
@@ -39,10 +40,10 @@ export interface WhiskyCardCurationFormState extends CurationWhiskyCardListFormV
   exposureEndDate: string;
   displayOrder: number;
   isActive: boolean;
-  alcohols: WhiskyCardCurationItemFormState[];
+  alcohols: WhiskyCurationItemFormState[];
 }
 
-export interface WhiskyCardCurationFormModel extends CurationFormModel {
+export interface WhiskyCurationFormModel extends CurationFormModel {
   spec: CurationV2Spec;
   title: string;
   editTitle: string;
@@ -60,7 +61,7 @@ export interface WhiskyCardCurationFormModel extends CurationFormModel {
   items: {
     label: string;
     minItems: number;
-    maxItems: number;
+    maxItems?: number;
   };
   pairings?: {
     label: string;
@@ -76,9 +77,9 @@ export interface WhiskyCardCurationFormModel extends CurationFormModel {
   };
 }
 
-export function createWhiskyCardCurationFormModel(
+export function createWhiskyCurationFormModel(
   spec: CurationV2Spec
-): WhiskyCardCurationFormModel {
+): WhiskyCurationFormModel {
   const alcoholSchema = getSchemaProperty(spec.requestSpec, 'alcohol');
   const commentSchema = spec.requestSpec.properties?.comment;
   const pairingsSchema = spec.requestSpec.properties?.pairings;
@@ -155,7 +156,7 @@ function createWhiskyCardListRequestSpec(
       alcohols: {
         type: 'array',
         minItems: spec.requestSpec.minItems ?? 1,
-        maxItems: spec.requestSpec.maxItems ?? 10,
+        maxItems: getOptionalMaxItems(spec.requestSpec),
         'x-field-style': 'alcohol-card-list',
         'x-display-name': label,
         items: spec.requestSpec,
@@ -194,7 +195,7 @@ function createWhiskyCardAlcoholsFieldModel(
     label: getSchemaDisplayLabel(alcoholsSchema),
     required: isSchemaPropertyRequired(requestSpec, key),
     minItems: alcoholsSchema.minItems ?? 1,
-    maxItems: alcoholsSchema.maxItems ?? 10,
+    maxItems: getOptionalMaxItems(alcoholsSchema),
     selectedTags: {
       label: getSchemaDisplayLabel(selectedTagsSchema) || '테이스팅 태그',
       required: isSchemaPropertyRequired(alcoholSchema, 'selectedTags'),
@@ -224,10 +225,10 @@ function createWhiskyCardFormSections(fields: CurationFieldModel[]): CurationFor
   ];
 }
 
-export function createCurationWhiskyCardFormSchema(
-  formModel: WhiskyCardCurationFormModel,
+export function createCurationWhiskyFormSchema(
+  formModel: WhiskyCurationFormModel,
   options: { mode?: 'create' | 'edit' } = {}
-): z.ZodType<WhiskyCardCurationFormState> {
+): z.ZodType<WhiskyCurationFormState> {
   const isEditMode = options.mode === 'edit';
   const curationItemSchema = z.object({
     source: z.enum(['BOTTLE_NOTE', 'MANUAL']),
@@ -265,31 +266,36 @@ export function createCurationWhiskyCardFormSchema(
     pairings: createPairingsSchema(formModel),
   });
 
-  return z.object({
-    name: z.string().min(1, '큐레이션명은 필수입니다.'),
-    description: isEditMode ? z.string() : z.string().min(1, '설명은 필수입니다.'),
-    imageUrls: z.array(z.string()).max(3, '이미지는 최대 3개까지 등록할 수 있습니다.'),
-    exposureStartDate: isEditMode ? z.string() : z.string().min(1, '노출 시작일은 필수입니다.'),
-    exposureEndDate: isEditMode ? z.string() : z.string().min(1, '노출 종료일은 필수입니다.'),
-    displayOrder: z
-      .number()
-      .int('노출 순서는 정수로 입력해주세요.')
-      .min(0, '노출 순서는 0 이상이어야 합니다.'),
-    isActive: z.boolean(),
-    alcohols: z
-      .array(curationItemSchema)
-      .min(
-        formModel.items.minItems,
-        `${formModel.whiskyLabel}를 최소 ${formModel.items.minItems}개 이상 추가해주세요.`
-      )
-      .max(
-        formModel.items.maxItems,
-        `${formModel.whiskyLabel}는 최대 ${formModel.items.maxItems}개까지 추가할 수 있습니다.`
-      ),
-  }) as unknown as z.ZodType<WhiskyCardCurationFormState>;
+  return z
+    .object({
+      name: z.string().min(1, '큐레이션명은 필수입니다.'),
+      description: isEditMode ? z.string() : z.string().min(1, '설명은 필수입니다.'),
+      imageUrls: z.array(z.string()).max(3, '이미지는 최대 3개까지 등록할 수 있습니다.'),
+      exposureStartDate: isEditMode ? z.string() : z.string().min(1, '노출 시작일은 필수입니다.'),
+      exposureEndDate: isEditMode ? z.string() : z.string().min(1, '노출 종료일은 필수입니다.'),
+      displayOrder: z
+        .number()
+        .int('노출 순서는 정수로 입력해주세요.')
+        .min(0, '노출 순서는 0 이상이어야 합니다.'),
+      isActive: z.boolean(),
+      alcohols: createWhiskyItemsSchema(curationItemSchema, formModel),
+    })
+    .superRefine((values, context) => {
+      if (
+        values.exposureStartDate &&
+        values.exposureEndDate &&
+        compareDateInputValues(values.exposureEndDate, values.exposureStartDate) < 0
+      ) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['exposureEndDate'],
+          message: '노출 종료일은 노출 시작일보다 빠를 수 없습니다.',
+        });
+      }
+    }) as unknown as z.ZodType<WhiskyCurationFormState>;
 }
 
-function createCommentSchema(formModel: WhiskyCardCurationFormModel) {
+function createCommentSchema(formModel: WhiskyCurationFormModel) {
   const commentSchema = z
     .string()
     .max(
@@ -302,7 +308,26 @@ function createCommentSchema(formModel: WhiskyCardCurationFormModel) {
     : commentSchema;
 }
 
-function createPairingsSchema(formModel: WhiskyCardCurationFormModel) {
+function createWhiskyItemsSchema(
+  curationItemSchema: z.ZodTypeAny,
+  formModel: WhiskyCurationFormModel
+) {
+  const itemsSchema = z.array(curationItemSchema).min(
+    formModel.items.minItems,
+    `${formModel.whiskyLabel}를 최소 ${formModel.items.minItems}개 이상 추가해주세요.`
+  );
+
+  if (typeof formModel.items.maxItems !== 'number') {
+    return itemsSchema;
+  }
+
+  return itemsSchema.max(
+    formModel.items.maxItems,
+    `${formModel.whiskyLabel}는 최대 ${formModel.items.maxItems}개까지 추가할 수 있습니다.`
+  );
+}
+
+function createPairingsSchema(formModel: WhiskyCurationFormModel) {
   if (!formModel.pairings) {
     return z.array(z.never()).optional();
   }
@@ -337,9 +362,13 @@ function createPairingsSchema(formModel: WhiskyCardCurationFormModel) {
     );
 }
 
-export function createDefaultWhiskyCardCurationFormState(
-  _formModel: WhiskyCardCurationFormModel
-): WhiskyCardCurationFormState {
+function getOptionalMaxItems(schema: JsonSchemaNode): number | undefined {
+  return typeof schema.maxItems === 'number' ? schema.maxItems : undefined;
+}
+
+export function createDefaultWhiskyCurationFormState(
+  _formModel: WhiskyCurationFormModel
+): WhiskyCurationFormState {
   return {
     name: '',
     description: '',
@@ -367,9 +396,9 @@ export function createEmptyWhiskyMirror(): CurationWhiskyMirror {
   };
 }
 
-export function createEmptyWhiskyCardCurationItem(
-  formModel: WhiskyCardCurationFormModel
-): WhiskyCardCurationItemFormState {
+export function createEmptyWhiskyCurationItem(
+  formModel: WhiskyCurationFormModel
+): WhiskyCurationItemFormState {
   return {
     source: 'MANUAL',
     alcohol: createEmptyWhiskyMirror(),
@@ -379,7 +408,7 @@ export function createEmptyWhiskyCardCurationItem(
   };
 }
 
-export function createDefaultPairings(formModel: WhiskyCardCurationFormModel): PairingFoodValue[] {
+export function createDefaultPairings(formModel: WhiskyCurationFormModel): PairingFoodValue[] {
   return formModel.pairings
     ? Array.from({ length: formModel.pairings.minItems }, () => createEmptyPairingFood())
     : [];

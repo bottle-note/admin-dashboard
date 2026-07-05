@@ -6,12 +6,12 @@ import type {
   CurationWhiskyStats,
 } from '../curation-whisky-card-list.types';
 import {
-  createDefaultWhiskyCardCurationFormState,
+  createDefaultWhiskyCurationFormState,
   type PairingFoodValue,
-  type WhiskyCardCurationFormModel,
-  type WhiskyCardCurationFormState,
-  type WhiskyCardCurationItemFormState,
-} from './whisky-card-curation.schema';
+  type WhiskyCurationFormModel,
+  type WhiskyCurationFormState,
+  type WhiskyCurationItemFormState,
+} from './whisky-curation.schema';
 
 const ALCOHOL_OPTIONAL_TEXT_FIELDS = [
   'engName',
@@ -23,16 +23,16 @@ const ALCOHOL_OPTIONAL_TEXT_FIELDS = [
   'korCategory',
 ] as const;
 
-export function buildWhiskyCardCurationPayload(
-  values: WhiskyCardCurationFormState,
-  formModel: WhiskyCardCurationFormModel
+export function buildWhiskyCurationPayload(
+  values: WhiskyCurationFormState,
+  formModel: WhiskyCurationFormModel
 ): CurationV2Payload {
   return values.alcohols.map((item) => mapWhiskyCardPayloadItem(item, formModel));
 }
 
 function mapWhiskyCardPayloadItem(
-  item: WhiskyCardCurationItemFormState,
-  formModel: WhiskyCardCurationFormModel
+  item: WhiskyCurationItemFormState,
+  formModel: WhiskyCurationFormModel
 ): CurationV2PayloadItem {
   const alcohol = {
     alcoholId: item.source === 'MANUAL' ? null : item.alcohol.alcoholId,
@@ -68,11 +68,11 @@ function mapWhiskyCardPayloadItem(
   return payload;
 }
 
-export function createWhiskyCardFormStateFromCuration(
+export function createWhiskyCurationFormStateFromCuration(
   curation: CurationV2Detail,
-  formModel: WhiskyCardCurationFormModel
-): WhiskyCardCurationFormState {
-  const formState = createDefaultWhiskyCardCurationFormState(formModel);
+  formModel: WhiskyCurationFormModel
+): WhiskyCurationFormState {
+  const formState = createDefaultWhiskyCurationFormState(formModel);
   const payloadItems = getPayloadItems(curation.payload);
 
   formState.name = curation.name;

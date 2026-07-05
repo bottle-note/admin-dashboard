@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { createTastingEventPreviewModel } from '../tasting-event.preview-model';
-import type { TastingEventCreateFormState } from '../tasting-event.schema';
+import { createWhiskyTastingEventPreviewModel } from '../whisky-tasting-event.preview-model';
+import type { WhiskyTastingEventFormState } from '../whisky-tasting-event.schema';
 
-describe('createTastingEventPreviewModel', () => {
+describe('createWhiskyTastingEventPreviewModel', () => {
   it('작성 중인 시음회 form 값을 앱 상세 미리보기 데이터로 변환한다', () => {
-    const preview = createTastingEventPreviewModel({
+    const preview = createWhiskyTastingEventPreviewModel({
       name: ' 6월 싱글몰트 시음회 ',
       description: ' 셰리 캐스크 중심의 시음회 ',
       imageUrls: ['https://img.example.com/main.png', 'https://img.example.com/sub.png'],
@@ -41,7 +41,7 @@ describe('createTastingEventPreviewModel', () => {
           comment: ' 첫 잔으로 소개합니다. ',
         },
       ],
-    } satisfies TastingEventCreateFormState);
+    } satisfies WhiskyTastingEventFormState);
 
     expect(preview).toMatchObject({
       name: '6월 싱글몰트 시음회',

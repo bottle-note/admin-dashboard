@@ -37,7 +37,7 @@ export interface CurationWhiskyCardListFieldModel {
   label: string;
   required: boolean;
   minItems: number;
-  maxItems: number;
+  maxItems?: number;
   selectedTags: {
     label: string;
     required: boolean;

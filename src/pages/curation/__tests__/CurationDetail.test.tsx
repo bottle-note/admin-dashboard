@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 
@@ -216,10 +216,18 @@ describe('CurationDetailPage', () => {
     expect(screen.getByLabelText('큐레이션명')).toHaveValue('6월 싱글몰트 시음회');
     expect(screen.getByLabelText('설명')).toHaveValue('');
     expect(screen.getByLabelText('광고노출 시작일')).toHaveValue('');
-    expect(screen.getByLabelText('광고노출 시작일')).toBeDisabled();
-    expect(screen.getByText('광고노출 시작일은 등록 후 변경할 수 없습니다.')).toBeInTheDocument();
+    expect(screen.getByLabelText('광고노출 시작일')).not.toBeDisabled();
+    expect(
+      screen.getAllByText((_, element) => element?.textContent === '광고노출 시작일*').length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByText('기존 노출 시작일이 없어 이번 수정에서만 입력할 수 있습니다.')
+    ).toBeInTheDocument();
     expect(screen.getByLabelText('광고노출 종료일')).toHaveValue('');
     expect(screen.getByLabelText('광고노출 종료일')).not.toBeDisabled();
+    expect(
+      screen.getAllByText((_, element) => element?.textContent === '광고노출 종료일*').length
+    ).toBeGreaterThan(0);
     expect(screen.getByText('날짜 및 장소')).toBeInTheDocument();
     expect(screen.getByText('참가 정보')).toBeInTheDocument();
     expect(screen.getAllByText('시음 위스키').length).toBeGreaterThan(0);
@@ -239,6 +247,7 @@ describe('CurationDetailPage', () => {
       '첫 잔으로 가볍게 시작하는 위스키'
     );
 
+    fireEvent.change(screen.getByLabelText('광고노출 시작일'), { target: { value: '2026-06-01' } });
     await user.clear(screen.getByLabelText('안내사항'));
     await user.type(screen.getByLabelText('안내사항'), '수정된 안내사항');
     await user.click(screen.getByRole('button', { name: /수정/ }));
@@ -249,7 +258,7 @@ describe('CurationDetailPage', () => {
       name: '6월 싱글몰트 시음회',
       description: null,
       imageUrls: ['https://cdn.example.com/cover.jpg'],
-      exposureStartDate: null,
+      exposureStartDate: '2026-06-01',
       exposureEndDate: null,
       displayOrder: 1,
       isActive: true,
@@ -356,4 +365,5 @@ describe('CurationDetailPage', () => {
     expect(screen.getByText('channel')).toBeInTheDocument();
     expect(screen.getByText('home')).toBeInTheDocument();
   });
+
 });

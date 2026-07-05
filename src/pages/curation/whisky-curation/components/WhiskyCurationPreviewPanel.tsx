@@ -2,23 +2,23 @@ import { useFormContext, useWatch } from 'react-hook-form';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-import { CurationPreviewFrame, WhiskyCardCurationPreview } from '../../_preview';
+import { CurationPreviewFrame, WhiskyCurationPreview } from '../../_preview';
 import type {
-  WhiskyCardCurationFormModel,
-  WhiskyCardCurationFormState,
-} from '../whisky-card-curation.schema';
+  WhiskyCurationFormModel,
+  WhiskyCurationFormState,
+} from '../whisky-curation.schema';
 
-interface WhiskyCardPreviewPanelProps {
-  formModel: WhiskyCardCurationFormModel;
+interface WhiskyCurationPreviewPanelProps {
+  formModel: WhiskyCurationFormModel;
 }
 
-export function WhiskyCardPreviewPanel({ formModel }: WhiskyCardPreviewPanelProps) {
-  const form = useFormContext<WhiskyCardCurationFormState>();
+export function WhiskyCurationPreviewPanel({ formModel }: WhiskyCurationPreviewPanelProps) {
+  const form = useFormContext<WhiskyCurationFormState>();
   const watchedValues = useWatch({ control: form.control });
   const previewValues = {
     ...form.getValues(),
     ...watchedValues,
-  } as WhiskyCardCurationFormState;
+  } as WhiskyCurationFormState;
 
   return (
     <Card className="shadow-sm">
@@ -28,7 +28,7 @@ export function WhiskyCardPreviewPanel({ formModel }: WhiskyCardPreviewPanelProp
       </CardHeader>
       <CardContent>
         <CurationPreviewFrame title={formModel.spec.name}>
-          <WhiskyCardCurationPreview
+          <WhiskyCurationPreview
             curation={{
               specName: formModel.spec.name,
               name: previewValues.name.trim() || formModel.spec.name,
