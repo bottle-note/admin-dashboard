@@ -22,6 +22,7 @@ import {
 
 const SPEC_BASE = '/admin/api/v2/curation-specs';
 const CURATION_BASE = '/admin/api/v2/curations';
+const S3_BASE = '/admin/api/v1/s3/presign-url';
 
 const recommendedWhiskySpec: CurationV2Spec = {
   id: 1,
@@ -33,7 +34,7 @@ const recommendedWhiskySpec: CurationV2Spec = {
   isActive: true,
   requestSpec: {
     type: 'object',
-    required: ['source', 'alcohol', 'comment'],
+    required: ['source', 'alcohol'],
     properties: {
       source: {
         type: 'string',
@@ -86,7 +87,7 @@ const whiskyPairingSpec: CurationV2Spec = {
   description: '위스키 페어링 큐레이션',
   requestSpec: {
     ...recommendedWhiskySpec.requestSpec,
-    required: ['source', 'alcohol', 'comment', 'pairings'],
+    required: ['source', 'alcohol', 'pairings'],
     properties: {
       ...recommendedWhiskySpec.requestSpec.properties,
       alcohol: {
@@ -120,6 +121,8 @@ const whiskyPairingSpec: CurationV2Spec = {
             itemImageUrl: {
               type: 'string',
               maxLength: 2048,
+              'x-field-style': 'image-upload',
+              'x-upload-path': 'admin/curation',
               'x-display-name': '음식 이미지',
             },
           },
@@ -133,6 +136,37 @@ function mockSpecSuccess(spec: CurationV2Spec) {
   server.use(
     http.get(SPEC_BASE, () => HttpResponse.json(wrapApiResponse([spec]))),
     http.get(`${SPEC_BASE}/:specId`, () => HttpResponse.json(wrapApiResponse(spec)))
+  );
+}
+
+function mockPairingImageUpload(viewUrls = ['https://cdn.example.com/pairing/icecream.jpg']) {
+  let issuedUploadCount = 0;
+
+  server.use(
+    http.get(S3_BASE, ({ request }) => {
+      const url = new URL(request.url);
+      const uploadSize = Number(url.searchParams.get('uploadSize') ?? '1');
+      const startIndex = issuedUploadCount;
+      issuedUploadCount += uploadSize;
+
+      return HttpResponse.json(
+        wrapApiResponse({
+          bucketName: 'test-bucket',
+          expiryTime: 15,
+          uploadSize,
+          imageUploadInfo: Array.from({ length: uploadSize }, (_, index) => {
+            const uploadIndex = startIndex + index;
+            return {
+              order: index,
+              viewUrl:
+                viewUrls[uploadIndex] ?? `https://cdn.example.com/pairing/${uploadIndex + 1}.jpg`,
+              uploadUrl: `https://s3.amazonaws.com/test-bucket/pairing/${uploadIndex + 1}.jpg?presigned=true`,
+            };
+          }),
+        })
+      );
+    }),
+    http.put('https://s3.amazonaws.com/*', () => new HttpResponse(null, { status: 200 }))
   );
 }
 
@@ -188,16 +222,17 @@ describe('CurationWhiskyCardCreatePage', () => {
     expect(screen.getByLabelText('앱 미리보기 프레임')).toBeInTheDocument();
     expect(screen.getByText('큐레이션 위스키')).toBeInTheDocument();
 
-    const guideMessage = screen.getByText('위스키를 검색하거나 직접 입력을 눌러 추가해주세요.');
+    const guideMessage = screen.getByText('추천 위스키를 추가해주세요.');
     const addCta = screen.getByRole('button', { name: '추천 위스키 추가' });
 
     expect(guideMessage).toBeInTheDocument();
-    expect(screen.queryByLabelText('수동 위스키 한글명')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('1번 수동 위스키 한글명')).not.toBeInTheDocument();
     expect(guideMessage.compareDocumentPosition(addCta)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 
     await user.click(addCta);
+    await user.click(screen.getByRole('button', { name: '직접 입력' }));
 
-    expect(screen.getByLabelText('수동 위스키 한글명')).toBeInTheDocument();
+    expect(screen.getByLabelText('1번 수동 위스키 한글명')).toBeInTheDocument();
   });
 
   it('추천 위스키는 DB 태그를 기본값으로 넣고 수정한 태그와 코멘트를 생성 payload로 전송한다', async () => {
@@ -224,19 +259,18 @@ describe('CurationWhiskyCardCreatePage', () => {
     await screen.findByLabelText('큐레이션명');
     fillBasicInfo();
 
-    await user.type(screen.getByPlaceholderText('위스키 검색하여 선택...'), '글렌');
+    await user.click(screen.getByRole('button', { name: '추천 위스키 추가' }));
+    await user.type(screen.getByPlaceholderText('위스키 검색 ...'), '글렌');
     await user.click(await screen.findByText('글렌피딕 12년'));
 
-    expect(await screen.findByText('평균 별점')).toBeInTheDocument();
     expect(screen.getByText('이번 주 추천 위스키')).toBeInTheDocument();
     expect(screen.getAllByText('글렌피딕 12년').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('4.2').length).toBeGreaterThan(0);
     expect(screen.getAllByText('바닐라').length).toBeGreaterThan(0);
     expect(screen.getAllByText('꿀').length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('button', { name: '바닐라 태그 삭제' }));
     await typeTastingTagSearch(user, '글렌피딕 12년 테이스팅 태그', '셰리{enter}');
-    fireEvent.change(screen.getByLabelText('추천 코멘트'), {
+    fireEvent.change(screen.getByLabelText('글렌피딕 12년 기대평'), {
       target: { value: '밸런스가 좋아 첫 추천으로 적합합니다.' },
     });
 
@@ -253,30 +287,98 @@ describe('CurationWhiskyCardCreatePage', () => {
       exposureEndDate: '2026-06-30',
       displayOrder: 0,
       isActive: true,
-      payload: {
+      payload: [
+        {
+          source: 'BOTTLE_NOTE',
+          alcohol: {
+            alcoholId: 10,
+            korName: '글렌피딕 12년',
+            engName: 'Glenfiddich 12',
+            imageUrl: 'https://example.com/glenfiddich.jpg',
+            abv: '40',
+            cask: '오크',
+            volume: '700ml',
+            regionName: '스코틀랜드',
+            korCategory: '싱글몰트',
+            selectedTags: ['꿀', '셰리'],
+          },
+          comment: '밸런스가 좋아 첫 추천으로 적합합니다.',
+        },
+      ],
+    });
+    expect(
+      Array.isArray(submittedBody.payload) ? submittedBody.payload[0] : submittedBody.payload
+    ).not.toHaveProperty('stats');
+  });
+
+  it('추천 위스키는 여러 위스키 카드를 payload 배열로 전송한다', async () => {
+    const user = userEvent.setup();
+    let capturedBody: CurationV2CreateRequest | null = null;
+    mockSpecSuccess(recommendedWhiskySpec);
+    server.use(
+      http.post(CURATION_BASE, async ({ request }) => {
+        capturedBody = (await request.json()) as CurationV2CreateRequest;
+        return HttpResponse.json(
+          wrapApiResponse({
+            code: 'CURATION_CREATED',
+            message: '큐레이션이 등록되었습니다.',
+            targetId: 23,
+            responseAt: '2026-05-31T09:00:00',
+          })
+        );
+      })
+    );
+
+    render(<CurationRecommendedWhiskyCreatePage />);
+
+    await screen.findByLabelText('큐레이션명');
+    fillBasicInfo();
+
+    await user.click(screen.getByRole('button', { name: '추천 위스키 추가' }));
+    await user.type(screen.getByPlaceholderText('위스키 검색 ...'), '글렌');
+    await user.click(await screen.findByText('글렌피딕 12년'));
+    await user.click(screen.getByRole('button', { name: '추천 위스키 추가' }));
+    await user.click(screen.getByRole('button', { name: '직접 입력' }));
+    fireEvent.change(screen.getByLabelText('2번 수동 위스키 한글명'), {
+      target: { value: '수동 추가 위스키' },
+    });
+    await typeTastingTagSearch(user, '수동 추가 위스키 테이스팅 태그', '피트{enter}');
+    fireEvent.change(screen.getByLabelText('수동 추가 위스키 기대평'), {
+      target: { value: '두 번째 추천 코멘트' },
+    });
+
+    await user.click(screen.getByRole('button', { name: /저장/ }));
+
+    await waitFor(() => expect(capturedBody).not.toBeNull());
+    const submittedBody = capturedBody as unknown as CurationV2CreateRequest;
+    expect(submittedBody.payload).toMatchObject([
+      {
         source: 'BOTTLE_NOTE',
         alcohol: {
           alcoholId: 10,
           korName: '글렌피딕 12년',
-          engName: 'Glenfiddich 12',
-          imageUrl: 'https://example.com/glenfiddich.jpg',
-          abv: '40',
-          cask: '오크',
-          volume: '700ml',
-          regionName: '스코틀랜드',
-          korCategory: '싱글몰트',
-          selectedTags: ['꿀', '셰리'],
         },
-        comment: '밸런스가 좋아 첫 추천으로 적합합니다.',
       },
-    });
-    expect(submittedBody.payload).not.toHaveProperty('stats');
+      {
+        source: 'MANUAL',
+        alcohol: {
+          alcoholId: null,
+          korName: '수동 추가 위스키',
+          selectedTags: ['피트'],
+        },
+        comment: '두 번째 추천 코멘트',
+      },
+    ]);
   });
 
   it('위스키 페어링은 페어링 음식 목록을 생성 payload에 포함한다', async () => {
     const user = userEvent.setup();
     let capturedBody: CurationV2CreateRequest | null = null;
     mockSpecSuccess(whiskyPairingSpec);
+    mockPairingImageUpload([
+      'https://cdn.example.com/pairing/icecream.jpg',
+      'https://cdn.example.com/pairing/chocolate.jpg',
+    ]);
     server.use(
       http.post(CURATION_BASE, async ({ request }) => {
         capturedBody = (await request.json()) as CurationV2CreateRequest;
@@ -298,19 +400,60 @@ describe('CurationWhiskyCardCreatePage', () => {
     expect(screen.getByLabelText('앱 미리보기 프레임')).toBeInTheDocument();
     fillBasicInfo();
 
-    await user.type(screen.getByPlaceholderText('위스키 검색하여 선택...'), '글렌');
+    await user.click(screen.getByRole('button', { name: '페어링 위스키 추가' }));
+    await user.type(screen.getByPlaceholderText('위스키 검색 ...'), '글렌');
     await user.click(await screen.findByText('글렌피딕 12년'));
-    fireEvent.change(screen.getByLabelText('페어링 코멘트'), {
-      target: { value: '부드러운 단맛을 살리는 페어링입니다.' },
-    });
-    fireEvent.change(screen.getByLabelText('1번 페어링 음식명'), {
+    expect(screen.queryByLabelText('글렌피딕 12년 기대평')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('1번 위스키 1번 페어링 음식명'), {
       target: { value: '바닐라 아이스크림' },
     });
-    fireEvent.change(screen.getByLabelText('1번 페어링 음식 이미지 URL'), {
-      target: { value: 'https://example.com/icecream.jpg' },
-    });
-    fireEvent.change(screen.getByLabelText('1번 페어링 설명'), {
+    await user.upload(
+      screen.getByLabelText('1번 위스키 1번 페어링 음식 이미지 파일 선택'),
+      new File(['icecream'], 'icecream.jpg', { type: 'image/jpeg' })
+    );
+    await waitFor(() =>
+      expect(screen.getByAltText('1번 위스키 1번 페어링 음식 이미지')).toHaveAttribute(
+        'src',
+        'https://cdn.example.com/pairing/icecream.jpg'
+      )
+    );
+    fireEvent.change(screen.getByLabelText('1번 위스키 1번 페어링 설명'), {
       target: { value: '꿀과 바닐라 향을 더 부드럽게 이어줍니다.' },
+    });
+
+    await user.click(screen.getByRole('button', { name: '페어링 음식 추가' }));
+    fireEvent.change(screen.getByLabelText('1번 위스키 2번 페어링 음식명'), {
+      target: { value: '다크초콜릿' },
+    });
+    await user.upload(
+      screen.getByLabelText('1번 위스키 2번 페어링 음식 이미지 파일 선택'),
+      new File(['chocolate'], 'chocolate.webp', { type: 'image/webp' })
+    );
+    await waitFor(() =>
+      expect(screen.getByAltText('1번 위스키 2번 페어링 음식 이미지')).toHaveAttribute(
+        'src',
+        'https://cdn.example.com/pairing/chocolate.jpg'
+      )
+    );
+    fireEvent.change(screen.getByLabelText('1번 위스키 2번 페어링 설명'), {
+      target: { value: '쌉싸름한 맛이 단맛을 잡아줍니다.' },
+    });
+
+    const dataTransfer = {
+      effectAllowed: '',
+      dropEffect: '',
+      setData: () => undefined,
+      getData: () => '1',
+    };
+
+    fireEvent.dragStart(screen.getByLabelText('위스키와 페어링할 음식 2 순서 변경'), {
+      dataTransfer,
+    });
+    fireEvent.dragOver(screen.getByLabelText('1번 위스키 1번 페어링 음식 순서 변경'), {
+      dataTransfer,
+    });
+    fireEvent.drop(screen.getByLabelText('1번 위스키 1번 페어링 음식 순서 변경'), {
+      dataTransfer,
     });
 
     expect(screen.getAllByText('바닐라 아이스크림').length).toBeGreaterThan(0);
@@ -323,21 +466,27 @@ describe('CurationWhiskyCardCreatePage', () => {
     await waitFor(() => expect(capturedBody).not.toBeNull());
     expect(capturedBody).toMatchObject({
       specId: 2,
-      payload: {
-        source: 'BOTTLE_NOTE',
-        alcohol: {
-          alcoholId: 10,
-          selectedTags: ['바닐라', '꿀'],
-        },
-        comment: '부드러운 단맛을 살리는 페어링입니다.',
-        pairings: [
-          {
-            itemName: '바닐라 아이스크림',
-            itemImageUrl: 'https://example.com/icecream.jpg',
-            pairingNote: '꿀과 바닐라 향을 더 부드럽게 이어줍니다.',
+      payload: [
+        {
+          source: 'BOTTLE_NOTE',
+          alcohol: {
+            alcoholId: 10,
+            selectedTags: ['바닐라', '꿀'],
           },
-        ],
-      },
+          pairings: [
+            {
+              itemName: '다크초콜릿',
+              itemImageUrl: 'https://cdn.example.com/pairing/chocolate.jpg',
+              pairingNote: '쌉싸름한 맛이 단맛을 잡아줍니다.',
+            },
+            {
+              itemName: '바닐라 아이스크림',
+              itemImageUrl: 'https://cdn.example.com/pairing/icecream.jpg',
+              pairingNote: '꿀과 바닐라 향을 더 부드럽게 이어줍니다.',
+            },
+          ],
+        },
+      ],
     });
   });
 
@@ -357,16 +506,18 @@ describe('CurationWhiskyCardCreatePage', () => {
       createdAt: '2026-05-15T00:00:00',
       modifiedAt: '2026-05-16T00:00:00',
       spec: recommendedWhiskySpec,
-      payload: {
-        source: 'MANUAL',
-        alcohol: {
-          alcoholId: null,
-          korName: '수동 추천 위스키',
-          engName: 'Manual Whisky',
-          selectedTags: ['스모키'],
+      payload: [
+        {
+          source: 'MANUAL',
+          alcohol: {
+            alcoholId: null,
+            korName: '수동 추천 위스키',
+            engName: 'Manual Whisky',
+            selectedTags: ['스모키'],
+          },
+          comment: '기존 코멘트',
         },
-        comment: '기존 코멘트',
-      },
+      ],
     };
     server.use(
       http.put(`${CURATION_BASE}/:curationId`, async ({ params, request }) => {
@@ -390,12 +541,12 @@ describe('CurationWhiskyCardCreatePage', () => {
     expect(screen.getByLabelText('광고노출 시작일')).toBeDisabled();
     expect(screen.getByLabelText('광고노출 종료일')).not.toBeDisabled();
     expect(screen.getByText('광고노출 시작일은 등록 후 변경할 수 없습니다.')).toBeInTheDocument();
-    expect(screen.getByLabelText('수동 위스키 한글명')).toHaveValue('수동 추천 위스키');
+    expect(screen.getByLabelText('1번 수동 위스키 한글명')).toHaveValue('수동 추천 위스키');
     expect(screen.getAllByText('스모키').length).toBeGreaterThan(0);
-    expect(screen.getByLabelText('추천 코멘트')).toHaveValue('기존 코멘트');
+    expect(screen.getByLabelText('수동 추천 위스키 기대평')).toHaveValue('기존 코멘트');
 
-    await user.clear(screen.getByLabelText('추천 코멘트'));
-    await user.type(screen.getByLabelText('추천 코멘트'), '수정된 추천 코멘트');
+    await user.clear(screen.getByLabelText('수동 추천 위스키 기대평'));
+    await user.type(screen.getByLabelText('수동 추천 위스키 기대평'), '수정된 추천 코멘트');
     await user.click(screen.getByRole('button', { name: /수정/ }));
 
     await waitFor(() => expect(capturedBody).not.toBeNull());
@@ -408,16 +559,18 @@ describe('CurationWhiskyCardCreatePage', () => {
       exposureEndDate: null,
       displayOrder: 3,
       isActive: true,
-      payload: {
-        source: 'MANUAL',
-        alcohol: {
-          alcoholId: null,
-          korName: '수동 추천 위스키',
-          engName: 'Manual Whisky',
-          selectedTags: ['스모키'],
+      payload: [
+        {
+          source: 'MANUAL',
+          alcohol: {
+            alcoholId: null,
+            korName: '수동 추천 위스키',
+            engName: 'Manual Whisky',
+            selectedTags: ['스모키'],
+          },
+          comment: '수정된 추천 코멘트',
         },
-        comment: '수정된 추천 코멘트',
-      },
+      ],
     });
   });
 });

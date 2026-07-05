@@ -51,6 +51,7 @@ export function createTastingEventFormStateFromCuration(
   formModel: TastingEventFormModel
 ): TastingEventCreateFormState {
   const formState = createDefaultTastingEventCreateFormState(formModel);
+  const payload = isRecord(curation.payload) ? curation.payload : {};
 
   formState.name = curation.name;
   formState.description = curation.description ?? '';
@@ -66,11 +67,11 @@ export function createTastingEventFormStateFromCuration(
   formState.isActive = curation.isActive;
 
   for (const field of formModel.payloadFields) {
-    if (!Object.prototype.hasOwnProperty.call(curation.payload, field.key)) {
+    if (!Object.prototype.hasOwnProperty.call(payload, field.key)) {
       continue;
     }
 
-    const value = curation.payload[field.key];
+    const value = payload[field.key];
 
     switch (field.kind) {
       case 'alcohol-card-list':

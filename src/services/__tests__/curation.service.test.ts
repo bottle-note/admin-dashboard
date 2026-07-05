@@ -3,11 +3,7 @@ import { http, HttpResponse } from 'msw';
 
 import { server } from '@/test/mocks/server';
 import { wrapApiResponse } from '@/test/mocks/data';
-import type {
-  CurationV2CreateRequest,
-  CurationV2Spec,
-  CurationV2SpecListItem,
-} from '@/types/api';
+import type { CurationV2CreateRequest, CurationV2Spec, CurationV2SpecListItem } from '@/types/api';
 import { curationService, resolveCurationSpecByCode } from '../curation.service';
 
 const SPEC_BASE = '/admin/api/v2/curation-specs';
@@ -127,10 +123,7 @@ describe('curationService', () => {
   });
 
   it('존재하지 않는 specCode는 null을 반환한다', () => {
-    const result = resolveCurationSpecByCode(
-      [mockRecommendedSpecListItem],
-      'WHISKY_TASTING_EVENT'
-    );
+    const result = resolveCurationSpecByCode([mockRecommendedSpecListItem], 'WHISKY_TASTING_EVENT');
 
     expect(result).toBeNull();
   });
@@ -202,7 +195,7 @@ describe('curationService', () => {
     const result = await curationService.getDetail(10);
 
     expect(result.spec.code).toBe('WHISKY_TASTING_EVENT');
-    expect(result.payload.eventDate).toBe('2026-06-15');
+    expect(result.payload).toMatchObject({ eventDate: '2026-06-15' });
   });
 
   it('spec 기반 큐레이션 생성 요청을 전송한다', async () => {

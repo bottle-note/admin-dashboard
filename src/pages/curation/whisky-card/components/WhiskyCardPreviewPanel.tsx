@@ -34,10 +34,8 @@ export function WhiskyCardPreviewPanel({ formModel }: WhiskyCardPreviewPanelProp
               name: previewValues.name.trim() || formModel.spec.name,
               description: previewValues.description,
               imageUrls: previewValues.imageUrls,
-              alcohol: previewValues.alcohol,
-              stats: previewValues.stats,
-              comment: previewValues.comment,
-              pairings: formModel.pairings ? previewValues.pairings : undefined,
+              alcohol: previewValues.alcohols[0]?.alcohol,
+              items: previewValues.alcohols,
             }}
             pairingTitle={formModel.pairings?.label}
           />

@@ -165,6 +165,7 @@ describe('CurationDetailPage', () => {
             payload: {
               eventDate: '2026-06-15',
               eventTime: '19:30',
+              placeName: '도시남 바',
               barAddress: '서울 강남구 테헤란로 123',
               isRecruiting: true,
               entryFee: 50000,
@@ -224,6 +225,7 @@ describe('CurationDetailPage', () => {
     expect(screen.getAllByText('시음 위스키').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('시음회 날짜')).toHaveValue('2026-06-15');
     expect(screen.getByLabelText('시음회 시간')).toHaveValue('19:30');
+    expect(screen.getByLabelText('장소명')).toHaveValue('도시남 바');
     expect(screen.getByLabelText('장소 및 바(bar) 주소')).toHaveValue('서울 강남구 테헤란로 123');
     expect(screen.getByLabelText('참가비(1인당)')).toHaveValue(50000);
     expect(screen.getByLabelText('총 모집 인원수')).toHaveValue(12);
@@ -254,6 +256,7 @@ describe('CurationDetailPage', () => {
       payload: {
         eventDate: '2026-06-15',
         eventTime: '19:30',
+        placeName: '도시남 바',
         barAddress: '서울 강남구 테헤란로 123',
         guideText: '수정된 안내사항',
         alcohols: [

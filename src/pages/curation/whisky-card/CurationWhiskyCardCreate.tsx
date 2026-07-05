@@ -19,19 +19,21 @@ import {
   type CurationV2UpdateRequest,
 } from '@/types/api';
 
+import { CurationFormSection } from '../components/CurationFormSection';
 import { TastingEventBasicInfoSection } from '../tasting-event/components/TastingEventBasicInfoSection';
 import { TastingEventImageSection } from '../tasting-event/components/TastingEventImageSection';
 import { useCurationSpecFormModel } from '../useCurationSpecFormModel';
-import { PairingFoodListSection } from './components/PairingFoodListSection';
 import { WhiskyCardPreviewPanel } from './components/WhiskyCardPreviewPanel';
-import { WhiskyCardSection } from './components/WhiskyCardSection';
+import { WhiskyCardPairingFields } from './components/WhiskyCardPairingFields';
 import {
   buildWhiskyCardCurationPayload,
   createWhiskyCardFormStateFromCuration,
 } from './whisky-card-curation.mapper';
 import {
   createCurationWhiskyCardFormSchema,
+  createDefaultPairings,
   createDefaultWhiskyCardCurationFormState,
+  createEmptyWhiskyCardCurationItem,
   createWhiskyCardCurationFormModel,
   type WhiskyCardCurationFormModel,
   type WhiskyCardCurationFormState,
@@ -65,7 +67,7 @@ export function CurationWhiskyCardEditPage({ curation }: { curation: CurationV2D
   const formModel = createWhiskyCardCurationFormModel(curation.spec);
 
   return (
-    <WhiskyCardReadyForm
+    <WhiskyCardCurationForm
       specDetail={curation.spec}
       formModel={formModel}
       curation={curation}
@@ -141,7 +143,11 @@ function CurationWhiskyCardCreatePage({ specCode }: { specCode: CurationV2SpecCo
         }
 
         return (
-          <WhiskyCardReadyForm specDetail={specDetail} formModel={formModel} onBack={handleBack} />
+          <WhiskyCardCurationForm
+            specDetail={specDetail}
+            formModel={formModel}
+            onBack={handleBack}
+          />
         );
     }
   };
@@ -168,24 +174,26 @@ function CurationWhiskyCardCreatePage({ specCode }: { specCode: CurationV2SpecCo
   );
 }
 
-interface WhiskyCardReadyFormProps {
+interface WhiskyCardCurationFormProps {
   specDetail: CurationV2Spec;
   formModel: WhiskyCardCurationFormModel;
   curation?: CurationV2Detail;
   onBack: () => void;
 }
 
-function WhiskyCardReadyForm({
+function WhiskyCardCurationForm({
   specDetail,
   formModel,
   curation,
   onBack,
-}: WhiskyCardReadyFormProps) {
+}: WhiskyCardCurationFormProps) {
   const navigate = useNavigate();
   const isRootAdmin = useAuthStore((state) => state.hasRole('ROOT_ADMIN'));
   const { showToast } = useToast();
-  const [isImageUploading, setIsImageUploading] = useState(false);
+  const [isCurationImageUploading, setIsCurationImageUploading] = useState(false);
+  const [isWhiskyImageUploading, setIsWhiskyImageUploading] = useState(false);
   const isEditMode = Boolean(curation);
+  const isImageUploading = isCurationImageUploading || isWhiskyImageUploading;
   const formSchema = createCurationWhiskyCardFormSchema(formModel, {
     mode: isEditMode ? 'edit' : 'create',
   });
@@ -265,18 +273,40 @@ function WhiskyCardReadyForm({
       />
 
       <FormProvider {...form}>
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start">
-          <div className="min-w-0 space-y-6">
+        <section className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          <div className="min-w-0 flex-1 space-y-6">
             <TastingEventBasicInfoSection isRootAdmin={isRootAdmin} isEditMode={isEditMode} />
-            <TastingEventImageSection onUploadingChange={setIsImageUploading} />
-            <WhiskyCardSection formModel={formModel} />
-            {formModel.pairings && <PairingFoodListSection formModel={formModel} />}
+            <TastingEventImageSection onUploadingChange={setIsCurationImageUploading} />
+            {formModel.sections.map((section) => (
+              <CurationFormSection
+                key={section.id}
+                section={section}
+                onImageUploadingChange={setIsWhiskyImageUploading}
+                alcoholCardListOptions={{
+                  createEmptyItem: () => createEmptyWhiskyCardCurationItem(formModel),
+                  transformItem: (item) => ({
+                    ...item,
+                    pairings: createDefaultPairings(formModel),
+                  }),
+                  showCommentField: !formModel.pairings,
+                  renderItemExtra: formModel.pairings
+                    ? ({ index }) => (
+                        <WhiskyCardPairingFields
+                          index={index}
+                          formModel={formModel}
+                          onUploadingChange={setIsWhiskyImageUploading}
+                        />
+                      )
+                    : undefined,
+                }}
+              />
+            ))}
           </div>
 
-          <aside className="lg:sticky lg:top-6">
+          <aside className="w-full shrink-0 lg:sticky lg:top-6 lg:w-96">
             <WhiskyCardPreviewPanel formModel={formModel} />
           </aside>
-        </div>
+        </section>
       </FormProvider>
     </div>
   );

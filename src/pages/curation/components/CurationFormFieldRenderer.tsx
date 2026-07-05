@@ -16,7 +16,10 @@ import type {
   CurationNumberFieldModel,
   CurationTextFieldModel,
 } from '../curation-form-model';
-import { CurationWhiskyCardListField } from './CurationWhiskyCardListField';
+import {
+  CurationWhiskyCardListField,
+  type CurationWhiskyCardListFieldOptions,
+} from './CurationWhiskyCardListField';
 
 interface CurationFormFieldRendererProps {
   field: CurationFieldModel;
@@ -26,6 +29,7 @@ interface CurationFormFieldRendererProps {
     stepNumber?: number;
     description?: string;
   };
+  alcoholCardListOptions?: CurationWhiskyCardListFieldOptions;
 }
 
 type StandardFieldRendererProps = {
@@ -55,6 +59,7 @@ export function CurationFormFieldRenderer({
   className,
   onImageUploadingChange,
   sectionHeader,
+  alcoholCardListOptions,
 }: CurationFormFieldRendererProps) {
   if (field.kind === 'alcohol-card-list') {
     return (
@@ -62,6 +67,7 @@ export function CurationFormFieldRenderer({
         fieldModel={field}
         onImageUploadingChange={onImageUploadingChange}
         sectionHeader={sectionHeader}
+        {...alcoholCardListOptions}
       />
     );
   }

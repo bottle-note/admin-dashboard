@@ -3,18 +3,21 @@ import type { FieldValues } from 'react-hook-form';
 import { useFormContext, useWatch } from 'react-hook-form';
 
 import type { CurationFormSectionModel, CurationSectionFieldModel } from '../curation-form-model';
+import type { CurationWhiskyCardListFieldOptions } from './CurationWhiskyCardListField';
 import { CurationFormFieldRenderer } from './CurationFormFieldRenderer';
 import { CurationSectionCard } from './CurationSectionCard';
 
 interface CurationFormSectionProps {
   section: CurationFormSectionModel;
   onImageUploadingChange?: (isUploading: boolean) => void;
+  alcoholCardListOptions?: CurationWhiskyCardListFieldOptions;
 }
 
 // form renderer 레이어: section model의 필드 목록을 공통 field renderer로 렌더링합니다.
 export function CurationFormSection({
   section,
   onImageUploadingChange,
+  alcoholCardListOptions,
 }: CurationFormSectionProps) {
   const form = useFormContext<FieldValues>();
   const watchedValues = useWatch({ control: form.control }) as FieldValues | undefined;
@@ -43,6 +46,7 @@ export function CurationFormSection({
       <CurationFormFieldRenderer
         field={firstField}
         onImageUploadingChange={onImageUploadingChange}
+        alcoholCardListOptions={alcoholCardListOptions}
         sectionHeader={{
           stepNumber: section.stepNumber,
           description: section.description,
@@ -64,6 +68,7 @@ export function CurationFormSection({
           field={field}
           className={className}
           onImageUploadingChange={onImageUploadingChange}
+          alcoholCardListOptions={alcoholCardListOptions}
         />
       ))}
     </CurationSectionCard>

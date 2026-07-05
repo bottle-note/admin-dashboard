@@ -87,12 +87,13 @@ export const CurationSpecCode = {
   WHISKY_PAIRING: 'WHISKY_PAIRING',
 } as const;
 
-export type KnownCurationV2SpecCode =
-  (typeof CurationSpecCode)[keyof typeof CurationSpecCode];
+export type KnownCurationV2SpecCode = (typeof CurationSpecCode)[keyof typeof CurationSpecCode];
 
 export type CurationV2SpecCode = KnownCurationV2SpecCode | (string & {});
 
-export type CurationV2Payload = Record<string, unknown>;
+export type CurationV2PayloadItem = Record<string, unknown>;
+
+export type CurationV2Payload = CurationV2PayloadItem | CurationV2PayloadItem[];
 
 export interface CurationV2Spec {
   id: number;

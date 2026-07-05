@@ -1,4 +1,4 @@
-import type { CurationV2Detail, CurationV2Payload } from '@/types/api';
+import type { CurationV2Detail, CurationV2Payload, CurationV2PayloadItem } from '@/types/api';
 
 import type {
   CurationWhiskyMirror,
@@ -7,10 +7,10 @@ import type {
 } from '../curation-whisky-card-list.types';
 import {
   createDefaultWhiskyCardCurationFormState,
-  createEmptyPairingFood,
   type PairingFoodValue,
   type WhiskyCardCurationFormModel,
   type WhiskyCardCurationFormState,
+  type WhiskyCardCurationItemFormState,
 } from './whisky-card-curation.schema';
 
 const ALCOHOL_OPTIONAL_TEXT_FIELDS = [
@@ -27,27 +27,34 @@ export function buildWhiskyCardCurationPayload(
   values: WhiskyCardCurationFormState,
   formModel: WhiskyCardCurationFormModel
 ): CurationV2Payload {
+  return values.alcohols.map((item) => mapWhiskyCardPayloadItem(item, formModel));
+}
+
+function mapWhiskyCardPayloadItem(
+  item: WhiskyCardCurationItemFormState,
+  formModel: WhiskyCardCurationFormModel
+): CurationV2PayloadItem {
   const alcohol = {
-    alcoholId: values.source === 'MANUAL' ? null : values.alcohol.alcoholId,
-    korName: values.alcohol.korName.trim(),
-    selectedTags: values.alcohol.selectedTags.map((tag) => tag.trim()).filter(Boolean),
+    alcoholId: item.source === 'MANUAL' ? null : item.alcohol.alcoholId,
+    korName: item.alcohol.korName.trim(),
+    selectedTags: item.alcohol.selectedTags.map((tag) => tag.trim()).filter(Boolean),
   } as CurationWhiskyMirror;
-  const comment = values.comment.trim();
-  const payload: CurationV2Payload = {
-    source: values.source,
+  const comment = item.comment?.trim();
+  const payload: CurationV2PayloadItem = {
+    source: item.source,
     alcohol,
     ...(comment ? { comment } : {}),
   };
 
   ALCOHOL_OPTIONAL_TEXT_FIELDS.forEach((key) => {
-    const value = values.alcohol[key]?.trim();
+    const value = item.alcohol[key]?.trim();
     if (value) {
       alcohol[key] = value;
     }
   });
 
   if (formModel.pairings) {
-    payload.pairings = values.pairings.map((pairing) => {
+    payload.pairings = item.pairings.map((pairing) => {
       const itemImageUrl = pairing.itemImageUrl?.trim();
 
       return {
@@ -66,7 +73,7 @@ export function createWhiskyCardFormStateFromCuration(
   formModel: WhiskyCardCurationFormModel
 ): WhiskyCardCurationFormState {
   const formState = createDefaultWhiskyCardCurationFormState(formModel);
-  const payload = curation.payload;
+  const payloadItems = getPayloadItems(curation.payload);
 
   formState.name = curation.name;
   formState.description = curation.description ?? '';
@@ -80,13 +87,15 @@ export function createWhiskyCardFormStateFromCuration(
   formState.exposureEndDate = toDateInputValue(curation.exposureEndDate);
   formState.displayOrder = curation.displayOrder;
   formState.isActive = curation.isActive;
-  formState.source = normalizeWhiskySource(payload.source);
-  formState.alcohol = normalizeWhiskyMirror(payload.alcohol);
-  formState.stats = normalizeWhiskyStats(payload.stats);
-  formState.comment = normalizeStringValue(payload.comment);
-  formState.pairings = formModel.pairings
-    ? normalizePairings(payload.pairings, formModel.pairings.minItems)
-    : [];
+  formState.alcohols = payloadItems.map((payload) => ({
+    source: normalizeWhiskySource(payload.source),
+    alcohol: normalizeWhiskyMirror(payload.alcohol),
+    stats: normalizeWhiskyStats(payload.stats),
+    comment: normalizeStringValue(payload.comment),
+    pairings: formModel.pairings
+      ? normalizePairings(payload.pairings, formModel.pairings.minItems)
+      : [],
+  }));
 
   return formState;
 }
@@ -108,6 +117,14 @@ function normalizeWhiskyMirror(value: unknown): CurationWhiskyMirror {
       ? alcohol.selectedTags.map(normalizeStringValue).filter(Boolean)
       : [],
   };
+}
+
+function getPayloadItems(payload: CurationV2Payload): CurationV2PayloadItem[] {
+  if (Array.isArray(payload)) {
+    return payload.filter(isRecord);
+  }
+
+  return isRecord(payload) ? [payload] : [];
 }
 
 function normalizeWhiskyStats(value: unknown): CurationWhiskyStats | null {
@@ -138,7 +155,11 @@ function normalizePairings(value: unknown, minItems: number): PairingFoodValue[]
     return pairings;
   }
 
-  return Array.from({ length: minItems }, () => createEmptyPairingFood());
+  return Array.from({ length: minItems }, () => ({
+    itemName: '',
+    pairingNote: '',
+    itemImageUrl: '',
+  }));
 }
 
 function normalizeWhiskySource(value: unknown): CurationWhiskySource {
