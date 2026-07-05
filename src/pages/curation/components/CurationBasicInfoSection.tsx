@@ -115,7 +115,7 @@ export function CurationBasicInfoSection({
               aria-label="설명"
               rows={4}
               {...form.register('description')}
-              placeholder="시음회 큐레이션에 대한 설명을 입력하세요."
+              placeholder="큐레이션에 대한 설명을 입력하세요."
             />
           </FormField>
           {onImageUploadingChange && (
@@ -142,9 +142,7 @@ export function CurationBasicInfoSection({
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-medium">
                     {exposureStartDateLabel}
-                    {isExposurePeriodRequired && (
-                      <span className="ml-1 text-destructive">*</span>
-                    )}
+                    {isExposurePeriodRequired && <span className="ml-1 text-destructive">*</span>}
                   </span>
                   <CurationExposurePeriodTooltip
                     ariaLabel={exposurePeriodTooltipLabel}
