@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
 import { FormField } from '@/components/common/FormField';
+import { RelatedWhiskyLookupCard } from '@/components/common/RelatedWhiskyLookupCard';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import {
   useRegionCreate,
@@ -25,11 +26,7 @@ import {
   useRegionList,
   useRegionUpdate,
 } from '@/hooks/useRegions';
-import {
-  regionDefaultValues,
-  regionFormSchema,
-  type RegionFormValues,
-} from './region.schema';
+import { regionDefaultValues, regionFormSchema, type RegionFormValues } from './region.schema';
 
 function toNullableText(value: string | null | undefined) {
   const trimmed = value?.trim();
@@ -96,10 +93,9 @@ export function RegionDetailPage() {
   ];
 
   const selectedParentValue = form.watch('parentId');
-  const nextCreateSortOrder =
-    parentRegionData?.items.length
-      ? Math.max(...parentRegionData.items.map((region) => region.sortOrder)) + 1
-      : regionDefaultValues.sortOrder;
+  const nextCreateSortOrder = parentRegionData?.items.length
+    ? Math.max(...parentRegionData.items.map((region) => region.sortOrder)) + 1
+    : regionDefaultValues.sortOrder;
 
   const onSubmit = (data: RegionFormValues) => {
     const formData = {
@@ -137,18 +133,12 @@ export function RegionDetailPage() {
         actions={
           <>
             {detailData && (
-              <Button
-                variant="destructive"
-                onClick={() => setIsDeleteDialogOpen(true)}
-              >
+              <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 삭제
               </Button>
             )}
-            <Button
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={isMutating}
-            >
+            <Button onClick={form.handleSubmit(onSubmit)} disabled={isMutating}>
               <Save className="mr-2 h-4 w-4" />
               {isMutating ? '저장 중...' : isNewMode ? '등록' : '저장'}
             </Button>
@@ -159,117 +149,103 @@ export function RegionDetailPage() {
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">로딩 중...</div>
       ) : (
-        <div className="flex flex-col gap-6 lg:flex-row">
-          <Card className="flex-[2]">
-            <CardHeader>
-              <CardTitle>기본 정보</CardTitle>
-              <CardDescription>지역의 기본 정보를 입력합니다.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  label="한글명"
-                  required
-                  error={form.formState.errors.korName?.message}
-                >
-                  <Input
-                    {...form.register('korName')}
-                    placeholder="예: 스코틀랜드"
-                  />
-                </FormField>
-                <FormField
-                  label="영문명"
-                  required
-                  error={form.formState.errors.engName?.message}
-                >
-                  <Input
-                    {...form.register('engName')}
-                    placeholder="예: Scotland"
-                  />
-                </FormField>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  label="대륙"
-                  error={form.formState.errors.continent?.message}
-                >
-                  <Input
-                    value={form.watch('continent') ?? ''}
-                    onChange={(e) => form.setValue('continent', e.target.value)}
-                    placeholder="예: 유럽"
-                  />
-                </FormField>
-                <FormField
-                  label="상위 지역"
-                  error={form.formState.errors.parentId?.message}
-                >
-                  <SearchableSelect
-                    value={selectedParentValue == null ? 'NONE' : String(selectedParentValue)}
-                    onChange={(value) =>
-                      form.setValue(
-                        'parentId',
-                        value === 'NONE' ? null : Number(value),
-                        { shouldValidate: true }
-                      )
-                    }
-                    options={parentOptions}
-                    placeholder="상위 지역 없음"
-                    searchPlaceholder="상위 지역 검색..."
-                    emptyMessage="지역을 찾을 수 없습니다."
-                  />
-                </FormField>
-              </div>
-
-              <FormField
-                label="설명"
-                error={form.formState.errors.description?.message}
-              >
-                <Textarea
-                  value={form.watch('description') ?? ''}
-                  onChange={(e) => form.setValue('description', e.target.value)}
-                  placeholder="지역 설명을 입력하세요."
-                  rows={4}
-                />
-              </FormField>
-            </CardContent>
-          </Card>
-
-          {!isNewMode && detailData && (
-            <Card className="flex-1">
+        <>
+          <div className="flex flex-col gap-6 lg:flex-row">
+            <Card className="flex-[2]">
               <CardHeader>
-                <CardTitle>참고 정보</CardTitle>
-                <CardDescription>지역의 연결 상태와 순서를 확인합니다.</CardDescription>
+                <CardTitle>기본 정보</CardTitle>
+                <CardDescription>지역의 기본 정보를 입력합니다.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">정렬 순서</p>
-                  <p className="font-mono">{detailData.sortOrder + 1}</p>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField label="한글명" required error={form.formState.errors.korName?.message}>
+                    <Input {...form.register('korName')} placeholder="예: 스코틀랜드" />
+                  </FormField>
+                  <FormField label="영문명" required error={form.formState.errors.engName?.message}>
+                    <Input {...form.register('engName')} placeholder="예: Scotland" />
+                  </FormField>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">상위 지역</p>
-                  <p>{detailData.parentKorName ?? '-'}</p>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField label="대륙" error={form.formState.errors.continent?.message}>
+                    <Input
+                      value={form.watch('continent') ?? ''}
+                      onChange={(e) => form.setValue('continent', e.target.value)}
+                      placeholder="예: 유럽"
+                    />
+                  </FormField>
+                  <FormField label="상위 지역" error={form.formState.errors.parentId?.message}>
+                    <SearchableSelect
+                      value={selectedParentValue == null ? 'NONE' : String(selectedParentValue)}
+                      onChange={(value) =>
+                        form.setValue('parentId', value === 'NONE' ? null : Number(value), {
+                          shouldValidate: true,
+                        })
+                      }
+                      options={parentOptions}
+                      placeholder="상위 지역 없음"
+                      searchPlaceholder="상위 지역 검색..."
+                      emptyMessage="지역을 찾을 수 없습니다."
+                    />
+                  </FormField>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">하위 지역</p>
-                  <p>{detailData.hasChildren ? '있음' : '없음'}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">연결 위스키</p>
-                  <p>{detailData.alcoholCount.toLocaleString()}개</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">생성일</p>
-                  <p>{formatDateTime(detailData.createAt)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">수정일</p>
-                  <p>{formatDateTime(detailData.lastModifyAt)}</p>
-                </div>
+
+                <FormField label="설명" error={form.formState.errors.description?.message}>
+                  <Textarea
+                    value={form.watch('description') ?? ''}
+                    onChange={(e) => form.setValue('description', e.target.value)}
+                    placeholder="지역 설명을 입력하세요."
+                    rows={4}
+                  />
+                </FormField>
               </CardContent>
             </Card>
+
+            {!isNewMode && detailData && (
+              <Card className="flex-1">
+                <CardHeader>
+                  <CardTitle>참고 정보</CardTitle>
+                  <CardDescription>지역의 연결 상태와 순서를 확인합니다.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">정렬 순서</p>
+                    <p className="font-mono">{detailData.sortOrder + 1}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">상위 지역</p>
+                    <p>{detailData.parentKorName ?? '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">하위 지역</p>
+                    <p>{detailData.hasChildren ? '있음' : '없음'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">연결 위스키</p>
+                    <p>{detailData.alcoholCount.toLocaleString()}개</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">생성일</p>
+                    <p>{formatDateTime(detailData.createAt)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">수정일</p>
+                    <p>{formatDateTime(detailData.lastModifyAt)}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {!isNewMode && regionId !== undefined && (
+            <RelatedWhiskyLookupCard
+              title="소속 위스키"
+              description="이 지역을 참조 중인 위스키 목록입니다."
+              params={{ regionId }}
+              relatedColumn="distillery"
+            />
           )}
-        </div>
+        </>
       )}
 
       <DeleteConfirmDialog

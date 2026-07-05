@@ -102,7 +102,7 @@ export function useAdminAlcoholLookupInfinite(
     (cursor) =>
       adminAlcoholService.lookup({
         ...params,
-        cursor,
+        cursor: cursor ?? 0,
         pageSize,
       }),
     {

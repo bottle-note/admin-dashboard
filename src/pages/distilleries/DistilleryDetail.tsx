@@ -18,6 +18,7 @@ import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { ImageUpload } from '@/components/common/ImageUpload';
 import { FormField } from '@/components/common/FormField';
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
+import { RelatedWhiskyLookupCard } from '@/components/common/RelatedWhiskyLookupCard';
 
 import {
   useDistilleryDetail,
@@ -140,18 +141,12 @@ export function DistilleryDetailPage() {
         actions={
           <>
             {detailData && (
-              <Button
-                variant="destructive"
-                onClick={() => setIsDeleteDialogOpen(true)}
-              >
+              <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 삭제
               </Button>
             )}
-            <Button
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={isMutating || isImageUploading}
-            >
+            <Button onClick={form.handleSubmit(onSubmit)} disabled={isMutating || isImageUploading}>
               <Save className="mr-2 h-4 w-4" />
               {isMutating ? '저장 중...' : isNewMode ? '등록' : '저장'}
             </Button>
@@ -162,74 +157,69 @@ export function DistilleryDetailPage() {
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">로딩 중...</div>
       ) : (
-        <div className="flex flex-col gap-6 lg:flex-row">
-          {/* 기본 정보 카드 */}
-          <Card className="flex-[2]">
-            <CardHeader>
-              <CardTitle>기본 정보</CardTitle>
-              <CardDescription>증류소의 기본 정보를 입력합니다.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* 한글명 / 영문명 */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  label="한글명"
-                  required
-                  error={form.formState.errors.korName?.message}
-                >
-                  <Input
-                    {...form.register('korName')}
-                    placeholder="예: 맥캘란"
-                  />
-                </FormField>
-                <FormField
-                  label="영문명"
-                  required
-                  error={form.formState.errors.engName?.message}
-                >
-                  <Input
-                    {...form.register('engName')}
-                    placeholder="예: Macallan"
-                  />
-                </FormField>
-              </div>
+        <>
+          <div className="flex flex-col gap-6 lg:flex-row">
+            {/* 기본 정보 카드 */}
+            <Card className="flex-[2]">
+              <CardHeader>
+                <CardTitle>기본 정보</CardTitle>
+                <CardDescription>증류소의 기본 정보를 입력합니다.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* 한글명 / 영문명 */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField label="한글명" required error={form.formState.errors.korName?.message}>
+                    <Input {...form.register('korName')} placeholder="예: 맥캘란" />
+                  </FormField>
+                  <FormField label="영문명" required error={form.formState.errors.engName?.message}>
+                    <Input {...form.register('engName')} placeholder="예: Macallan" />
+                  </FormField>
+                </div>
 
-              {/* 정렬 순서 */}
-              <FormField
-                label="정렬 순서"
-                required
-                error={form.formState.errors.sortOrder?.message}
-              >
-                <Input
-                  type="number"
-                  min={0}
-                  {...form.register('sortOrder', { valueAsNumber: true })}
-                  placeholder="미지정 시 9999"
+                {/* 정렬 순서 */}
+                <FormField
+                  label="정렬 순서"
+                  required
+                  error={form.formState.errors.sortOrder?.message}
+                >
+                  <Input
+                    type="number"
+                    min={0}
+                    {...form.register('sortOrder', { valueAsNumber: true })}
+                    placeholder="미지정 시 9999"
+                  />
+                </FormField>
+              </CardContent>
+            </Card>
+
+            {/* 이미지 카드 */}
+            <Card className="flex-1">
+              <CardHeader>
+                <CardTitle>이미지</CardTitle>
+                <CardDescription>증류소 이미지를 업로드합니다. (선택)</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <ImageUpload
+                  imageUrl={imagePreviewUrl}
+                  onImageChange={handleImageChange}
+                  minHeight={150}
                 />
-              </FormField>
-            </CardContent>
-          </Card>
+                {isImageUploading && (
+                  <p className="text-sm text-muted-foreground">파일 업로드 중...</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* 이미지 카드 */}
-          <Card className="flex-1">
-            <CardHeader>
-              <CardTitle>이미지</CardTitle>
-              <CardDescription>
-                증류소 이미지를 업로드합니다. (선택)
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <ImageUpload
-                imageUrl={imagePreviewUrl}
-                onImageChange={handleImageChange}
-                minHeight={150}
-              />
-              {isImageUploading && (
-                <p className="text-sm text-muted-foreground">파일 업로드 중...</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+          {!isNewMode && distilleryId !== undefined && (
+            <RelatedWhiskyLookupCard
+              title="소속 위스키"
+              description="이 증류소를 참조 중인 위스키 목록입니다."
+              params={{ distilleryId }}
+              relatedColumn="region"
+            />
+          )}
+        </>
       )}
 
       {/* 삭제 확인 다이얼로그 */}
