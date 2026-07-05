@@ -7,6 +7,7 @@ import {
   mockAlcoholConnectionResponse,
   mockAlcoholDisconnectionResponse,
   mockAlcoholListItems,
+  mockAlcoholLookupItems,
   mockAlcoholDetails,
   mockAlcoholDeleteResponse,
   mockCategoryReferences,
@@ -264,6 +265,56 @@ export const alcoholHandlers = [
   // GET 카테고리 레퍼런스 (목록보다 먼저 매칭되도록)
   http.get(`${ALCOHOL_BASE}/categories/reference`, () => {
     return HttpResponse.json(wrapApiResponse(mockCategoryReferences));
+  }),
+
+  // GET lookup (상세보다 먼저 매칭되도록)
+  http.get(`${ALCOHOL_BASE}/lookup`, ({ request }) => {
+    const url = new URL(request.url);
+    const keyword = url.searchParams.get('keyword');
+    const category = url.searchParams.get('category');
+    const regionId = url.searchParams.get('regionId');
+    const distilleryId = url.searchParams.get('distilleryId');
+    const cursor = Number(url.searchParams.get('cursor') ?? 0);
+    const pageSize = Number(url.searchParams.get('pageSize') ?? 20);
+
+    let items = mockAlcoholLookupItems;
+
+    if (keyword) {
+      items = items.filter(
+        (item) =>
+          item.korName.includes(keyword) ||
+          item.engName.toLowerCase().includes(keyword.toLowerCase()) ||
+          item.korCategoryName.includes(keyword) ||
+          item.engCategoryName.toLowerCase().includes(keyword.toLowerCase()) ||
+          item.korRegion?.includes(keyword) ||
+          item.engRegion?.toLowerCase().includes(keyword.toLowerCase()) ||
+          item.korDistillery?.includes(keyword) ||
+          item.engDistillery?.toLowerCase().includes(keyword.toLowerCase())
+      );
+    }
+    if (category && category !== 'ALL') {
+      items = items.filter((item) => item.categoryGroup === category);
+    }
+    if (regionId) {
+      items = items.filter((item) => item.regionId === Number(regionId));
+    }
+    if (distilleryId) {
+      items = items.filter((item) => item.distilleryId === Number(distilleryId));
+    }
+
+    const sliced = items.slice(cursor, cursor + pageSize);
+    const nextCursor = cursor + sliced.length;
+
+    return HttpResponse.json(
+      wrapApiResponse(sliced, {
+        pageable: {
+          currentCursor: cursor,
+          cursor: nextCursor,
+          pageSize,
+          hasNext: nextCursor < items.length,
+        },
+      })
+    );
   }),
 
   // GET 상세

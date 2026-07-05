@@ -6,6 +6,7 @@ import type {
   TastingTagAlcoholConnectionResponse,
   TastingTagAlcohol,
   AlcoholListItem,
+  AlcoholLookupItem,
   AlcoholDetail,
   AlcoholDeleteResponse,
   CategoryReferenceMap,
@@ -230,6 +231,22 @@ export const mockAlcoholDetails: AlcoholDetail[] = [
     deletedAt: null,
   },
 ];
+
+export const mockAlcoholLookupItems: AlcoholLookupItem[] = mockAlcoholDetails.map((item) => ({
+  alcoholId: item.alcoholId,
+  korName: item.korName,
+  engName: item.engName,
+  korCategoryName: item.korCategory,
+  engCategoryName: item.engCategory,
+  categoryGroup: item.categoryGroup,
+  regionId: item.regionId,
+  korRegion: item.korRegion,
+  engRegion: item.engRegion,
+  distilleryId: item.distilleryId,
+  korDistillery: item.korDistillery,
+  engDistillery: item.engDistillery,
+  imageUrl: item.imageUrl,
+}));
 
 export const mockAlcoholDeleteResponse: AlcoholDeleteResponse = {
   code: 'ALCOHOL_DELETED',

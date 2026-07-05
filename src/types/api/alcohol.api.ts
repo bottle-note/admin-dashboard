@@ -13,6 +13,11 @@ export const AlcoholApi = {
     endpoint: '/admin/api/v1/alcohols',
     method: 'GET',
   },
+  /** 술 lookup 조회 */
+  lookup: {
+    endpoint: '/admin/api/v1/alcohols/lookup',
+    method: 'GET',
+  },
   /** 술 상세 조회 */
   detail: {
     endpoint: '/admin/api/v1/alcohols/:alcoholId',
@@ -66,11 +71,7 @@ export type AlcoholType =
   | 'ETC';
 
 /** 어드민 술 정렬 기준 */
-export type AdminAlcoholSortType =
-  | 'KOR_NAME'
-  | 'ENG_NAME'
-  | 'KOR_CATEGORY'
-  | 'ENG_CATEGORY';
+export type AdminAlcoholSortType = 'KOR_NAME' | 'ENG_NAME' | 'KOR_CATEGORY' | 'ENG_CATEGORY';
 
 /** 정렬 방향 */
 export type SortOrder = 'ASC' | 'DESC';
@@ -134,6 +135,53 @@ export interface AlcoholApiTypes {
       totalPages: number;
       /** 다음 페이지 존재 여부 */
       hasNext: boolean;
+    };
+  };
+  /** 술 lookup 조회 */
+  lookup: {
+    /** 요청 파라미터 */
+    params: {
+      /** 검색어 (이름, 카테고리, 지역, 증류소 대상) */
+      keyword?: string;
+      /** 카테고리 그룹 필터 */
+      category?: AlcoholCategory | 'ALL';
+      /** 지역 ID 필터 */
+      regionId?: number;
+      /** 증류소 ID 필터 */
+      distilleryId?: number;
+      /** 다음 페이지 조회용 커서 */
+      cursor?: number;
+      /** 페이지 크기 (기본값: 20, 최대: 100) */
+      pageSize?: number;
+    };
+    /** 응답 아이템 */
+    response: {
+      /** 술 ID */
+      alcoholId: number;
+      /** 한글 이름 */
+      korName: string;
+      /** 영문 이름 */
+      engName: string;
+      /** 카테고리 한글명 */
+      korCategoryName: string;
+      /** 카테고리 영문명 */
+      engCategoryName: string;
+      /** 카테고리 그룹 */
+      categoryGroup: AlcoholCategory;
+      /** 지역 ID */
+      regionId: number | null;
+      /** 지역 한글명 */
+      korRegion: string | null;
+      /** 지역 영문명 */
+      engRegion: string | null;
+      /** 증류소 ID */
+      distilleryId: number | null;
+      /** 증류소 한글명 */
+      korDistillery: string | null;
+      /** 증류소 영문명 */
+      engDistillery: string | null;
+      /** 이미지 URL */
+      imageUrl: string | null;
     };
   };
   /** 술 상세 조회 */
@@ -326,6 +374,12 @@ export type AlcoholListItem = AlcoholApiTypes['search']['response'];
 /** 술 목록 페이지네이션 메타 */
 export type AlcoholPageMeta = AlcoholApiTypes['search']['meta'];
 
+/** 술 lookup 조회 파라미터 */
+export type AlcoholLookupParams = AlcoholApiTypes['lookup']['params'];
+
+/** 술 lookup 아이템 */
+export type AlcoholLookupItem = AlcoholApiTypes['lookup']['response'];
+
 /** 술 상세 정보 */
 export type AlcoholDetail = AlcoholApiTypes['detail']['response'];
 
@@ -362,7 +416,9 @@ export const CATEGORY_GROUP_LABELS: Record<AlcoholCategory, string> = {
 };
 
 /** 카테고리 그룹 키 목록 (타입 안전) */
-export const ALCOHOL_CATEGORIES: AlcoholCategory[] = Object.keys(CATEGORY_GROUP_LABELS) as AlcoholCategory[];
+export const ALCOHOL_CATEGORIES: AlcoholCategory[] = Object.keys(
+  CATEGORY_GROUP_LABELS
+) as AlcoholCategory[];
 
 // ============================================
 // 카테고리 레퍼런스 타입
