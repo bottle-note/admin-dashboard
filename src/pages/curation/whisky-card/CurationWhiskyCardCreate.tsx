@@ -67,7 +67,7 @@ export function CurationWhiskyCardEditPage({ curation }: { curation: CurationV2D
   const formModel = createWhiskyCardCurationFormModel(curation.spec);
 
   return (
-    <WhiskyCardReadyForm
+    <WhiskyCardCurationForm
       specDetail={curation.spec}
       formModel={formModel}
       curation={curation}
@@ -143,7 +143,11 @@ function CurationWhiskyCardCreatePage({ specCode }: { specCode: CurationV2SpecCo
         }
 
         return (
-          <WhiskyCardReadyForm specDetail={specDetail} formModel={formModel} onBack={handleBack} />
+          <WhiskyCardCurationForm
+            specDetail={specDetail}
+            formModel={formModel}
+            onBack={handleBack}
+          />
         );
     }
   };
@@ -170,19 +174,19 @@ function CurationWhiskyCardCreatePage({ specCode }: { specCode: CurationV2SpecCo
   );
 }
 
-interface WhiskyCardReadyFormProps {
+interface WhiskyCardCurationFormProps {
   specDetail: CurationV2Spec;
   formModel: WhiskyCardCurationFormModel;
   curation?: CurationV2Detail;
   onBack: () => void;
 }
 
-function WhiskyCardReadyForm({
+function WhiskyCardCurationForm({
   specDetail,
   formModel,
   curation,
   onBack,
-}: WhiskyCardReadyFormProps) {
+}: WhiskyCardCurationFormProps) {
   const navigate = useNavigate();
   const isRootAdmin = useAuthStore((state) => state.hasRole('ROOT_ADMIN'));
   const { showToast } = useToast();
