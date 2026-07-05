@@ -285,7 +285,13 @@ function WhiskyCardReadyForm({
                     pairings: createDefaultPairings(formModel),
                   }),
                   renderItemExtra: formModel.pairings
-                    ? ({ index }) => <WhiskyCardPairingFields index={index} formModel={formModel} />
+                    ? ({ index }) => (
+                        <WhiskyCardPairingFields
+                          index={index}
+                          formModel={formModel}
+                          onUploadingChange={setIsWhiskyImageUploading}
+                        />
+                      )
                     : undefined,
                 }}
               />

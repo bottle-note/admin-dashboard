@@ -22,6 +22,7 @@ import {
 
 const SPEC_BASE = '/admin/api/v2/curation-specs';
 const CURATION_BASE = '/admin/api/v2/curations';
+const S3_BASE = '/admin/api/v1/s3/presign-url';
 
 const recommendedWhiskySpec: CurationV2Spec = {
   id: 1,
@@ -120,6 +121,8 @@ const whiskyPairingSpec: CurationV2Spec = {
             itemImageUrl: {
               type: 'string',
               maxLength: 2048,
+              'x-field-style': 'image-upload',
+              'x-upload-path': 'admin/curation',
               'x-display-name': '음식 이미지',
             },
           },
@@ -133,6 +136,37 @@ function mockSpecSuccess(spec: CurationV2Spec) {
   server.use(
     http.get(SPEC_BASE, () => HttpResponse.json(wrapApiResponse([spec]))),
     http.get(`${SPEC_BASE}/:specId`, () => HttpResponse.json(wrapApiResponse(spec)))
+  );
+}
+
+function mockPairingImageUpload(viewUrls = ['https://cdn.example.com/pairing/icecream.jpg']) {
+  let issuedUploadCount = 0;
+
+  server.use(
+    http.get(S3_BASE, ({ request }) => {
+      const url = new URL(request.url);
+      const uploadSize = Number(url.searchParams.get('uploadSize') ?? '1');
+      const startIndex = issuedUploadCount;
+      issuedUploadCount += uploadSize;
+
+      return HttpResponse.json(
+        wrapApiResponse({
+          bucketName: 'test-bucket',
+          expiryTime: 15,
+          uploadSize,
+          imageUploadInfo: Array.from({ length: uploadSize }, (_, index) => {
+            const uploadIndex = startIndex + index;
+            return {
+              order: index,
+              viewUrl:
+                viewUrls[uploadIndex] ?? `https://cdn.example.com/pairing/${uploadIndex + 1}.jpg`,
+              uploadUrl: `https://s3.amazonaws.com/test-bucket/pairing/${uploadIndex + 1}.jpg?presigned=true`,
+            };
+          }),
+        })
+      );
+    }),
+    http.put('https://s3.amazonaws.com/*', () => new HttpResponse(null, { status: 200 }))
   );
 }
 
@@ -341,6 +375,10 @@ describe('CurationWhiskyCardCreatePage', () => {
     const user = userEvent.setup();
     let capturedBody: CurationV2CreateRequest | null = null;
     mockSpecSuccess(whiskyPairingSpec);
+    mockPairingImageUpload([
+      'https://cdn.example.com/pairing/icecream.jpg',
+      'https://cdn.example.com/pairing/chocolate.jpg',
+    ]);
     server.use(
       http.post(CURATION_BASE, async ({ request }) => {
         capturedBody = (await request.json()) as CurationV2CreateRequest;
@@ -371,11 +409,53 @@ describe('CurationWhiskyCardCreatePage', () => {
     fireEvent.change(screen.getByLabelText('1번 위스키 1번 페어링 음식명'), {
       target: { value: '바닐라 아이스크림' },
     });
-    fireEvent.change(screen.getByLabelText('1번 위스키 1번 페어링 음식 이미지 URL'), {
-      target: { value: 'https://example.com/icecream.jpg' },
-    });
+    await user.upload(
+      screen.getByLabelText('1번 위스키 1번 페어링 음식 이미지 파일 선택'),
+      new File(['icecream'], 'icecream.jpg', { type: 'image/jpeg' })
+    );
+    await waitFor(() =>
+      expect(screen.getByAltText('1번 위스키 1번 페어링 음식 이미지')).toHaveAttribute(
+        'src',
+        'https://cdn.example.com/pairing/icecream.jpg'
+      )
+    );
     fireEvent.change(screen.getByLabelText('1번 위스키 1번 페어링 설명'), {
       target: { value: '꿀과 바닐라 향을 더 부드럽게 이어줍니다.' },
+    });
+
+    await user.click(screen.getByRole('button', { name: '페어링 음식 추가' }));
+    fireEvent.change(screen.getByLabelText('1번 위스키 2번 페어링 음식명'), {
+      target: { value: '다크초콜릿' },
+    });
+    await user.upload(
+      screen.getByLabelText('1번 위스키 2번 페어링 음식 이미지 파일 선택'),
+      new File(['chocolate'], 'chocolate.webp', { type: 'image/webp' })
+    );
+    await waitFor(() =>
+      expect(screen.getByAltText('1번 위스키 2번 페어링 음식 이미지')).toHaveAttribute(
+        'src',
+        'https://cdn.example.com/pairing/chocolate.jpg'
+      )
+    );
+    fireEvent.change(screen.getByLabelText('1번 위스키 2번 페어링 설명'), {
+      target: { value: '쌉싸름한 맛이 단맛을 잡아줍니다.' },
+    });
+
+    const dataTransfer = {
+      effectAllowed: '',
+      dropEffect: '',
+      setData: () => undefined,
+      getData: () => '1',
+    };
+
+    fireEvent.dragStart(screen.getByLabelText('위스키와 페어링할 음식 2 순서 변경'), {
+      dataTransfer,
+    });
+    fireEvent.dragOver(screen.getByLabelText('1번 위스키 1번 페어링 음식 순서 변경'), {
+      dataTransfer,
+    });
+    fireEvent.drop(screen.getByLabelText('1번 위스키 1번 페어링 음식 순서 변경'), {
+      dataTransfer,
     });
 
     expect(screen.getAllByText('바닐라 아이스크림').length).toBeGreaterThan(0);
@@ -398,8 +478,13 @@ describe('CurationWhiskyCardCreatePage', () => {
           comment: '부드러운 단맛을 살리는 페어링입니다.',
           pairings: [
             {
+              itemName: '다크초콜릿',
+              itemImageUrl: 'https://cdn.example.com/pairing/chocolate.jpg',
+              pairingNote: '쌉싸름한 맛이 단맛을 잡아줍니다.',
+            },
+            {
               itemName: '바닐라 아이스크림',
-              itemImageUrl: 'https://example.com/icecream.jpg',
+              itemImageUrl: 'https://cdn.example.com/pairing/icecream.jpg',
               pairingNote: '꿀과 바닐라 향을 더 부드럽게 이어줍니다.',
             },
           ],

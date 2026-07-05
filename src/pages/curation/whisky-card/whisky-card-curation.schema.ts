@@ -17,6 +17,7 @@ import {
   createCurationFormModelFromRequestSpec,
   getSchemaDisplayLabel,
   getSchemaProperty,
+  getSchemaXString,
   isSchemaPropertyRequired,
 } from '../curation-form-model';
 
@@ -70,6 +71,8 @@ export interface WhiskyCardCurationFormModel extends CurationFormModel {
     pairingNoteLabel: string;
     pairingNoteMaxLength: number;
     itemImageUrlLabel: string;
+    hasItemImageUrl: boolean;
+    itemImageUploadPath: string;
   };
 }
 
@@ -81,6 +84,7 @@ export function createWhiskyCardCurationFormModel(
   const pairingsSchema = spec.requestSpec.properties?.pairings;
   const pairingItemSchema = pairingsSchema?.items;
   const pairingItemProperties = pairingItemSchema?.properties ?? {};
+  const itemImageUrlSchema = pairingItemProperties.itemImageUrl;
   const curationWhiskyLabel = String(alcoholSchema['x-display-name'] ?? spec.name);
   const formRequestSpec = createWhiskyCardListRequestSpec(spec, curationWhiskyLabel);
   const baseFormModel = createCurationFormModelFromRequestSpec(formRequestSpec, {
@@ -122,12 +126,22 @@ export function createWhiskyCardCurationFormModel(
             pairingItemProperties.pairingNote?.['x-display-name'] ?? '페어링 설명'
           ),
           pairingNoteMaxLength: pairingItemProperties.pairingNote?.maxLength ?? 500,
-          itemImageUrlLabel: String(
-            pairingItemProperties.itemImageUrl?.['x-display-name'] ?? '음식 이미지'
-          ),
+          itemImageUrlLabel: String(itemImageUrlSchema?.['x-display-name'] ?? '음식 이미지'),
+          hasItemImageUrl: Boolean(itemImageUrlSchema),
+          itemImageUploadPath:
+            (itemImageUrlSchema && getPairingImageUploadPath(itemImageUrlSchema)) ??
+            'admin/curation',
         }
       : undefined,
   };
+}
+
+function getPairingImageUploadPath(schema: JsonSchemaNode): string | undefined {
+  return (
+    getSchemaXString(schema, 'x-upload-path') ??
+    getSchemaXString(schema, 'x-s3-root-path') ??
+    getSchemaXString(schema, 'x-upload-root-path')
+  );
 }
 
 function createWhiskyCardListRequestSpec(
