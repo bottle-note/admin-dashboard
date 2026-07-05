@@ -309,7 +309,7 @@ export function WhiskyCardPairingFields({
                 className={cn(
                   'grid gap-5 pl-10',
                   pairingModel.hasItemImageUrl
-                    ? 'md:grid-cols-[12.5rem_minmax(0,1fr)]'
+                    ? 'md:grid-cols-[7rem_minmax(0,1fr)]'
                     : 'md:grid-cols-1'
                 )}
               >
@@ -324,11 +324,11 @@ export function WhiskyCardPairingFields({
                       onChange={(event) => void handlePairingImageChange(pairingIndex, event)}
                       disabled={isImageUploading}
                     />
-                    <div className="relative w-full max-w-[12.5rem] md:max-w-none">
+                    <div className="relative h-28 w-28">
                       <label
                         htmlFor={imageInputId}
                         className={cn(
-                          'flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed bg-muted/10 text-muted-foreground transition-colors hover:bg-muted/20',
+                          'flex h-full w-full cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed bg-muted/10 text-muted-foreground transition-colors hover:bg-muted/20',
                           isImageUploading && 'pointer-events-none opacity-70'
                         )}
                       >
@@ -371,7 +371,7 @@ export function WhiskyCardPairingFields({
                   </div>
                 )}
 
-                <div className="flex min-w-0 flex-col gap-4 md:min-h-[12.5rem]">
+                <div className="flex min-w-0 flex-col gap-4">
                   <div className="space-y-1">
                     <label
                       htmlFor={`${getPairingKey(index, pairingIndex)}-name`}
@@ -382,7 +382,6 @@ export function WhiskyCardPairingFields({
                     <Input
                       id={`${getPairingKey(index, pairingIndex)}-name`}
                       aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식명`}
-                      className="h-12 text-sm"
                       maxLength={pairingModel.itemNameMaxLength}
                       {...form.register(
                         `alcohols.${index}.pairings.${pairingIndex}.itemName` as const
@@ -404,7 +403,6 @@ export function WhiskyCardPairingFields({
                     <Textarea
                       id={`${getPairingKey(index, pairingIndex)}-note`}
                       aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 설명`}
-                      className="min-h-[8.5rem] resize-none text-sm md:min-h-[8.5rem]"
                       maxLength={pairingModel.pairingNoteMaxLength}
                       {...form.register(
                         `alcohols.${index}.pairings.${pairingIndex}.pairingNote` as const
