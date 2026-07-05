@@ -273,8 +273,8 @@ function WhiskyCardCurationForm({
       />
 
       <FormProvider {...form}>
-        <div className="relative space-y-6 lg:pr-[25.5rem]">
-          <div className="min-w-0 space-y-6">
+        <section className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          <div className="min-w-0 flex-1 space-y-6">
             <TastingEventBasicInfoSection isRootAdmin={isRootAdmin} isEditMode={isEditMode} />
             <TastingEventImageSection onUploadingChange={setIsCurationImageUploading} />
             {formModel.sections.map((section) => (
@@ -303,10 +303,10 @@ function WhiskyCardCurationForm({
             ))}
           </div>
 
-          <aside className="lg:fixed lg:right-6 lg:top-40 lg:mt-0 lg:w-96">
+          <aside className="w-full shrink-0 lg:sticky lg:top-6 lg:w-96">
             <WhiskyCardPreviewPanel formModel={formModel} />
           </aside>
-        </div>
+        </section>
       </FormProvider>
     </div>
   );
