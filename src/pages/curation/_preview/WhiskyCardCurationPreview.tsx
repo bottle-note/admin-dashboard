@@ -2,7 +2,11 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import type { CurationWhiskyMirror, CurationWhiskyStats } from '../curation-whisky-card-list.types';
+import type {
+  CurationWhiskyCardValue,
+  CurationWhiskyMirror,
+  CurationWhiskyStats,
+} from '../curation-whisky-card-list.types';
 import { tastingEventPreviewThemeStyle } from './previewTheme';
 
 export interface WhiskyCardCurationPreviewPairing {
@@ -16,10 +20,11 @@ export interface WhiskyCardCurationPreviewData {
   name: string;
   description?: string | null;
   imageUrls: string[];
-  alcohol: CurationWhiskyMirror;
+  alcohol?: CurationWhiskyMirror;
   stats?: CurationWhiskyStats | null;
   comment?: string | null;
   pairings?: WhiskyCardCurationPreviewPairing[];
+  items?: Array<CurationWhiskyCardValue & { pairings?: WhiskyCardCurationPreviewPairing[] }>;
 }
 
 interface WhiskyCardCurationPreviewProps {
@@ -33,13 +38,11 @@ export function WhiskyCardCurationPreview({
   pairingTitle = '페어링 음식',
   className,
 }: WhiskyCardCurationPreviewProps) {
-  const coverImageUrl = curation.imageUrls[0] ?? curation.alcohol.imageUrl ?? '';
+  const visibleItems = getVisibleItems(curation);
+  const coverImageUrl = curation.imageUrls[0] ?? visibleItems[0]?.alcohol.imageUrl ?? '';
   const galleryImageUrls = curation.imageUrls.filter((imageUrl) => imageUrl !== coverImageUrl);
   const description = normalizeText(curation.description);
   const hasDescription = Boolean(description);
-  const visiblePairings =
-    curation.pairings?.filter((pairing) => pairing.itemName.trim() || pairing.pairingNote.trim()) ??
-    [];
 
   return (
     <article className={cn('w-full bg-white', className)} style={tastingEventPreviewThemeStyle}>
@@ -58,28 +61,63 @@ export function WhiskyCardCurationPreview({
           큐레이션 위스키
         </h2>
         <div className="mt-4 divide-y divide-[var(--preview-bg-gray)] border-t border-[var(--preview-bg-gray)]">
-          <WhiskyPreviewItem
-            alcohol={curation.alcohol}
-            stats={curation.stats}
-            comment={curation.comment}
-          />
+          {visibleItems.length > 0 ? (
+            visibleItems.map((item, index) => (
+              <WhiskyPreviewItem
+                key={`${item.alcohol.korName}-${index}`}
+                alcohol={item.alcohol}
+                stats={item.stats}
+                comment={item.comment}
+                pairings={item.pairings}
+                pairingTitle={pairingTitle}
+              />
+            ))
+          ) : (
+            <WhiskyPreviewItem
+              alcohol={createPreviewFallbackAlcohol()}
+              pairingTitle={pairingTitle}
+            />
+          )}
         </div>
       </section>
-
-      {visiblePairings.length > 0 && (
-        <section className="px-5 pb-8">
-          <h2 className="text-[16px] font-extrabold text-[var(--preview-main-dark-gray)]">
-            {pairingTitle}
-          </h2>
-          <div className="mt-4 space-y-4">
-            {visiblePairings.map((pairing, index) => (
-              <PairingPreviewItem key={`${pairing.itemName}-${index}`} pairing={pairing} />
-            ))}
-          </div>
-        </section>
-      )}
     </article>
   );
+}
+
+function getVisibleItems(
+  curation: WhiskyCardCurationPreviewData
+): Array<CurationWhiskyCardValue & { pairings?: WhiskyCardCurationPreviewPairing[] }> {
+  const visibleItems =
+    curation.items?.filter(
+      (item) =>
+        normalizeText(item.alcohol.korName) ||
+        normalizeText(item.alcohol.engName) ||
+        normalizeText(item.comment) ||
+        item.alcohol.selectedTags.length > 0
+    ) ?? [];
+
+  if (visibleItems.length > 0) return visibleItems;
+  if (!curation.alcohol) return [];
+
+  return [
+    {
+      source: 'MANUAL',
+      alcohol: curation.alcohol,
+      stats: curation.stats,
+      comment: curation.comment,
+      pairings: curation.pairings,
+    },
+  ];
+}
+
+function createPreviewFallbackAlcohol(): CurationWhiskyMirror {
+  return {
+    alcoholId: null,
+    korName: '',
+    engName: '',
+    imageUrl: '',
+    selectedTags: [],
+  };
 }
 
 function CurationPreviewHero({
@@ -154,10 +192,14 @@ function WhiskyPreviewItem({
   alcohol,
   stats,
   comment,
+  pairings,
+  pairingTitle,
 }: {
   alcohol: CurationWhiskyMirror;
   stats?: CurationWhiskyStats | null;
   comment?: string | null;
+  pairings?: WhiskyCardCurationPreviewPairing[];
+  pairingTitle: string;
 }) {
   const name = normalizeText(alcohol.korName) || '위스키명';
   const details = [formatAbv(alcohol.abv), alcohol.korCategory].filter(Boolean);
@@ -165,6 +207,8 @@ function WhiskyPreviewItem({
     Boolean
   );
   const normalizedComment = normalizeText(comment);
+  const visiblePairings =
+    pairings?.filter((pairing) => pairing.itemName.trim() || pairing.pairingNote.trim()) ?? [];
 
   return (
     <article className="py-6">
@@ -229,6 +273,19 @@ function WhiskyPreviewItem({
         <p className="mt-5 whitespace-pre-line text-[13px] font-medium leading-[1.8] text-[var(--preview-main-gray)]">
           {normalizedComment}
         </p>
+      )}
+
+      {visiblePairings.length > 0 && (
+        <div className="mt-5">
+          <h4 className="text-[14px] font-extrabold text-[var(--preview-main-dark-gray)]">
+            {pairingTitle}
+          </h4>
+          <div className="mt-3 space-y-4">
+            {visiblePairings.map((pairing, index) => (
+              <PairingPreviewItem key={`${pairing.itemName}-${index}`} pairing={pairing} />
+            ))}
+          </div>
+        </div>
       )}
     </article>
   );

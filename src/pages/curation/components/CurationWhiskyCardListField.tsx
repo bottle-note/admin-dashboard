@@ -5,6 +5,7 @@ import {
   type ChangeEvent,
   type DragEvent,
   type PointerEvent,
+  type ReactNode,
 } from 'react';
 import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import { GripVertical, Loader2, Plus, Upload, X } from 'lucide-react';
@@ -47,7 +48,17 @@ const MANUAL_WHISKY_IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp';
 const SUPPORTED_MANUAL_WHISKY_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 type RemovableWhiskyStatsKey = Extract<keyof CurationWhiskyStats, 'rating' | 'totalRatingsCount'>;
 
-interface CurationWhiskyCardListFieldProps {
+export interface CurationWhiskyCardListFieldOptions {
+  createEmptyItem?: () => CurationWhiskyCardValue;
+  transformItem?: (item: CurationWhiskyCardValue) => CurationWhiskyCardValue;
+  renderItemExtra?: (params: {
+    fieldId: string;
+    index: number;
+    item: CurationWhiskyCardValue | undefined;
+  }) => ReactNode;
+}
+
+interface CurationWhiskyCardListFieldProps extends CurationWhiskyCardListFieldOptions {
   fieldModel: CurationWhiskyCardListFieldModel;
   onImageUploadingChange?: (isUploading: boolean) => void;
   sectionHeader?: {
@@ -60,6 +71,9 @@ export function CurationWhiskyCardListField({
   fieldModel,
   onImageUploadingChange,
   sectionHeader,
+  createEmptyItem = createManualCurationWhiskyItem,
+  transformItem = (item) => item,
+  renderItemExtra,
 }: CurationWhiskyCardListFieldProps) {
   const form = useFormContext<CurationWhiskyCardListFormValues>();
   const fetchAlcoholDetail = useAdminAlcoholDetailLookup();
@@ -118,7 +132,7 @@ export function CurationWhiskyCardListField({
   const handleAddEmptyWhisky = () => {
     if (isAddDisabled) return;
     form.clearErrors('alcohols');
-    alcoholFieldArray.append(createManualCurationWhiskyItem(), { shouldFocus: false });
+    alcoholFieldArray.append(createEmptyItem(), { shouldFocus: false });
   };
 
   const handleSelectBottleNoteWhisky = async (index: number, whisky: SelectedWhisky) => {
@@ -133,15 +147,19 @@ export function CurationWhiskyCardListField({
         0,
         fieldModel.selectedTags.maxItems
       );
-      form.setValue(`alcohols.${index}` as const, curationWhiskyItem, {
+      form.setValue(`alcohols.${index}` as const, transformItem(curationWhiskyItem), {
         shouldDirty: true,
         shouldValidate: true,
       });
     } catch {
-      form.setValue(`alcohols.${index}` as const, createBottleNoteCurationWhiskyItem(whisky), {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
+      form.setValue(
+        `alcohols.${index}` as const,
+        transformItem(createBottleNoteCurationWhiskyItem(whisky)),
+        {
+          shouldDirty: true,
+          shouldValidate: true,
+        }
+      );
       showToast({
         type: 'error',
         message: '위스키 상세 정보를 불러오지 못해 기본 정보만 추가했습니다.',
@@ -155,7 +173,7 @@ export function CurationWhiskyCardListField({
     const currentItem = form.getValues(`alcohols.${index}` as const);
 
     if (!currentItem || currentItem.source !== 'MANUAL') {
-      form.setValue(`alcohols.${index}` as const, createManualCurationWhiskyItem(), {
+      form.setValue(`alcohols.${index}` as const, createEmptyItem(), {
         shouldDirty: true,
         shouldValidate: true,
       });
@@ -419,7 +437,7 @@ export function CurationWhiskyCardListField({
 
       {watchedAlcohols.length === 0 ? (
         <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-          시음 위스키를 추가해주세요.
+          {fieldModel.label}를 추가해주세요.
         </div>
       ) : (
         <div className="space-y-3">
@@ -778,6 +796,7 @@ export function CurationWhiskyCardListField({
                       />
                       {commentError && <p className="text-sm text-destructive">{commentError}</p>}
                     </div>
+                    {renderItemExtra?.({ fieldId: field.id, index, item })}
                   </>
                 )}
               </div>
@@ -791,7 +810,7 @@ export function CurationWhiskyCardListField({
         className="h-14 w-full rounded-[10px] text-base font-semibold"
         onClick={handleAddEmptyWhisky}
         disabled={isAddDisabled}
-        aria-label="시음 위스키 추가"
+        aria-label={`${fieldModel.label} 추가`}
       >
         <Plus className="h-5 w-5" />
         추가

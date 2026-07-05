@@ -1,4 +1,4 @@
-import type { JsonSchemaNode } from '@/types/api';
+import type { CurationV2Payload, JsonSchemaNode } from '@/types/api';
 
 import { getSchemaDisplayLabel, getSchemaProperties } from './curation-form-model';
 
@@ -52,10 +52,18 @@ export function formatCurationExposurePeriod(
   return `${formatCurationDate(startDate)} ~ ${formatCurationDate(endDate)}`;
 }
 
-export function getCurationPayloadEntries(
-  requestSpec: JsonSchemaNode,
-  payload: Record<string, unknown>
-) {
+export function getCurationPayloadEntries(requestSpec: JsonSchemaNode, payload: CurationV2Payload) {
+  if (Array.isArray(payload)) {
+    return [
+      {
+        key: 'items',
+        label: '아이템',
+        schema: undefined,
+        value: payload,
+      },
+    ];
+  }
+
   const properties = getSchemaProperties(requestSpec);
   const schemaKeys = Object.keys(properties);
   const extraKeys = Object.keys(payload).filter((key) => !schemaKeys.includes(key));

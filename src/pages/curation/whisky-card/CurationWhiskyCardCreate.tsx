@@ -19,19 +19,21 @@ import {
   type CurationV2UpdateRequest,
 } from '@/types/api';
 
+import { CurationFormSection } from '../components/CurationFormSection';
 import { TastingEventBasicInfoSection } from '../tasting-event/components/TastingEventBasicInfoSection';
 import { TastingEventImageSection } from '../tasting-event/components/TastingEventImageSection';
 import { useCurationSpecFormModel } from '../useCurationSpecFormModel';
-import { PairingFoodListSection } from './components/PairingFoodListSection';
 import { WhiskyCardPreviewPanel } from './components/WhiskyCardPreviewPanel';
-import { WhiskyCardSection } from './components/WhiskyCardSection';
+import { WhiskyCardPairingFields } from './components/WhiskyCardPairingFields';
 import {
   buildWhiskyCardCurationPayload,
   createWhiskyCardFormStateFromCuration,
 } from './whisky-card-curation.mapper';
 import {
   createCurationWhiskyCardFormSchema,
+  createDefaultPairings,
   createDefaultWhiskyCardCurationFormState,
+  createEmptyWhiskyCardCurationItem,
   createWhiskyCardCurationFormModel,
   type WhiskyCardCurationFormModel,
   type WhiskyCardCurationFormState,
@@ -184,8 +186,10 @@ function WhiskyCardReadyForm({
   const navigate = useNavigate();
   const isRootAdmin = useAuthStore((state) => state.hasRole('ROOT_ADMIN'));
   const { showToast } = useToast();
-  const [isImageUploading, setIsImageUploading] = useState(false);
+  const [isCurationImageUploading, setIsCurationImageUploading] = useState(false);
+  const [isWhiskyImageUploading, setIsWhiskyImageUploading] = useState(false);
   const isEditMode = Boolean(curation);
+  const isImageUploading = isCurationImageUploading || isWhiskyImageUploading;
   const formSchema = createCurationWhiskyCardFormSchema(formModel, {
     mode: isEditMode ? 'edit' : 'create',
   });
@@ -268,9 +272,24 @@ function WhiskyCardReadyForm({
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start">
           <div className="min-w-0 space-y-6">
             <TastingEventBasicInfoSection isRootAdmin={isRootAdmin} isEditMode={isEditMode} />
-            <TastingEventImageSection onUploadingChange={setIsImageUploading} />
-            <WhiskyCardSection formModel={formModel} />
-            {formModel.pairings && <PairingFoodListSection formModel={formModel} />}
+            <TastingEventImageSection onUploadingChange={setIsCurationImageUploading} />
+            {formModel.sections.map((section) => (
+              <CurationFormSection
+                key={section.id}
+                section={section}
+                onImageUploadingChange={setIsWhiskyImageUploading}
+                alcoholCardListOptions={{
+                  createEmptyItem: () => createEmptyWhiskyCardCurationItem(formModel),
+                  transformItem: (item) => ({
+                    ...item,
+                    pairings: createDefaultPairings(formModel),
+                  }),
+                  renderItemExtra: formModel.pairings
+                    ? ({ index }) => <WhiskyCardPairingFields index={index} formModel={formModel} />
+                    : undefined,
+                }}
+              />
+            ))}
           </div>
 
           <aside className="lg:sticky lg:top-6">
