@@ -309,7 +309,7 @@ export function WhiskyCardPairingFields({
                 className={cn(
                   'grid gap-5 pl-10',
                   pairingModel.hasItemImageUrl
-                    ? 'md:grid-cols-[minmax(10rem,13rem)_minmax(0,1fr)]'
+                    ? 'md:grid-cols-[12.5rem_minmax(0,1fr)]'
                     : 'md:grid-cols-1'
                 )}
               >
@@ -324,42 +324,45 @@ export function WhiskyCardPairingFields({
                       onChange={(event) => void handlePairingImageChange(pairingIndex, event)}
                       disabled={isImageUploading}
                     />
-                    <label
-                      htmlFor={imageInputId}
-                      className={cn(
-                        'flex min-h-[14.75rem] cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed bg-muted/10 text-muted-foreground transition-colors hover:bg-muted/20',
-                        isImageUploading && 'pointer-events-none opacity-70'
-                      )}
-                    >
-                      {pairing.itemImageUrl ? (
-                        <img
-                          src={pairing.itemImageUrl}
-                          alt={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 이미지`}
-                          className="h-full min-h-[14.75rem] w-full object-cover"
-                        />
-                      ) : (
-                        <span className="flex flex-col items-center gap-3 text-sm font-medium">
-                          {isImageUploading ? (
-                            <Loader2 className="h-8 w-8 animate-spin" aria-hidden="true" />
-                          ) : (
-                            <Upload className="h-8 w-8" aria-hidden="true" />
-                          )}
-                          {isImageUploading ? '업로드 중' : '이미지 업로드'}
-                        </span>
-                      )}
-                    </label>
-                    {pairing.itemImageUrl && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 px-0 text-xs text-muted-foreground hover:text-destructive"
-                        onClick={() => handleRemovePairingImage(pairingIndex)}
-                        disabled={isImageUploading}
+                    <div className="relative w-full max-w-[12.5rem] md:max-w-none">
+                      <label
+                        htmlFor={imageInputId}
+                        className={cn(
+                          'flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed bg-muted/10 text-muted-foreground transition-colors hover:bg-muted/20',
+                          isImageUploading && 'pointer-events-none opacity-70'
+                        )}
                       >
-                        이미지 삭제
-                      </Button>
-                    )}
+                        {pairing.itemImageUrl ? (
+                          <img
+                            src={pairing.itemImageUrl}
+                            alt={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 이미지`}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="flex flex-col items-center gap-2 text-sm font-medium">
+                            {isImageUploading ? (
+                              <Loader2 className="h-7 w-7 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <Upload className="h-7 w-7" aria-hidden="true" />
+                            )}
+                            {isImageUploading ? '업로드 중' : '이미지 업로드'}
+                          </span>
+                        )}
+                      </label>
+                      {pairing.itemImageUrl && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          className="absolute right-2 top-2 h-7 w-7 rounded-full bg-background/90 text-muted-foreground shadow-sm hover:bg-background hover:text-destructive"
+                          aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 이미지 삭제`}
+                          onClick={() => handleRemovePairingImage(pairingIndex)}
+                          disabled={isImageUploading}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                     {pairingError?.itemImageUrl?.message && (
                       <p className="text-sm text-destructive">
                         {pairingError.itemImageUrl.message}
@@ -368,7 +371,7 @@ export function WhiskyCardPairingFields({
                   </div>
                 )}
 
-                <div className="flex min-w-0 flex-col gap-6">
+                <div className="flex min-w-0 flex-col gap-4 md:min-h-[12.5rem]">
                   <div className="space-y-1">
                     <label
                       htmlFor={`${getPairingKey(index, pairingIndex)}-name`}
@@ -379,7 +382,7 @@ export function WhiskyCardPairingFields({
                     <Input
                       id={`${getPairingKey(index, pairingIndex)}-name`}
                       aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식명`}
-                      className="h-16 text-base"
+                      className="h-12 text-sm"
                       maxLength={pairingModel.itemNameMaxLength}
                       {...form.register(
                         `alcohols.${index}.pairings.${pairingIndex}.itemName` as const
@@ -401,7 +404,7 @@ export function WhiskyCardPairingFields({
                     <Textarea
                       id={`${getPairingKey(index, pairingIndex)}-note`}
                       aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 설명`}
-                      className="min-h-[9.5rem] resize-none text-base"
+                      className="min-h-[8.5rem] resize-none text-sm md:min-h-[8.5rem]"
                       maxLength={pairingModel.pairingNoteMaxLength}
                       {...form.register(
                         `alcohols.${index}.pairings.${pairingIndex}.pairingNote` as const
