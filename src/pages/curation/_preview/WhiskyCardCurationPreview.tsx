@@ -66,12 +66,14 @@ export function WhiskyCardCurationPreview({
               <WhiskyPreviewItem
                 key={`${item.alcohol.korName}-${index}`}
                 item={item}
+                order={index + 1}
                 pairingTitle={pairingTitle}
               />
             ))
           ) : (
             <WhiskyPreviewItem
               item={{ source: 'MANUAL', alcohol: createPreviewFallbackAlcohol(), comment: '' }}
+              order={1}
               pairingTitle={pairingTitle}
             />
           )}
@@ -187,9 +189,11 @@ function CurationPreviewGallery({ imageUrls }: { imageUrls: string[] }) {
 
 function WhiskyPreviewItem({
   item,
+  order,
   pairingTitle,
 }: {
   item: CurationWhiskyCardValue & { pairings?: WhiskyCardCurationPreviewPairing[] };
+  order: number;
   pairingTitle: string;
 }) {
   const visiblePairings =
@@ -201,6 +205,7 @@ function WhiskyPreviewItem({
       alcohol={item.alcohol}
       stats={item.stats}
       comment={item.comment}
+      order={order}
       fallbackName="위스키명"
     >
       {visiblePairings.length > 0 && (
