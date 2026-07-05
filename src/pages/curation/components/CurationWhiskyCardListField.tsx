@@ -51,6 +51,7 @@ type RemovableWhiskyStatsKey = Extract<keyof CurationWhiskyStats, 'rating' | 'to
 export interface CurationWhiskyCardListFieldOptions {
   createEmptyItem?: () => CurationWhiskyCardValue;
   transformItem?: (item: CurationWhiskyCardValue) => CurationWhiskyCardValue;
+  showCommentField?: boolean;
   renderItemExtra?: (params: {
     fieldId: string;
     index: number;
@@ -73,6 +74,7 @@ export function CurationWhiskyCardListField({
   sectionHeader,
   createEmptyItem = createManualCurationWhiskyItem,
   transformItem = (item) => item,
+  showCommentField = true,
   renderItemExtra,
 }: CurationWhiskyCardListFieldProps) {
   const form = useFormContext<CurationWhiskyCardListFormValues>();
@@ -785,17 +787,19 @@ export function CurationWhiskyCardListField({
                       </div>
                     </div>
 
-                    <div className="mt-4 space-y-2">
-                      <Textarea
-                        aria-label={`${itemName} 기대평`}
-                        rows={5}
-                        maxLength={fieldModel.comment.maxLength}
-                        {...form.register(`alcohols.${index}.comment` as const)}
-                        placeholder="위스키 기대평을 작성해주세요."
-                        className="min-h-40 resize-none rounded-[10px] border-border"
-                      />
-                      {commentError && <p className="text-sm text-destructive">{commentError}</p>}
-                    </div>
+                    {showCommentField && (
+                      <div className="mt-4 space-y-2">
+                        <Textarea
+                          aria-label={`${itemName} 기대평`}
+                          rows={5}
+                          maxLength={fieldModel.comment.maxLength}
+                          {...form.register(`alcohols.${index}.comment` as const)}
+                          placeholder="위스키 기대평을 작성해주세요."
+                          className="min-h-40 resize-none rounded-[10px] border-border"
+                        />
+                        {commentError && <p className="text-sm text-destructive">{commentError}</p>}
+                      </div>
+                    )}
                     {renderItemExtra?.({ fieldId: field.id, index, item })}
                   </>
                 )}

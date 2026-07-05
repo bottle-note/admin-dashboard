@@ -284,6 +284,7 @@ function WhiskyCardReadyForm({
                     ...item,
                     pairings: createDefaultPairings(formModel),
                   }),
+                  showCommentField: !formModel.pairings,
                   renderItemExtra: formModel.pairings
                     ? ({ index }) => (
                         <WhiskyCardPairingFields

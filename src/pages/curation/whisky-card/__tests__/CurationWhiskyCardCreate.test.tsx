@@ -403,9 +403,7 @@ describe('CurationWhiskyCardCreatePage', () => {
     await user.click(screen.getByRole('button', { name: '페어링 위스키 추가' }));
     await user.type(screen.getByPlaceholderText('위스키 검색 ...'), '글렌');
     await user.click(await screen.findByText('글렌피딕 12년'));
-    fireEvent.change(screen.getByLabelText('글렌피딕 12년 기대평'), {
-      target: { value: '부드러운 단맛을 살리는 페어링입니다.' },
-    });
+    expect(screen.queryByLabelText('글렌피딕 12년 기대평')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('1번 위스키 1번 페어링 음식명'), {
       target: { value: '바닐라 아이스크림' },
     });
@@ -475,7 +473,6 @@ describe('CurationWhiskyCardCreatePage', () => {
             alcoholId: 10,
             selectedTags: ['바닐라', '꿀'],
           },
-          comment: '부드러운 단맛을 살리는 페어링입니다.',
           pairings: [
             {
               itemName: '다크초콜릿',

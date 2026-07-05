@@ -9,7 +9,6 @@ import {
 import { useFormContext, useWatch } from 'react-hook-form';
 import { GripVertical, Loader2, Plus, Upload } from 'lucide-react';
 
-import { FormField } from '@/components/common/FormField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -316,37 +315,61 @@ export function WhiskyCardPairingFields({
                 </Button>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-[7rem_minmax(0,1fr)]">
-                {pairingModel.hasItemImageUrl && (
-                  <FormField
-                    label={pairingModel.itemImageUrlLabel}
-                    error={pairingError?.itemImageUrl?.message}
+              <div className="space-y-3 pl-10">
+                <div className="grid gap-2 md:grid-cols-[9rem_minmax(0,1fr)] md:items-center">
+                  <label
+                    htmlFor={`${getPairingKey(index, pairingIndex)}-name`}
+                    className="text-sm font-semibold text-foreground"
                   >
+                    {pairingModel.itemNameLabel}
+                    <span className="ml-1 text-destructive">*</span>
+                  </label>
+                  <div className="space-y-1">
+                    <Input
+                      id={`${getPairingKey(index, pairingIndex)}-name`}
+                      aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식명`}
+                      maxLength={pairingModel.itemNameMaxLength}
+                      {...form.register(
+                        `alcohols.${index}.pairings.${pairingIndex}.itemName` as const
+                      )}
+                      placeholder="예: 바닐라 아이스크림"
+                    />
+                    {pairingError?.itemName?.message && (
+                      <p className="text-sm text-destructive">{pairingError.itemName.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                {pairingModel.hasItemImageUrl && (
+                  <div className="grid gap-2 md:grid-cols-[9rem_minmax(0,1fr)] md:items-start">
+                    <span className="text-sm font-semibold text-foreground">
+                      {pairingModel.itemImageUrlLabel}
+                    </span>
                     <div className="space-y-2">
-                      <div className="flex h-28 items-center justify-center overflow-hidden rounded-md border border-dashed bg-muted/20">
-                        {pairing.itemImageUrl ? (
-                          <img
-                            src={pairing.itemImageUrl}
-                            alt={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 이미지`}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex flex-col items-center gap-1 text-xs text-muted-foreground">
-                            <Upload className="h-5 w-5" aria-hidden="true" />
-                            음식 이미지
-                          </div>
-                        )}
-                      </div>
-                      <input
-                        id={imageInputId}
-                        type="file"
-                        accept={PAIRING_IMAGE_ACCEPT}
-                        className="sr-only"
-                        aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 이미지 파일 선택`}
-                        onChange={(event) => void handlePairingImageChange(pairingIndex, event)}
-                        disabled={isImageUploading}
-                      />
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed bg-muted/20">
+                          {pairing.itemImageUrl ? (
+                            <img
+                              src={pairing.itemImageUrl}
+                              alt={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 이미지`}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex flex-col items-center gap-1 text-xs text-muted-foreground">
+                              <Upload className="h-5 w-5" aria-hidden="true" />
+                              음식 이미지
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          id={imageInputId}
+                          type="file"
+                          accept={PAIRING_IMAGE_ACCEPT}
+                          className="sr-only"
+                          aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 이미지 파일 선택`}
+                          onChange={(event) => void handlePairingImageChange(pairingIndex, event)}
+                          disabled={isImageUploading}
+                        />
                         <Button
                           type="button"
                           variant="outline"
@@ -373,33 +396,26 @@ export function WhiskyCardPairingFields({
                           </Button>
                         )}
                       </div>
+                      {pairingError?.itemImageUrl?.message && (
+                        <p className="text-sm text-destructive">
+                          {pairingError.itemImageUrl.message}
+                        </p>
+                      )}
                     </div>
-                  </FormField>
+                  </div>
                 )}
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    label={pairingModel.itemNameLabel}
-                    required
-                    error={pairingError?.itemName?.message}
-                    className="md:col-span-2"
+                <div className="grid gap-2 md:grid-cols-[9rem_minmax(0,1fr)] md:items-start">
+                  <label
+                    htmlFor={`${getPairingKey(index, pairingIndex)}-note`}
+                    className="text-sm font-semibold text-foreground"
                   >
-                    <Input
-                      aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식명`}
-                      maxLength={pairingModel.itemNameMaxLength}
-                      {...form.register(
-                        `alcohols.${index}.pairings.${pairingIndex}.itemName` as const
-                      )}
-                      placeholder="예: 바닐라 아이스크림"
-                    />
-                  </FormField>
-                  <FormField
-                    label={pairingModel.pairingNoteLabel}
-                    required
-                    error={pairingError?.pairingNote?.message}
-                    className="md:col-span-2"
-                  >
+                    {pairingModel.pairingNoteLabel}
+                    <span className="ml-1 text-destructive">*</span>
+                  </label>
+                  <div className="space-y-1">
                     <Textarea
+                      id={`${getPairingKey(index, pairingIndex)}-note`}
                       aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 설명`}
                       rows={3}
                       maxLength={pairingModel.pairingNoteMaxLength}
@@ -408,7 +424,10 @@ export function WhiskyCardPairingFields({
                       )}
                       placeholder="위스키의 풍미와 잘 어울리는 이유를 입력하세요."
                     />
-                  </FormField>
+                    {pairingError?.pairingNote?.message && (
+                      <p className="text-sm text-destructive">{pairingError.pairingNote.message}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
