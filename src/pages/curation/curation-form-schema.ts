@@ -26,6 +26,21 @@ export function formatCurationFieldTopic(label: string): string {
   return `${label}${getTopicParticle(label)}`;
 }
 
+function getObjectParticle(label: string): '을' | '를' {
+  const trimmedLabel = label.trim();
+  const lastChar = trimmedLabel.charAt(trimmedLabel.length - 1);
+  if (trimmedLabel.length === 0 || !lastChar) return '를';
+
+  const codePoint = lastChar.charCodeAt(0);
+  if (codePoint < 0xac00 || codePoint > 0xd7a3) return '를';
+
+  return (codePoint - 0xac00) % 28 === 0 ? '를' : '을';
+}
+
+export function formatCurationFieldObject(label: string): string {
+  return `${label}${getObjectParticle(label)}`;
+}
+
 // text/date/time/textarea field model을 문자열 Zod schema로 변환합니다.
 function createTextFieldValueSchema(field: CurationTextFieldModel): z.ZodType<unknown> {
   let schema = z.string();

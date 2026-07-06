@@ -14,9 +14,20 @@ import type {
   CurationV2UpdateRequest,
 } from '@/types/api';
 
-import { CurationRecommendedWhiskyCreatePage } from '../CurationRecommendedWhiskyCreate';
-import { CurationRecommendedWhiskyEditPage } from '../CurationRecommendedWhiskyEdit';
-import { CurationWhiskyPairingCreatePage } from '../CurationWhiskyPairingCreate';
+import { WhiskyCurationCreatePage } from '../WhiskyCurationCreatePage';
+import { WhiskyCurationEditPage } from '../WhiskyCurationEditPage';
+
+function renderRecommendedCreatePage() {
+  return render(
+    <WhiskyCurationCreatePage specCode="RECOMMENDED_WHISKY" fallbackTitle="추천 위스키 작성" />
+  );
+}
+
+function renderPairingCreatePage() {
+  return render(
+    <WhiskyCurationCreatePage specCode="WHISKY_PAIRING" fallbackTitle="위스키 페어링 작성" />
+  );
+}
 
 const SPEC_BASE = '/admin/api/v2/curation-specs';
 const CURATION_BASE = '/admin/api/v2/curations';
@@ -214,7 +225,7 @@ describe('whisky curation pages', () => {
     const user = userEvent.setup();
     mockSpecSuccess(recommendedWhiskySpec);
 
-    render(<CurationRecommendedWhiskyCreatePage />);
+    renderRecommendedCreatePage();
 
     await screen.findByLabelText('큐레이션명');
     expect(screen.getByLabelText('노출 시작일')).toBeInTheDocument();
@@ -248,7 +259,7 @@ describe('whisky curation pages', () => {
       })
     );
 
-    render(<CurationRecommendedWhiskyCreatePage />);
+    renderRecommendedCreatePage();
 
     await screen.findByLabelText('큐레이션명');
     fireEvent.change(screen.getByLabelText('큐레이션명'), {
@@ -286,7 +297,7 @@ describe('whisky curation pages', () => {
       })
     );
 
-    render(<CurationRecommendedWhiskyCreatePage />);
+    renderRecommendedCreatePage();
 
     expect(await screen.findByRole('heading', { name: '추천 위스키 작성' })).toBeInTheDocument();
     await screen.findByLabelText('큐레이션명');
@@ -303,7 +314,7 @@ describe('whisky curation pages', () => {
 
     await user.click(screen.getByRole('button', { name: '바닐라 태그 삭제' }));
     await typeTastingTagSearch(user, '글렌피딕 12년 테이스팅 태그', '셰리{enter}');
-    fireEvent.change(screen.getByLabelText('글렌피딕 12년 기대평'), {
+    fireEvent.change(screen.getByLabelText('글렌피딕 12년 추천 코멘트'), {
       target: { value: '밸런스가 좋아 첫 추천으로 적합합니다.' },
     });
 
@@ -362,7 +373,7 @@ describe('whisky curation pages', () => {
       })
     );
 
-    render(<CurationRecommendedWhiskyCreatePage />);
+    renderRecommendedCreatePage();
 
     await screen.findByLabelText('큐레이션명');
     fillBasicInfo();
@@ -376,7 +387,7 @@ describe('whisky curation pages', () => {
       target: { value: '수동 추가 위스키' },
     });
     await typeTastingTagSearch(user, '수동 추가 위스키 테이스팅 태그', '피트{enter}');
-    fireEvent.change(screen.getByLabelText('수동 추가 위스키 기대평'), {
+    fireEvent.change(screen.getByLabelText('수동 추가 위스키 추천 코멘트'), {
       target: { value: '두 번째 추천 코멘트' },
     });
 
@@ -426,7 +437,7 @@ describe('whisky curation pages', () => {
       })
     );
 
-    render(<CurationWhiskyPairingCreatePage />);
+    renderPairingCreatePage();
 
     expect(await screen.findByRole('heading', { name: '위스키 페어링 작성' })).toBeInTheDocument();
     await screen.findByLabelText('큐레이션명');
@@ -436,7 +447,7 @@ describe('whisky curation pages', () => {
     await user.click(screen.getByRole('button', { name: '페어링 위스키 추가' }));
     await user.type(screen.getByPlaceholderText('위스키 검색 ...'), '글렌');
     await user.click(await screen.findByText('글렌피딕 12년'));
-    expect(screen.queryByLabelText('글렌피딕 12년 기대평')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('글렌피딕 12년 페어링 코멘트')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('1번 위스키 1번 페어링 음식명'), {
       target: { value: '바닐라 아이스크림' },
     });
@@ -567,7 +578,7 @@ describe('whisky curation pages', () => {
       })
     );
 
-    render(<CurationRecommendedWhiskyEditPage curation={curation} />);
+    render(<WhiskyCurationEditPage curation={curation} />);
 
     expect(await screen.findByRole('heading', { name: '추천 위스키 수정' })).toBeInTheDocument();
     expect(screen.getByLabelText('큐레이션명')).toHaveValue('기존 추천 위스키');
@@ -584,11 +595,11 @@ describe('whisky curation pages', () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText('1번 수동 위스키 한글명')).toHaveValue('수동 추천 위스키');
     expect(screen.getAllByText('스모키').length).toBeGreaterThan(0);
-    expect(screen.getByLabelText('수동 추천 위스키 기대평')).toHaveValue('기존 코멘트');
+    expect(screen.getByLabelText('수동 추천 위스키 추천 코멘트')).toHaveValue('기존 코멘트');
 
     fireEvent.change(screen.getByLabelText('노출 시작일'), { target: { value: '2026-06-01' } });
-    await user.clear(screen.getByLabelText('수동 추천 위스키 기대평'));
-    await user.type(screen.getByLabelText('수동 추천 위스키 기대평'), '수정된 추천 코멘트');
+    await user.clear(screen.getByLabelText('수동 추천 위스키 추천 코멘트'));
+    await user.type(screen.getByLabelText('수동 추천 위스키 추천 코멘트'), '수정된 추천 코멘트');
     await user.click(screen.getByRole('button', { name: /수정/ }));
 
     await waitFor(() => expect(capturedBody).not.toBeNull());
@@ -659,7 +670,7 @@ describe('whisky curation pages', () => {
       })
     );
 
-    render(<CurationRecommendedWhiskyEditPage curation={curation} />);
+    render(<WhiskyCurationEditPage curation={curation} />);
 
     expect(await screen.findByRole('heading', { name: '추천 위스키 수정' })).toBeInTheDocument();
     expect(screen.getByText('1개 이상 등록할 수 있습니다.')).toBeInTheDocument();

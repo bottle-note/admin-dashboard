@@ -23,8 +23,8 @@ import { CurationEntryPage } from '@/pages/curation/CurationEntry';
 import { CurationListPage } from '@/pages/curation/CurationList';
 import { CurationDetailPage } from '@/pages/curation/CurationDetail';
 import { CurationWhiskyTastingEventCreatePage } from '@/pages/curation/whisky-tasting-event/CurationWhiskyTastingEventCreate';
-import { CurationRecommendedWhiskyCreatePage } from '@/pages/curation/whisky-curation/CurationRecommendedWhiskyCreate';
-import { CurationWhiskyPairingCreatePage } from '@/pages/curation/whisky-curation/CurationWhiskyPairingCreate';
+import { WhiskyCurationCreatePage } from '@/pages/curation/whisky-curation/WhiskyCurationCreatePage';
+import { CurationSpecCode } from '@/types/api';
 import { InquiryListPage } from '@/pages/inquiries/InquiryList';
 import { PolicyListPage } from '@/pages/policies/PolicyList';
 import { UserListPage } from '@/pages/users/UserList';
@@ -92,7 +92,10 @@ export function AppRoutes() {
           path="dashboard/curations/general/new"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
-              <CurationRecommendedWhiskyCreatePage />
+              <WhiskyCurationCreatePage
+                specCode={CurationSpecCode.RECOMMENDED_WHISKY}
+                fallbackTitle="추천 위스키 작성"
+              />
             </RoleProtectedRoute>
           }
         />
@@ -100,7 +103,10 @@ export function AppRoutes() {
           path="dashboard/curations/pairings/new"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
-              <CurationWhiskyPairingCreatePage />
+              <WhiskyCurationCreatePage
+                specCode={CurationSpecCode.WHISKY_PAIRING}
+                fallbackTitle="위스키 페어링 작성"
+              />
             </RoleProtectedRoute>
           }
         />

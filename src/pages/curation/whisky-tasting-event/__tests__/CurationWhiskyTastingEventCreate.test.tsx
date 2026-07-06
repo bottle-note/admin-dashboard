@@ -442,14 +442,14 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
 
     await user.type(whiskySearchInput, '글렌');
     await user.click(await screen.findByText('글렌피딕 12년'));
-    expect(await screen.findByText('위스키 1')).toBeInTheDocument();
+    expect(await screen.findByText('시음 위스키 1')).toBeInTheDocument();
     expect(await screen.findByLabelText('글렌피딕 12년 순서 변경')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '시음 위스키 추가' }));
     whiskySearchInput = await screen.findByPlaceholderText('위스키 검색 ...');
     await user.type(whiskySearchInput, '맥');
     await user.click(await screen.findByText('맥캘란 18년'));
-    expect(await screen.findByText('위스키 2')).toBeInTheDocument();
+    expect(await screen.findByText('시음 위스키 2')).toBeInTheDocument();
     expect(await screen.findByLabelText('맥캘란 18년 순서 변경')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: '삭제' })).toHaveLength(2);
 
@@ -500,7 +500,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     await user.click(await screen.findByText('글렌피딕 12년'));
 
     const tagInput = await screen.findByLabelText('글렌피딕 12년 테이스팅 태그');
-    const commentTextarea = screen.getByLabelText('글렌피딕 12년 기대평');
+    const commentTextarea = screen.getByLabelText('글렌피딕 12년 위스키 기대평');
     const dataTransfer = {
       effectAllowed: '',
       dropEffect: '',
@@ -809,7 +809,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     await typeTastingTagSearch(user, '글렌피딕 12년 테이스팅 태그', '셰리');
     await user.click(await screen.findByRole('button', { name: '추가' }));
     expect(screen.getByText('3/12')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('글렌피딕 12년 기대평'), {
+    fireEvent.change(screen.getByLabelText('글렌피딕 12년 위스키 기대평'), {
       target: { value: '첫 잔으로 가볍게 시작하는 위스키' },
     });
 
@@ -917,7 +917,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
       target: { value: 'Open Malt 12' },
     });
     await typeTastingTagSearch(user, '오픈 몰트 12년 테이스팅 태그', '버번{enter}');
-    fireEvent.change(screen.getByLabelText('오픈 몰트 12년 기대평'), {
+    fireEvent.change(screen.getByLabelText('오픈 몰트 12년 위스키 기대평'), {
       target: { value: '직접 섭외한 한정 위스키' },
     });
 
@@ -1015,7 +1015,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
       );
     });
     await typeTastingTagSearch(user, '오픈 몰트 12년 테이스팅 태그', '버번{enter}');
-    fireEvent.change(screen.getByLabelText('오픈 몰트 12년 기대평'), {
+    fireEvent.change(screen.getByLabelText('오픈 몰트 12년 위스키 기대평'), {
       target: { value: '직접 섭외한 한정 위스키' },
     });
 
