@@ -8,11 +8,26 @@ import { render } from '@/test/test-utils';
 
 import { CurationListPage } from '../CurationList';
 
+const SPEC_BASE = '/admin/api/v2/curation-specs';
 const CURATION_BASE = '/admin/api/v2/curations';
 
 describe('CurationListPage', () => {
   it('spec 기반 큐레이션 목록을 표시한다', async () => {
     server.use(
+      http.get(SPEC_BASE, () => {
+        return HttpResponse.json(
+          wrapApiResponse([
+            {
+              id: 3,
+              code: 'WHISKY_TASTING_EVENT',
+              name: '위스키 시음회',
+              description: '시음회 날짜, 장소, 참가 정보와 시음 위스키 라인업',
+              version: 1,
+              isActive: true,
+            },
+          ])
+        );
+      }),
       http.get(CURATION_BASE, ({ request }) => {
         const url = new URL(request.url);
 
@@ -53,5 +68,6 @@ describe('CurationListPage', () => {
     });
     expect(screen.getByText('위스키 시음회')).toBeInTheDocument();
     expect(screen.getByText('활성')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: '스펙' })).toBeInTheDocument();
   });
 });

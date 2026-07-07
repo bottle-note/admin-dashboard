@@ -54,7 +54,7 @@ export function WhiskyCurationForm({
   const [isWhiskyImageUploading, setIsWhiskyImageUploading] = useState(false);
   const isEditMode = Boolean(curation);
   const isImageUploading = isCurationImageUploading || isWhiskyImageUploading;
-  // 스펙에 pairings가 있으면 페어링(코멘트 숨김 + 페어링 UI), 없으면 추천(코멘트 표시).
+  // formModel.pairings는 WHISKY_PAIRING specCode에서만 생성됩니다.
   const hasPairings = Boolean(formModel.pairings);
   const formSchema = createCurationWhiskyFormSchema(formModel, {
     mode: isEditMode ? 'edit' : 'create',

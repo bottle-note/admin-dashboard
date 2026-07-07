@@ -133,6 +133,7 @@ describe('curationService', () => {
       http.get(CURATION_BASE, ({ request }) => {
         const url = new URL(request.url);
 
+        expect(url.searchParams.get('code')).toBe('RECOMMENDED_WHISKY');
         expect(url.searchParams.get('isActive')).toBe('true');
         expect(url.searchParams.get('page')).toBe('0');
 
@@ -161,7 +162,12 @@ describe('curationService', () => {
       })
     );
 
-    const result = await curationService.list({ isActive: true, page: 0, size: 20 });
+    const result = await curationService.list({
+      code: 'RECOMMENDED_WHISKY',
+      isActive: true,
+      page: 0,
+      size: 20,
+    });
 
     expect(result.items[0]!.specCode).toBe('WHISKY_TASTING_EVENT');
     expect(result.meta.totalElements).toBe(1);

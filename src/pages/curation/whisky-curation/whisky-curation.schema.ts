@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { compareDateInputValues } from '@/lib/date-validation';
-import type { CurationV2Spec, JsonSchemaNode } from '@/types/api';
+import { CurationSpecCode, type CurationV2Spec, type JsonSchemaNode } from '@/types/api';
 
 import type {
   CurationWhiskyCardListFormValues,
@@ -67,9 +67,11 @@ export function createWhiskyCurationFormModel(spec: CurationV2Spec): WhiskyCurat
     throw new Error('추천/페어링 큐레이션 requestSpec은 x-container: "array" 계약이어야 합니다.');
   }
 
+  const isPairingSpec = spec.code === CurationSpecCode.WHISKY_PAIRING;
   const alcoholSchema = getSchemaProperty(requestSpec, 'alcohol');
   const label =
     getSchemaDisplayLabel(requestSpec) || getSchemaDisplayLabel(alcoholSchema) || spec.name;
+  const pairingsSchema = isPairingSpec ? getSchemaProperty(requestSpec, 'pairings') : undefined;
   const cardList = createAlcoholCardListFieldModel({
     key: 'alcohols',
     label,
@@ -84,8 +86,8 @@ export function createWhiskyCurationFormModel(spec: CurationV2Spec): WhiskyCurat
     title: `${spec.name} 작성`,
     editTitle: `${spec.name} 수정`,
     cardList,
-    // 스펙에 pairings 아이템이 있으면 페어링, 없으면 추천 — 타입 분기가 아니라 스펙이 결정합니다.
-    pairings: createWhiskyPairingModel(requestSpec.properties?.pairings),
+    // 큐레이션 타입은 specCode가 결정하고, pairings 스키마는 페어링 타입의 필수 계약입니다.
+    pairings: createWhiskyPairingModel(pairingsSchema),
     payloadFields: [cardList],
     sections: [
       {
