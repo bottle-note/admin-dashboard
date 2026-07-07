@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useCurationList } from '@/hooks/useCurations';
+import { useCurationList, useCurationSpecs } from '@/hooks/useCurations';
 import { isNonComposingEnterKey } from '@/lib/keyboard';
 import type { CurationV2SearchParams } from '@/types/api';
 
@@ -33,11 +33,14 @@ const IS_ACTIVE_OPTIONS = [
   { value: 'false', label: '비활성' },
 ];
 
+const ALL_SPEC_CODE = 'ALL';
+
 export function CurationListPage() {
   const navigate = useNavigate();
   const [urlParams, setUrlParams] = useSearchParams();
 
   const keyword = urlParams.get('keyword') ?? '';
+  const code = urlParams.get('code') ?? '';
   const isActiveParam = urlParams.get('isActive');
   const page = Number(urlParams.get('page')) || 0;
   const size = Number(urlParams.get('size')) || 20;
@@ -49,12 +52,14 @@ export function CurationListPage() {
 
   const searchParams: CurationV2SearchParams = {
     keyword: keyword || undefined,
+    code: code || undefined,
     isActive: isActiveParam === 'true' ? true : isActiveParam === 'false' ? false : undefined,
     page,
     size,
   };
 
   const { data, isLoading } = useCurationList(searchParams);
+  const { data: curationSpecs = [] } = useCurationSpecs();
 
   const updateUrlParams = (updates: Record<string, string | undefined>) => {
     const nextParams = new URLSearchParams(urlParams);
@@ -83,6 +88,13 @@ export function CurationListPage() {
   const handleIsActiveChange = (value: string) => {
     updateUrlParams({
       isActive: value === 'ALL' ? undefined : value,
+      page: '0',
+    });
+  };
+
+  const handleSpecCodeChange = (value: string) => {
+    updateUrlParams({
+      code: value === ALL_SPEC_CODE ? undefined : value,
       page: '0',
     });
   };
@@ -116,13 +128,26 @@ export function CurationListPage() {
           />
         </div>
         <Select value={isActiveParam ?? 'ALL'} onValueChange={handleIsActiveChange}>
-          <SelectTrigger className="w-full sm:w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]" aria-label="상태">
             <SelectValue placeholder="상태" />
           </SelectTrigger>
           <SelectContent>
             {IS_ACTIVE_OPTIONS.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={code || ALL_SPEC_CODE} onValueChange={handleSpecCodeChange}>
+          <SelectTrigger className="w-full sm:w-[220px]" aria-label="스펙">
+            <SelectValue placeholder="스펙" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_SPEC_CODE}>스펙 전체</SelectItem>
+            {curationSpecs.map((spec) => (
+              <SelectItem key={spec.code} value={spec.code}>
+                {spec.name || formatCurationSpecCode(spec.code)}
               </SelectItem>
             ))}
           </SelectContent>

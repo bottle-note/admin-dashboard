@@ -113,7 +113,11 @@ describe('useCurations hooks', () => {
 
   it('spec 기반 큐레이션 목록을 반환한다', async () => {
     server.use(
-      http.get(CURATION_BASE, () => {
+      http.get(CURATION_BASE, ({ request }) => {
+        const url = new URL(request.url);
+
+        expect(url.searchParams.get('code')).toBe('RECOMMENDED_WHISKY');
+
         return HttpResponse.json(
           wrapApiResponse(
             [
@@ -139,7 +143,9 @@ describe('useCurations hooks', () => {
       })
     );
 
-    const { result } = renderHook(() => useCurationList({ page: 0, size: 20 }));
+    const { result } = renderHook(() =>
+      useCurationList({ code: 'RECOMMENDED_WHISKY', page: 0, size: 20 })
+    );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 

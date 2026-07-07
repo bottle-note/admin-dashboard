@@ -243,7 +243,7 @@ describe('CurationDetailPage', () => {
     expect(screen.getAllByText('글렌드로낙 12년').length).toBeGreaterThan(0);
     expect(screen.getAllByText('셰리').length).toBeGreaterThan(0);
     expect(screen.getAllByText('달콤한').length).toBeGreaterThan(0);
-    expect(screen.getByLabelText('글렌드로낙 12년 기대평')).toHaveValue(
+    expect(screen.getByLabelText('글렌드로낙 12년 위스키 기대평')).toHaveValue(
       '첫 잔으로 가볍게 시작하는 위스키'
     );
 

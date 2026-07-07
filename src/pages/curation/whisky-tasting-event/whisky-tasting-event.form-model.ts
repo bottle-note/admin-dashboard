@@ -3,19 +3,12 @@ import type { CurationV2Spec } from '@/types/api';
 import type {
   CurationBooleanRadioFieldModel,
   CurationBasicFieldModel,
-  CurationFieldModelBuildContext,
   CurationFieldModel,
   CurationFormModel,
   CurationFormSectionModel,
   CurationTextFieldModel,
 } from '../curation-form-model';
-import {
-  createCurationFormModelFromRequestSpec,
-  getSchemaDisplayLabel,
-  getSchemaProperty,
-  isSchemaPropertyRequired,
-} from '../curation-form-model';
-import type { CurationWhiskyCardListFieldModel } from '../curation-whisky-card-list.types';
+import { createCurationFormModelFromRequestSpec } from '../curation-form-model';
 
 const DATE_LOCATION_FIELD_KEYS = [
   'eventDate',
@@ -41,8 +34,8 @@ export function createWhiskyTastingEventFormModel(spec: CurationV2Spec): WhiskyT
   // 1. requestSpec 레이어: 상세 스펙의 requestSpec을 화면 생성의 단일 입력으로 사용합니다.
   const formModel = createCurationFormModelFromRequestSpec(spec.requestSpec, {
     // 2. schema parser 레이어: 공통 parser가 JSON Schema와 x-* 메타데이터를 읽습니다.
-    // 3. form/field model 레이어: 공통 필드는 기본 field model로, 특수 필드는 도메인 field model로 만듭니다.
-    createCustomField: createTastingEventCustomFieldModel,
+    //    alcohol-card-list(x-field-style)는 공통 parser가 서버 vocabulary를 직접 인식해 만듭니다.
+    // 3. form/field model 레이어: 공통 필드는 기본 field model로 변환합니다.
     overrideField: applyTastingEventFieldOverrides,
     // 5. form renderer 준비 레이어: 화면 렌더러가 순회할 섹션 배치를 만듭니다.
     createSections: createTastingEventFormSections,
@@ -54,49 +47,6 @@ export function createWhiskyTastingEventFormModel(spec: CurationV2Spec): WhiskyT
     ...formModel,
     payloadFields,
     sections: createTastingEventFormSections(payloadFields),
-  };
-}
-
-// 시음회에서 공통 field model로 표현할 수 없는 특수 필드를 도메인 field model로 변환합니다.
-function createTastingEventCustomFieldModel({
-  requestSpec,
-  key,
-  kind,
-}: CurationFieldModelBuildContext): CurationFieldModel | null {
-  if (kind !== 'alcohol-card-list') return null;
-
-  return createTastingEventAlcoholsFieldModel(requestSpec, key);
-}
-
-// 시음회 위스키 배열 schema를 위스키 카드 리스트 field model로 변환합니다.
-function createTastingEventAlcoholsFieldModel(
-  requestSpec: CurationV2Spec['requestSpec'],
-  key: string
-): CurationWhiskyCardListFieldModel {
-  const alcoholsSchema = getSchemaProperty(requestSpec, key);
-  const alcoholItemSchema = alcoholsSchema.items!;
-  const alcoholSchema = getSchemaProperty(alcoholItemSchema, 'alcohol');
-  const selectedTagsSchema = getSchemaProperty(alcoholSchema, 'selectedTags');
-  const commentSchema = getSchemaProperty(alcoholItemSchema, 'comment');
-
-  return {
-    key,
-    kind: 'alcohol-card-list',
-    label: getSchemaDisplayLabel(alcoholsSchema),
-    required: isSchemaPropertyRequired(requestSpec, key),
-    minItems: alcoholsSchema.minItems!,
-    maxItems: alcoholsSchema.maxItems!,
-    selectedTags: {
-      label: getSchemaDisplayLabel(selectedTagsSchema),
-      required: isSchemaPropertyRequired(alcoholSchema, 'selectedTags'),
-      minItems: selectedTagsSchema.minItems ?? 1,
-      maxItems: selectedTagsSchema.maxItems!,
-    },
-    comment: {
-      label: getSchemaDisplayLabel(commentSchema),
-      required: isSchemaPropertyRequired(alcoholItemSchema, 'comment'),
-      maxLength: commentSchema.maxLength!,
-    },
   };
 }
 

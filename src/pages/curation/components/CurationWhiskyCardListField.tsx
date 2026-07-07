@@ -40,6 +40,7 @@ import type {
   CurationWhiskyMirror,
   CurationWhiskyStats,
 } from '../curation-whisky-card-list.types';
+import { formatCurationFieldObject } from '../curation-form-schema';
 import { CurationTastingTagCombobox } from './CurationTastingTagCombobox';
 import { CurationSectionCard } from './CurationSectionCard';
 
@@ -510,7 +511,7 @@ export function CurationWhiskyCardListField({
                       <GripVertical className="h-4 w-4" />
                     </button>
                     <h3 className="text-base font-semibold text-foreground">
-                      위스키 {index + 1}
+                      {fieldModel.label} {index + 1}
                       {fieldModel.required && <span className="ml-1 text-destructive">*</span>}
                     </h3>
                   </div>
@@ -793,11 +794,11 @@ export function CurationWhiskyCardListField({
                     {showCommentField && (
                       <div className="mt-4 space-y-2">
                         <Textarea
-                          aria-label={`${itemName} 기대평`}
+                          aria-label={`${itemName} ${fieldModel.comment.label}`}
                           rows={5}
                           maxLength={fieldModel.comment.maxLength}
                           {...form.register(`alcohols.${index}.comment` as const)}
-                          placeholder="위스키 기대평을 작성해주세요."
+                          placeholder={`${formatCurationFieldObject(fieldModel.comment.label)} 작성해주세요.`}
                           className="min-h-40 resize-none rounded-[10px] border-border"
                         />
                         {commentError && <p className="text-sm text-destructive">{commentError}</p>}
@@ -879,6 +880,9 @@ function getWhiskyProfile(alcohol: CurationWhiskyMirror | undefined): string {
   return [formatAbv(alcohol.abv), normalizeText(alcohol.korCategory)].filter(Boolean).join(' · ');
 }
 
+// ponytail: stats 라벨은 하드코딩 유지. responseSpec이 현재 모든 스펙/픽스처에서 비어 있고
+// stats.* x-display-name 경로가 미확정이라 추측 파싱을 하지 않음. responseSpec 구조 확정 시
+// field model에 stats 라벨을 실어 스펙 드리븐으로 전환한다.
 function getWhiskyStatsItems(stats: CurationWhiskyCardValue['stats']) {
   if (!stats) return [];
 

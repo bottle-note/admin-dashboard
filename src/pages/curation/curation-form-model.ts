@@ -102,6 +102,17 @@ export function createCurationFormModelFromRequestSpec(
       return customField;
     }
 
+    if (kind === 'alcohol-card-list') {
+      return createAlcoholCardListFieldModel({
+        key,
+        label: getSchemaDisplayLabel(fieldSchema),
+        required: isSchemaPropertyRequired(requestSpec, key),
+        minItems: fieldSchema.minItems ?? 1,
+        maxItems: typeof fieldSchema.maxItems === 'number' ? fieldSchema.maxItems : undefined,
+        itemSchema: fieldSchema.items!,
+      });
+    }
+
     const basicField = createCurationBasicFieldModel(requestSpec, key);
     return options.overrideField?.(basicField) ?? basicField;
   });
@@ -216,6 +227,51 @@ export function createCurationBasicFieldModel(
         maxLength: fieldSchema.maxLength,
       };
     case 'alcohol-card-list':
-      throw new Error('alcohol-card-list는 도메인 전용 field model 생성 함수에서 처리해야 합니다.');
+      throw new Error('alcohol-card-list는 createAlcoholCardListFieldModel로 생성해야 합니다.');
   }
+}
+
+export interface AlcoholCardListFieldParams {
+  key: string;
+  label: string;
+  required: boolean;
+  minItems: number;
+  maxItems?: number;
+  /** 위스키 카드 1건의 스키마 (alcohol/selectedTags/comment 계약을 담는다) */
+  itemSchema: JsonSchemaNode;
+}
+
+// 위스키 카드 아이템 스키마를 카드 리스트 field model로 변환합니다.
+// 시음회(속성 배열)와 추천/페어링(루트 배열)이 동일한 아이템 계약을 공유하므로 빌더도 하나입니다.
+export function createAlcoholCardListFieldModel({
+  key,
+  label,
+  required,
+  minItems,
+  maxItems,
+  itemSchema,
+}: AlcoholCardListFieldParams): CurationWhiskyCardListFieldModel {
+  const alcoholSchema = getSchemaProperty(itemSchema, 'alcohol');
+  const selectedTagsSchema = getSchemaProperty(alcoholSchema, 'selectedTags');
+  const commentSchema = itemSchema.properties?.comment;
+
+  return {
+    key,
+    kind: 'alcohol-card-list',
+    label,
+    required,
+    minItems,
+    maxItems,
+    selectedTags: {
+      label: getSchemaDisplayLabel(selectedTagsSchema) || '테이스팅 태그',
+      required: isSchemaPropertyRequired(alcoholSchema, 'selectedTags'),
+      minItems: selectedTagsSchema.minItems ?? 1,
+      maxItems: selectedTagsSchema.maxItems ?? 12,
+    },
+    comment: {
+      label: (commentSchema && getSchemaDisplayLabel(commentSchema)) || '큐레이터 코멘트',
+      required: isSchemaPropertyRequired(itemSchema, 'comment'),
+      maxLength: commentSchema?.maxLength ?? 500,
+    },
+  };
 }

@@ -149,6 +149,8 @@ export interface CurationV2ApiTypes {
     params: {
       /** 검색어 */
       keyword?: string;
+      /** 큐레이션 스펙 코드 exact match 필터 */
+      code?: CurationV2SpecCode;
       /** 활성화 상태 */
       isActive?: boolean;
       /** 페이지 번호 (0-based) */

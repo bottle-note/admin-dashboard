@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { FormProvider, useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save } from 'lucide-react';
@@ -19,7 +19,7 @@ import {
 import { CurationBasicInfoSection } from '../components/CurationBasicInfoSection';
 import { CurationFormSection } from '../components/CurationFormSection';
 import { CurationImageSection } from '../components/CurationImageSection';
-import type { CurationWhiskyCardValue } from '../curation-whisky-card-list.types';
+import { WhiskyPairingFields } from './components/WhiskyPairingFields';
 import { WhiskyCurationPreviewPanel } from './components/WhiskyCurationPreviewPanel';
 import {
   buildWhiskyCurationPayload,
@@ -34,22 +34,9 @@ import {
   type WhiskyCurationFormState,
 } from './whisky-curation.schema';
 
-export interface WhiskyCurationItemExtraRenderContext {
-  index: number;
-  item: CurationWhiskyCardValue | undefined;
-  formModel: WhiskyCurationFormModel;
-  onUploadingChange: (isUploading: boolean) => void;
-}
-
-export interface WhiskyCurationPresentation {
-  showCommentField: boolean;
-  renderItemExtra?: (context: WhiskyCurationItemExtraRenderContext) => ReactNode;
-}
-
 interface WhiskyCurationFormProps {
   specDetail: CurationV2Spec;
   formModel: WhiskyCurationFormModel;
-  presentation: WhiskyCurationPresentation;
   curation?: CurationV2Detail;
   onBack: () => void;
 }
@@ -57,7 +44,6 @@ interface WhiskyCurationFormProps {
 export function WhiskyCurationForm({
   specDetail,
   formModel,
-  presentation,
   curation,
   onBack,
 }: WhiskyCurationFormProps) {
@@ -68,6 +54,8 @@ export function WhiskyCurationForm({
   const [isWhiskyImageUploading, setIsWhiskyImageUploading] = useState(false);
   const isEditMode = Boolean(curation);
   const isImageUploading = isCurationImageUploading || isWhiskyImageUploading;
+  // formModel.pairings는 WHISKY_PAIRING specCode에서만 생성됩니다.
+  const hasPairings = Boolean(formModel.pairings);
   const formSchema = createCurationWhiskyFormSchema(formModel, {
     mode: isEditMode ? 'edit' : 'create',
   });
@@ -171,15 +159,15 @@ export function WhiskyCurationForm({
                     ...item,
                     pairings: createDefaultPairings(formModel),
                   }),
-                  showCommentField: presentation.showCommentField,
-                  renderItemExtra: presentation.renderItemExtra
-                    ? ({ index, item }) =>
-                        presentation.renderItemExtra?.({
-                          index,
-                          item,
-                          formModel,
-                          onUploadingChange: setIsWhiskyImageUploading,
-                        })
+                  showCommentField: !hasPairings,
+                  renderItemExtra: hasPairings
+                    ? ({ index }) => (
+                        <WhiskyPairingFields
+                          index={index}
+                          formModel={formModel}
+                          onUploadingChange={setIsWhiskyImageUploading}
+                        />
+                      )
                     : undefined,
                 }}
               />

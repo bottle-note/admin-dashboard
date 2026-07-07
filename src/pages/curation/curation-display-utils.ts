@@ -54,11 +54,12 @@ export function formatCurationExposurePeriod(
 
 export function getCurationPayloadEntries(requestSpec: JsonSchemaNode, payload: CurationV2Payload) {
   if (Array.isArray(payload)) {
+    // x-container: "array" 스펙은 requestSpec 루트가 아이템 스키마 → 라벨을 스펙에서 읽는다.
     return [
       {
         key: 'items',
-        label: '아이템',
-        schema: undefined,
+        label: getSchemaDisplayLabel(requestSpec) || '아이템',
+        schema: requestSpec,
         value: payload,
       },
     ];
