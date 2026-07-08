@@ -34,12 +34,8 @@ export function CurationPreviewWhiskyCard({
   children,
 }: CurationPreviewWhiskyCardProps) {
   const name = normalizeText(alcohol.korName) || fallbackName;
-  const details = [formatAbv(alcohol.abv), normalizeText(alcohol.korCategory)].filter(Boolean);
-  const chips = [
-    ...(alcohol.selectedTags ?? []),
-    normalizeText(alcohol.korCategory),
-    normalizeText(alcohol.regionName),
-  ].filter(Boolean);
+  const details = [formatAbv(alcohol.abv)].filter(Boolean);
+  const chips = (alcohol.selectedTags ?? []).filter(Boolean);
   const normalizedComment = normalizeText(comment);
 
   return (
