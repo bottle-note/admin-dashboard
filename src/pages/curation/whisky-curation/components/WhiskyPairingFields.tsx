@@ -319,7 +319,7 @@ export function WhiskyPairingFields({
                       id={imageInputId}
                       type="file"
                       accept={PAIRING_IMAGE_ACCEPT}
-                      className="sr-only"
+                      className="hidden"
                       aria-label={`${index + 1}번 위스키 ${pairingIndex + 1}번 페어링 음식 이미지 파일 선택`}
                       onChange={(event) => void handlePairingImageChange(pairingIndex, event)}
                       disabled={isImageUploading}
@@ -375,7 +375,7 @@ export function WhiskyPairingFields({
                   <div className="space-y-1">
                     <label
                       htmlFor={`${getPairingKey(index, pairingIndex)}-name`}
-                      className="sr-only"
+                      className="hidden"
                     >
                       {pairingModel.itemNameLabel}
                     </label>
@@ -396,7 +396,7 @@ export function WhiskyPairingFields({
                   <div className="space-y-1">
                     <label
                       htmlFor={`${getPairingKey(index, pairingIndex)}-note`}
-                      className="sr-only"
+                      className="hidden"
                     >
                       {pairingModel.pairingNoteLabel}
                     </label>
