@@ -627,7 +627,7 @@ export function CurationWhiskyCardListField({
                                   id={`${field.id}-manual-whisky-image`}
                                   type="file"
                                   accept={MANUAL_WHISKY_IMAGE_ACCEPT}
-                                  className="sr-only"
+                                  className="hidden"
                                   aria-label={`${manualFieldPrefix} 이미지 파일 선택`}
                                   onChange={(event) =>
                                     void handleManualWhiskyImageChange(field.id, index, event)
