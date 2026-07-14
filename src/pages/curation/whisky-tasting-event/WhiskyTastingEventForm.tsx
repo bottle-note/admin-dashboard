@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FormProvider, useForm, type Resolver } from 'react-hook-form';
+import { FormProvider, useForm, type FieldErrors, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save } from 'lucide-react';
 import { useNavigate } from 'react-router';
@@ -18,6 +18,7 @@ import {
 
 import { CurationBasicInfoSection } from '../components/CurationBasicInfoSection';
 import { CurationFormSection } from '../components/CurationFormSection';
+import { focusFirstFormError } from '../focusFirstFormError';
 import { WhiskyTastingEventPreviewPanel } from './components/WhiskyTastingEventPreviewPanel';
 import type { WhiskyTastingEventFormModel } from './whisky-tasting-event.form-model';
 import {
@@ -61,6 +62,7 @@ export function WhiskyTastingEventForm({
     resolver: zodResolver(formSchema as never) as unknown as Resolver<WhiskyTastingEventFormState>,
     defaultValues,
     mode: 'onSubmit',
+    shouldFocusError: false,
   });
 
   const createMutation = useCurationCreate({
@@ -100,8 +102,9 @@ export function WhiskyTastingEventForm({
 
       createMutation.mutate(request);
     },
-    () => {
+    (errors: FieldErrors<WhiskyTastingEventFormState>) => {
       showToast({ type: 'warning', message: '입력 정보를 확인해주세요.' });
+      focusFirstFormError(errors);
     }
   );
 

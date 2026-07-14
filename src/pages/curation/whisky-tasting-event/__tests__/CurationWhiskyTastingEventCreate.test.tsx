@@ -294,7 +294,28 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
 
   afterEach(() => {
     keywordSearchMock.mockReset();
+    vi.restoreAllMocks();
     delete window.kakao;
+  });
+
+  it('필수 입력 누락 시 첫 오류 필드로 스크롤하고 포커스한다', async () => {
+    const user = userEvent.setup();
+    const scrollIntoViewSpy = vi.spyOn(Element.prototype, 'scrollIntoView');
+    mockSpecSuccess();
+
+    render(<CurationWhiskyTastingEventCreatePage />);
+
+    const nameInput = await screen.findByLabelText('큐레이션명');
+    await user.click(screen.getByRole('button', { name: '저장' }));
+
+    await waitFor(() => {
+      expect(nameInput).toHaveFocus();
+    });
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'center',
+    });
+    expect(await screen.findByText('큐레이션명은 필수입니다.')).toBeInTheDocument();
   });
 
   it('스펙 목록과 상세 조회 후 시음회 작성 폼을 렌더링한다', async () => {

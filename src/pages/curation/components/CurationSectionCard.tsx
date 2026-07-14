@@ -9,6 +9,7 @@ import type { CurationSectionHeaderProps } from './CurationSectionHeader';
 interface CurationSectionCardProps extends CurationSectionHeaderProps {
   children: ReactNode;
   contentClassName?: string;
+  formFieldName?: string;
 }
 
 export function CurationSectionCard({
@@ -17,10 +18,14 @@ export function CurationSectionCard({
   description,
   titleSuffix,
   contentClassName,
+  formFieldName,
   children,
 }: CurationSectionCardProps) {
   return (
-    <Card className="overflow-hidden rounded-[10px] border-border shadow-none">
+    <Card
+      className="overflow-hidden rounded-[10px] border-border shadow-none"
+      data-form-field-name={formFieldName}
+    >
       <CurationSectionHeader
         stepNumber={stepNumber}
         title={title}

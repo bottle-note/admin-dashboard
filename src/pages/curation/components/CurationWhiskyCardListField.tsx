@@ -406,6 +406,7 @@ export function CurationWhiskyCardListField({
 
   return (
     <CurationSectionCard
+      formFieldName={fieldModel.key}
       stepNumber={sectionHeader?.stepNumber}
       title={
         <>
