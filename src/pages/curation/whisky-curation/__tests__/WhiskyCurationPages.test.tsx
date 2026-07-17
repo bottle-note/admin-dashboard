@@ -248,6 +248,20 @@ describe('whisky curation pages', () => {
     expect(screen.getByLabelText('1번 수동 위스키 한글명')).toBeInTheDocument();
   });
 
+  it('필수 입력 누락 시 화면상 첫 필드로 포커스한다', async () => {
+    const user = userEvent.setup();
+    mockSpecSuccess(recommendedWhiskySpec);
+
+    renderRecommendedCreatePage();
+
+    const nameInput = await screen.findByLabelText('큐레이션명');
+    await user.click(screen.getByRole('button', { name: /저장/ }));
+
+    await waitFor(() => {
+      expect(nameInput).toHaveFocus();
+    });
+  });
+
   it('추천 위스키는 노출 종료일이 시작일보다 빠르면 저장 전 validation을 표시한다', async () => {
     const user = userEvent.setup();
     let capturedBody: CurationV2CreateRequest | null = null;

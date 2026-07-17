@@ -63,7 +63,7 @@ const tastingEventSpec: CurationV2Spec = {
       },
       capacity: {
         type: 'integer',
-        minimum: 1,
+        minimum: 0,
         maximum: 999,
         description: '총 모집 인원수',
         'x-display-name': '총 모집 인원수',
@@ -161,9 +161,14 @@ describe('createWhiskyTastingEventFormModel', () => {
     expect(fieldsByKey.capacity).toMatchObject({
       label: '총 모집 인원수',
       required: true,
-      minimum: 1,
+      minimum: 0,
       maximum: 999,
       suffix: '명',
+      undecidedOption: {
+        label: '모집 인원 미정',
+        value: 0,
+        fallbackValue: 1,
+      },
     });
     expect(fieldsByKey.applicationLink).toMatchObject({
       kind: 'text',

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FormProvider, useForm, type Resolver } from 'react-hook-form';
+import { FormProvider, useForm, type FieldErrors, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save } from 'lucide-react';
 import { useNavigate } from 'react-router';
@@ -17,8 +17,10 @@ import {
 } from '@/types/api';
 
 import { CurationBasicInfoSection } from '../components/CurationBasicInfoSection';
+import { CurationFormErrorFocusProvider } from '../components/CurationFormErrorFocusProvider';
 import { CurationFormSection } from '../components/CurationFormSection';
 import { CurationImageSection } from '../components/CurationImageSection';
+import { useCurationFormErrorFocus } from '../form-error-focus';
 import { WhiskyPairingFields } from './components/WhiskyPairingFields';
 import { WhiskyCurationPreviewPanel } from './components/WhiskyCurationPreviewPanel';
 import {
@@ -62,11 +64,13 @@ export function WhiskyCurationForm({
   const defaultValues = curation
     ? createWhiskyCurationFormStateFromCuration(curation, formModel)
     : createDefaultWhiskyCurationFormState(formModel);
+  const errorFocus = useCurationFormErrorFocus<WhiskyCurationFormState>();
 
   const form = useForm<WhiskyCurationFormState>({
     resolver: zodResolver(formSchema as never) as unknown as Resolver<WhiskyCurationFormState>,
     defaultValues,
     mode: 'onSubmit',
+    shouldFocusError: false,
   });
 
   const createMutation = useCurationCreate({
@@ -106,8 +110,9 @@ export function WhiskyCurationForm({
 
       createMutation.mutate(request);
     },
-    () => {
+    (errors: FieldErrors<WhiskyCurationFormState>) => {
       showToast({ type: 'warning', message: '입력 정보를 확인해주세요.' });
+      errorFocus.focusFirstError(errors);
     }
   );
 
@@ -135,49 +140,51 @@ export function WhiskyCurationForm({
       />
 
       <FormProvider {...form}>
-        <section className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          <div className="min-w-0 flex-1 space-y-6">
-            <CurationBasicInfoSection
-              isRootAdmin={isRootAdmin}
-              isEditMode={isEditMode}
-              canEditExposureStartDateInEditMode={!curation?.exposureStartDate}
-              exposureStartDateLabel="노출 시작일"
-              exposureEndDateLabel="노출 종료일"
-              exposureStartDateHelpText="노출 시작일은 등록 후 변경할 수 없습니다."
-              exposurePeriodTooltipLabel="노출기간 안내"
-              exposurePeriodTooltipContent="설정한 노출 기간동안 보틀노트 앱에서 노출됩니다."
-            />
-            <CurationImageSection onUploadingChange={setIsCurationImageUploading} />
-            {formModel.sections.map((section) => (
-              <CurationFormSection
-                key={section.id}
-                section={section}
-                onImageUploadingChange={setIsWhiskyImageUploading}
-                alcoholCardListOptions={{
-                  createEmptyItem: () => createEmptyWhiskyCurationItem(formModel),
-                  transformItem: (item) => ({
-                    ...item,
-                    pairings: createDefaultPairings(formModel),
-                  }),
-                  showCommentField: !hasPairings,
-                  renderItemExtra: hasPairings
-                    ? ({ index }) => (
-                        <WhiskyPairingFields
-                          index={index}
-                          formModel={formModel}
-                          onUploadingChange={setIsWhiskyImageUploading}
-                        />
-                      )
-                    : undefined,
-                }}
+        <CurationFormErrorFocusProvider registry={errorFocus.registry}>
+          <section className="flex flex-col gap-6 lg:flex-row lg:items-start">
+            <div className="min-w-0 flex-1 space-y-6">
+              <CurationBasicInfoSection
+                isRootAdmin={isRootAdmin}
+                isEditMode={isEditMode}
+                canEditExposureStartDateInEditMode={!curation?.exposureStartDate}
+                exposureStartDateLabel="노출 시작일"
+                exposureEndDateLabel="노출 종료일"
+                exposureStartDateHelpText="노출 시작일은 등록 후 변경할 수 없습니다."
+                exposurePeriodTooltipLabel="노출기간 안내"
+                exposurePeriodTooltipContent="설정한 노출 기간동안 보틀노트 앱에서 노출됩니다."
               />
-            ))}
-          </div>
+              <CurationImageSection onUploadingChange={setIsCurationImageUploading} />
+              {formModel.sections.map((section) => (
+                <CurationFormSection
+                  key={section.id}
+                  section={section}
+                  onImageUploadingChange={setIsWhiskyImageUploading}
+                  alcoholCardListOptions={{
+                    createEmptyItem: () => createEmptyWhiskyCurationItem(formModel),
+                    transformItem: (item) => ({
+                      ...item,
+                      pairings: createDefaultPairings(formModel),
+                    }),
+                    showCommentField: !hasPairings,
+                    renderItemExtra: hasPairings
+                      ? ({ index }) => (
+                          <WhiskyPairingFields
+                            index={index}
+                            formModel={formModel}
+                            onUploadingChange={setIsWhiskyImageUploading}
+                          />
+                        )
+                      : undefined,
+                  }}
+                />
+              ))}
+            </div>
 
-          <aside className="w-full shrink-0 lg:sticky lg:top-6 lg:w-96">
-            <WhiskyCurationPreviewPanel formModel={formModel} />
-          </aside>
-        </section>
+            <aside className="w-full shrink-0 lg:sticky lg:top-6 lg:w-96">
+              <WhiskyCurationPreviewPanel formModel={formModel} />
+            </aside>
+          </section>
+        </CurationFormErrorFocusProvider>
       </FormProvider>
     </div>
   );

@@ -6,6 +6,7 @@ import type {
   CurationFieldModel,
   CurationFormModel,
   CurationFormSectionModel,
+  CurationNumberFieldModel,
   CurationTextFieldModel,
 } from '../curation-form-model';
 import { createCurationFormModelFromRequestSpec } from '../curation-form-model';
@@ -76,7 +77,17 @@ function applyTastingEventFieldOverrides(field: CurationBasicFieldModel): Curati
     case 'entryFee':
       return field.kind === 'number' ? { ...field, suffix: '원' } : field;
     case 'capacity':
-      return field.kind === 'number' ? { ...field, suffix: '명' } : field;
+      return field.kind === 'number'
+        ? ({
+            ...field,
+            suffix: '명',
+            undecidedOption: {
+              label: '모집 인원 미정',
+              value: 0,
+              fallbackValue: 1,
+            },
+          } satisfies CurationNumberFieldModel)
+        : field;
     case 'applicationLink':
       return field.kind === 'text'
         ? { ...field, placeholder: 'https://forms.example.com/tasting' }

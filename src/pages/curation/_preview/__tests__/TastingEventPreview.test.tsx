@@ -45,4 +45,19 @@ describe('TastingEventPreview', () => {
 
     expect(screen.getByText('첫 줄 설명 둘째 줄 설명')).toHaveClass('whitespace-pre-line');
   });
+
+  it('모집 인원이 0명이면 미정으로 표시한다', () => {
+    render(
+      <TastingEventPreview
+        event={{
+          ...tastingEventPreview,
+          payload: { ...tastingEventPreview.payload, capacity: 0 },
+        }}
+        today={new Date('2026-06-01')}
+      />
+    );
+
+    expect(screen.getAllByText('모집 인원 미정').length).toBeGreaterThan(0);
+    expect(screen.queryByText('0명 정원')).not.toBeInTheDocument();
+  });
 });

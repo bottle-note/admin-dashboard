@@ -220,7 +220,7 @@ function createDefaultTastingEventPayloadFieldValue(field: CurationFieldModel): 
     case 'boolean-radio':
       return false;
     case 'number':
-      return typeof field.minimum === 'number' ? field.minimum : 0;
+      return field.undecidedOption?.fallbackValue ?? field.minimum ?? 0;
     case 'date':
     case 'time':
     case 'textarea':

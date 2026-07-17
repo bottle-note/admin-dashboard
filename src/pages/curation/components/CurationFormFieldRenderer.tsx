@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import type { FieldValues } from 'react-hook-form';
 import { useFormContext, useWatch } from 'react-hook-form';
 
 import { FormField } from '@/components/common/FormField';
 import { PlaceSearchInput } from '@/components/common/PlaceSearchInput';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -269,6 +270,14 @@ function NumberField({
   form: ReturnType<typeof useFormContext<FieldValues>>;
   name: string;
 }) {
+  const value = useWatch({
+    control: form.control,
+    name,
+  });
+  const undecidedOption = field.undecidedOption;
+  const lastDecidedValueRef = useRef(undecidedOption?.fallbackValue ?? 0);
+  const isUndecided = undecidedOption !== undefined && value === undecidedOption.value;
+  const registration = form.register(name, { valueAsNumber: true });
   const input = (
     <Input
       className={field.suffix ? 'pr-12' : undefined}
@@ -276,19 +285,63 @@ function NumberField({
       type="number"
       min={field.minimum}
       max={field.maximum}
+      disabled={isUndecided}
       placeholder={field.placeholder}
-      {...form.register(name, { valueAsNumber: true })}
+      {...registration}
     />
   );
-
-  if (!field.suffix) return input;
-
-  return (
+  const inputWithSuffix = field.suffix ? (
     <div className="relative">
       {input}
       <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-medium text-muted-foreground">
         {field.suffix}
       </span>
+    </div>
+  ) : (
+    input
+  );
+
+  if (!undecidedOption) return inputWithSuffix;
+
+  const checkboxId = `${name}-undecided`;
+
+  const handleUndecidedCheckedChange = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+      const currentValue = form.getValues(name);
+      if (
+        typeof currentValue === 'number' &&
+        Number.isFinite(currentValue) &&
+        currentValue !== undecidedOption.value
+      ) {
+        lastDecidedValueRef.current = currentValue;
+      }
+
+      form.setValue(name, undecidedOption.value, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      return;
+    }
+
+    form.setValue(name, lastDecidedValueRef.current, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
+  return (
+    <div className="space-y-2">
+      {inputWithSuffix}
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id={checkboxId}
+          checked={isUndecided}
+          onCheckedChange={handleUndecidedCheckedChange}
+        />
+        <Label htmlFor={checkboxId} className="cursor-pointer text-sm font-normal">
+          {undecidedOption.label}
+        </Label>
+      </div>
     </div>
   );
 }
