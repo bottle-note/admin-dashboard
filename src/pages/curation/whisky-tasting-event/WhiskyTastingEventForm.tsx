@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FormProvider, useForm, type Resolver } from 'react-hook-form';
+import { FormProvider, useForm, type FieldErrors, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save } from 'lucide-react';
 import { useNavigate } from 'react-router';
@@ -17,7 +17,9 @@ import {
 } from '@/types/api';
 
 import { CurationBasicInfoSection } from '../components/CurationBasicInfoSection';
+import { CurationFormErrorFocusProvider } from '../components/CurationFormErrorFocusProvider';
 import { CurationFormSection } from '../components/CurationFormSection';
+import { useCurationFormErrorFocus } from '../form-error-focus';
 import { WhiskyTastingEventPreviewPanel } from './components/WhiskyTastingEventPreviewPanel';
 import type { WhiskyTastingEventFormModel } from './whisky-tasting-event.form-model';
 import {
@@ -56,11 +58,13 @@ export function WhiskyTastingEventForm({
   const defaultValues = curation
     ? createWhiskyTastingEventFormStateFromCuration(curation, formModel)
     : createDefaultWhiskyTastingEventFormState(formModel);
+  const errorFocus = useCurationFormErrorFocus<WhiskyTastingEventFormState>();
 
   const form = useForm<WhiskyTastingEventFormState>({
     resolver: zodResolver(formSchema as never) as unknown as Resolver<WhiskyTastingEventFormState>,
     defaultValues,
     mode: 'onSubmit',
+    shouldFocusError: false,
   });
 
   const createMutation = useCurationCreate({
@@ -100,8 +104,9 @@ export function WhiskyTastingEventForm({
 
       createMutation.mutate(request);
     },
-    () => {
+    (errors: FieldErrors<WhiskyTastingEventFormState>) => {
       showToast({ type: 'warning', message: '입력 정보를 확인해주세요.' });
+      errorFocus.focusFirstError(errors);
     }
   );
 
@@ -129,27 +134,29 @@ export function WhiskyTastingEventForm({
       />
 
       <FormProvider {...form}>
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start">
-          <div className="min-w-0 space-y-6">
-            <CurationBasicInfoSection
-              isRootAdmin={isRootAdmin}
-              isEditMode={isEditMode}
-              canEditExposureStartDateInEditMode={!curation?.exposureStartDate}
-              onImageUploadingChange={setIsCurationImageUploading}
-            />
-            {formModel.sections.map((section) => (
-              <CurationFormSection
-                key={section.id}
-                section={section}
-                onImageUploadingChange={setIsWhiskyImageUploading}
+        <CurationFormErrorFocusProvider registry={errorFocus.registry}>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start">
+            <div className="min-w-0 space-y-6">
+              <CurationBasicInfoSection
+                isRootAdmin={isRootAdmin}
+                isEditMode={isEditMode}
+                canEditExposureStartDateInEditMode={!curation?.exposureStartDate}
+                onImageUploadingChange={setIsCurationImageUploading}
               />
-            ))}
-          </div>
+              {formModel.sections.map((section) => (
+                <CurationFormSection
+                  key={section.id}
+                  section={section}
+                  onImageUploadingChange={setIsWhiskyImageUploading}
+                />
+              ))}
+            </div>
 
-          <aside className="lg:sticky lg:top-6">
-            <WhiskyTastingEventPreviewPanel />
-          </aside>
-        </div>
+            <aside className="lg:sticky lg:top-6">
+              <WhiskyTastingEventPreviewPanel />
+            </aside>
+          </div>
+        </CurationFormErrorFocusProvider>
       </FormProvider>
     </div>
   );

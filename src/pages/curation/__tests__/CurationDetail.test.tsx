@@ -75,7 +75,7 @@ const tastingEventSpec: CurationV2Spec = {
       },
       capacity: {
         type: 'integer',
-        minimum: 1,
+        minimum: 0,
         maximum: 999,
         description: '총 모집 인원수',
         'x-display-name': '총 모집 인원수',
@@ -169,7 +169,7 @@ describe('CurationDetailPage', () => {
               barAddress: '서울 강남구 테헤란로 123',
               isRecruiting: true,
               entryFee: 50000,
-              capacity: 12,
+              capacity: 0,
               applicationLink: 'https://forms.example.com/tasting',
               guideText: '시작 10분 전 입장해 주세요.',
               alcohols: [
@@ -236,7 +236,9 @@ describe('CurationDetailPage', () => {
     expect(screen.getByLabelText('장소명')).toHaveValue('도시남 바');
     expect(screen.getByLabelText('장소 및 바(bar) 주소')).toHaveValue('서울 강남구 테헤란로 123');
     expect(screen.getByLabelText('참가비(1인당)')).toHaveValue(50000);
-    expect(screen.getByLabelText('총 모집 인원수')).toHaveValue(12);
+    expect(screen.getByLabelText('총 모집 인원수')).toHaveValue(0);
+    expect(screen.getByLabelText('총 모집 인원수')).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: '모집 인원 미정' })).toBeChecked();
     expect(screen.getByLabelText('신청링크')).toHaveValue('https://forms.example.com/tasting');
     expect(screen.getByLabelText('안내사항')).toHaveValue('시작 10분 전 입장해 주세요.');
     expect(screen.getByLabelText('1번 수동 위스키 한글명')).toHaveValue('글렌드로낙 12년');
@@ -267,6 +269,7 @@ describe('CurationDetailPage', () => {
         eventTime: '19:30',
         placeName: '도시남 바',
         barAddress: '서울 강남구 테헤란로 123',
+        capacity: 0,
         guideText: '수정된 안내사항',
         alcohols: [
           {

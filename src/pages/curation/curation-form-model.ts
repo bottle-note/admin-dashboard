@@ -34,6 +34,11 @@ export interface CurationNumberFieldModel extends CurationBaseFieldModel {
   minimum?: number;
   maximum?: number;
   suffix?: string;
+  undecidedOption?: {
+    label: string;
+    value: number;
+    fallbackValue: number;
+  };
 }
 
 export interface CurationBooleanRadioFieldModel extends CurationBaseFieldModel {

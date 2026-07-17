@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { forwardRef, type ReactNode } from 'react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -11,23 +11,21 @@ interface CurationSectionCardProps extends CurationSectionHeaderProps {
   contentClassName?: string;
 }
 
-export function CurationSectionCard({
-  stepNumber,
-  title,
-  description,
-  titleSuffix,
-  contentClassName,
-  children,
-}: CurationSectionCardProps) {
-  return (
-    <Card className="overflow-hidden rounded-[10px] border-border shadow-none">
-      <CurationSectionHeader
-        stepNumber={stepNumber}
-        title={title}
-        description={description}
-        titleSuffix={titleSuffix}
-      />
-      <CardContent className={cn('pt-6', contentClassName)}>{children}</CardContent>
-    </Card>
-  );
-}
+export const CurationSectionCard = forwardRef<HTMLDivElement, CurationSectionCardProps>(
+  function CurationSectionCard(
+    { stepNumber, title, description, titleSuffix, contentClassName, children },
+    ref
+  ) {
+    return (
+      <Card ref={ref} className="overflow-hidden rounded-[10px] border-border shadow-none">
+        <CurationSectionHeader
+          stepNumber={stepNumber}
+          title={title}
+          description={description}
+          titleSuffix={titleSuffix}
+        />
+        <CardContent className={cn('pt-6', contentClassName)}>{children}</CardContent>
+      </Card>
+    );
+  }
+);

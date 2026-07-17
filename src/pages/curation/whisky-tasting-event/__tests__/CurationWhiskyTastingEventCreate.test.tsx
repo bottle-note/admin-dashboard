@@ -107,7 +107,7 @@ const tastingEventSpec: CurationV2Spec = {
       },
       capacity: {
         type: 'integer',
-        minimum: 1,
+        minimum: 0,
         maximum: 999,
         description: '총 모집 인원수',
         'x-display-name': '총 모집 인원수',
@@ -294,7 +294,28 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
 
   afterEach(() => {
     keywordSearchMock.mockReset();
+    vi.restoreAllMocks();
     delete window.kakao;
+  });
+
+  it('필수 입력 누락 시 첫 오류 필드로 스크롤하고 포커스한다', async () => {
+    const user = userEvent.setup();
+    const scrollIntoViewSpy = vi.spyOn(Element.prototype, 'scrollIntoView');
+    mockSpecSuccess();
+
+    render(<CurationWhiskyTastingEventCreatePage />);
+
+    const nameInput = await screen.findByLabelText('큐레이션명');
+    await user.click(screen.getByRole('button', { name: '저장' }));
+
+    await waitFor(() => {
+      expect(nameInput).toHaveFocus();
+    });
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'center',
+    });
+    expect(await screen.findByText('큐레이션명은 필수입니다.')).toBeInTheDocument();
   });
 
   it('스펙 목록과 상세 조회 후 시음회 작성 폼을 렌더링한다', async () => {
@@ -336,6 +357,33 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     expect(screen.getByLabelText('노출 순서')).toBeDisabled();
     expect(screen.getByLabelText('활성화 상태')).toBeDisabled();
     expect(screen.queryByText('BOTTLE_NOTE')).not.toBeInTheDocument();
+  });
+
+  it('모집 인원 미정 체크 시 0명으로 바꾸고 입력을 비활성화한다', async () => {
+    const user = userEvent.setup();
+    mockSpecSuccess();
+
+    render(<CurationWhiskyTastingEventCreatePage />);
+
+    const capacityInput = await screen.findByLabelText('총 모집 인원수');
+    const undecidedCheckbox = screen.getByRole('checkbox', { name: '모집 인원 미정' });
+
+    expect(capacityInput).toHaveValue(1);
+    expect(capacityInput).toBeEnabled();
+    expect(undecidedCheckbox).not.toBeChecked();
+
+    fireEvent.change(capacityInput, { target: { value: '20' } });
+    await user.click(undecidedCheckbox);
+
+    expect(undecidedCheckbox).toBeChecked();
+    expect(capacityInput).toHaveValue(0);
+    expect(capacityInput).toBeDisabled();
+
+    await user.click(undecidedCheckbox);
+
+    expect(undecidedCheckbox).not.toBeChecked();
+    expect(capacityInput).toHaveValue(20);
+    expect(capacityInput).toBeEnabled();
   });
 
   it('장소명 input 클릭으로 장소 검색을 열고 선택한 장소명을 빈 상세 주소에만 채운다', async () => {
@@ -732,6 +780,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     expect(
       await screen.findByText('시음 위스키를 최소 1개 이상 추가해주세요.')
     ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '시음 위스키 추가' })).toHaveFocus();
   });
 
   it('입력값을 specId와 시음회 payload로 조립해 생성 API에 전송한다', async () => {
@@ -772,7 +821,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     fireEvent.change(screen.getByLabelText('장소명'), { target: { value: '도시남 바' } });
     fireEvent.change(screen.getByLabelText('상세 주소'), { target: { value: '2층 도시남 바' } });
     fireEvent.change(screen.getByLabelText('참가비(1인당)'), { target: { value: '75000' } });
-    fireEvent.change(screen.getByLabelText('총 모집 인원수'), { target: { value: '20' } });
+    await user.click(screen.getByRole('checkbox', { name: '모집 인원 미정' }));
     fireEvent.change(screen.getByLabelText('신청링크'), {
       target: { value: 'https://forms.example.com/tasting' },
     });
@@ -828,7 +877,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
         detailAddress: '2층 도시남 바',
         isRecruiting: true,
         entryFee: 75000,
-        capacity: 20,
+        capacity: 0,
         applicationLink: 'https://forms.example.com/tasting',
         guideText: '시작 10분 전 입장해 주세요.',
         alcohols: [

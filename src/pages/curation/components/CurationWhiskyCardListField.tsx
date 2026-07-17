@@ -41,6 +41,7 @@ import type {
   CurationWhiskyStats,
 } from '../curation-whisky-card-list.types';
 import { formatCurationFieldObject } from '../curation-form-schema';
+import { useRegisterCurationFormErrorFocusTarget } from '../form-error-focus';
 import { CurationTastingTagCombobox } from './CurationTastingTagCombobox';
 import { CurationSectionCard } from './CurationSectionCard';
 
@@ -94,6 +95,8 @@ export function CurationWhiskyCardListField({
   const [pendingAlcoholId, setPendingAlcoholId] = useState<number | null>(null);
   const [draggedAlcoholIndex, setDraggedAlcoholIndex] = useState<number | null>(null);
   const [dragOverAlcoholIndex, setDragOverAlcoholIndex] = useState<number | null>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
   const activeWhiskyDragHandleIndexRef = useRef<number | null>(null);
   const localManualImageUrlsRef = useRef<Set<string>>(new Set());
   const alcoholFieldArray = useFieldArray({
@@ -121,6 +124,8 @@ export function CurationWhiskyCardListField({
   );
   const manualRegionOptions =
     regionData?.items.map((region) => ({ value: region.korName, label: region.korName })) ?? [];
+
+  useRegisterCurationFormErrorFocusTarget(fieldModel.key, sectionRef, addButtonRef);
 
   useEffect(() => {
     onImageUploadingChange?.(uploadingManualImageFieldIds.size > 0);
@@ -406,6 +411,7 @@ export function CurationWhiskyCardListField({
 
   return (
     <CurationSectionCard
+      ref={sectionRef}
       stepNumber={sectionHeader?.stepNumber}
       title={
         <>
@@ -813,6 +819,7 @@ export function CurationWhiskyCardListField({
         </div>
       )}
       <Button
+        ref={addButtonRef}
         type="button"
         variant="secondary"
         className="h-14 w-full rounded-[10px] text-base font-semibold"

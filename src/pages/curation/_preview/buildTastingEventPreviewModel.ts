@@ -115,7 +115,10 @@ export const buildTastingEventPreviewModel = (
     barAddress: payload.barAddress,
     detailAddress: payload.detailAddress ?? '',
     fullAddress,
-    capacityLabel: `${payload.capacity.toLocaleString('ko-KR')}명 정원`,
+    capacityLabel:
+      payload.capacity === 0
+        ? '모집 인원 미정'
+        : `${payload.capacity.toLocaleString('ko-KR')}명 정원`,
     entryFeeLabel:
       payload.entryFee > 0
         ? `${payload.entryFee.toLocaleString('ko-KR')}원`
