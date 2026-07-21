@@ -24,9 +24,6 @@ import {
   mockDistilleryDetail,
   mockDistilleryFormResponse,
   mockDistilleryDeleteResponse,
-  mockCurationListItems,
-  mockCurationDetail,
-  mockCurationBulkReorderResponse,
   mockRegionListItems,
   mockRegionDetail,
   mockRegionFormResponse,
@@ -584,83 +581,6 @@ export const distilleryHandlers = [
 ];
 
 // ============================================
-// Curation Handlers
-// ============================================
-
-const CURATION_BASE = '/admin/api/v1/curations';
-
-export const curationHandlers = [
-  // GET 목록
-  http.get(CURATION_BASE, ({ request }) => {
-    const url = new URL(request.url);
-    const keyword = url.searchParams.get('keyword');
-    const isActive = url.searchParams.get('isActive');
-    const size = Number(url.searchParams.get('size') ?? 20);
-    const page = Number(url.searchParams.get('page') ?? 0);
-
-    let items = mockCurationListItems;
-    if (keyword) {
-      items = items.filter((c) => c.name.includes(keyword));
-    }
-    if (isActive !== null && isActive !== '') {
-      items = items.filter((c) => c.isActive === (isActive === 'true'));
-    }
-
-    return HttpResponse.json(
-      wrapApiResponse(items, {
-        page,
-        size,
-        totalElements: items.length,
-        totalPages: Math.ceil(items.length / size),
-        hasNext: false,
-      })
-    );
-  }),
-
-  // PATCH 노출순서 일괄 변경 (상세보다 먼저)
-  http.patch(`${CURATION_BASE}/bulk/reorder`, async ({ request }) => {
-    const body = (await request.json()) as { ids: number[] };
-    return HttpResponse.json(
-      wrapApiResponse({
-        ...mockCurationBulkReorderResponse,
-        targetId: body.ids[0] ?? 0,
-      })
-    );
-  }),
-
-  // GET 상세
-  http.get(`${CURATION_BASE}/:curationId`, ({ params }) => {
-    const id = Number(params.curationId);
-    if (id === mockCurationDetail.id) {
-      // CurationDetail → API 응답 형태(modifiedAt)로 변환
-      return HttpResponse.json(
-        wrapApiResponse({
-          id: mockCurationDetail.id,
-          name: mockCurationDetail.name,
-          description: mockCurationDetail.description,
-          coverImageUrl: mockCurationDetail.coverImageUrl,
-          displayOrder: mockCurationDetail.displayOrder,
-          isActive: mockCurationDetail.isActive,
-          createdAt: mockCurationDetail.createdAt,
-          modifiedAt: mockCurationDetail.updatedAt,
-          alcohols: mockCurationDetail.alcohols,
-        })
-      );
-    }
-    return HttpResponse.json(
-      {
-        success: false,
-        code: 404,
-        data: null,
-        errors: [{ code: 'CURATION_NOT_FOUND', message: '큐레이션을 찾을 수 없습니다.' }],
-        meta: {},
-      },
-      { status: 404 }
-    );
-  }),
-];
-
-// ============================================
 // Region Handlers
 // ============================================
 
@@ -777,6 +697,5 @@ export const handlers = [
   ...userHandlers,
   ...reviewHandlers,
   ...distilleryHandlers,
-  ...curationHandlers,
   ...regionHandlers,
 ];

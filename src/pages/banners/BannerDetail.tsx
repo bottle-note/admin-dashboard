@@ -8,7 +8,7 @@ import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
 
 import { useBannerDetailForm } from './useBannerDetailForm';
 import { useImageUpload, S3UploadPath } from '@/hooks/useImageUpload';
-import { useCurationList } from '@/hooks/useCurationOld';
+import { useCurationList } from '@/hooks/useCurations';
 
 import { BannerBasicInfoCard } from './components/BannerBasicInfoCard';
 import { BannerTextSettingsCard } from './components/BannerTextSettingsCard';

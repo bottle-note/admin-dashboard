@@ -6,7 +6,5 @@ export { LoginPage } from './login.page';
 export { TastingTagListPage } from './tasting-tag-list.page';
 export { WhiskyListPage } from './whisky-list.page';
 export { WhiskyDetailPage } from './whisky-detail.page';
-export { CurationListPage } from './curation-list.page';
-export { CurationDetailPage } from './curation-detail.page';
 export { BannerListPage } from './banner-list.page';
 export { BannerDetailPage } from './banner-detail.page';

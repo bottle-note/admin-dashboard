@@ -23,9 +23,6 @@ import type {
   DistilleryDetail,
   DistilleryFormResponse,
   DistilleryDeleteResponse,
-  CurationListItem,
-  CurationDetail,
-  CurationBulkReorderResponse,
   RegionListItem,
   RegionDetail,
   RegionFormResponse,
@@ -321,7 +318,7 @@ export const mockBannerDetail: BannerDetail = {
   descriptionFontColor: '#ffffff',
   imageUrl: 'https://example.com/banner1.jpg',
   textPosition: 'RT',
-  targetUrl: '/curations/1',
+  targetUrl: '/search?curationId=1',
   isExternalUrl: false,
   bannerType: 'CURATION',
   sortOrder: 0,
@@ -512,76 +509,6 @@ export const mockDistilleryDeleteResponse: DistilleryDeleteResponse = {
   code: 'DISTILLERY_DELETED',
   message: '증류소가 삭제되었습니다.',
   targetId: 1,
-  responseAt: '2024-06-01T00:00:00',
-};
-
-// ============================================
-// Curation Mock Data
-// ============================================
-
-export const mockCurationListItems: CurationListItem[] = [
-  {
-    id: 1,
-    name: '신년 특집 큐레이션',
-    description: '새해를 맞이하는 특별한 위스키 모음',
-    coverImageUrl: 'https://example.com/curation1.jpg',
-    displayOrder: 0,
-    alcoholCount: 5,
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00',
-    updatedAt: '2024-01-01T00:00:00',
-  },
-  {
-    id: 2,
-    name: '입문자 추천 큐레이션',
-    description: null,
-    coverImageUrl: null,
-    displayOrder: 1,
-    alcoholCount: 3,
-    isActive: false,
-    createdAt: '2024-02-01T00:00:00',
-    updatedAt: '2024-02-01T00:00:00',
-  },
-];
-
-export const mockCurationDetail: CurationDetail = {
-  id: 1,
-  name: '신년 특집 큐레이션',
-  description: '새해를 맞이하는 특별한 위스키 모음',
-  coverImageUrl: 'https://example.com/curation1.jpg',
-  displayOrder: 0,
-  isActive: true,
-  createdAt: '2024-01-01T00:00:00',
-  updatedAt: '2024-01-01T00:00:00',
-  alcoholCount: 2,
-  alcohols: [
-    {
-      alcoholId: 10,
-      korName: '글렌피딕 12년',
-      engName: 'Glenfiddich 12',
-      korCategoryName: '싱글몰트',
-      engCategoryName: 'Single Malt',
-      imageUrl: 'https://example.com/glenfiddich.jpg',
-      createdAt: '2024-01-01T00:00:00',
-      modifiedAt: '2024-06-01T00:00:00',
-    },
-    {
-      alcoholId: 20,
-      korName: '맥캘란 18년',
-      engName: 'Macallan 18',
-      korCategoryName: '싱글몰트',
-      engCategoryName: 'Single Malt',
-      imageUrl: null,
-      createdAt: '2024-03-01T00:00:00',
-      modifiedAt: '2024-06-01T00:00:00',
-    },
-  ],
-};
-
-export const mockCurationBulkReorderResponse: CurationBulkReorderResponse = {
-  code: 'CURATION_REORDERED',
-  message: '큐레이션 순서가 변경되었습니다.',
-  targetId: 0,
   responseAt: '2024-06-01T00:00:00',
 };
 
