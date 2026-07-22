@@ -23,6 +23,10 @@ describe('useRegions hooks', () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(result.current.data!.items.length).toBeGreaterThan(0);
+      expect(result.current.data!.items[0]!.imageUrl).toBe(
+        'https://example.com/regions/scotland.webp'
+      );
+      expect(result.current.data!.items.some((item) => item.imageUrl === null)).toBe(true);
       expect(result.current.data!.meta.totalElements).toBeGreaterThan(0);
     });
 
@@ -71,6 +75,7 @@ describe('useRegions hooks', () => {
 
       expect(result.current.data!.id).toBe(1);
       expect(result.current.data!.korName).toBe('스코틀랜드');
+      expect(result.current.data!.imageUrl).toBe('https://example.com/regions/scotland.webp');
       expect(result.current.data!.sortOrder).toBe(0);
       expect(result.current.data!.hasChildren).toBe(true);
     });
@@ -85,6 +90,7 @@ describe('useRegions hooks', () => {
               engName: '-',
               continent: null,
               description: null,
+              imageUrl: null,
               sortOrder: 21,
               parentId: null,
               parentKorName: null,
@@ -120,6 +126,7 @@ describe('useRegions hooks', () => {
         engName: 'Japan',
         continent: '아시아',
         description: null,
+        imageUrl: null,
         parentId: null,
         sortOrder: 9999,
       });
@@ -159,6 +166,7 @@ describe('useRegions hooks', () => {
         data: {
           korName: '스코틀랜드 수정',
           engName: 'Scotland Updated',
+          imageUrl: 'https://example.com/regions/scotland-updated.webp',
           sortOrder: 0,
         },
       });

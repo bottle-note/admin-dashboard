@@ -76,6 +76,7 @@ export function RegionDetailPage() {
         engName: detailData.engName,
         continent: detailData.continent,
         description: detailData.description,
+        imageUrl: detailData.imageUrl,
         parentId: detailData.parentId,
         sortOrder: detailData.sortOrder,
       });
@@ -103,6 +104,7 @@ export function RegionDetailPage() {
       engName: data.engName,
       continent: toNullableText(data.continent),
       description: toNullableText(data.description),
+      imageUrl: data.imageUrl,
       parentId: data.parentId,
       sortOrder: isNewMode ? nextCreateSortOrder : data.sortOrder,
     };

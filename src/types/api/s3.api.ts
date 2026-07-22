@@ -71,6 +71,8 @@ export const S3UploadPath = {
   CURATION: 'admin/curation',
   /** 증류소 이미지 */
   DISTILLERY: 'admin/distillery',
+  /** 지역 대표 이미지 */
+  REGION: 'admin/region',
   /** 테이스팅 태그 아이콘 */
   TASTING_TAG: 'admin/tasting-tag',
 } as const;

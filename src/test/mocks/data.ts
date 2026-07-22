@@ -596,6 +596,7 @@ export const mockRegionListItems: RegionListItem[] = [
     engName: 'Scotland',
     continent: '유럽',
     description: '스카치 위스키의 대표 생산 지역입니다.',
+    imageUrl: 'https://example.com/regions/scotland.webp',
     createdAt: '2024-01-01T00:00:00',
     modifiedAt: '2024-06-01T00:00:00',
     parentId: null,
@@ -607,6 +608,7 @@ export const mockRegionListItems: RegionListItem[] = [
     engName: 'Speyside',
     continent: '유럽',
     description: '스코틀랜드 북동부의 주요 위스키 생산지입니다.',
+    imageUrl: 'https://example.com/regions/speyside.webp',
     createdAt: '2024-01-02T00:00:00',
     modifiedAt: '2024-06-02T00:00:00',
     parentId: 1,
@@ -618,6 +620,7 @@ export const mockRegionListItems: RegionListItem[] = [
     engName: 'United States',
     continent: '북아메리카',
     description: null,
+    imageUrl: null,
     createdAt: '2024-01-03T00:00:00',
     modifiedAt: '2024-06-03T00:00:00',
     parentId: null,
@@ -631,6 +634,7 @@ export const mockRegionDetail: RegionDetail = {
   engName: 'Scotland',
   continent: '유럽',
   description: '스카치 위스키의 대표 생산 지역입니다.',
+  imageUrl: 'https://example.com/regions/scotland.webp',
   sortOrder: 0,
   parentId: null,
   parentKorName: null,
@@ -638,6 +642,22 @@ export const mockRegionDetail: RegionDetail = {
   alcoholCount: 42,
   createAt: '2024-01-01T00:00:00',
   lastModifyAt: '2024-06-01T00:00:00',
+};
+
+export const mockRegionDetailWithoutImage: RegionDetail = {
+  id: 3,
+  korName: '미국',
+  engName: 'United States',
+  continent: '북아메리카',
+  description: null,
+  imageUrl: null,
+  sortOrder: 2,
+  parentId: null,
+  parentKorName: null,
+  hasChildren: false,
+  alcoholCount: 0,
+  createAt: '2024-01-03T00:00:00',
+  lastModifyAt: '2024-06-03T00:00:00',
 };
 
 export const mockRegionFormResponse: RegionFormResponse = {

@@ -15,7 +15,74 @@ describe('regionService', () => {
       const result = await regionService.list();
       expect(result.items).toHaveLength(mockRegionListItems.length);
       expect(result.items[0]!.korName).toBe('스코틀랜드');
+      expect(result.items[0]!.imageUrl).toBe('https://example.com/regions/scotland.webp');
+      expect(result.items[2]!.imageUrl).toBeNull();
       expect(result.meta.totalElements).toBe(mockRegionListItems.length);
+    });
+  });
+
+  // ==========================================
+  // detail()/create()/update()
+  // ==========================================
+  describe('imageUrl 계약', () => {
+    it('상세 응답의 imageUrl을 그대로 반환한다', async () => {
+      const resultWithImage = await regionService.detail(1);
+      const resultWithoutImage = await regionService.detail(3);
+
+      expect(resultWithImage.imageUrl).toBe('https://example.com/regions/scotland.webp');
+      expect(resultWithoutImage.imageUrl).toBeNull();
+    });
+
+    it('생성 요청에 nullable imageUrl을 그대로 전송한다', async () => {
+      let capturedBody: Record<string, unknown> | null = null;
+      server.use(
+        http.post(BASE, async ({ request }) => {
+          capturedBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(
+            wrapApiResponse({
+              code: 'REGION_CREATED',
+              message: '지역이 생성되었습니다.',
+              targetId: 99,
+              responseAt: '2024-06-01T00:00:00',
+            })
+          );
+        })
+      );
+
+      await regionService.create({
+        korName: '일본',
+        engName: 'Japan',
+        imageUrl: null,
+      });
+
+      expect(capturedBody).toMatchObject({ imageUrl: null });
+    });
+
+    it('수정 요청에 imageUrl URL을 그대로 전송한다', async () => {
+      let capturedBody: Record<string, unknown> | null = null;
+      server.use(
+        http.put(`${BASE}/1`, async ({ request }) => {
+          capturedBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(
+            wrapApiResponse({
+              code: 'REGION_UPDATED',
+              message: '지역이 수정되었습니다.',
+              targetId: 1,
+              responseAt: '2024-06-01T00:00:00',
+            })
+          );
+        })
+      );
+
+      await regionService.update(1, {
+        korName: '스코틀랜드',
+        engName: 'Scotland',
+        imageUrl: 'https://example.com/regions/scotland-updated.webp',
+      });
+
+      expect(capturedBody).toMatchObject({
+        imageUrl: 'https://example.com/regions/scotland-updated.webp',
+      });
     });
   });
 

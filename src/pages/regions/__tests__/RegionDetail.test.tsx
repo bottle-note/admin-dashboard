@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 
 import { server } from '@/test/mocks/server';
 import { mockAlcoholLookupItems, wrapApiResponse } from '@/test/mocks/data';
 import { render } from '@/test/test-utils';
+import type { RegionFormData } from '@/types/api';
 
 import { RegionDetailPage } from '../RegionDetail';
 
@@ -51,5 +53,37 @@ describe('RegionDetailPage', () => {
     expect(screen.getByText('맥캘란 18년')).toBeInTheDocument();
     expect(lookupRegionId).toBe('1');
     expect(lookupCursor).toBe('0');
+  });
+
+  it('이미지가 있는 지역의 텍스트만 수정해도 기존 imageUrl을 보존해 저장한다', async () => {
+    const user = userEvent.setup();
+    let capturedBody: RegionFormData | null = null;
+
+    server.use(
+      http.put('/admin/api/v1/regions/1', async ({ request }) => {
+        capturedBody = (await request.json()) as RegionFormData;
+        return HttpResponse.json(
+          wrapApiResponse({
+            code: 'REGION_UPDATED',
+            message: '지역이 수정되었습니다.',
+            targetId: 1,
+            responseAt: '2024-06-01T00:00:00',
+          })
+        );
+      })
+    );
+
+    render(<RegionDetailPage />);
+
+    const korNameInput = await screen.findByDisplayValue('스코틀랜드');
+    await user.clear(korNameInput);
+    await user.type(korNameInput, '스코틀랜드 수정');
+    await user.click(screen.getByRole('button', { name: '저장' }));
+
+    await waitFor(() => expect(capturedBody).not.toBeNull());
+    expect(capturedBody).toMatchObject({
+      korName: '스코틀랜드 수정',
+      imageUrl: 'https://example.com/regions/scotland.webp',
+    });
   });
 });
