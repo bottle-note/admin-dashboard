@@ -165,6 +165,10 @@ export function ImageCropDialog({
     }
   };
 
+  const sourceCrop =
+    cropPixels && imageRef.current ? toSourceCrop(cropPixels, imageRef.current) : null;
+  const cropSizeLabel = sourceCrop ? `크롭 ${sourceCrop.width} × ${sourceCrop.height}px` : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
@@ -185,8 +189,21 @@ export function ImageCropDialog({
                 keepSelection
                 ruleOfThirds
                 disabled={isProcessing}
-                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onChange={(pixelCrop, percentCrop) => {
+                  setCrop(percentCrop);
+                  setCropPixels(pixelCrop);
+                }}
                 onComplete={handleCropComplete}
+                renderSelectionAddon={() =>
+                  cropSizeLabel ? (
+                    <span
+                      className="pointer-events-none absolute bottom-1 right-1 rounded bg-black/75 px-1.5 py-0.5 text-xs font-medium text-white"
+                      aria-label={`원본 기준 ${cropSizeLabel}`}
+                    >
+                      {cropSizeLabel}
+                    </span>
+                  ) : null
+                }
               >
                 <img
                   ref={imageRef}

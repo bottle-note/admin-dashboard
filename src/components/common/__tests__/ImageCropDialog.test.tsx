@@ -15,10 +15,12 @@ vi.mock('react-image-crop', () => ({
     aspect,
     children,
     onComplete,
+    renderSelectionAddon,
   }: {
     aspect?: number;
     children: React.ReactNode;
     onComplete: (crop: { unit: 'px'; x: number; y: number; width: number; height: number }) => void;
+    renderSelectionAddon?: () => React.ReactNode;
   }) => (
     <div data-testid="crop-editor" data-aspect={aspect === undefined ? 'free' : String(aspect)}>
       <button
@@ -28,6 +30,7 @@ vi.mock('react-image-crop', () => ({
         크롭 영역 변경
       </button>
       {children}
+      {renderSelectionAddon?.()}
     </div>
   ),
   centerCrop: <T,>(crop: T) => crop,
@@ -103,8 +106,10 @@ describe('ImageCropDialog', () => {
 
     await user.selectOptions(screen.getByLabelText('크롭 비율'), 'free');
     expect(screen.getByTestId('crop-editor')).toHaveAttribute('data-aspect', 'free');
+    expect(await screen.findByLabelText('원본 기준 크롭 900 × 450px')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '크롭 영역 변경' }));
+    expect(await screen.findByLabelText('원본 기준 크롭 600 × 300px')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '크롭 적용' }));
 
     await waitFor(() => {
