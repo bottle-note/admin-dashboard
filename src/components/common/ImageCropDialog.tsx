@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import Cropper, { type Area } from 'react-easy-crop';
+import { useEffect, useRef, useState } from 'react';
+import ReactCrop, { centerCrop, makeAspectCrop, type Crop, type PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -26,12 +27,50 @@ interface ImageCropDialogProps {
   onPrepared: (preparedImage: PreparedImage) => void;
 }
 
-function toCropPixels(area: Area) {
+function createInitialCrop(image: HTMLImageElement, aspectRatio: number | null): Crop {
+  if (aspectRatio === null) {
+    return { unit: '%', x: 5, y: 5, width: 90, height: 90 };
+  }
+
+  const width = image.width || image.naturalWidth;
+  const height = image.height || image.naturalHeight;
+
+  return centerCrop(
+    makeAspectCrop({ unit: '%', width: 90 }, aspectRatio, width, height),
+    width,
+    height
+  );
+}
+
+function toPixelCrop(crop: Crop, image: HTMLImageElement): PixelCrop {
+  if (crop.unit === 'px') return crop as PixelCrop;
+
+  const width = image.width || image.naturalWidth;
+  const height = image.height || image.naturalHeight;
+
   return {
-    x: Math.round(area.x),
-    y: Math.round(area.y),
-    width: Math.round(area.width),
-    height: Math.round(area.height),
+    unit: 'px',
+    x: (crop.x ?? 0) * (width / 100),
+    y: (crop.y ?? 0) * (height / 100),
+    width: crop.width * (width / 100),
+    height: crop.height * (height / 100),
+  };
+}
+
+function toSourceCrop(crop: PixelCrop, image: HTMLImageElement) {
+  const renderedWidth = image.width || image.naturalWidth;
+  const renderedHeight = image.height || image.naturalHeight;
+
+  if (!renderedWidth || !renderedHeight || !image.naturalWidth || !image.naturalHeight) return null;
+
+  const scaleX = image.naturalWidth / renderedWidth;
+  const scaleY = image.naturalHeight / renderedHeight;
+
+  return {
+    x: Math.round(crop.x * scaleX),
+    y: Math.round(crop.y * scaleY),
+    width: Math.round(crop.width * scaleX),
+    height: Math.round(crop.height * scaleY),
   };
 }
 
@@ -42,12 +81,12 @@ export function ImageCropDialog({
   onOpenChange,
   onPrepared,
 }: ImageCropDialogProps) {
+  const imageRef = useRef<HTMLImageElement>(null);
   const [sourceUrl, setSourceUrl] = useState<string | null>(null);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
+  const [crop, setCrop] = useState<Crop>();
+  const [cropPixels, setCropPixels] = useState<PixelCrop | null>(null);
   const [quality, setQuality] = useState(policy.defaultQuality);
-  const [aspectRatio, setAspectRatio] = useState(policy.defaultAspectRatio);
-  const [cropPixels, setCropPixels] = useState<Area | null>(null);
+  const [aspectRatio, setAspectRatio] = useState<number | null>(policy.defaultAspectRatio);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -56,19 +95,47 @@ export function ImageCropDialog({
 
     const nextSourceUrl = URL.createObjectURL(file);
     setSourceUrl(nextSourceUrl);
-    setCrop({ x: 0, y: 0 });
-    setZoom(1);
+    setCrop(undefined);
+    setCropPixels(null);
     setQuality(policy.defaultQuality);
     setAspectRatio(policy.defaultAspectRatio);
-    setCropPixels(null);
     setErrorMessage(null);
 
     return () => URL.revokeObjectURL(nextSourceUrl);
   }, [file, open, policy.defaultAspectRatio, policy.defaultQuality]);
 
+  const handleCropComplete = (nextCrop: PixelCrop) => {
+    setCropPixels(nextCrop);
+  };
+
+  const handleImageLoad = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const initialCrop = createInitialCrop(event.currentTarget, aspectRatio);
+    setCrop(initialCrop);
+    setCropPixels(toPixelCrop(initialCrop, event.currentTarget));
+  };
+
+  const handleAspectRatioChange = (value: string) => {
+    const nextAspectRatio = value === 'free' ? null : Number(value);
+    setAspectRatio(nextAspectRatio);
+    setCropPixels(null);
+
+    if (imageRef.current) {
+      const initialCrop = createInitialCrop(imageRef.current, nextAspectRatio);
+      setCrop(initialCrop);
+      setCropPixels(toPixelCrop(initialCrop, imageRef.current));
+    }
+  };
+
   const handleApply = async () => {
-    if (!file || !cropPixels) {
+    const image = imageRef.current;
+    if (!file || !image || !cropPixels) {
       setErrorMessage('크롭 영역을 준비하지 못했습니다. 이미지를 다시 선택해주세요.');
+      return;
+    }
+
+    const sourceCrop = toSourceCrop(cropPixels, image);
+    if (!sourceCrop) {
+      setErrorMessage('이미지 크기를 확인하지 못했습니다. 이미지를 다시 선택해주세요.');
       return;
     }
 
@@ -77,7 +144,7 @@ export function ImageCropDialog({
 
     try {
       const preparedImage = await preprocessImageToWebP(file, {
-        crop: toCropPixels(cropPixels),
+        crop: sourceCrop,
         quality,
         allowedMimeTypes: policy.allowedMimeTypes,
         maxInputBytes: policy.maxInputBytes,
@@ -104,25 +171,31 @@ export function ImageCropDialog({
         <DialogHeader>
           <DialogTitle>이미지 크롭 및 변환</DialogTitle>
           <DialogDescription>
-            비율을 선택한 뒤 이미지를 드래그하고 확대 수준을 조절해 원하는 영역을 정하세요.
+            자유 비율 또는 고정 비율을 선택한 뒤, 크롭 영역을 드래그하거나 모서리 핸들로 크기를
+            조절하세요.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
-          <div className="relative h-80 overflow-hidden rounded-md bg-muted sm:h-96">
+          <div className="flex min-h-80 items-center justify-center overflow-auto rounded-md bg-muted p-3 sm:min-h-96">
             {sourceUrl && (
-              <Cropper
-                image={sourceUrl}
+              <ReactCrop
                 crop={crop}
-                zoom={zoom}
-                aspect={aspectRatio}
-                minZoom={1}
-                maxZoom={3}
-                showGrid
-                onCropChange={setCrop}
-                onCropComplete={(_, croppedAreaPixels) => setCropPixels(croppedAreaPixels)}
-                onZoomChange={setZoom}
-              />
+                aspect={aspectRatio ?? undefined}
+                keepSelection
+                ruleOfThirds
+                disabled={isProcessing}
+                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onComplete={handleCropComplete}
+              >
+                <img
+                  ref={imageRef}
+                  src={sourceUrl}
+                  alt="크롭할 원본 이미지"
+                  className="max-h-[24rem] w-full object-contain"
+                  onLoad={handleImageLoad}
+                />
+              </ReactCrop>
             )}
           </div>
 
@@ -131,15 +204,12 @@ export function ImageCropDialog({
               <span>크롭 비율</span>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                value={String(aspectRatio)}
+                value={aspectRatio === null ? 'free' : String(aspectRatio)}
                 disabled={isProcessing}
-                onChange={(event) => {
-                  setAspectRatio(Number(event.target.value));
-                  setCropPixels(null);
-                }}
+                onChange={(event) => handleAspectRatioChange(event.target.value)}
               >
                 {policy.aspectRatios.map((option) => (
-                  <option key={option.label} value={option.value}>
+                  <option key={option.label} value={option.value === null ? 'free' : option.value}>
                     {option.label}
                   </option>
                 ))}
@@ -147,36 +217,22 @@ export function ImageCropDialog({
             </label>
 
             <label className="space-y-2 text-sm font-medium">
-              <span>확대 수준: {zoom.toFixed(1)}배</span>
+              <span>WebP 품질: {quality}%</span>
               <input
                 className="w-full accent-primary"
                 type="range"
-                min="1"
-                max="3"
-                step="0.1"
-                value={zoom}
+                min="40"
+                max="95"
+                step="5"
+                value={quality}
                 disabled={isProcessing}
-                onChange={(event) => setZoom(Number(event.target.value))}
+                onChange={(event) => setQuality(Number(event.target.value))}
               />
+              <span className="block text-xs font-normal text-muted-foreground">
+                변환 후 실제 해상도와 파일 크기는 적용 결과에서 확인할 수 있습니다.
+              </span>
             </label>
           </div>
-
-          <label className="space-y-2 text-sm font-medium">
-            <span>WebP 품질: {quality}%</span>
-            <input
-              className="w-full accent-primary"
-              type="range"
-              min="40"
-              max="95"
-              step="5"
-              value={quality}
-              disabled={isProcessing}
-              onChange={(event) => setQuality(Number(event.target.value))}
-            />
-            <span className="block text-xs font-normal text-muted-foreground">
-              변환 후 실제 해상도와 파일 크기는 적용 결과에서 확인할 수 있습니다.
-            </span>
-          </label>
 
           {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
         </div>

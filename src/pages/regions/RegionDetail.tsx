@@ -37,6 +37,7 @@ import { regionDefaultValues, regionFormSchema, type RegionFormValues } from './
 const REGION_IMAGE_POLICY: ImageProcessingPolicy = {
   allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
   aspectRatios: [
+    { label: '자유 비율', value: null },
     { label: '1:1', value: 1 },
     { label: '4:3', value: 4 / 3 },
     { label: '16:9', value: 16 / 9 },

@@ -15,13 +15,14 @@ import { ImageCropDialog } from './ImageCropDialog';
 
 export interface ImageAspectRatioOption {
   label: string;
-  value: number;
+  /** null이면 크롭 영역의 가로·세로 비율을 고정하지 않는다. */
+  value: number | null;
 }
 
 export interface ImageProcessingPolicy {
   allowedMimeTypes: readonly string[];
   aspectRatios: readonly ImageAspectRatioOption[];
-  defaultAspectRatio: number;
+  defaultAspectRatio: number | null;
   defaultQuality: number;
   maxInputBytes: number;
   maxOutputBytes: number;
