@@ -17,8 +17,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
 import { FormField } from '@/components/common/FormField';
+import {
+  PreparedImageField,
+  type ImageProcessingPolicy,
+} from '@/components/common/PreparedImageField';
 import { RelatedWhiskyLookupCard } from '@/components/common/RelatedWhiskyLookupCard';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { useImageUpload, S3UploadPath } from '@/hooks/useImageUpload';
 import {
   useRegionCreate,
   useRegionDelete,
@@ -26,7 +31,22 @@ import {
   useRegionList,
   useRegionUpdate,
 } from '@/hooks/useRegions';
+import type { PreparedImage } from '@/lib/image-preprocessing';
 import { regionDefaultValues, regionFormSchema, type RegionFormValues } from './region.schema';
+
+const REGION_IMAGE_POLICY: ImageProcessingPolicy = {
+  allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+  aspectRatios: [
+    { label: '1:1', value: 1 },
+    { label: '4:3', value: 4 / 3 },
+    { label: '16:9', value: 16 / 9 },
+  ],
+  defaultAspectRatio: 1,
+  defaultQuality: 70,
+  maxInputBytes: 20 * 1024 * 1024,
+  maxOutputBytes: 5 * 1024 * 1024,
+  maxOutputLongEdge: 1600,
+};
 
 function toNullableText(value: string | null | undefined) {
   const trimmed = value?.trim();
@@ -61,10 +81,19 @@ export function RegionDetailPage() {
   });
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [pendingImage, setPendingImage] = useState<PreparedImage | null>(null);
+  const [stagedImageUrl, setStagedImageUrl] = useState<string | null>(null);
 
   const form = useForm<RegionFormValues>({
     resolver: zodResolver(regionFormSchema),
     defaultValues: regionDefaultValues,
+  });
+  const {
+    upload: uploadRegionImage,
+    isUploading: isImageUploading,
+    error: imageUploadError,
+  } = useImageUpload({
+    rootPath: S3UploadPath.REGION,
   });
 
   useEffect(() => {
@@ -98,21 +127,54 @@ export function RegionDetailPage() {
     ? Math.max(...parentRegionData.items.map((region) => region.sortOrder)) + 1
     : regionDefaultValues.sortOrder;
 
-  const onSubmit = (data: RegionFormValues) => {
+  const handlePreparedImageChange = (preparedImage: PreparedImage) => {
+    setPendingImage(preparedImage);
+    setStagedImageUrl(null);
+  };
+
+  const handleCancelPreparedImage = () => {
+    setPendingImage(null);
+    setStagedImageUrl(null);
+  };
+
+  const handleRemoveImage = () => {
+    setPendingImage(null);
+    setStagedImageUrl(null);
+    form.setValue('imageUrl', null, { shouldDirty: true, shouldValidate: true });
+  };
+
+  const onSubmit = async (data: RegionFormValues) => {
+    let imageUrl = data.imageUrl;
+
+    if (pendingImage) {
+      imageUrl = stagedImageUrl ?? (await uploadRegionImage(pendingImage.file));
+      if (!imageUrl) return;
+
+      setStagedImageUrl(imageUrl);
+    }
+
     const formData = {
       korName: data.korName,
       engName: data.engName,
       continent: toNullableText(data.continent),
       description: toNullableText(data.description),
-      imageUrl: data.imageUrl,
+      imageUrl,
       parentId: data.parentId,
       sortOrder: isNewMode ? nextCreateSortOrder : data.sortOrder,
     };
 
-    if (isNewMode) {
-      createMutation.mutate(formData);
-    } else if (regionId !== undefined) {
-      updateMutation.mutate({ id: regionId, data: formData });
+    try {
+      if (isNewMode) {
+        await createMutation.mutateAsync(formData);
+      } else if (regionId !== undefined) {
+        await updateMutation.mutateAsync({ id: regionId, data: formData });
+      }
+
+      form.setValue('imageUrl', imageUrl);
+      setPendingImage(null);
+      setStagedImageUrl(null);
+    } catch {
+      // 업로드가 성공했더라도 Region 저장이 실패하면 staged URL과 pending 파일을 보존해 재시도한다.
     }
   };
 
@@ -124,7 +186,7 @@ export function RegionDetailPage() {
 
   const handleBack = () => navigate('/regions');
 
-  const isMutating = createMutation.isPending || updateMutation.isPending;
+  const isMutating = createMutation.isPending || updateMutation.isPending || isImageUploading;
 
   return (
     <div className="space-y-6">
@@ -203,40 +265,63 @@ export function RegionDetailPage() {
               </CardContent>
             </Card>
 
-            {!isNewMode && detailData && (
-              <Card className="flex-1">
+            <div className="flex flex-1 flex-col gap-6">
+              <Card>
                 <CardHeader>
-                  <CardTitle>참고 정보</CardTitle>
-                  <CardDescription>지역의 연결 상태와 순서를 확인합니다.</CardDescription>
+                  <CardTitle>대표 이미지</CardTitle>
+                  <CardDescription>
+                    비율을 선택하고 원하는 영역으로 크롭한 WebP 이미지를 저장합니다.
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">정렬 순서</p>
-                    <p className="font-mono">{detailData.sortOrder + 1}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">상위 지역</p>
-                    <p>{detailData.parentKorName ?? '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">하위 지역</p>
-                    <p>{detailData.hasChildren ? '있음' : '없음'}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">연결 위스키</p>
-                    <p>{detailData.alcoholCount.toLocaleString()}개</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">생성일</p>
-                    <p>{formatDateTime(detailData.createAt)}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">수정일</p>
-                    <p>{formatDateTime(detailData.lastModifyAt)}</p>
-                  </div>
+                <CardContent>
+                  <PreparedImageField
+                    currentImageUrl={form.watch('imageUrl')}
+                    preparedImage={pendingImage}
+                    policy={REGION_IMAGE_POLICY}
+                    disabled={isMutating}
+                    errorMessage={imageUploadError?.message}
+                    onPreparedImageChange={handlePreparedImageChange}
+                    onCancelPreparedImage={handleCancelPreparedImage}
+                    onRemoveImage={handleRemoveImage}
+                  />
                 </CardContent>
               </Card>
-            )}
+
+              {!isNewMode && detailData && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>참고 정보</CardTitle>
+                    <CardDescription>지역의 연결 상태와 순서를 확인합니다.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">정렬 순서</p>
+                      <p className="font-mono">{detailData.sortOrder + 1}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">상위 지역</p>
+                      <p>{detailData.parentKorName ?? '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">하위 지역</p>
+                      <p>{detailData.hasChildren ? '있음' : '없음'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">연결 위스키</p>
+                      <p>{detailData.alcoholCount.toLocaleString()}개</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">생성일</p>
+                      <p>{formatDateTime(detailData.createAt)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">수정일</p>
+                      <p>{formatDateTime(detailData.lastModifyAt)}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
 
           {!isNewMode && regionId !== undefined && (

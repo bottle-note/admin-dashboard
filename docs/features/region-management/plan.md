@@ -82,6 +82,18 @@ Add region management under the whisky/tasting tag admin section. The implementa
 - If reorder save fails, restore local rows to the original order and refetch.
 - Bulk reorder API is not available. Track a follow-up issue for `PATCH /admin/api/v1/regions/reorder` with `regionIds` if product wants atomic full-order saves.
 
+## Region Representative Image Follow-up
+
+10. Add image-only preprocessing UI without changing shared `ImageUpload` or Banner video behavior.
+   - Add `PreparedImageField` and its `ImageCropDialog` child component.
+   - Allow JPG/PNG/WebP selection, ratio selection (1:1, 4:3, 16:9), image drag/zoom cropping, WebP quality selection, and actual result metadata display.
+   - Keep `PreparedImage.file` and its object URL local to the field. The shared component must not know an S3 root path or Region/RHF API types.
+11. Compose the field in `RegionDetailPage`.
+   - Keep existing `form.imageUrl` until a new image is successfully saved; use local `pendingImage` and `stagedImageUrl` states for a replacement.
+   - On save only, upload `pendingImage.file` to `S3UploadPath.REGION`, reuse a staged URL after a Region mutation failure, and send the resulting URL in the Region request.
+   - Image removal sends `imageUrl: null`; do not add a client-side S3 delete flow.
+12. Surface region representative thumbnails in `RegionListPage` and add focused tests for image field state and deferred WebP upload behavior.
+
 ## Verification Checklist
 
 - [ ] `pnpm test:run src/hooks/__tests__/useRegions.test.ts`

@@ -335,6 +335,7 @@ export function RegionListPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[80px]">순서</TableHead>
+              <TableHead className="w-[72px]">이미지</TableHead>
               <TableHead>한글명</TableHead>
               <TableHead>영문명</TableHead>
               <TableHead className="w-[120px]">대륙</TableHead>
@@ -346,13 +347,13 @@ export function RegionListPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={isReorderMode ? 7 : 6} className="py-8 text-center">
+                <TableCell colSpan={isReorderMode ? 8 : 7} className="py-8 text-center">
                   <span className="text-muted-foreground">로딩 중...</span>
                 </TableCell>
               </TableRow>
             ) : displayedItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isReorderMode ? 7 : 6} className="py-8 text-center">
+                <TableCell colSpan={isReorderMode ? 8 : 7} className="py-8 text-center">
                   <span className="text-muted-foreground">
                     {keyword ? '검색 결과가 없습니다.' : '등록된 지역이 없습니다.'}
                   </span>
@@ -374,6 +375,19 @@ export function RegionListPage() {
                 >
                   <TableCell className="text-center font-mono text-sm">
                     {isReorderMode ? index + 1 : item.sortOrder + 1}
+                  </TableCell>
+                  <TableCell>
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={`${item.korName} 대표 이미지`}
+                        className="h-10 w-10 rounded object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
+                        -
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="font-medium">{item.korName}</TableCell>
                   <TableCell className="text-muted-foreground">{item.engName}</TableCell>
