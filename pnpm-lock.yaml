@@ -95,6 +95,9 @@ importers:
       react-hook-form:
         specifier: ^7.69.0
         version: 7.69.0(react@18.3.1)
+      react-image-crop:
+        specifier: 11.1.2
+        version: 11.1.2(react@18.3.1)
       react-router:
         specifier: ^7.11.0
         version: 7.11.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -2534,6 +2537,11 @@ packages:
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
+
+  react-image-crop@11.1.2:
+    resolution: {integrity: sha512-+0Pc2fxpwKL4u4oLmdKBw8XSwUceFbXbKEHvFOlsl/MGB1OVNic4uBlAPmEHGXYgoJIq+b63xHbc/aJMG0AVkA==}
+    peerDependencies:
+      react: '>=16.13.1'
 
   react-is@17.0.2:
     resolution: {integrity: sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==}
@@ -5318,6 +5326,10 @@ snapshots:
       scheduler: 0.23.2
 
   react-hook-form@7.69.0(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+
+  react-image-crop@11.1.2(react@18.3.1):
     dependencies:
       react: 18.3.1
 

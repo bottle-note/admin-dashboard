@@ -70,6 +70,8 @@ export interface RegionApiTypes {
       continent: string | null;
       /** 설명 */
       description: string | null;
+      /** 대표 이미지 URL */
+      imageUrl: string | null;
       /** 생성일시 */
       createdAt: string;
       /** 수정일시 */
@@ -107,6 +109,8 @@ export interface RegionApiTypes {
       continent: string | null;
       /** 설명 */
       description: string | null;
+      /** 대표 이미지 URL */
+      imageUrl: string | null;
       /** 정렬 순서 */
       sortOrder: number;
       /** 상위 지역 ID */
@@ -135,6 +139,8 @@ export interface RegionApiTypes {
       continent?: string | null;
       /** 설명 */
       description?: string | null;
+      /** 대표 이미지 URL */
+      imageUrl?: string | null;
       /** 상위 지역 ID */
       parentId?: number | null;
       /** 정렬 순서 (미지정 시 백엔드 기본값 9999) */

@@ -29,6 +29,7 @@ import {
   mockCurationBulkReorderResponse,
   mockRegionListItems,
   mockRegionDetail,
+  mockRegionDetailWithoutImage,
   mockRegionFormResponse,
   mockRegionDeleteResponse,
   mockRegionBulkReorderResponse,
@@ -718,8 +719,11 @@ export const regionHandlers = [
   // GET 상세
   http.get(`${REGION_BASE}/:id`, ({ params }) => {
     const id = Number(params.id);
-    if (id === mockRegionDetail.id) {
-      return HttpResponse.json(wrapApiResponse(mockRegionDetail));
+    const detail = [mockRegionDetail, mockRegionDetailWithoutImage].find(
+      (region) => region.id === id
+    );
+    if (detail) {
+      return HttpResponse.json(wrapApiResponse(detail));
     }
     return HttpResponse.json(
       {

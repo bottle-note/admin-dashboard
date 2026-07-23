@@ -5,6 +5,7 @@ export const regionFormSchema = z.object({
   engName: z.string().min(1, '영문명은 필수입니다'),
   continent: z.string().nullable(),
   description: z.string().nullable(),
+  imageUrl: z.string().nullable(),
   parentId: z.number().nullable(),
   sortOrder: z
     .number({ message: '정렬 순서는 숫자여야 합니다' })
@@ -19,6 +20,7 @@ export const regionDefaultValues: RegionFormValues = {
   engName: '',
   continent: null,
   description: null,
+  imageUrl: null,
   parentId: null,
   sortOrder: 9999,
 };

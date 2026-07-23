@@ -114,6 +114,12 @@
 - `DELETE /admin/api/v1/regions/{regionId}`
   - 존재하지 않는 ID는 `REGION_NOT_FOUND`로 실패한다.
   - Response는 프로젝트의 일반 mutation 응답 형식인 `{ code, message, targetId, responseAt }`로 본다.
+- Region 대표 이미지 후속 연동:
+  - `imageUrl: string | null`은 Region 목록/상세 응답 및 생성/수정 요청에서 사용한다.
+  - 지역 등록/수정 화면은 이미지 선택 → 비율 선택 크롭 → WebP 전처리 → 저장 시 S3 업로드 → Region API `imageUrl` 전달 순서를 따른다.
+  - 이미지 선택·크롭만으로는 S3 또는 Region API를 호출하지 않는다.
+  - 지원 입력은 JPG/PNG/WebP, 최대 20 MiB이며 WebP 결과는 최대 긴 변 1600px·최대 5 MiB로 제한한다.
+  - 운영자는 자유 비율, 1:1, 4:3, 16:9 중 크롭 비율을 선택하고 크롭 영역을 드래그·리사이즈해 조절한다. 선택 영역 모서리에는 원본 기준 크롭 가로×세로 픽셀을 표시한다. 기본 비율은 1:1, 기본 품질은 70이다.
 - `PATCH /admin/api/v1/regions/{regionId}/sort-order`
   - Request:
     - `sortOrder: number`
