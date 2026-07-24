@@ -1,4 +1,4 @@
-import { useCurationSpec, useCurationSpecByCode } from '@/hooks/useCurations';
+import { useCurationSpec, useCurationSpecs } from '@/hooks/useCurations';
 import type { CurationV2Spec, CurationV2SpecCode } from '@/types/api';
 
 interface UseCurationSpecFormModelOptions<TFormModel> {
@@ -13,9 +13,10 @@ export function useCurationSpecFormModel<TFormModel>({
   createFormModel,
   showErrorToast = false,
 }: UseCurationSpecFormModelOptions<TFormModel>) {
-  const specsQuery = useCurationSpecByCode(specCode);
-  const targetSpec = specsQuery.data?.isActive ? specsQuery.data : null;
-  const specDetailQuery = useCurationSpec(targetSpec?.id, {
+  const specsQuery = useCurationSpecs();
+  const targetSpec =
+    specsQuery.data?.find((spec) => spec.code === specCode && spec.isActive) ?? null;
+  const specDetailQuery = useCurationSpec(targetSpec?.id, targetSpec?.version, {
     showErrorToast,
   });
   const specDetail = specDetailQuery.data;
