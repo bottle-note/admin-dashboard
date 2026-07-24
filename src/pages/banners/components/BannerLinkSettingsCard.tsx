@@ -15,12 +15,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField } from '@/components/common/FormField';
 
 import type { BannerFormValues } from '../banner.schema';
-import { curationService } from '@/hooks/useCurationOld';
-import type { CurationListItem } from '@/types/api';
+import { createCurationTargetUrl } from '../banner-curation-link';
+import type { CurationV2ListItem } from '@/types/api';
 
 interface BannerLinkSettingsCardProps {
   form: UseFormReturn<BannerFormValues>;
-  curations: CurationListItem[];
+  curations: CurationV2ListItem[];
 }
 
 export function BannerLinkSettingsCard({ form, curations }: BannerLinkSettingsCardProps) {
@@ -32,7 +32,7 @@ export function BannerLinkSettingsCard({ form, curations }: BannerLinkSettingsCa
   const handleCurationChange = (value: string) => {
     const id = parseInt(value, 10);
     form.setValue('curationId', id);
-    form.setValue('targetUrl', curationService.generateCurationUrl(id));
+    form.setValue('targetUrl', createCurationTargetUrl(id));
     form.setValue('isExternalUrl', false);
   };
 

@@ -17,8 +17,6 @@ import { TastingTagDetailPage } from '@/pages/tasting-tags/TastingTagDetail';
 import { BannerListPage } from '@/pages/banners/BannerList';
 import { BannerDetailPage } from '@/pages/banners/BannerDetail';
 import { BannerCreatePage } from '@/pages/banners/BannerCreate';
-import { CurationListPage as CurationOldListPage } from '@/pages/curation-old/CurationList';
-import { CurationDetailPage as CurationOldDetailPage } from '@/pages/curation-old/CurationDetail';
 import { CurationEntryPage } from '@/pages/curation/CurationEntry';
 import { CurationListPage } from '@/pages/curation/CurationList';
 import { CurationDetailPage } from '@/pages/curation/CurationDetail';
@@ -196,32 +194,6 @@ export function AppRoutes() {
             </RoleProtectedRoute>
           }
         />
-        {/* Curations - ROOT_ADMIN only */}
-        <Route
-          path="curations"
-          element={
-            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <CurationOldListPage />
-            </RoleProtectedRoute>
-          }
-        />
-        <Route
-          path="curations/new"
-          element={
-            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <CurationOldDetailPage key="new" />
-            </RoleProtectedRoute>
-          }
-        />
-        <Route
-          path="curations/:id"
-          element={
-            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
-              <CurationOldDetailPage key="edit" />
-            </RoleProtectedRoute>
-          }
-        />
-
         {/* Inquiries - ROOT_ADMIN only */}
         <Route
           path="inquiries"

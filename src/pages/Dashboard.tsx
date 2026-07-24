@@ -8,7 +8,7 @@ import { useAdminAlcoholList } from '@/hooks/useAdminAlcohols';
 import { useHelpList } from '@/hooks/useHelps';
 import { useTastingTagList } from '@/hooks/useTastingTags';
 import { useBannerList } from '@/hooks/useBanners';
-import { useCurationList } from '@/hooks/useCurationOld';
+import { useCurationList } from '@/hooks/useCurations';
 
 interface StatCardProps {
   title: string;
@@ -93,7 +93,7 @@ export function DashboardPage() {
           value={curationData?.meta.totalElements ?? 0}
           icon={<BookOpen className="h-5 w-5" />}
           isLoading={isCurationLoading}
-          href="/curations"
+          href="/dashboard/curations"
         />
         <StatCard
           title="처리 대기 문의"
