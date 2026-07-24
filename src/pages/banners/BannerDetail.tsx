@@ -35,7 +35,7 @@ export function BannerDetailPage() {
     rootPath: S3UploadPath.BANNER,
   });
 
-  const { data: curationData } = useCurationList();
+  const { data: curationData } = useCurationList({ isActive: true });
   const curations = curationData?.items ?? [];
 
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);

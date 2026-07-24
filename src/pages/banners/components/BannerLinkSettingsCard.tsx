@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField } from '@/components/common/FormField';
 
 import type { BannerFormValues } from '../banner.schema';
+import { createCurationTargetUrl } from '../banner-curation-link';
 import type { CurationV2ListItem } from '@/types/api';
 
 interface BannerLinkSettingsCardProps {
@@ -31,7 +32,7 @@ export function BannerLinkSettingsCard({ form, curations }: BannerLinkSettingsCa
   const handleCurationChange = (value: string) => {
     const id = parseInt(value, 10);
     form.setValue('curationId', id);
-    form.setValue('targetUrl', `/search?curationId=${id}`);
+    form.setValue('targetUrl', createCurationTargetUrl(id));
     form.setValue('isExternalUrl', false);
   };
 

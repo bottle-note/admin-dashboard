@@ -117,6 +117,7 @@ describe('useCurations hooks', () => {
         const url = new URL(request.url);
 
         expect(url.searchParams.get('code')).toBe('RECOMMENDED_WHISKY');
+        expect(url.searchParams.get('isActive')).toBe('true');
 
         return HttpResponse.json(
           wrapApiResponse(
@@ -144,7 +145,7 @@ describe('useCurations hooks', () => {
     );
 
     const { result } = renderHook(() =>
-      useCurationList({ code: 'RECOMMENDED_WHISKY', page: 0, size: 20 })
+      useCurationList({ code: 'RECOMMENDED_WHISKY', isActive: true, page: 0, size: 20 })
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));

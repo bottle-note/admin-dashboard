@@ -23,17 +23,7 @@ import {
 } from './banner.schema';
 import type { BannerFormValues } from './banner.schema';
 import type { BannerDetail } from '@/types/api';
-
-/**
- * 큐레이션 URL에서 curationId 추출
- * @param url - /alcohols/search?curationId=123 형태의 URL
- * @returns curationId 또는 null
- */
-function parseCurationIdFromUrl(url: string | null | undefined): number | null {
-  if (!url) return null;
-  const match = url.match(/curationId=(\d+)/);
-  return match && match[1] ? parseInt(match[1], 10) : null;
-}
+import { extractCurationIdFromTargetUrl } from './banner-curation-link';
 
 /**
  * useBannerDetailForm 훅의 반환 타입
@@ -96,7 +86,7 @@ export function useBannerDetailForm(id: string | undefined): UseBannerDetailForm
       // CURATION 타입인 경우 URL에서 curationId 추출
       const curationId =
         bannerData.bannerType === 'CURATION'
-          ? parseCurationIdFromUrl(bannerData.targetUrl)
+          ? extractCurationIdFromTargetUrl(bannerData.targetUrl)
           : null;
 
       form.reset({
