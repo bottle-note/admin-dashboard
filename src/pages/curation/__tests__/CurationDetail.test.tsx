@@ -9,6 +9,7 @@ import { render } from '@/test/test-utils';
 import type { CurationV2Spec, CurationV2UpdateRequest } from '@/types/api';
 
 import { CurationDetailPage } from '../CurationDetail';
+import { programSpec } from '../schema-driven/__tests__/program-spec.fixture';
 
 vi.mock('react-router', async () => {
   const actual = await vi.importActual<typeof import('react-router')>('react-router');
@@ -140,6 +141,49 @@ const tastingEventSpec: CurationV2Spec = {
 };
 
 describe('CurationDetailPage', () => {
+  it('PROGRAM 큐레이션은 스펙 기반 수정 폼으로 렌더링한다', async () => {
+    server.use(
+      http.get(`${CURATION_BASE}/:curationId`, () =>
+        HttpResponse.json(
+          wrapApiResponse({
+            id: 10,
+            name: '2026 바쇼',
+            description: '행사 소개',
+            coverImageUrl: null,
+            imageUrls: [],
+            exposureStartDate: '2026-07-01',
+            exposureEndDate: '2026-07-31',
+            displayOrder: 0,
+            isActive: true,
+            createdAt: '2026-07-01T00:00:00',
+            modifiedAt: '2026-07-01T00:00:00',
+            spec: programSpec,
+            payload: {
+              eventStartDate: '2026-07-24',
+              eventEndDate: '2026-07-26',
+              placeName: '코엑스',
+              address: '서울 강남구 영동대로 513',
+              programs: [
+                {
+                  name: '마스터클래스',
+                  type: 'MASTER_CLASS',
+                  programDate: '2026-07-24',
+                  startTime: '14:00',
+                  description: '행사 설명',
+                },
+              ],
+            },
+          })
+        )
+      )
+    );
+
+    render(<CurationDetailPage />);
+
+    expect(await screen.findByRole('heading', { name: '프로그램 수정' })).toBeInTheDocument();
+    expect(screen.getByLabelText('1번 프로그램 프로그램명')).toHaveValue('마스터클래스');
+  });
+
   it('시음회 큐레이션은 작성 폼에 기존 값을 채우고 수정 API로 저장한다', async () => {
     const user = userEvent.setup();
     let capturedBody: CurationV2UpdateRequest | null = null;
@@ -368,5 +412,4 @@ describe('CurationDetailPage', () => {
     expect(screen.getByText('channel')).toBeInTheDocument();
     expect(screen.getByText('home')).toBeInTheDocument();
   });
-
 });

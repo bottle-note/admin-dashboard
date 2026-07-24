@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Layers,
   Loader2,
+  Presentation,
   Utensils,
   type LucideIcon,
 } from 'lucide-react';
@@ -13,7 +14,6 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCurationSpecs } from '@/hooks/useCurations';
-import { useToast } from '@/hooks/useToast';
 import { cn } from '@/lib/utils';
 import {
   CurationSpecCode,
@@ -30,7 +30,7 @@ import {
 } from './_preview';
 
 interface CurationSpecUiConfig {
-  href: string;
+  hasPreview: boolean;
   icon: LucideIcon;
   order: number;
   label: string;
@@ -44,7 +44,7 @@ interface CurationSpecUiConfig {
 
 const CURATION_SPEC_UI_CONFIG: Record<KnownCurationV2SpecCode, CurationSpecUiConfig> = {
   WHISKY_TASTING_EVENT: {
-    href: '/dashboard/curations/tasting-events/new',
+    hasPreview: true,
     icon: CalendarDays,
     order: 1,
     label: '시음회',
@@ -66,7 +66,7 @@ const CURATION_SPEC_UI_CONFIG: Record<KnownCurationV2SpecCode, CurationSpecUiCon
     previewButtonClassName: 'bg-white/20 text-white hover:bg-white/30',
   },
   RECOMMENDED_WHISKY: {
-    href: '/dashboard/curations/general/new',
+    hasPreview: true,
     icon: Layers,
     order: 2,
     label: '일반 큐레이션',
@@ -78,7 +78,7 @@ const CURATION_SPEC_UI_CONFIG: Record<KnownCurationV2SpecCode, CurationSpecUiCon
     previewButtonClassName: 'bg-white/25 text-white hover:bg-white/35',
   },
   WHISKY_PAIRING: {
-    href: '/dashboard/curations/pairings/new',
+    hasPreview: true,
     icon: Utensils,
     order: 3,
     label: '페어링 · 위스키 → 음식',
@@ -92,6 +92,18 @@ const CURATION_SPEC_UI_CONFIG: Record<KnownCurationV2SpecCode, CurationSpecUiCon
     fields: ['이름', '설명', '커버', '기준 위스키 1종', '추천 음식 N개(자유 입력)'],
     headerClassName: 'bg-[#687c53]',
     previewButtonClassName: 'bg-white/20 text-white hover:bg-white/30',
+  },
+  PROGRAM: {
+    hasPreview: false,
+    icon: Presentation,
+    order: 4,
+    label: '프로그램',
+    description: '행사 정보와 여러 프로그램, 프로그램별 위스키 라인업을 함께 발행합니다.',
+    useCases: ['박람회·페스티벌 프로그램', '브랜드 마스터클래스', '복수 세션 행사 안내'],
+    example: '2026 바앤스피릿쇼 — 마스터클래스·시음·세미나',
+    fields: ['이름', '설명', '커버', '행사 정보', '프로그램 목록', '프로그램별 위스키'],
+    headerClassName: 'bg-primary',
+    previewButtonClassName: '',
   },
 };
 
@@ -113,7 +125,6 @@ export function CurationEntryPage() {
   const [selectedPreviewCode, setSelectedPreviewCode] = useState<KnownCurationV2SpecCode>(
     CurationSpecCode.WHISKY_TASTING_EVENT
   );
-  const { showToast } = useToast();
   const { data: specs = [], isError, isLoading, refetch } = useCurationSpecs();
 
   const activeSpecs = specs.filter((spec) => spec.isActive).sort(compareCurationSpecs);
@@ -174,15 +185,7 @@ export function CurationEntryPage() {
               const example = config?.example ?? spec.name;
               const fields = config?.fields ?? ['이름', '설명', '커버', 'payload'];
               const handleStart = () => {
-                if (config) {
-                  navigate(config.href);
-                  return;
-                }
-
-                showToast({
-                  type: 'info',
-                  message: '준비중입니다',
-                });
+                navigate(`/dashboard/curations/specs/${encodeURIComponent(spec.code)}/new`);
               };
 
               return (
@@ -212,22 +215,23 @@ export function CurationEntryPage() {
                       </span>
                       <h2 className="truncate text-base font-bold">{label}</h2>
                     </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      className={cn(
-                        'h-10 shrink-0 rounded-lg border-0 px-6 font-semibold shadow-none',
-                        config?.previewButtonClassName ?? 'bg-white/20 text-white hover:bg-white/30'
-                      )}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (config) {
+                    {config?.hasPreview && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        aria-label={`${label} 미리보기`}
+                        className={cn(
+                          'h-10 shrink-0 rounded-lg border-0 px-6 font-semibold shadow-none',
+                          config.previewButtonClassName
+                        )}
+                        onClick={(event) => {
+                          event.stopPropagation();
                           setSelectedPreviewCode(spec.code as KnownCurationV2SpecCode);
-                        }
-                      }}
-                    >
-                      미리보기
-                    </Button>
+                        }}
+                      >
+                        미리보기
+                      </Button>
+                    )}
                   </div>
 
                   <CardContent className="space-y-5 p-5">

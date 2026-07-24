@@ -41,7 +41,10 @@ export function CurationFormSection({
     }
   }, [form, section.fields, watchedValues]);
 
-  if (visibleFields.length === 1 && firstField?.kind === 'alcohol-card-list') {
+  if (
+    visibleFields.length === 1 &&
+    (firstField?.kind === 'alcohol-card-list' || firstField?.kind === 'object-array')
+  ) {
     return (
       <CurationFormFieldRenderer
         field={firstField}

@@ -11,6 +11,16 @@ import { CurationEntryPage } from '../CurationEntry';
 
 const SPEC_BASE = '/admin/api/v2/curation-specs';
 const mockShowToast = vi.hoisted(() => vi.fn());
+const mockNavigate = vi.hoisted(() => vi.fn());
+
+vi.mock('react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router')>();
+
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 vi.mock('@/hooks/useToast', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks/useToast')>();
@@ -53,6 +63,14 @@ const mockSpecs: CurationV2SpecListItem[] = [
   },
   {
     id: 4,
+    code: 'PROGRAM',
+    name: '프로그램',
+    description: '여러 프로그램과 프로그램별 위스키 라인업을 발행합니다.',
+    version: 1,
+    isActive: true,
+  },
+  {
+    id: 5,
     code: 'INACTIVE_SPEC',
     name: '비활성 스펙',
     description: '비활성 스펙',
@@ -72,6 +90,7 @@ function mockSpecList(specs: CurationV2SpecListItem[] = mockSpecs) {
 describe('CurationEntryPage', () => {
   beforeEach(() => {
     mockShowToast.mockClear();
+    mockNavigate.mockClear();
   });
 
   const getFirstPreviewButton = async () => {
@@ -97,6 +116,7 @@ describe('CurationEntryPage', () => {
       '시음회',
       '일반 큐레이션',
       '페어링 · 위스키 → 음식',
+      '프로그램',
     ]);
     expect(
       screen.getByText('특정 바에서 특정 기간 동안 위스키를 시음하는 모집을 만듭니다.')
@@ -111,16 +131,48 @@ describe('CurationEntryPage', () => {
 
     render(<CurationEntryPage />);
 
-    expect(await screen.findAllByRole('button', { name: /작성하기/ })).toHaveLength(3);
+    expect(await screen.findAllByRole('button', { name: /작성하기/ })).toHaveLength(4);
     expect(screen.getAllByRole('button', { name: /미리보기/ })).toHaveLength(3);
   });
 
-  it('준비되지 않은 활성 스펙의 작성하기를 누르면 준비중 안내를 표시한다', async () => {
+  it('PROGRAM 작성하기는 spec code 기반 동적 라우트로 이동하고 미리보기는 표시하지 않는다', async () => {
+    const user = userEvent.setup();
+    mockSpecList();
+
+    render(<CurationEntryPage />);
+
+    await user.click(await screen.findByRole('button', { name: '프로그램 작성하기' }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard/curations/specs/PROGRAM/new');
+    expect(screen.queryByRole('button', { name: '프로그램 미리보기' })).not.toBeInTheDocument();
+  });
+
+  it('기존 전용 스펙 카드도 동일한 spec code 작성 라우트로 이동한다', async () => {
+    const user = userEvent.setup();
+    mockSpecList();
+
+    render(<CurationEntryPage />);
+
+    await user.click(await screen.findByRole('button', { name: '시음회 작성하기' }));
+    expect(mockNavigate).toHaveBeenLastCalledWith(
+      '/dashboard/curations/specs/WHISKY_TASTING_EVENT/new'
+    );
+
+    await user.click(screen.getByRole('button', { name: '일반 큐레이션 작성하기' }));
+    expect(mockNavigate).toHaveBeenLastCalledWith(
+      '/dashboard/curations/specs/RECOMMENDED_WHISKY/new'
+    );
+
+    await user.click(screen.getByRole('button', { name: '페어링 · 위스키 → 음식 작성하기' }));
+    expect(mockNavigate).toHaveBeenLastCalledWith('/dashboard/curations/specs/WHISKY_PAIRING/new');
+  });
+
+  it('UI 설정이 없는 활성 스펙도 동적 작성 라우트로 이동한다', async () => {
     const user = userEvent.setup();
     mockSpecList([
       ...mockSpecs,
       {
-        id: 5,
+        id: 6,
         code: 'SEASONAL_PICK',
         name: '시즌 큐레이션',
         description: '아직 작성 화면이 준비되지 않은 스펙',
@@ -135,10 +187,8 @@ describe('CurationEntryPage', () => {
 
     await user.click(screen.getByRole('button', { name: '시즌 큐레이션 작성하기' }));
 
-    expect(mockShowToast).toHaveBeenCalledWith({
-      type: 'info',
-      message: '준비중입니다',
-    });
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard/curations/specs/SEASONAL_PICK/new');
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it('미리보기 패널은 기본 시음회 앱 프레임을 표시한다', async () => {
