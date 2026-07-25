@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -14,19 +14,28 @@ import type {
   CurationV2UpdateRequest,
 } from '@/types/api';
 
-import { WhiskyCurationCreatePage } from '../WhiskyCurationCreatePage';
+import { CurationCreatePage } from '../../CurationCreate';
 import { WhiskyCurationEditPage } from '../WhiskyCurationEditPage';
 
+const routeState = vi.hoisted(() => ({ specCode: 'RECOMMENDED_WHISKY' }));
+
+vi.mock('react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router')>();
+
+  return {
+    ...actual,
+    useParams: () => ({ specCode: routeState.specCode }),
+  };
+});
+
 function renderRecommendedCreatePage() {
-  return render(
-    <WhiskyCurationCreatePage specCode="RECOMMENDED_WHISKY" fallbackTitle="추천 위스키 작성" />
-  );
+  routeState.specCode = 'RECOMMENDED_WHISKY';
+  return render(<CurationCreatePage />);
 }
 
 function renderPairingCreatePage() {
-  return render(
-    <WhiskyCurationCreatePage specCode="WHISKY_PAIRING" fallbackTitle="위스키 페어링 작성" />
-  );
+  routeState.specCode = 'WHISKY_PAIRING';
+  return render(<CurationCreatePage />);
 }
 
 const SPEC_BASE = '/admin/api/v2/curation-specs';

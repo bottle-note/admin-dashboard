@@ -10,7 +10,10 @@ export type CurationFieldKind =
   | 'address'
   | 'number'
   | 'boolean-radio'
-  | 'alcohol-card-list';
+  | 'select'
+  | 'multi-select'
+  | 'alcohol-card-list'
+  | 'object-array';
 
 export interface CurationBaseFieldModel {
   key: string;
@@ -21,11 +24,15 @@ export interface CurationBaseFieldModel {
   fieldStyle?: string;
   placeholder?: string;
   defaultValue?: unknown;
+  nullable?: boolean;
+  ariaLabel?: string;
 }
 
 export interface CurationTextFieldModel extends CurationBaseFieldModel {
   kind: 'text' | 'textarea' | 'date' | 'time' | 'address';
+  minLength?: number;
   maxLength?: number;
+  usePlaceSearch?: boolean;
 }
 
 export interface CurationNumberFieldModel extends CurationBaseFieldModel {
@@ -47,12 +54,41 @@ export interface CurationBooleanRadioFieldModel extends CurationBaseFieldModel {
   falseLabel: string;
 }
 
+export interface CurationSelectOption {
+  value: string;
+  label: string;
+}
+
+export interface CurationSelectFieldModel extends CurationBaseFieldModel {
+  kind: 'select';
+  options: CurationSelectOption[];
+}
+
+export interface CurationMultiSelectFieldModel extends CurationBaseFieldModel {
+  kind: 'multi-select';
+  options: CurationSelectOption[];
+  minItems: number;
+  maxItems?: number;
+}
+
 export type CurationBasicFieldModel =
   | CurationTextFieldModel
   | CurationNumberFieldModel
-  | CurationBooleanRadioFieldModel;
+  | CurationBooleanRadioFieldModel
+  | CurationSelectFieldModel
+  | CurationMultiSelectFieldModel;
 
-export type CurationFieldModel = CurationBasicFieldModel | CurationWhiskyCardListFieldModel;
+export interface CurationObjectArrayFieldModel extends CurationBaseFieldModel {
+  kind: 'object-array';
+  minItems: number;
+  maxItems?: number;
+  itemFields: CurationFieldModel[];
+}
+
+export type CurationFieldModel =
+  | CurationBasicFieldModel
+  | CurationWhiskyCardListFieldModel
+  | CurationObjectArrayFieldModel;
 
 export interface CurationFieldVisibilityCondition {
   fieldKey: string;
@@ -98,34 +134,66 @@ export function createCurationFormModelFromRequestSpec(
   requestSpec: JsonSchemaNode,
   options: CreateCurationFormModelOptions
 ): CurationFormModel {
-  const payloadFields = Object.keys(getSchemaProperties(requestSpec)).map((key) => {
-    const fieldSchema = getSchemaProperty(requestSpec, key);
-    const kind = getSchemaFieldKind(key, fieldSchema);
-    const customField = options.createCustomField?.({ requestSpec, fieldSchema, key, kind });
-
-    if (customField) {
-      return customField;
-    }
-
-    if (kind === 'alcohol-card-list') {
-      return createAlcoholCardListFieldModel({
-        key,
-        label: getSchemaDisplayLabel(fieldSchema),
-        required: isSchemaPropertyRequired(requestSpec, key),
-        minItems: fieldSchema.minItems ?? 1,
-        maxItems: typeof fieldSchema.maxItems === 'number' ? fieldSchema.maxItems : undefined,
-        itemSchema: fieldSchema.items!,
-      });
-    }
-
-    const basicField = createCurationBasicFieldModel(requestSpec, key);
-    return options.overrideField?.(basicField) ?? basicField;
-  });
+  const payloadFields = Object.keys(getSchemaProperties(requestSpec)).map((key) =>
+    createCurationFieldModel(requestSpec, key, options)
+  );
 
   return {
     payloadFields,
     sections: options.createSections(payloadFields),
   };
+}
+
+function createCurationFieldModel(
+  requestSpec: JsonSchemaNode,
+  key: string,
+  options: Pick<CreateCurationFormModelOptions, 'createCustomField' | 'overrideField'> = {}
+): CurationFieldModel {
+  const fieldSchema = getSchemaProperty(requestSpec, key);
+  const kind = getSchemaFieldKind(key, fieldSchema);
+  const customField = options.createCustomField?.({ requestSpec, fieldSchema, key, kind });
+
+  if (customField) {
+    return customField;
+  }
+
+  if (kind === 'alcohol-card-list') {
+    if (!fieldSchema.items) {
+      throw new Error(`지원하지 않는 큐레이션 스키마 필드: ${key}의 items가 없습니다.`);
+    }
+
+    return createAlcoholCardListFieldModel({
+      key,
+      label: getSchemaDisplayLabel(fieldSchema),
+      required: isSchemaPropertyRequired(requestSpec, key),
+      minItems: fieldSchema.minItems ?? (isSchemaPropertyRequired(requestSpec, key) ? 1 : 0),
+      maxItems: typeof fieldSchema.maxItems === 'number' ? fieldSchema.maxItems : undefined,
+      itemSchema: fieldSchema.items,
+    });
+  }
+
+  if (kind === 'object-array') {
+    const itemSchema = fieldSchema.items;
+    if (!itemSchema || itemSchema.type !== 'object') {
+      throw new Error(`지원하지 않는 큐레이션 스키마 필드: ${key}의 object items가 없습니다.`);
+    }
+
+    return {
+      key,
+      kind,
+      label: getSchemaDisplayLabel(fieldSchema) || key,
+      required: isSchemaPropertyRequired(requestSpec, key),
+      nullable: fieldSchema.nullable,
+      minItems: fieldSchema.minItems ?? 0,
+      maxItems: typeof fieldSchema.maxItems === 'number' ? fieldSchema.maxItems : undefined,
+      itemFields: Object.keys(getSchemaProperties(itemSchema)).map((itemKey) =>
+        createCurationFieldModel(itemSchema, itemKey)
+      ),
+    };
+  }
+
+  const basicField = createCurationBasicFieldModel(requestSpec, key);
+  return options.overrideField?.(basicField) ?? basicField;
 }
 
 export function getSchemaProperties(schema: JsonSchemaNode): Record<string, JsonSchemaNode> {
@@ -183,6 +251,15 @@ function resolveSchemaKind(
   if (key.toLowerCase().includes('time')) return 'time';
   if (schema.type === 'integer' || schema.type === 'number') return 'number';
   if (schema.type === 'boolean') return 'boolean-radio';
+  if (schema.type === 'array' && schema.items?.enum) return 'multi-select';
+  if (schema.type === 'array' && schema.items?.type === 'object') return 'object-array';
+  if (schema.type === 'array') {
+    throw new Error(`지원하지 않는 큐레이션 스키마 필드: ${key} 배열 형식`);
+  }
+  if (schema.type === 'object') {
+    throw new Error(`지원하지 않는 큐레이션 스키마 필드: ${key} 객체 형식`);
+  }
+  if (schema.enum) return 'select';
   if (schema.maxLength && schema.maxLength > 500) return 'textarea';
 
   return 'text';
@@ -202,6 +279,7 @@ export function createCurationBasicFieldModel(
     fieldStyle: getSchemaFieldStyle(fieldSchema),
     placeholder: getSchemaPlaceholder(fieldSchema),
     defaultValue: fieldSchema.default,
+    nullable: fieldSchema.nullable,
   };
   const kind = getSchemaFieldKind(key, fieldSchema);
 
@@ -221,6 +299,20 @@ export function createCurationBasicFieldModel(
         trueLabel: '네',
         falseLabel: '아니요',
       };
+    case 'select':
+      return {
+        ...base,
+        kind,
+        options: createEnumOptions(key, fieldSchema.enum),
+      };
+    case 'multi-select':
+      return {
+        ...base,
+        kind,
+        options: createEnumOptions(key, fieldSchema.items?.enum),
+        minItems: fieldSchema.minItems ?? 0,
+        maxItems: typeof fieldSchema.maxItems === 'number' ? fieldSchema.maxItems : undefined,
+      };
     case 'textarea':
     case 'date':
     case 'time':
@@ -229,11 +321,46 @@ export function createCurationBasicFieldModel(
       return {
         ...base,
         kind,
+        minLength: fieldSchema.minLength,
         maxLength: fieldSchema.maxLength,
       };
     case 'alcohol-card-list':
       throw new Error('alcohol-card-list는 createAlcoholCardListFieldModel로 생성해야 합니다.');
+    case 'object-array':
+      throw new Error('object-array는 createCurationFieldModel로 생성해야 합니다.');
   }
+}
+
+function createEnumOptions(
+  key: string,
+  enumValues: JsonSchemaNode['enum']
+): CurationSelectOption[] {
+  if (!enumValues || enumValues.some((value) => typeof value !== 'string')) {
+    throw new Error(`지원하지 않는 큐레이션 스키마 필드: ${key} enum은 문자열이어야 합니다.`);
+  }
+
+  return enumValues.map((value) => ({
+    value: value as string,
+    label: formatSchemaEnumLabel(value as string),
+  }));
+}
+
+export function formatSchemaEnumLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .split('_')
+    .filter(Boolean)
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
+    .join(' ');
+}
+
+export function prefixCurationFieldModelKey(
+  field: CurationFieldModel,
+  prefix: string
+): CurationFieldModel {
+  const key = `${prefix}.${field.key}`;
+
+  return { ...field, key };
 }
 
 export interface AlcoholCardListFieldParams {

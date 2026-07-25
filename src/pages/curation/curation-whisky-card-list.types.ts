@@ -33,6 +33,7 @@ export interface CurationWhiskyCardListFormValues {
 
 export interface CurationWhiskyCardListFieldModel {
   key: string;
+  ariaLabel?: string;
   kind: 'alcohol-card-list';
   label: string;
   required: boolean;

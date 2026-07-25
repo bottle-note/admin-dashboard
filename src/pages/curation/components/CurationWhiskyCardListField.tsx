@@ -7,7 +7,7 @@ import {
   type PointerEvent,
   type ReactNode,
 } from 'react';
-import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
+import { useFieldArray, useFormContext, useWatch, type FieldValues } from 'react-hook-form';
 import { GripVertical, Loader2, Plus, Upload, X } from 'lucide-react';
 
 import { FormField } from '@/components/common/FormField';
@@ -35,7 +35,6 @@ import {
 } from '../curation-whisky-card-list.mapper';
 import type {
   CurationWhiskyCardListFieldModel,
-  CurationWhiskyCardListFormValues,
   CurationWhiskyCardValue,
   CurationWhiskyMirror,
   CurationWhiskyStats,
@@ -79,7 +78,8 @@ export function CurationWhiskyCardListField({
   showCommentField = true,
   renderItemExtra,
 }: CurationWhiskyCardListFieldProps) {
-  const form = useFormContext<CurationWhiskyCardListFormValues>();
+  const form = useFormContext<FieldValues>();
+  const fieldPath = fieldModel.key;
   const fetchAlcoholDetail = useAdminAlcoholDetailLookup();
   const { data: categoryReferenceData } = useCategoryReferences();
   const { data: regionData } = useRegionList({ size: 200, sortOrder: 'ASC' });
@@ -101,13 +101,12 @@ export function CurationWhiskyCardListField({
   const localManualImageUrlsRef = useRef<Set<string>>(new Set());
   const alcoholFieldArray = useFieldArray({
     control: form.control,
-    name: 'alcohols',
+    name: fieldPath,
   });
-  const watchedAlcohols =
-    useWatch({
-      control: form.control,
-      name: 'alcohols',
-    }) ?? [];
+  const watchedAlcohols = (useWatch({
+    control: form.control,
+    name: fieldPath,
+  }) ?? []) as CurationWhiskyCardValue[];
   const selectedAlcoholIds = watchedAlcohols
     .map((item) => item.alcohol.alcoholId)
     .filter((id): id is number => typeof id === 'number');
@@ -142,7 +141,7 @@ export function CurationWhiskyCardListField({
 
   const handleAddEmptyWhisky = () => {
     if (isAddDisabled) return;
-    form.clearErrors('alcohols');
+    form.clearErrors(fieldPath);
     alcoholFieldArray.append(createEmptyItem(), { shouldFocus: false });
   };
 
@@ -158,13 +157,13 @@ export function CurationWhiskyCardListField({
         0,
         fieldModel.selectedTags.maxItems
       );
-      form.setValue(`alcohols.${index}` as const, transformItem(curationWhiskyItem), {
+      form.setValue(`${fieldPath}.${index}`, transformItem(curationWhiskyItem), {
         shouldDirty: true,
         shouldValidate: true,
       });
     } catch {
       form.setValue(
-        `alcohols.${index}` as const,
+        `${fieldPath}.${index}`,
         transformItem(createBottleNoteCurationWhiskyItem(whisky)),
         {
           shouldDirty: true,
@@ -181,10 +180,12 @@ export function CurationWhiskyCardListField({
   };
 
   const handleUseManualInput = (fieldId: string, index: number) => {
-    const currentItem = form.getValues(`alcohols.${index}` as const);
+    const currentItem = form.getValues(`${fieldPath}.${index}`) as
+      | CurationWhiskyCardValue
+      | undefined;
 
     if (!currentItem || currentItem.source !== 'MANUAL') {
-      form.setValue(`alcohols.${index}` as const, createEmptyItem(), {
+      form.setValue(`${fieldPath}.${index}`, createEmptyItem(), {
         shouldDirty: true,
         shouldValidate: true,
       });
@@ -205,8 +206,8 @@ export function CurationWhiskyCardListField({
     const trimmedValue = value.trim();
     if (!trimmedValue) return false;
 
-    const path = `alcohols.${index}.alcohol.selectedTags` as const;
-    const currentTags = form.getValues(path) ?? [];
+    const path = `${fieldPath}.${index}.alcohol.selectedTags`;
+    const currentTags = (form.getValues(path) ?? []) as string[];
     if (
       currentTags.includes(trimmedValue) ||
       currentTags.length >= fieldModel.selectedTags.maxItems
@@ -223,8 +224,8 @@ export function CurationWhiskyCardListField({
   };
 
   const handleRemoveTag = (index: number, tag: string) => {
-    const path = `alcohols.${index}.alcohol.selectedTags` as const;
-    const currentTags = form.getValues(path);
+    const path = `${fieldPath}.${index}.alcohol.selectedTags`;
+    const currentTags = (form.getValues(path) ?? []) as string[];
     form.setValue(
       path,
       currentTags.filter((item) => item !== tag),
@@ -236,11 +237,14 @@ export function CurationWhiskyCardListField({
   };
 
   const handleHideWhiskyStatsItem = (index: number, key: RemovableWhiskyStatsKey) => {
-    const currentStats = form.getValues(`alcohols.${index}.stats` as const);
+    const currentStats = form.getValues(`${fieldPath}.${index}.stats`) as
+      | CurationWhiskyStats
+      | null
+      | undefined;
     if (!currentStats) return;
 
     form.setValue(
-      `alcohols.${index}.stats` as const,
+      `${fieldPath}.${index}.stats`,
       {
         ...currentStats,
         [key]: null,
@@ -288,7 +292,7 @@ export function CurationWhiskyCardListField({
       return;
     }
 
-    const path = `alcohols.${index}.alcohol.imageUrl` as const;
+    const path = `${fieldPath}.${index}.alcohol.imageUrl`;
     const previewUrl = URL.createObjectURL(file);
     localManualImageUrlsRef.current.add(previewUrl);
     form.setValue(path, previewUrl, {
@@ -317,7 +321,7 @@ export function CurationWhiskyCardListField({
   };
 
   const handleRemoveManualWhiskyImage = (index: number) => {
-    const path = `alcohols.${index}.alcohol.imageUrl` as const;
+    const path = `${fieldPath}.${index}.alcohol.imageUrl`;
     const currentImageUrl = form.getValues(path);
     if (currentImageUrl) {
       revokeLocalManualImageUrl(currentImageUrl);
@@ -329,7 +333,7 @@ export function CurationWhiskyCardListField({
   };
 
   const handleRemoveWhisky = (fieldId: string, index: number) => {
-    form.clearErrors('alcohols');
+    form.clearErrors(fieldPath);
     alcoholFieldArray.remove(index);
     resetWhiskyDragState();
     setManualInputFieldIds((prev) => {
@@ -403,7 +407,7 @@ export function CurationWhiskyCardListField({
       sourceIndex !== targetIndex
     ) {
       alcoholFieldArray.move(sourceIndex, targetIndex);
-      void form.trigger('alcohols');
+      void form.trigger(fieldPath);
     }
 
     resetWhiskyDragState();
@@ -443,8 +447,10 @@ export function CurationWhiskyCardListField({
         </p>
       )}
 
-      {form.formState.errors.alcohols?.message && (
-        <p className="text-sm text-destructive">{form.formState.errors.alcohols.message}</p>
+      {form.getFieldState(fieldPath, form.formState).error?.message && (
+        <p className="text-sm text-destructive">
+          {form.getFieldState(fieldPath, form.formState).error?.message}
+        </p>
       )}
 
       {watchedAlcohols.length === 0 ? (
@@ -455,7 +461,15 @@ export function CurationWhiskyCardListField({
         <div className="space-y-3">
           {alcoholFieldArray.fields.map((field, index) => {
             const item = watchedAlcohols[index];
-            const itemError = form.formState.errors.alcohols?.[index];
+            const itemError = form.getFieldState(`${fieldPath}.${index}`, form.formState).error as
+              | {
+                  alcohol?: {
+                    korName?: { message?: string };
+                    selectedTags?: { message?: string };
+                  };
+                  comment?: { message?: string };
+                }
+              | undefined;
             const tags = item?.alcohol.selectedTags ?? [];
             const tagInput = tagInputs[field.id] ?? '';
             const itemName =
@@ -616,14 +630,14 @@ export function CurationWhiskyCardListField({
                             >
                               <Input
                                 aria-label={`${manualFieldPrefix} 한글명`}
-                                {...form.register(`alcohols.${index}.alcohol.korName` as const)}
+                                {...form.register(`${fieldPath}.${index}.alcohol.korName`)}
                                 placeholder="예: 글렌드로낙 오리지널 12년"
                               />
                             </FormField>
                             <FormField label="위스키 영문명">
                               <Input
                                 aria-label={`${manualFieldPrefix} 영문명`}
-                                {...form.register(`alcohols.${index}.alcohol.engName` as const)}
+                                {...form.register(`${fieldPath}.${index}.alcohol.engName`)}
                                 placeholder="예: GLENDRONACH ORIGINAL 12Y"
                               />
                             </FormField>
@@ -679,21 +693,21 @@ export function CurationWhiskyCardListField({
                             <FormField label="도수">
                               <Input
                                 aria-label={`${manualFieldPrefix} 도수`}
-                                {...form.register(`alcohols.${index}.alcohol.abv` as const)}
+                                {...form.register(`${fieldPath}.${index}.alcohol.abv`)}
                                 placeholder="예: 43"
                               />
                             </FormField>
                             <FormField label="용량">
                               <Input
                                 aria-label={`${manualFieldPrefix} 용량`}
-                                {...form.register(`alcohols.${index}.alcohol.volume` as const)}
+                                {...form.register(`${fieldPath}.${index}.alcohol.volume`)}
                                 placeholder="예: 700ml"
                               />
                             </FormField>
                             <FormField label="캐스크">
                               <Input
                                 aria-label={`${manualFieldPrefix} 캐스크`}
-                                {...form.register(`alcohols.${index}.alcohol.cask` as const)}
+                                {...form.register(`${fieldPath}.${index}.alcohol.cask`)}
                                 placeholder="예: 셰리 캐스크"
                               />
                             </FormField>
@@ -702,14 +716,10 @@ export function CurationWhiskyCardListField({
                                 ariaLabel={`${manualFieldPrefix} 지역`}
                                 value={manualRegionValue}
                                 onChange={(value) =>
-                                  form.setValue(
-                                    `alcohols.${index}.alcohol.regionName` as const,
-                                    value,
-                                    {
-                                      shouldDirty: true,
-                                      shouldValidate: true,
-                                    }
-                                  )
+                                  form.setValue(`${fieldPath}.${index}.alcohol.regionName`, value, {
+                                    shouldDirty: true,
+                                    shouldValidate: true,
+                                  })
                                 }
                                 options={manualRegionOptionsForValue}
                                 placeholder="지역 선택"
@@ -723,7 +733,7 @@ export function CurationWhiskyCardListField({
                                 value={manualCategoryValue}
                                 onChange={(value) =>
                                   form.setValue(
-                                    `alcohols.${index}.alcohol.korCategory` as const,
+                                    `${fieldPath}.${index}.alcohol.korCategory`,
                                     value,
                                     {
                                       shouldDirty: true,
@@ -803,7 +813,7 @@ export function CurationWhiskyCardListField({
                           aria-label={`${itemName} ${fieldModel.comment.label}`}
                           rows={5}
                           maxLength={fieldModel.comment.maxLength}
-                          {...form.register(`alcohols.${index}.comment` as const)}
+                          {...form.register(`${fieldPath}.${index}.comment`)}
                           placeholder={`${formatCurationFieldObject(fieldModel.comment.label)} 작성해주세요.`}
                           className="min-h-40 resize-none rounded-[10px] border-border"
                         />
@@ -825,7 +835,7 @@ export function CurationWhiskyCardListField({
         className="h-14 w-full rounded-[10px] text-base font-semibold"
         onClick={handleAddEmptyWhisky}
         disabled={isAddDisabled}
-        aria-label={`${fieldModel.label} 추가`}
+        aria-label={`${fieldModel.ariaLabel ?? fieldModel.label} 추가`}
       >
         <Plus className="h-5 w-5" />
         추가
