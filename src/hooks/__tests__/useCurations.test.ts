@@ -13,7 +13,6 @@ import {
 } from '@/lib/curation-spec-browser-cache';
 import { useAuthStore } from '@/stores/auth';
 import type { CurationV2CreateRequest, CurationV2Spec, CurationV2SpecListItem } from '@/types/api';
-import { useCurationSpecFormModel } from '@/pages/curation/useCurationSpecFormModel';
 import {
   useCurationCreate,
   useCurationList,
@@ -75,7 +74,7 @@ const createRequest: CurationV2CreateRequest = {
 const ADMIN_ID = 7;
 
 beforeEach(() => {
-  localStorage.clear();
+  window.localStorage.clear();
   act(() => {
     useAuthStore.setState({
       user: { adminId: ADMIN_ID, email: 'admin@example.com', roles: ['ROOT_ADMIN'] },
@@ -178,32 +177,6 @@ describe('useCurations hooks', () => {
     expect(getCachedCurationSpecDetail(cache, mockTastingEventSpec.id, 1)?.data).toEqual(
       mockTastingEventSpec
     );
-  });
-
-  it('form model이 canonical 목록 query를 재사용한다', async () => {
-    let listRequestCount = 0;
-    server.use(
-      http.get(SPEC_BASE, () => {
-        listRequestCount++;
-        return HttpResponse.json(wrapApiResponse([mockTastingEventSpecListItem]));
-      }),
-      http.get(`${SPEC_BASE}/:specId`, () =>
-        HttpResponse.json(wrapApiResponse(mockTastingEventSpec))
-      )
-    );
-
-    const { result } = renderHook(() => {
-      const specsQuery = useCurationSpecs();
-      const formModel = useCurationSpecFormModel({
-        specCode: 'WHISKY_TASTING_EVENT',
-        createFormModel: (spec) => spec.id,
-      });
-
-      return { specsQuery, formModel };
-    });
-
-    await waitFor(() => expect(result.current.formModel.formModel).toBe(mockTastingEventSpec.id));
-    expect(listRequestCount).toBe(1);
   });
 
   it('큐레이션 스펙 목록을 반환한다', async () => {

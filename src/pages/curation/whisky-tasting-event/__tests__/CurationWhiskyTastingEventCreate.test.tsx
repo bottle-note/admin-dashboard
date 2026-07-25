@@ -9,7 +9,16 @@ import { wrapApiError, wrapApiResponse } from '@/test/mocks/data';
 import { useAuthStore } from '@/stores/auth';
 import type { CurationV2CreateRequest, CurationV2Spec } from '@/types/api';
 
-import { CurationWhiskyTastingEventCreatePage } from '../CurationWhiskyTastingEventCreate';
+import { CurationCreatePage } from '../../CurationCreate';
+
+vi.mock('react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router')>();
+
+  return {
+    ...actual,
+    useParams: () => ({ specCode: 'WHISKY_TASTING_EVENT' }),
+  };
+});
 
 const SPEC_BASE = '/admin/api/v2/curation-specs';
 const CURATION_BASE = '/admin/api/v2/curations';
@@ -279,7 +288,7 @@ async function typeTastingTagSearch(
   return searchInput;
 }
 
-describe('CurationWhiskyTastingEventCreatePage', () => {
+describe('CurationCreatePage whisky tasting event strategy', () => {
   beforeEach(() => {
     setCurrentUserRoles([]);
     Object.defineProperty(URL, 'createObjectURL', {
@@ -303,7 +312,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     const scrollIntoViewSpy = vi.spyOn(Element.prototype, 'scrollIntoView');
     mockSpecSuccess();
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     const nameInput = await screen.findByLabelText('큐레이션명');
     await user.click(screen.getByRole('button', { name: '저장' }));
@@ -321,7 +330,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
   it('스펙 목록과 상세 조회 후 시음회 작성 폼을 렌더링한다', async () => {
     mockSpecSuccess();
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     expect(await screen.findByRole('heading', { name: '시음회 작성' })).toBeInTheDocument();
     expect(await screen.findByText('기본정보')).toBeInTheDocument();
@@ -363,7 +372,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     const user = userEvent.setup();
     mockSpecSuccess();
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     const capacityInput = await screen.findByLabelText('총 모집 인원수');
     const undecidedCheckbox = screen.getByRole('checkbox', { name: '모집 인원 미정' });
@@ -414,7 +423,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
       );
     });
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     const placeNameInput = await screen.findByLabelText('장소명');
     await user.click(placeNameInput);
@@ -449,7 +458,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     const user = userEvent.setup();
     mockSpecSuccess(createTastingEventSpec({ alcoholsMaxItems: 1 }));
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     expect(await screen.findByText(/1-1개까지 등록할 수 있습니다/)).toBeInTheDocument();
 
@@ -465,7 +474,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     const user = userEvent.setup();
     mockSpecSuccess();
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     await user.click(await screen.findByRole('button', { name: '시음 위스키 추가' }));
     await user.click(screen.getByRole('button', { name: '직접 입력' }));
@@ -483,7 +492,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     const user = userEvent.setup();
     mockSpecSuccess();
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     await user.click(await screen.findByRole('button', { name: '시음 위스키 추가' }));
     let whiskySearchInput = await screen.findByPlaceholderText('위스키 검색 ...');
@@ -539,7 +548,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     const user = userEvent.setup();
     mockSpecSuccess();
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     await user.click(await screen.findByRole('button', { name: '시음 위스키 추가' }));
     const whiskySearchInput = await screen.findByPlaceholderText('위스키 검색 ...');
@@ -571,7 +580,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     setCurrentUserRoles(['ROOT_ADMIN']);
     mockSpecSuccess();
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     expect(await screen.findByText('관리자 전용 설정')).toBeInTheDocument();
     expect(screen.getByLabelText('노출 순서')).not.toBeDisabled();
@@ -583,7 +592,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
   it('관리자가 아니면 관리자 전용 설정 조작 시 안내를 표시한다', async () => {
     mockSpecSuccess();
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     const displayOrderInput = await screen.findByLabelText('노출 순서');
 
@@ -598,7 +607,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     const user = userEvent.setup();
     mockSpecSuccess();
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     expect(await screen.findByText('시음회 참여자를 모집할 목적이신가요?')).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: '네' })).toHaveAttribute('aria-checked', 'true');
@@ -632,7 +641,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     const user = userEvent.setup();
     mockSpecSuccess();
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     expect(await screen.findByLabelText('신청링크')).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: '네' })).toHaveAttribute('aria-checked', 'true');
@@ -645,7 +654,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
   it('광고노출 시작일이나 종료일이 과거 날짜여도 오늘 날짜 기준 validation을 표시하지 않는다', async () => {
     mockSpecSuccess();
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     await screen.findByLabelText('광고노출 시작일');
 
@@ -665,7 +674,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
   it('광고노출 종료일이 시작일보다 빠르면 저장 전 validation을 표시한다', async () => {
     mockSpecSuccess();
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     await screen.findByLabelText('광고노출 시작일');
 
@@ -682,7 +691,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     mockSpecSuccess();
     mockImageUpload();
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     const imageFileInput = await screen.findByLabelText('큐레이션 이미지 파일 선택');
 
@@ -734,11 +743,9 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
       )
     );
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
-    expect(
-      await screen.findByText('시음회 스펙 상세를 불러올 권한이 없습니다.')
-    ).toBeInTheDocument();
+    expect(await screen.findByText('큐레이션 스펙을 불러오지 못했습니다.')).toBeInTheDocument();
     expect(screen.queryByLabelText('큐레이션명')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /저장/ })).not.toBeInTheDocument();
   });
@@ -747,7 +754,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
     const user = userEvent.setup();
     mockSpecSuccess();
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     await screen.findByLabelText('큐레이션명');
 
@@ -801,7 +808,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
       })
     );
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     await screen.findByLabelText('큐레이션명');
 
@@ -925,7 +932,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
       })
     );
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     await screen.findByLabelText('큐레이션명');
 
@@ -1001,7 +1008,7 @@ describe('CurationWhiskyTastingEventCreatePage', () => {
       })
     );
 
-    render(<CurationWhiskyTastingEventCreatePage />);
+    render(<CurationCreatePage />);
 
     await screen.findByLabelText('큐레이션명');
 

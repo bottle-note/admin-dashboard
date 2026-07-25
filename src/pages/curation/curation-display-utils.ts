@@ -10,6 +10,8 @@ export function formatCurationSpecCode(code: string): string {
       return '추천 위스키';
     case 'WHISKY_PAIRING':
       return '위스키 페어링';
+    case 'PROGRAM':
+      return '프로그램';
     default:
       return code;
   }

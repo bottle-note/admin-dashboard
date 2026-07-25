@@ -8,15 +8,25 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
 import type {
   CurationBooleanRadioFieldModel,
   CurationBasicFieldModel,
   CurationFieldModel,
+  CurationMultiSelectFieldModel,
   CurationNumberFieldModel,
+  CurationSelectFieldModel,
   CurationTextFieldModel,
 } from '../curation-form-model';
+import { CurationObjectArrayField } from './CurationObjectArrayField';
 import {
   CurationWhiskyCardListField,
   type CurationWhiskyCardListFieldOptions,
@@ -52,6 +62,8 @@ const STANDARD_FIELD_RENDERER_REGISTRY: Record<
   textarea: renderTextAreaInput,
   number: renderNumberInput,
   'boolean-radio': renderBooleanRadioInput,
+  select: renderSelectInput,
+  'multi-select': renderMultiSelectInput,
 };
 
 // 4. renderer registry 레이어: field model의 kind에 맞는 입력 컴포넌트를 선택해 렌더링합니다.
@@ -69,6 +81,16 @@ export function CurationFormFieldRenderer({
         onImageUploadingChange={onImageUploadingChange}
         sectionHeader={sectionHeader}
         {...alcoholCardListOptions}
+      />
+    );
+  }
+
+  if (field.kind === 'object-array') {
+    return (
+      <CurationObjectArrayField
+        fieldModel={field}
+        sectionHeader={sectionHeader}
+        onImageUploadingChange={onImageUploadingChange}
       />
     );
   }
@@ -95,6 +117,18 @@ function StandardCurationFormFieldRenderer({
   );
 }
 
+function renderSelectInput({ field, form, name }: StandardFieldRendererProps) {
+  if (field.kind !== 'select') return null;
+
+  return <SelectField field={field} form={form} name={name} />;
+}
+
+function renderMultiSelectInput({ field, form, name }: StandardFieldRendererProps) {
+  if (field.kind !== 'multi-select') return null;
+
+  return <MultiSelectField field={field} form={form} name={name} />;
+}
+
 // 일반 입력 필드의 세부 kind별 실제 input 요소를 생성합니다.
 function renderStandardInput(
   field: CurationBasicFieldModel,
@@ -109,7 +143,7 @@ function renderStandardInput(
 function renderTextInput({ field, form, name }: StandardFieldRendererProps) {
   if (field.kind !== 'text' && field.kind !== 'date' && field.kind !== 'time') return null;
 
-  if (field.kind === 'text' && field.key === 'placeName') {
+  if (field.kind === 'text' && field.usePlaceSearch) {
     return <PlaceNameSearchField field={field} form={form} name={name} />;
   }
 
@@ -156,12 +190,96 @@ function TextInputField({
 }) {
   return (
     <Input
-      aria-label={field.label}
+      aria-label={field.ariaLabel ?? field.label}
       type={field.kind === 'text' ? 'text' : field.kind}
       maxLength={field.maxLength}
       placeholder={field.placeholder}
       {...form.register(name)}
     />
+  );
+}
+
+function SelectField({
+  field,
+  form,
+  name,
+}: {
+  field: CurationSelectFieldModel;
+  form: ReturnType<typeof useFormContext<FieldValues>>;
+  name: string;
+}) {
+  const value = useWatch({ control: form.control, name });
+
+  return (
+    <Select
+      value={typeof value === 'string' ? value : ''}
+      onValueChange={(nextValue) =>
+        form.setValue(name, nextValue, { shouldDirty: true, shouldValidate: true })
+      }
+    >
+      <SelectTrigger aria-label={field.ariaLabel ?? field.label}>
+        <SelectValue placeholder={`${field.label} 선택`} />
+      </SelectTrigger>
+      <SelectContent>
+        {field.options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function MultiSelectField({
+  field,
+  form,
+  name,
+}: {
+  field: CurationMultiSelectFieldModel;
+  form: ReturnType<typeof useFormContext<FieldValues>>;
+  name: string;
+}) {
+  const watchedValue = useWatch({ control: form.control, name });
+  const values = Array.isArray(watchedValue)
+    ? watchedValue.filter((value): value is string => typeof value === 'string')
+    : [];
+  const maxReached = typeof field.maxItems === 'number' && values.length >= field.maxItems;
+
+  return (
+    <div
+      role="group"
+      aria-label={field.ariaLabel ?? field.label}
+      className="grid gap-3 rounded-md border p-4 sm:grid-cols-2"
+    >
+      {field.options.map((option) => {
+        const checked = values.includes(option.value);
+        const id = `${name}-${option.value}`;
+
+        return (
+          <div key={option.value} className="flex items-center gap-2">
+            <Checkbox
+              id={id}
+              checked={checked}
+              disabled={!checked && maxReached}
+              onCheckedChange={(nextChecked) => {
+                const nextValues =
+                  nextChecked === true
+                    ? [...values, option.value]
+                    : values.filter((value) => value !== option.value);
+                form.setValue(name, nextValues, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                });
+              }}
+            />
+            <Label htmlFor={id} className="cursor-pointer text-sm font-normal">
+              {option.label}
+            </Label>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -177,7 +295,7 @@ function AddressField({
 }) {
   return (
     <PlaceSearchInput
-      aria-label={field.label}
+      aria-label={field.ariaLabel ?? field.label}
       placeholder={field.placeholder}
       maxLength={field.maxLength}
       registration={form.register(name)}
@@ -213,7 +331,7 @@ function PlaceNameSearchField({
 
   return (
     <PlaceSearchInput
-      aria-label={field.label}
+      aria-label={field.ariaLabel ?? field.label}
       placeholder={field.placeholder}
       maxLength={field.maxLength}
       registration={form.register(name)}
@@ -251,7 +369,7 @@ function TextAreaField({
 }) {
   return (
     <Textarea
-      aria-label={field.label}
+      aria-label={field.ariaLabel ?? field.label}
       rows={5}
       maxLength={field.maxLength}
       placeholder={field.placeholder}
@@ -281,7 +399,7 @@ function NumberField({
   const input = (
     <Input
       className={field.suffix ? 'pr-12' : undefined}
-      aria-label={field.label}
+      aria-label={field.ariaLabel ?? field.label}
       type="number"
       min={field.minimum}
       max={field.maximum}

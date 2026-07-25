@@ -48,7 +48,7 @@ const pairingSpec: CurationV2Spec = {
 
 describe('curation spec browser cache', () => {
   beforeEach(() => {
-    localStorage.clear();
+    window.localStorage.clear();
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
   });
