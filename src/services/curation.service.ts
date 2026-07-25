@@ -24,10 +24,9 @@ import {
 
 export const curationKeys = {
   all: ['curation'] as const,
-  specs: () => [...curationKeys.all, 'specs'] as const,
-  spec: (specId: number) => [...curationKeys.specs(), specId] as const,
-  specByCode: (specCode: CurationV2SpecCode) =>
-    [...curationKeys.specs(), 'code', specCode] as const,
+  specs: (adminId: number) => [...curationKeys.all, 'specs', adminId] as const,
+  spec: (adminId: number, specId: number, version: number) =>
+    [...curationKeys.specs(adminId), 'detail', specId, version] as const,
   lists: () => [...curationKeys.all, 'list'] as const,
   list: (params?: CurationV2SearchParams) =>
     params ? ([...curationKeys.lists(), params] as const) : curationKeys.lists(),

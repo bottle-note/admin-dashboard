@@ -4,12 +4,8 @@ import { useNavigate, useParams } from 'react-router';
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useCurationSpec, useCurationSpecByCode } from '@/hooks/useCurations';
-import {
-  CurationSpecCode,
-  type CurationV2Spec,
-  type CurationV2SpecCode,
-} from '@/types/api';
+import { useCurationSpec, useCurationSpecs } from '@/hooks/useCurations';
+import { CurationSpecCode, type CurationV2Spec, type CurationV2SpecCode } from '@/types/api';
 
 import { SchemaDrivenCurationForm } from './schema-driven/SchemaDrivenCurationForm';
 import {
@@ -35,9 +31,12 @@ type CurationCreateStrategy =
 export function CurationCreatePage() {
   const navigate = useNavigate();
   const { specCode } = useParams<{ specCode: CurationV2SpecCode }>();
-  const specsQuery = useCurationSpecByCode(specCode);
-  const targetSpec = specsQuery.data?.isActive ? specsQuery.data : null;
-  const specDetailQuery = useCurationSpec(targetSpec?.id, { showErrorToast: false });
+  const specsQuery = useCurationSpecs();
+  const targetSpec =
+    specsQuery.data?.find((spec) => spec.code === specCode && spec.isActive) ?? null;
+  const specDetailQuery = useCurationSpec(targetSpec?.id, targetSpec?.version, {
+    showErrorToast: false,
+  });
   const handleBack = () => navigate('/dashboard/curations');
   let strategy: CurationCreateStrategy | null = null;
   let schemaError: Error | null = null;

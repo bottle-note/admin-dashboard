@@ -4,12 +4,21 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 
+import {
+  cacheCurationSpecDetail,
+  CURATION_SPEC_QUERY_GC_MS,
+  CURATION_SPEC_REVALIDATE_AFTER_MS,
+  getCachedCurationSpecDetail,
+  readCurationSpecBrowserCache,
+  reconcileCurationSpecManifest,
+  writeCurationSpecBrowserCache,
+} from '@/lib/curation-spec-browser-cache';
+import { useAuthStore } from '@/stores/auth';
 import { useApiQuery, type UseApiQueryOptions } from './useApiQuery';
 import { useApiMutation, type UseApiMutationOptions } from './useApiMutation';
 import {
   curationKeys,
   curationService,
-  resolveCurationSpecByCode,
   type CurationListResponse,
 } from '@/services/curation.service';
 import type {
@@ -18,7 +27,6 @@ import type {
   CurationV2Detail,
   CurationV2SearchParams,
   CurationV2Spec,
-  CurationV2SpecCode,
   CurationV2SpecListItem,
   CurationV2UpdateRequest,
   CurationV2UpdateResponse,
@@ -26,45 +34,81 @@ import type {
 
 /**
  * 큐레이션 스펙 목록 조회 훅
+ *
+ * 목록 API는 version manifest로 사용한다. 브라우저 cache가 1시간 이내면 즉시 복원하고,
+ * stale 상태 또는 탭 재포커스 때만 목록을 다시 조회해 상세 schema cache를 정리한다.
  */
 export function useCurationSpecs() {
-  return useApiQuery<CurationV2SpecListItem[]>(curationKeys.specs(), curationService.listSpecs, {
-    staleTime: 1000 * 60 * 5,
-  });
-}
+  const adminId = useAuthStore((state) => state.user?.adminId);
+  const browserCache = adminId ? readCurationSpecBrowserCache(adminId) : null;
 
-/**
- * 큐레이션 스펙 상세 조회 훅
- */
-export function useCurationSpec(
-  specId: number | undefined,
-  options?: UseApiQueryOptions<CurationV2Spec>
-) {
-  return useApiQuery<CurationV2Spec>(
-    curationKeys.spec(specId ?? 0),
-    () => curationService.getSpec(specId!),
+  return useApiQuery<CurationV2SpecListItem[]>(
+    curationKeys.specs(adminId ?? 0),
+    async () => {
+      const specs = await curationService.listSpecs();
+
+      if (adminId) {
+        const checkedAt = Date.now();
+        const reconciledCache = reconcileCurationSpecManifest(
+          readCurationSpecBrowserCache(adminId),
+          specs,
+          checkedAt
+        );
+        writeCurationSpecBrowserCache(adminId, reconciledCache);
+      }
+
+      return specs;
+    },
     {
-      enabled: !!specId && specId > 0,
-      staleTime: 1000 * 60 * 5,
-      ...options,
+      staleTime: CURATION_SPEC_REVALIDATE_AFTER_MS,
+      gcTime: CURATION_SPEC_QUERY_GC_MS,
+      refetchOnWindowFocus: true,
+      initialData: browserCache?.specs,
+      initialDataUpdatedAt: browserCache?.checkedAt,
     }
   );
 }
 
 /**
- * 큐레이션 스펙 code 기준 조회 훅
- * specId는 환경별로 달라질 수 있으므로 code로 조회 후 런타임에 resolve한다.
+ * 큐레이션 스펙 상세 조회 훅
+ *
+ * 상세 query key에 version을 포함해 manifest version이 바뀌면 기존 TanStack Query data도
+ * 재사용하지 않는다. 현재 version의 browser cache가 있으면 상세 API 요청을 생략한다.
  */
-export function useCurationSpecByCode(specCode: CurationV2SpecCode | undefined) {
-  return useApiQuery<CurationV2SpecListItem | null>(
-    curationKeys.specByCode(specCode ?? ''),
+export function useCurationSpec(
+  specId: number | undefined,
+  version: number | undefined,
+  options?: UseApiQueryOptions<CurationV2Spec>
+) {
+  const adminId = useAuthStore((state) => state.user?.adminId);
+  const browserCache = adminId ? readCurationSpecBrowserCache(adminId) : null;
+  const cachedDetail =
+    specId && version ? getCachedCurationSpecDetail(browserCache, specId, version) : null;
+  const { enabled: isEnabled = true, ...restOptions } = options ?? {};
+
+  return useApiQuery<CurationV2Spec>(
+    curationKeys.spec(adminId ?? 0, specId ?? 0, version ?? 0),
     async () => {
-      const specs = await curationService.listSpecs();
-      return specCode ? resolveCurationSpecByCode(specs, specCode) : null;
+      const spec = await curationService.getSpec(specId!);
+
+      if (adminId && spec.version === version) {
+        const nextCache = cacheCurationSpecDetail(
+          readCurationSpecBrowserCache(adminId),
+          spec,
+          Date.now()
+        );
+        writeCurationSpecBrowserCache(adminId, nextCache);
+      }
+
+      return spec;
     },
     {
-      enabled: !!specCode,
-      staleTime: 1000 * 60 * 5,
+      ...restOptions,
+      enabled: !!specId && specId > 0 && !!version && isEnabled,
+      staleTime: Infinity,
+      gcTime: CURATION_SPEC_QUERY_GC_MS,
+      initialData: cachedDetail?.data,
+      initialDataUpdatedAt: cachedDetail?.cachedAt,
     }
   );
 }

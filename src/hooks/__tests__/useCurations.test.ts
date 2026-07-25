@@ -1,19 +1,22 @@
-import { describe, expect, it, vi } from 'vitest';
-import { waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 
 import { server } from '@/test/mocks/server';
 import { wrapApiResponse } from '@/test/mocks/data';
 import { renderHook } from '@/test/test-utils';
-import type {
-  CurationV2CreateRequest,
-  CurationV2Spec,
-  CurationV2SpecListItem,
-} from '@/types/api';
+import {
+  cacheCurationSpecDetail,
+  getCachedCurationSpecDetail,
+  readCurationSpecBrowserCache,
+  writeCurationSpecBrowserCache,
+} from '@/lib/curation-spec-browser-cache';
+import { useAuthStore } from '@/stores/auth';
+import type { CurationV2CreateRequest, CurationV2Spec, CurationV2SpecListItem } from '@/types/api';
 import {
   useCurationCreate,
   useCurationList,
-  useCurationSpecByCode,
+  useCurationSpec,
   useCurationSpecs,
   useCurationUpdate,
 } from '../useCurations';
@@ -68,7 +71,114 @@ const createRequest: CurationV2CreateRequest = {
   },
 };
 
+const ADMIN_ID = 7;
+
+beforeEach(() => {
+  window.localStorage.clear();
+  act(() => {
+    useAuthStore.setState({
+      user: { adminId: ADMIN_ID, email: 'admin@example.com', roles: ['ROOT_ADMIN'] },
+      accessToken: 'test-access-token',
+      refreshToken: 'test-refresh-token',
+      isAuthenticated: true,
+    });
+  });
+});
+
 describe('useCurations hooks', () => {
+  it('fresh browser manifest를 목록 API 호출 없이 사용한다', async () => {
+    let listRequestCount = 0;
+    server.use(
+      http.get(SPEC_BASE, () => {
+        listRequestCount++;
+        return HttpResponse.json(wrapApiResponse([mockTastingEventSpecListItem]));
+      })
+    );
+
+    writeCurationSpecBrowserCache(ADMIN_ID, {
+      schemaVersion: 1,
+      checkedAt: Date.now(),
+      specs: [mockTastingEventSpecListItem],
+      details: {},
+    });
+
+    const { result } = renderHook(() => useCurationSpecs());
+
+    await waitFor(() => expect(result.current.data?.[0]?.version).toBe(1));
+    expect(listRequestCount).toBe(0);
+  });
+
+  it('stale manifest 확인 후 version이 바뀐 detail cache를 제거한다', async () => {
+    const staleCache = cacheCurationSpecDetail(
+      {
+        schemaVersion: 1,
+        checkedAt: Date.now() - 1000 * 60 * 60 - 1,
+        specs: [mockTastingEventSpecListItem],
+        details: {},
+      },
+      mockTastingEventSpec,
+      Date.now() - 1000 * 60 * 60 - 1
+    );
+    writeCurationSpecBrowserCache(ADMIN_ID, staleCache);
+
+    server.use(
+      http.get(SPEC_BASE, () =>
+        HttpResponse.json(wrapApiResponse([{ ...mockTastingEventSpecListItem, version: 2 }]))
+      )
+    );
+
+    const { result } = renderHook(() => useCurationSpecs());
+
+    await waitFor(() => expect(result.current.data?.[0]?.version).toBe(2));
+
+    const cache = readCurationSpecBrowserCache(ADMIN_ID);
+    expect(getCachedCurationSpecDetail(cache, mockTastingEventSpec.id, 1)).toBeNull();
+  });
+
+  it('matching browser detail을 재사용하고 detail API를 호출하지 않는다', async () => {
+    let detailRequestCount = 0;
+    server.use(
+      http.get(`${SPEC_BASE}/:specId`, () => {
+        detailRequestCount++;
+        return HttpResponse.json(wrapApiResponse(mockTastingEventSpec));
+      })
+    );
+
+    const cache = cacheCurationSpecDetail(
+      {
+        schemaVersion: 1,
+        checkedAt: Date.now(),
+        specs: [mockTastingEventSpecListItem],
+        details: {},
+      },
+      mockTastingEventSpec,
+      Date.now()
+    );
+    writeCurationSpecBrowserCache(ADMIN_ID, cache);
+
+    const { result } = renderHook(() => useCurationSpec(mockTastingEventSpec.id, 1));
+
+    await waitFor(() => expect(result.current.data?.id).toBe(mockTastingEventSpec.id));
+    expect(detailRequestCount).toBe(0);
+  });
+
+  it('detail cache miss 시 응답 schema를 browser cache에 저장한다', async () => {
+    server.use(
+      http.get(`${SPEC_BASE}/:specId`, () =>
+        HttpResponse.json(wrapApiResponse(mockTastingEventSpec))
+      )
+    );
+
+    const { result } = renderHook(() => useCurationSpec(mockTastingEventSpec.id, 1));
+
+    await waitFor(() => expect(result.current.data?.id).toBe(mockTastingEventSpec.id));
+
+    const cache = readCurationSpecBrowserCache(ADMIN_ID);
+    expect(getCachedCurationSpecDetail(cache, mockTastingEventSpec.id, 1)?.data).toEqual(
+      mockTastingEventSpec
+    );
+  });
+
   it('큐레이션 스펙 목록을 반환한다', async () => {
     server.use(
       http.get(SPEC_BASE, () => {
@@ -81,34 +191,6 @@ describe('useCurations hooks', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data![0]!.code).toBe('WHISKY_TASTING_EVENT');
-  });
-
-  it('specCode로 큐레이션 스펙을 resolve한다', async () => {
-    server.use(
-      http.get(SPEC_BASE, () => {
-        return HttpResponse.json(wrapApiResponse([mockTastingEventSpecListItem]));
-      })
-    );
-
-    const { result } = renderHook(() => useCurationSpecByCode('WHISKY_TASTING_EVENT'));
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data?.id).toBe(3);
-  });
-
-  it('존재하지 않는 specCode는 null로 반환한다', async () => {
-    server.use(
-      http.get(SPEC_BASE, () => {
-        return HttpResponse.json(wrapApiResponse([mockTastingEventSpecListItem]));
-      })
-    );
-
-    const { result } = renderHook(() => useCurationSpecByCode('UNKNOWN_SPEC'));
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data).toBeNull();
   });
 
   it('spec 기반 큐레이션 목록을 반환한다', async () => {
