@@ -10,7 +10,7 @@ const tastingEventSpec: CurationV2Spec = {
   name: '위스키 시음회',
   description: '시음회 날짜, 장소, 참가 정보와 시음 위스키 라인업',
   hydratorKey: 'alcohol',
-  version: 2,
+  version: 3_000_001,
   isActive: true,
   requestSpec: {
     type: 'object',
@@ -36,6 +36,21 @@ const tastingEventSpec: CurationV2Spec = {
         type: 'string',
         description: '시음회 시간',
         'x-display-name': '시음회 시간',
+      },
+      placeName: {
+        type: 'string',
+        maxLength: 100,
+        description: '시음회 장소명',
+        'x-field-style': 'address-search',
+        'x-display-name': '장소명',
+      },
+      kakaoPlaceId: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 20,
+        description: 'Kakao Places 장소 ID',
+        'x-field-style': 'address-search',
+        'x-display-name': 'Kakao 장소 ID',
       },
       barAddress: {
         type: 'string',
@@ -140,9 +155,15 @@ describe('createWhiskyTastingEventFormModel', () => {
     });
     expect(fieldsByKey.placeName).toMatchObject({
       label: '장소명',
-      kind: 'text',
-      required: true,
+      kind: 'address',
+      required: false,
       maxLength: 100,
+    });
+    expect(fieldsByKey.kakaoPlaceId).toMatchObject({
+      label: 'Kakao 장소 ID',
+      kind: 'hidden',
+      required: false,
+      maxLength: 20,
     });
     expect(fieldsByKey.detailAddress).toMatchObject({
       label: '상세 주소',

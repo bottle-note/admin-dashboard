@@ -8,6 +8,7 @@ export type CurationFieldKind =
   | 'date'
   | 'time'
   | 'address'
+  | 'hidden'
   | 'number'
   | 'boolean-radio'
   | 'select'
@@ -29,10 +30,9 @@ export interface CurationBaseFieldModel {
 }
 
 export interface CurationTextFieldModel extends CurationBaseFieldModel {
-  kind: 'text' | 'textarea' | 'date' | 'time' | 'address';
+  kind: 'text' | 'textarea' | 'date' | 'time' | 'address' | 'hidden';
   minLength?: number;
   maxLength?: number;
-  usePlaceSearch?: boolean;
 }
 
 export interface CurationNumberFieldModel extends CurationBaseFieldModel {
@@ -240,9 +240,11 @@ function resolveSchemaKind(
   schema: JsonSchemaNode,
   fieldStyle?: string
 ): CurationFieldKind {
+  if (fieldStyle === 'address-search' && key.toLowerCase().endsWith('placeid')) return 'hidden';
   if (fieldStyle === 'long-text') return 'textarea';
   if (fieldStyle === 'plain-text') return 'text';
   if (fieldStyle === 'address-search') return 'address';
+  if (fieldStyle === 'hidden') return 'hidden';
   if (fieldStyle === 'alcohol-card-list') return 'alcohol-card-list';
   if (fieldStyle === 'time') return 'time';
   if (fieldStyle === 'date') return 'date';
@@ -317,6 +319,7 @@ export function createCurationBasicFieldModel(
     case 'date':
     case 'time':
     case 'address':
+    case 'hidden':
     case 'text':
       return {
         ...base,

@@ -226,6 +226,7 @@ function createDefaultTastingEventPayloadFieldValue(field: CurationFieldModel): 
     case 'textarea':
     case 'text':
     case 'address':
+    case 'hidden':
       return '';
   }
 }
