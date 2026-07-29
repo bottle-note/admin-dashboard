@@ -12,12 +12,29 @@ describe('createSchemaDrivenCurationFormModel', () => {
     expect(model.payloadFields.map((field) => [field.key, field.kind])).toEqual([
       ['eventStartDate', 'date'],
       ['eventEndDate', 'date'],
-      ['placeName', 'text'],
+      ['placeName', 'address'],
+      ['kakaoPlaceId', 'hidden'],
       ['address', 'text'],
+      ['detailAddress', 'text'],
       ['entryFee', 'number'],
       ['programTags', 'multi-select'],
       ['programs', 'object-array'],
     ]);
+
+    const placeName = model.payloadFields.find((field) => field.key === 'placeName');
+    const address = model.payloadFields.find((field) => field.key === 'address');
+    const detailAddress = model.payloadFields.find((field) => field.key === 'detailAddress');
+
+    expect(placeName).toMatchObject({
+      kind: 'address',
+      placeSearchTargets: {
+        placeName: 'placeName',
+        kakaoPlaceId: 'id',
+        address: 'address',
+      },
+    });
+    expect(address).toMatchObject({ kind: 'text', readOnly: true });
+    expect(detailAddress).toMatchObject({ kind: 'text', readOnly: undefined, nullable: true });
 
     const programTags = model.payloadFields.find((field) => field.key === 'programTags');
     expect(programTags).toMatchObject({

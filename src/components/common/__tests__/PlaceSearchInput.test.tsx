@@ -46,9 +46,11 @@ function setKakaoPlacesMock() {
 
 function Harness({
   defaultValue = '',
+  onAddressSelect = true,
   onPlaceSelect,
 }: {
   defaultValue?: string;
+  onAddressSelect?: boolean;
   onPlaceSelect?: (place: SelectedPlace) => void;
 }) {
   const { register, setValue } = useForm({ defaultValues: { addr: defaultValue } });
@@ -57,7 +59,7 @@ function Harness({
     <PlaceSearchInput
       aria-label="장소"
       registration={register('addr')}
-      onAddressSelect={(addr) => setValue('addr', addr)}
+      onAddressSelect={onAddressSelect ? (addr) => setValue('addr', addr) : undefined}
       onPlaceSelect={onPlaceSelect}
     />
   );
@@ -123,6 +125,45 @@ describe('PlaceSearchInput', () => {
     expect(screen.queryByText('도시남 바')).not.toBeInTheDocument();
   });
 
+  it('주소 변경 콜백 없이도 장소 선택 정보를 전달한다', async () => {
+    const handlePlaceSelect = vi.fn();
+    setKakaoPlacesMock();
+    keywordSearchMock.mockImplementation((_keyword, callback) => {
+      callback(
+        [
+          {
+            id: '123',
+            place_name: '도시남 바',
+            category_name: '음식점 > 술집',
+            phone: '02-123-4567',
+            address_name: '서울 강남구 역삼동 123-45',
+            road_address_name: '서울 강남구 테헤란로 123',
+            x: '127.0276',
+            y: '37.4979',
+            place_url: 'https://place.map.kakao.com/123',
+          },
+        ],
+        'OK',
+        { ...paginationPage1, last: 1, totalCount: 1, hasNextPage: false }
+      );
+    });
+
+    render(<Harness onAddressSelect={false} onPlaceSelect={handlePlaceSelect} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '장소 검색' }));
+    fireEvent.change(screen.getByLabelText('장소 검색어'), { target: { value: '도시남' } });
+    fireEvent.click(screen.getByRole('button', { name: '검색' }));
+    fireEvent.click(await screen.findByText('도시남 바'));
+
+    expect(handlePlaceSelect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: '123',
+        placeName: '도시남 바',
+        address: '서울 강남구 테헤란로 123',
+      })
+    );
+  });
+
   it('검색 결과 하단에서 다음 페이지를 조회한다', async () => {
     setKakaoPlacesMock();
     keywordSearchMock.mockImplementation((keyword, callback, options) => {
@@ -180,11 +221,10 @@ describe('PlaceSearchInput', () => {
     fireEvent.click(screen.getByRole('button', { name: '다음' }));
 
     expect(await screen.findByText('도시남 라운지')).toBeInTheDocument();
-    expect(keywordSearchMock).toHaveBeenLastCalledWith(
-      '도시남',
-      expect.any(Function),
-      { size: 10, page: 2 }
-    );
+    expect(keywordSearchMock).toHaveBeenLastCalledWith('도시남', expect.any(Function), {
+      size: 10,
+      page: 2,
+    });
     expect(screen.getByText('총 12개 · 2 / 2 페이지')).toBeInTheDocument();
   });
 

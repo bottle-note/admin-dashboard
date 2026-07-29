@@ -91,10 +91,32 @@ const tastingEventSpec: CurationV2Spec = {
         description: '시음회 시간',
         'x-display-name': '시음회 시간',
       },
+      placeName: {
+        type: 'string',
+        maxLength: 100,
+        description: '시음회 장소명',
+        'x-field-style': 'address-search',
+        'x-display-name': '장소명',
+        'x-place-search-targets': {
+          placeName: 'placeName',
+          kakaoPlaceId: 'id',
+          barAddress: 'address',
+        },
+      },
+      kakaoPlaceId: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 20,
+        description: 'Kakao Places 장소 ID',
+        'x-field-style': 'hidden',
+        'x-display-name': 'Kakao 장소 ID',
+      },
       barAddress: {
         type: 'string',
         maxLength: 200,
         description: '장소 및 바 주소',
+        'x-field-style': 'plain-text',
+        'x-read-only': true,
         'x-display-name': '장소 및 바(bar) 주소',
       },
       detailAddress: {
@@ -277,6 +299,37 @@ function setKakaoPlacesMock() {
   };
 }
 
+function mockDefaultKakaoPlaceSearch() {
+  setKakaoPlacesMock();
+  keywordSearchMock.mockImplementation((_, callback, options) => {
+    expect(options).toEqual({ size: 10, page: 1 });
+    callback(
+      [
+        {
+          id: '123',
+          place_name: '도시남 바',
+          category_name: '음식점 > 술집',
+          phone: '02-123-4567',
+          address_name: '서울 강남구 역삼동 123-45',
+          road_address_name: '서울 강남구 테헤란로 123',
+          x: '127.0276',
+          y: '37.4979',
+          place_url: 'https://place.map.kakao.com/123',
+        },
+      ],
+      'OK',
+      placeSearchPagination
+    );
+  });
+}
+
+async function selectDefaultPlace(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: '장소 검색' }));
+  fireEvent.change(screen.getByLabelText('장소 검색어'), { target: { value: '도시남' } });
+  await user.click(screen.getByRole('button', { name: '검색' }));
+  await user.click(await screen.findByText('도시남 바'));
+}
+
 async function typeTastingTagSearch(
   user: ReturnType<typeof userEvent.setup>,
   comboboxName: string,
@@ -395,7 +448,7 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
     expect(capacityInput).toBeEnabled();
   });
 
-  it('장소명 input 클릭으로 장소 검색을 열고 선택한 장소명을 빈 상세 주소에만 채운다', async () => {
+  it('장소 검색 선택값만 target 필드에 반영하고 상세 주소는 유지한다', async () => {
     const user = userEvent.setup();
     mockSpecSuccess();
     setKakaoPlacesMock();
@@ -436,12 +489,9 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
     await user.click(await screen.findByText('도시남 바'));
 
     expect(placeNameInput).toHaveValue('도시남 바');
-    expect(placeNameInput).not.toHaveAttribute('readonly');
+    expect(placeNameInput).toHaveAttribute('readonly');
     expect(screen.getByLabelText('장소 및 바(bar) 주소')).toHaveValue('서울 강남구 테헤란로 123');
-    expect(screen.getByLabelText('상세 주소')).toHaveValue('도시남 바');
-
-    fireEvent.change(placeNameInput, { target: { value: '도시남 바 수정' } });
-    expect(placeNameInput).toHaveValue('도시남 바 수정');
+    expect(screen.getByLabelText('상세 주소')).toHaveValue('');
 
     fireEvent.change(screen.getByLabelText('상세 주소'), { target: { value: '2층 별실' } });
     await user.click(screen.getByRole('button', { name: '장소 검색' }));
@@ -753,6 +803,7 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
   it('시음 위스키를 추가하지 않고 저장하면 alcohols validation을 표시한다', async () => {
     const user = userEvent.setup();
     mockSpecSuccess();
+    mockDefaultKakaoPlaceSearch();
 
     render(<CurationCreatePage />);
 
@@ -768,10 +819,7 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
     fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2099-06-30' } });
     fireEvent.change(screen.getByLabelText('시음회 날짜'), { target: { value: '2026-06-15' } });
     fireEvent.change(screen.getByLabelText('시음회 시간'), { target: { value: '19:30' } });
-    fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
-      target: { value: '서울 강남구 테헤란로 123' },
-    });
-    fireEvent.change(screen.getByLabelText('장소명'), { target: { value: '도시남 바' } });
+    await selectDefaultPlace(user);
     fireEvent.change(screen.getByLabelText('상세 주소'), { target: { value: '2층 도시남 바' } });
     fireEvent.change(screen.getByLabelText('참가비(1인당)'), { target: { value: '75000' } });
     fireEvent.change(screen.getByLabelText('총 모집 인원수'), { target: { value: '20' } });
@@ -794,6 +842,7 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
     const user = userEvent.setup();
     let capturedBody: CurationV2CreateRequest | null = null;
     mockSpecSuccess();
+    mockDefaultKakaoPlaceSearch();
     server.use(
       http.post(CURATION_BASE, async ({ request }) => {
         capturedBody = (await request.json()) as CurationV2CreateRequest;
@@ -822,10 +871,7 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
     fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2099-06-30' } });
     fireEvent.change(screen.getByLabelText('시음회 날짜'), { target: { value: '2026-06-15' } });
     fireEvent.change(screen.getByLabelText('시음회 시간'), { target: { value: '19:30' } });
-    fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
-      target: { value: '서울 강남구 테헤란로 123' },
-    });
-    fireEvent.change(screen.getByLabelText('장소명'), { target: { value: '도시남 바' } });
+    await selectDefaultPlace(user);
     fireEvent.change(screen.getByLabelText('상세 주소'), { target: { value: '2층 도시남 바' } });
     fireEvent.change(screen.getByLabelText('참가비(1인당)'), { target: { value: '75000' } });
     await user.click(screen.getByRole('checkbox', { name: '모집 인원 미정' }));
@@ -881,6 +927,7 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
         eventTime: '19:30',
         barAddress: '서울 강남구 테헤란로 123',
         placeName: '도시남 바',
+        kakaoPlaceId: '123',
         detailAddress: '2층 도시남 바',
         isRecruiting: true,
         entryFee: 75000,
@@ -918,6 +965,7 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
     const user = userEvent.setup();
     let capturedBody: CurationV2CreateRequest | null = null;
     mockSpecSuccess();
+    mockDefaultKakaoPlaceSearch();
     server.use(
       http.post(CURATION_BASE, async ({ request }) => {
         capturedBody = (await request.json()) as CurationV2CreateRequest;
@@ -946,10 +994,7 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
     fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2099-06-30' } });
     fireEvent.change(screen.getByLabelText('시음회 날짜'), { target: { value: '2026-06-15' } });
     fireEvent.change(screen.getByLabelText('시음회 시간'), { target: { value: '19:30' } });
-    fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
-      target: { value: '서울 강남구 테헤란로 123' },
-    });
-    fireEvent.change(screen.getByLabelText('장소명'), { target: { value: '도시남 바' } });
+    await selectDefaultPlace(user);
     fireEvent.change(screen.getByLabelText('상세 주소'), { target: { value: '2층 도시남 바' } });
     fireEvent.change(screen.getByLabelText('참가비(1인당)'), { target: { value: '75000' } });
     fireEvent.change(screen.getByLabelText('총 모집 인원수'), { target: { value: '20' } });
@@ -993,6 +1038,7 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
     const user = userEvent.setup();
     let capturedBody: CurationV2CreateRequest | null = null;
     mockSpecSuccess();
+    mockDefaultKakaoPlaceSearch();
     mockImageUpload(['https://cdn.example.com/curation/manual-whisky.jpg']);
     server.use(
       http.post(CURATION_BASE, async ({ request }) => {
@@ -1022,10 +1068,7 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
     fireEvent.change(screen.getByLabelText('광고노출 종료일'), { target: { value: '2099-06-30' } });
     fireEvent.change(screen.getByLabelText('시음회 날짜'), { target: { value: '2026-06-15' } });
     fireEvent.change(screen.getByLabelText('시음회 시간'), { target: { value: '19:30' } });
-    fireEvent.change(screen.getByLabelText('장소 및 바(bar) 주소'), {
-      target: { value: '서울 강남구 테헤란로 123' },
-    });
-    fireEvent.change(screen.getByLabelText('장소명'), { target: { value: '도시남 바' } });
+    await selectDefaultPlace(user);
     fireEvent.change(screen.getByLabelText('상세 주소'), { target: { value: '2층 도시남 바' } });
     fireEvent.change(screen.getByLabelText('참가비(1인당)'), { target: { value: '75000' } });
     fireEvent.change(screen.getByLabelText('총 모집 인원수'), { target: { value: '20' } });
