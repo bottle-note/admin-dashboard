@@ -3,7 +3,7 @@ import type { FieldValues } from 'react-hook-form';
 import { useFormContext, useWatch } from 'react-hook-form';
 
 import { FormField } from '@/components/common/FormField';
-import { PlaceSearchInput } from '@/components/common/PlaceSearchInput';
+import { PlaceSearchInput, type SelectedPlace } from '@/components/common/PlaceSearchInput';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,6 +59,7 @@ const STANDARD_FIELD_RENDERER_REGISTRY: Record<
   date: renderTextInput,
   time: renderTextInput,
   address: renderAddressInput,
+  hidden: renderHiddenInput,
   textarea: renderTextAreaInput,
   number: renderNumberInput,
   'boolean-radio': renderBooleanRadioInput,
@@ -108,6 +109,9 @@ function StandardCurationFormFieldRenderer({
 }) {
   const form = useFormContext<FieldValues>();
   const name = field.key;
+  if (field.kind === 'hidden') {
+    return renderStandardInput(field, form, name);
+  }
   const error = form.getFieldState(name, form.formState).error?.message;
 
   return (
@@ -143,10 +147,6 @@ function renderStandardInput(
 function renderTextInput({ field, form, name }: StandardFieldRendererProps) {
   if (field.kind !== 'text' && field.kind !== 'date' && field.kind !== 'time') return null;
 
-  if (field.kind === 'text' && field.usePlaceSearch) {
-    return <PlaceNameSearchField field={field} form={form} name={name} />;
-  }
-
   return <TextInputField field={field} form={form} name={name} />;
 }
 
@@ -155,6 +155,12 @@ function renderAddressInput({ field, form, name }: StandardFieldRendererProps) {
   if (field.kind !== 'address') return null;
 
   return <AddressField field={field} form={form} name={name} />;
+}
+
+function renderHiddenInput({ field, form, name }: StandardFieldRendererProps) {
+  if (field.kind !== 'hidden') return null;
+
+  return <input type="hidden" {...form.register(name)} />;
 }
 
 // textarea field model을 Textarea renderer로 위임합니다.
@@ -302,59 +308,27 @@ function AddressField({
       onAddressSelect={(next) =>
         form.setValue(name, next, { shouldDirty: true, shouldValidate: true })
       }
-      onPlaceSelect={(place) => {
-        if (name !== 'barAddress') return;
-
-        form.setValue('placeName', place.placeName, {
-          shouldDirty: true,
-          shouldValidate: true,
-        });
-      }}
+      onPlaceSelect={(place) => syncPlaceSelection(form, place)}
     />
   );
 }
 
-function PlaceNameSearchField({
-  field,
-  form,
-  name,
-}: {
-  field: CurationTextFieldModel;
-  form: ReturnType<typeof useFormContext<FieldValues>>;
-  name: string;
-}) {
-  const currentValue = useWatch({
-    control: form.control,
-    name,
-  });
-  const hasPlaceName = typeof currentValue === 'string' && currentValue.trim().length > 0;
+function syncPlaceSelection(
+  form: ReturnType<typeof useFormContext<FieldValues>>,
+  place: SelectedPlace
+) {
+  const valuesByField = {
+    placeName: place.placeName,
+    kakaoPlaceId: place.id,
+    barAddress: place.address,
+    address: place.address,
+  };
 
-  return (
-    <PlaceSearchInput
-      aria-label={field.ariaLabel ?? field.label}
-      placeholder={field.placeholder}
-      maxLength={field.maxLength}
-      registration={form.register(name)}
-      readOnly={!hasPlaceName}
-      openOnInputClick={!hasPlaceName}
-      onAddressSelect={(next) =>
-        form.setValue('barAddress', next, { shouldDirty: true, shouldValidate: true })
-      }
-      onPlaceSelect={(place) => {
-        form.setValue(name, place.placeName, {
-          shouldDirty: true,
-          shouldValidate: true,
-        });
-        const detailAddress = form.getValues('detailAddress');
-        if (typeof detailAddress === 'string' && detailAddress.trim()) return;
+  for (const [fieldName, value] of Object.entries(valuesByField)) {
+    if (typeof form.getValues(fieldName) !== 'string') continue;
 
-        form.setValue('detailAddress', place.placeName, {
-          shouldDirty: true,
-          shouldValidate: true,
-        });
-      }}
-    />
-  );
+    form.setValue(fieldName, value, { shouldDirty: true, shouldValidate: true });
+  }
 }
 
 // textarea field model을 Textarea 컴포넌트로 렌더링합니다.

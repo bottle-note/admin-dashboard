@@ -19,16 +19,6 @@ const DATE_LOCATION_FIELD_KEYS = [
   'detailAddress',
 ];
 
-const TASTING_EVENT_PLACE_NAME_FIELD: CurationTextFieldModel = {
-  key: 'placeName',
-  label: '장소명',
-  required: true,
-  kind: 'text',
-  usePlaceSearch: true,
-  placeholder: '장소명을 입력하거나 검색하세요.',
-  maxLength: 100,
-};
-
 export type WhiskyTastingEventFormModel = CurationFormModel;
 
 // 시음회 스펙을 자동 렌더링 파이프라인의 form model로 변환합니다.
@@ -36,7 +26,7 @@ export function createWhiskyTastingEventFormModel(
   spec: CurationV2Spec
 ): WhiskyTastingEventFormModel {
   // 1. requestSpec 레이어: 상세 스펙의 requestSpec을 화면 생성의 단일 입력으로 사용합니다.
-  const formModel = createCurationFormModelFromRequestSpec(spec.requestSpec, {
+  return createCurationFormModelFromRequestSpec(spec.requestSpec, {
     // 2. schema parser 레이어: 공통 parser가 JSON Schema와 x-* 메타데이터를 읽습니다.
     //    alcohol-card-list(x-field-style)는 공통 parser가 서버 vocabulary를 직접 인식해 만듭니다.
     // 3. form/field model 레이어: 공통 필드는 기본 field model로 변환합니다.
@@ -44,21 +34,11 @@ export function createWhiskyTastingEventFormModel(
     // 5. form renderer 준비 레이어: 화면 렌더러가 순회할 섹션 배치를 만듭니다.
     createSections: createTastingEventFormSections,
   });
-
-  const payloadFields = insertTastingEventPlaceNameField(formModel.payloadFields);
-
-  return {
-    ...formModel,
-    payloadFields,
-    sections: createTastingEventFormSections(payloadFields),
-  };
 }
 
 // 공통 field model에 시음회 화면에서 필요한 라벨, placeholder, 단위 override를 적용합니다.
 function applyTastingEventFieldOverrides(field: CurationBasicFieldModel): CurationBasicFieldModel {
   switch (field.key) {
-    case 'placeName':
-      return field.kind === 'text' ? { ...field, usePlaceSearch: true } : field;
     case 'eventTime':
       return field.kind === 'text' || field.kind === 'time'
         ? ({ ...field, kind: 'time' } satisfies CurationTextFieldModel)
@@ -106,46 +86,15 @@ function applyTastingEventFieldOverrides(field: CurationBasicFieldModel): Curati
   }
 }
 
-function insertTastingEventPlaceNameField(fields: CurationFieldModel[]): CurationFieldModel[] {
-  const existingPlaceNameField = fields.find(
-    (field) => field.key === TASTING_EVENT_PLACE_NAME_FIELD.key
-  );
-  const placeNameField = existingPlaceNameField
-    ? ({ ...existingPlaceNameField, required: true } satisfies CurationFieldModel)
-    : TASTING_EVENT_PLACE_NAME_FIELD;
-  const fieldsWithoutPlaceName = fields.filter(
-    (field) => field.key !== TASTING_EVENT_PLACE_NAME_FIELD.key
-  );
-
-  const barAddressIndex = fieldsWithoutPlaceName.findIndex((field) => field.key === 'barAddress');
-  if (barAddressIndex >= 0) {
-    return [
-      ...fieldsWithoutPlaceName.slice(0, barAddressIndex),
-      placeNameField,
-      ...fieldsWithoutPlaceName.slice(barAddressIndex),
-    ];
-  }
-
-  const detailAddressIndex = fieldsWithoutPlaceName.findIndex(
-    (field) => field.key === 'detailAddress'
-  );
-  if (detailAddressIndex < 0) {
-    return [...fieldsWithoutPlaceName, placeNameField];
-  }
-
-  return [
-    ...fieldsWithoutPlaceName.slice(0, detailAddressIndex),
-    placeNameField,
-    ...fieldsWithoutPlaceName.slice(detailAddressIndex),
-  ];
-}
-
 // payload 필드 목록을 시음회 화면의 날짜/참가/위스키 섹션으로 배치합니다.
 function createTastingEventFormSections(fields: CurationFieldModel[]): CurationFormSectionModel[] {
   const dateLocationFields = fields.filter((field) => DATE_LOCATION_FIELD_KEYS.includes(field.key));
   const alcoholLineupFields = fields.filter((field) => field.kind === 'alcohol-card-list');
   const participationFields = fields.filter(
-    (field) => !DATE_LOCATION_FIELD_KEYS.includes(field.key) && field.kind !== 'alcohol-card-list'
+    (field) =>
+      !DATE_LOCATION_FIELD_KEYS.includes(field.key) &&
+      field.kind !== 'alcohol-card-list' &&
+      field.kind !== 'hidden'
   );
 
   return [

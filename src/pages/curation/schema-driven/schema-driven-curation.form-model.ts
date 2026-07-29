@@ -36,7 +36,9 @@ function createSchemaDrivenSections(
   spec: CurationV2Spec,
   fields: CurationFieldModel[]
 ): CurationFormSectionModel[] {
-  const rootFields = fields.filter((field) => field.kind !== 'object-array');
+  const rootFields = fields.filter(
+    (field) => field.kind !== 'object-array' && field.kind !== 'hidden'
+  );
   const objectArrayFields = fields.filter((field) => field.kind === 'object-array');
   const sections: CurationFormSectionModel[] = [];
 

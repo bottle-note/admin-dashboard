@@ -41,7 +41,12 @@ export function buildWhiskyTastingEventPayload(
       return payload;
     }
 
-    payload[key] = normalizePayloadValue(value);
+    const normalizedValue = normalizePayloadValue(value);
+    if (field.kind === 'hidden' && !field.required && normalizedValue === '') {
+      return payload;
+    }
+
+    payload[key] = normalizedValue;
     return payload;
   }, {});
 }
@@ -92,6 +97,7 @@ export function createWhiskyTastingEventFormStateFromCuration(
       case 'textarea':
       case 'text':
       case 'address':
+      case 'hidden':
         formState[field.key] = normalizeStringValue(value);
         break;
     }

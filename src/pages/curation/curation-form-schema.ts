@@ -252,6 +252,7 @@ export function createCurationFieldValueSchema(field: CurationFieldModel): z.Zod
     case 'date':
     case 'time':
     case 'address':
+    case 'hidden':
       return createTextFieldValueSchema(field);
   }
 }
@@ -276,6 +277,7 @@ export function createDefaultCurationFieldValue(field: CurationFieldModel): unkn
     case 'textarea':
     case 'text':
     case 'address':
+    case 'hidden':
       return '';
   }
 }

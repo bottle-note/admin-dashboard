@@ -93,6 +93,7 @@ function hydrateFieldValue(field: CurationFieldModel, value: unknown): unknown {
     case 'textarea':
     case 'text':
     case 'address':
+    case 'hidden':
       return value === null || value === undefined ? '' : String(value);
   }
 }
@@ -127,6 +128,7 @@ function serializeFieldValue(field: CurationFieldModel, value: unknown): unknown
     case 'textarea':
     case 'text':
     case 'address':
+    case 'hidden':
     case 'date':
     case 'time':
       return typeof value === 'string' ? value.trim() : '';
