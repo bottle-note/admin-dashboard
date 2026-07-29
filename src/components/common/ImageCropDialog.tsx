@@ -65,13 +65,28 @@ function toSourceCrop(crop: PixelCrop, image: HTMLImageElement) {
 
   const scaleX = image.naturalWidth / renderedWidth;
   const scaleY = image.naturalHeight / renderedHeight;
+  const sourceLeft = Math.round(crop.x * scaleX);
+  const sourceTop = Math.round(crop.y * scaleY);
+  const sourceRight = Math.round((crop.x + crop.width) * scaleX);
+  const sourceBottom = Math.round((crop.y + crop.height) * scaleY);
+  const sourceCoordinates = [sourceLeft, sourceTop, sourceRight, sourceBottom];
 
-  return {
-    x: Math.round(crop.x * scaleX),
-    y: Math.round(crop.y * scaleY),
-    width: Math.round(crop.width * scaleX),
-    height: Math.round(crop.height * scaleY),
-  };
+  if (sourceCoordinates.some((value) => !Number.isFinite(value))) return null;
+
+  const x = clamp(sourceLeft, 0, image.naturalWidth);
+  const y = clamp(sourceTop, 0, image.naturalHeight);
+  const right = clamp(sourceRight, 0, image.naturalWidth);
+  const bottom = clamp(sourceBottom, 0, image.naturalHeight);
+  const width = right - x;
+  const height = bottom - y;
+
+  if (width <= 0 || height <= 0) return null;
+
+  return { x, y, width, height };
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
 export function ImageCropDialog({
@@ -135,7 +150,7 @@ export function ImageCropDialog({
 
     const sourceCrop = toSourceCrop(cropPixels, image);
     if (!sourceCrop) {
-      setErrorMessage('이미지 크기를 확인하지 못했습니다. 이미지를 다시 선택해주세요.');
+      setErrorMessage('크롭 영역이 이미지 범위를 벗어났습니다. 영역을 다시 조절해주세요.');
       return;
     }
 

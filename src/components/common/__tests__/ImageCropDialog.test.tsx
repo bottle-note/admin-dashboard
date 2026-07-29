@@ -29,6 +29,24 @@ vi.mock('react-image-crop', () => ({
       >
         크롭 영역 변경
       </button>
+      <button
+        type="button"
+        onClick={() => onComplete({ unit: 'px', x: -50, y: -10, width: 100, height: 100 })}
+      >
+        음수 좌표 크롭 영역 변경
+      </button>
+      <button
+        type="button"
+        onClick={() => onComplete({ unit: 'px', x: 450, y: 230, width: 100, height: 100 })}
+      >
+        경계 밖 크롭 영역 변경
+      </button>
+      <button
+        type="button"
+        onClick={() => onComplete({ unit: 'px', x: 500, y: 250, width: 0, height: 0 })}
+      >
+        빈 크롭 영역 변경
+      </button>
       {children}
       {renderSelectionAddon?.()}
     </div>
@@ -69,7 +87,7 @@ describe('ImageCropDialog', () => {
     const preparedImage = {
       file: new File(['output'], 'region.webp', { type: 'image/webp' }),
       metadata: {
-        original: { width: 1000, height: 500, byteSize: 1_000_000, mimeType: 'image/jpeg' },
+        original: { width: 1000, height: 750, byteSize: 1_000_000, mimeType: 'image/jpeg' },
         output: {
           width: 1000,
           height: 500,
@@ -98,7 +116,7 @@ describe('ImageCropDialog', () => {
       width: { configurable: true, value: 500 },
       height: { configurable: true, value: 250 },
       naturalWidth: { configurable: true, value: 1000 },
-      naturalHeight: { configurable: true, value: 500 },
+      naturalHeight: { configurable: true, value: 750 },
     });
     fireEvent.load(image);
 
@@ -106,22 +124,124 @@ describe('ImageCropDialog', () => {
 
     await user.selectOptions(screen.getByLabelText('크롭 비율'), 'free');
     expect(screen.getByTestId('crop-editor')).toHaveAttribute('data-aspect', 'free');
-    expect(await screen.findByLabelText('원본 기준 크롭 900 × 450px')).toBeInTheDocument();
+    expect(await screen.findByLabelText('원본 기준 크롭 900 × 675px')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '크롭 영역 변경' }));
-    expect(await screen.findByLabelText('원본 기준 크롭 600 × 300px')).toBeInTheDocument();
+    expect(await screen.findByLabelText('원본 기준 크롭 600 × 450px')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '크롭 적용' }));
 
     await waitFor(() => {
       expect(preprocessImageToWebP).toHaveBeenCalledWith(
         file,
         expect.objectContaining({
-          crop: { x: 20, y: 40, width: 600, height: 300 },
+          crop: { x: 20, y: 60, width: 600, height: 450 },
           quality: 70,
         })
       );
     });
     expect(onPrepared).toHaveBeenCalledWith(preparedImage);
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('음수 시작 좌표의 크롭은 원본과 겹치는 부분만 전처리에 전달한다', async () => {
+    const user = userEvent.setup();
+    const file = new File(['source'], 'region.jpg', { type: 'image/jpeg' });
+    preprocessImageToWebP.mockResolvedValue({ file, metadata: {} });
+
+    render(
+      <ImageCropDialog
+        file={file}
+        open
+        policy={policy}
+        onOpenChange={vi.fn()}
+        onPrepared={vi.fn()}
+      />
+    );
+
+    const image = await screen.findByAltText('크롭할 원본 이미지');
+    Object.defineProperties(image, {
+      width: { configurable: true, value: 500 },
+      height: { configurable: true, value: 250 },
+      naturalWidth: { configurable: true, value: 1000 },
+      naturalHeight: { configurable: true, value: 500 },
+    });
+    fireEvent.load(image);
+
+    await user.click(screen.getByRole('button', { name: '음수 좌표 크롭 영역 변경' }));
+    await user.click(screen.getByRole('button', { name: '크롭 적용' }));
+
+    await waitFor(() => {
+      expect(preprocessImageToWebP).toHaveBeenCalledWith(
+        file,
+        expect.objectContaining({ crop: { x: 0, y: 0, width: 100, height: 180 } })
+      );
+    });
+  });
+
+  it('원본 이미지 경계를 넘는 크롭은 원본 범위로 잘라 WebP 전처리에 전달한다', async () => {
+    const user = userEvent.setup();
+    const file = new File(['source'], 'region.jpg', { type: 'image/jpeg' });
+    const onPrepared = vi.fn();
+    preprocessImageToWebP.mockResolvedValue({ file, metadata: {} });
+
+    render(
+      <ImageCropDialog
+        file={file}
+        open
+        policy={policy}
+        onOpenChange={vi.fn()}
+        onPrepared={onPrepared}
+      />
+    );
+
+    const image = await screen.findByAltText('크롭할 원본 이미지');
+    Object.defineProperties(image, {
+      width: { configurable: true, value: 500 },
+      height: { configurable: true, value: 250 },
+      naturalWidth: { configurable: true, value: 1000 },
+      naturalHeight: { configurable: true, value: 500 },
+    });
+    fireEvent.load(image);
+
+    await user.click(screen.getByRole('button', { name: '경계 밖 크롭 영역 변경' }));
+    await user.click(screen.getByRole('button', { name: '크롭 적용' }));
+
+    await waitFor(() => {
+      expect(preprocessImageToWebP).toHaveBeenCalledWith(
+        file,
+        expect.objectContaining({ crop: { x: 900, y: 460, width: 100, height: 40 } })
+      );
+    });
+    expect(onPrepared).toHaveBeenCalledTimes(1);
+  });
+
+  it('원본과 겹치지 않는 빈 크롭은 전처리하지 않고 조절 오류를 표시한다', async () => {
+    const user = userEvent.setup();
+    const file = new File(['source'], 'region.jpg', { type: 'image/jpeg' });
+
+    render(
+      <ImageCropDialog
+        file={file}
+        open
+        policy={policy}
+        onOpenChange={vi.fn()}
+        onPrepared={vi.fn()}
+      />
+    );
+
+    const image = await screen.findByAltText('크롭할 원본 이미지');
+    Object.defineProperties(image, {
+      width: { configurable: true, value: 500 },
+      height: { configurable: true, value: 250 },
+      naturalWidth: { configurable: true, value: 1000 },
+      naturalHeight: { configurable: true, value: 500 },
+    });
+    fireEvent.load(image);
+
+    await user.click(screen.getByRole('button', { name: '빈 크롭 영역 변경' }));
+    await user.click(screen.getByRole('button', { name: '크롭 적용' }));
+
+    expect(await screen.findByText('크롭 영역이 이미지 범위를 벗어났습니다. 영역을 다시 조절해주세요.')).toBeInTheDocument();
+    expect(preprocessImageToWebP).not.toHaveBeenCalled();
   });
 });
