@@ -20,6 +20,7 @@ export interface TastingEventPreviewAlcoholItem {
 export interface TastingEventPreviewPayload {
   capacity: number;
   entryFee: number;
+  is_tbc?: boolean;
   eventDate: string;
   eventTime: string;
   guideText?: string;

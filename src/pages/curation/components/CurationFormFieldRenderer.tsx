@@ -367,8 +367,15 @@ function NumberField({
     name,
   });
   const undecidedOption = field.undecidedOption;
+  const linkedCheckbox = field.linkedCheckbox;
+  const linkedCheckboxValue = useWatch({
+    control: form.control,
+    name: linkedCheckbox?.fieldKey ?? name,
+  });
   const lastDecidedValueRef = useRef(undecidedOption?.fallbackValue ?? 0);
-  const isUndecided = undecidedOption !== undefined && value === undecidedOption.value;
+  const isUndecided = linkedCheckbox
+    ? Boolean(linkedCheckboxValue)
+    : undecidedOption !== undefined && value === undecidedOption.value;
   const registration = form.register(name, { valueAsNumber: true });
   const input = (
     <Input
@@ -393,11 +400,30 @@ function NumberField({
     input
   );
 
-  if (!undecidedOption) return inputWithSuffix;
+  if (!undecidedOption && !linkedCheckbox) return inputWithSuffix;
 
-  const checkboxId = `${name}-undecided`;
+  const checkboxId = `${name}-${linkedCheckbox ? linkedCheckbox.fieldKey : 'undecided'}`;
 
   const handleUndecidedCheckedChange = (checked: boolean | 'indeterminate') => {
+    if (linkedCheckbox) {
+      const isChecked = checked === true;
+      form.setValue(linkedCheckbox.fieldKey, isChecked, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      form.setValue(
+        name,
+        isChecked ? linkedCheckbox.valueWhenChecked : linkedCheckbox.valueWhenUnchecked,
+        {
+          shouldDirty: true,
+          shouldValidate: true,
+        }
+      );
+      return;
+    }
+
+    if (!undecidedOption) return;
+
     if (checked === true) {
       const currentValue = form.getValues(name);
       if (
@@ -431,7 +457,7 @@ function NumberField({
           onCheckedChange={handleUndecidedCheckedChange}
         />
         <Label htmlFor={checkboxId} className="cursor-pointer text-sm font-normal">
-          {undecidedOption.label}
+          {linkedCheckbox?.label ?? undecidedOption?.label}
         </Label>
       </div>
     </div>

@@ -56,6 +56,21 @@ const tastingEventSpec: CurationV2Spec = {
         'x-field-style': 'time',
         'x-display-name': '시음회 시간',
       },
+      placeName: {
+        type: 'string',
+        maxLength: 100,
+        description: '시음회 장소명',
+        'x-field-style': 'address-search',
+        'x-display-name': '장소명',
+      },
+      kakaoPlaceId: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 20,
+        description: 'Kakao Places 장소 ID',
+        'x-field-style': 'address-search',
+        'x-display-name': 'Kakao 장소 ID',
+      },
       barAddress: {
         type: 'string',
         maxLength: 200,
@@ -73,6 +88,12 @@ const tastingEventSpec: CurationV2Spec = {
         minimum: 0,
         description: '참가비',
         'x-display-name': '참가비(1인당)',
+      },
+      is_tbc: {
+        type: 'boolean',
+        description: '참가비 미정 여부. false이면 entryFee의 0은 무료를 뜻한다.',
+        'x-field-style': 'none',
+        'x-display-name': '참가비 미정 여부',
       },
       capacity: {
         type: 'integer',
@@ -213,6 +234,7 @@ describe('CurationDetailPage', () => {
               barAddress: '서울 강남구 테헤란로 123',
               isRecruiting: true,
               entryFee: 50000,
+              is_tbc: true,
               capacity: 0,
               applicationLink: 'https://forms.example.com/tasting',
               guideText: '시작 10분 전 입장해 주세요.',
@@ -279,7 +301,9 @@ describe('CurationDetailPage', () => {
     expect(screen.getByLabelText('시음회 시간')).toHaveValue('19:30');
     expect(screen.getByLabelText('장소명')).toHaveValue('도시남 바');
     expect(screen.getByLabelText('장소 및 바(bar) 주소')).toHaveValue('서울 강남구 테헤란로 123');
-    expect(screen.getByLabelText('참가비(1인당)')).toHaveValue(50000);
+    expect(screen.getByLabelText('참가비(1인당)')).toHaveValue(0);
+    expect(screen.getByLabelText('참가비(1인당)')).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: '가격 미정' })).toBeChecked();
     expect(screen.getByLabelText('총 모집 인원수')).toHaveValue(0);
     expect(screen.getByLabelText('총 모집 인원수')).toBeDisabled();
     expect(screen.getByRole('checkbox', { name: '모집 인원 미정' })).toBeChecked();
@@ -313,6 +337,8 @@ describe('CurationDetailPage', () => {
         eventTime: '19:30',
         placeName: '도시남 바',
         barAddress: '서울 강남구 테헤란로 123',
+        entryFee: 0,
+        is_tbc: true,
         capacity: 0,
         guideText: '수정된 안내사항',
         alcohols: [

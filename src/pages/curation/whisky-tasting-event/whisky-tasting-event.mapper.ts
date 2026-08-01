@@ -41,6 +41,11 @@ export function buildWhiskyTastingEventPayload(
       return payload;
     }
 
+    if (key === 'entryFee' && values.is_tbc === true) {
+      payload[key] = 0;
+      return payload;
+    }
+
     const normalizedValue = normalizePayloadValue(value);
     if (field.kind === 'hidden' && !field.required && normalizedValue === '') {
       return payload;
@@ -105,6 +110,10 @@ export function createWhiskyTastingEventFormStateFromCuration(
 
   if (Array.isArray(formState.alcohols)) {
     formState.alcohols = normalizeTastingEventAlcohols(formState.alcohols);
+  }
+
+  if (formState.is_tbc === true) {
+    formState.entryFee = 0;
   }
 
   return formState;

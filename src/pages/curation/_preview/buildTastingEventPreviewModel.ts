@@ -119,8 +119,9 @@ export const buildTastingEventPreviewModel = (
       payload.capacity === 0
         ? '모집 인원 미정'
         : `${payload.capacity.toLocaleString('ko-KR')}명 정원`,
-    entryFeeLabel:
-      payload.entryFee > 0
+    entryFeeLabel: payload.is_tbc
+      ? '가격 미정'
+      : payload.entryFee > 0
         ? `${payload.entryFee.toLocaleString('ko-KR')}원`
         : '무료',
     mapSearchUrl: fullAddress

@@ -12,6 +12,18 @@ const formModel = {
       required: false,
       kind: 'hidden',
     },
+    {
+      key: 'entryFee',
+      label: '참가비(1인당)',
+      required: true,
+      kind: 'number',
+    },
+    {
+      key: 'is_tbc',
+      label: '참가비 미정 여부',
+      required: false,
+      kind: 'boolean-radio',
+    },
   ],
 } as unknown as WhiskyTastingEventFormModel;
 
@@ -23,8 +35,21 @@ describe('buildWhiskyTastingEventPayload', () => {
     expect(buildWhiskyTastingEventPayload(emptyValues, formModel)).not.toHaveProperty(
       'kakaoPlaceId'
     );
-    expect(buildWhiskyTastingEventPayload(selectedValues, formModel)).toEqual({
+    expect(buildWhiskyTastingEventPayload(selectedValues, formModel)).toMatchObject({
       kakaoPlaceId: '27288225',
+    });
+  });
+
+  it('가격 미정이면 제출 시 참가비를 0으로 정규화한다', () => {
+    const values = {
+      kakaoPlaceId: '',
+      entryFee: 75000,
+      is_tbc: true,
+    } as unknown as WhiskyTastingEventFormState;
+
+    expect(buildWhiskyTastingEventPayload(values, formModel)).toMatchObject({
+      entryFee: 0,
+      is_tbc: true,
     });
   });
 });
