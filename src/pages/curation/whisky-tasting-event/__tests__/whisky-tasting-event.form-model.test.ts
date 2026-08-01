@@ -82,6 +82,12 @@ const tastingEventSpec: CurationV2Spec = {
         description: '참가비',
         'x-display-name': '참가비(1인당)',
       },
+      is_tbc: {
+        type: 'boolean',
+        description: '참가비 미정 여부. false이면 entryFee의 0은 무료를 뜻한다.',
+        'x-field-style': 'none',
+        'x-display-name': '참가비 미정 여부',
+      },
       capacity: {
         type: 'integer',
         minimum: 0,
@@ -184,6 +190,16 @@ describe('createWhiskyTastingEventFormModel', () => {
     expect(fieldsByKey.entryFee).toMatchObject({
       label: '참가비(1인당)',
       suffix: '원',
+      linkedCheckbox: {
+        label: '가격 미정',
+        fieldKey: 'is_tbc',
+        valueWhenChecked: 0,
+        valueWhenUnchecked: 0,
+      },
+    });
+    expect(fieldsByKey.is_tbc).toMatchObject({
+      kind: 'boolean-radio',
+      required: false,
     });
     expect(fieldsByKey.isRecruiting).toMatchObject({
       required: false,

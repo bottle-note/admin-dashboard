@@ -136,6 +136,12 @@ const tastingEventSpec: CurationV2Spec = {
         description: '참가비',
         'x-display-name': '참가비(1인당)',
       },
+      is_tbc: {
+        type: 'boolean',
+        description: '참가비 미정 여부. false이면 entryFee의 0은 무료를 뜻한다.',
+        'x-field-style': 'none',
+        'x-display-name': '참가비 미정 여부',
+      },
       capacity: {
         type: 'integer',
         minimum: 0,
@@ -931,6 +937,7 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
         detailAddress: '2층 도시남 바',
         isRecruiting: true,
         entryFee: 75000,
+        is_tbc: false,
         capacity: 0,
         applicationLink: 'https://forms.example.com/tasting',
         guideText: '시작 10분 전 입장해 주세요.',
@@ -959,6 +966,33 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
       },
     });
     expect(screen.queryByText('BOTTLE_NOTE')).not.toBeInTheDocument();
+  });
+
+  it('가격 미정을 선택하면 참가비를 0원으로 고정하고 입력과 미리보기를 연동한다', async () => {
+    const user = userEvent.setup();
+    mockSpecSuccess();
+
+    render(<CurationCreatePage />);
+
+    const entryFeeInput = await screen.findByLabelText('참가비(1인당)');
+    const priceTbcCheckbox = screen.getByRole('checkbox', { name: '가격 미정' });
+
+    fireEvent.change(entryFeeInput, { target: { value: '75000' } });
+    expect(screen.getByText('75,000원')).toBeInTheDocument();
+
+    await user.click(priceTbcCheckbox);
+
+    expect(priceTbcCheckbox).toBeChecked();
+    expect(entryFeeInput).toHaveValue(0);
+    expect(entryFeeInput).toBeDisabled();
+    expect(screen.getAllByText('가격 미정').length).toBeGreaterThan(1);
+
+    await user.click(priceTbcCheckbox);
+
+    expect(priceTbcCheckbox).not.toBeChecked();
+    expect(entryFeeInput).toHaveValue(0);
+    expect(entryFeeInput).not.toBeDisabled();
+    expect(screen.getByText('무료')).toBeInTheDocument();
   });
 
   it('광고 전용 시음회는 신청링크 없이 저장하고 payload에는 빈 문자열을 전송한다', async () => {

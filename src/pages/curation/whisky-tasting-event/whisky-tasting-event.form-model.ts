@@ -25,19 +25,24 @@ export type WhiskyTastingEventFormModel = CurationFormModel;
 export function createWhiskyTastingEventFormModel(
   spec: CurationV2Spec
 ): WhiskyTastingEventFormModel {
+  const supportsPriceTbc = Boolean(spec.requestSpec.properties?.is_tbc);
+
   // 1. requestSpec 레이어: 상세 스펙의 requestSpec을 화면 생성의 단일 입력으로 사용합니다.
   return createCurationFormModelFromRequestSpec(spec.requestSpec, {
     // 2. schema parser 레이어: 공통 parser가 JSON Schema와 x-* 메타데이터를 읽습니다.
     //    alcohol-card-list(x-field-style)는 공통 parser가 서버 vocabulary를 직접 인식해 만듭니다.
     // 3. form/field model 레이어: 공통 필드는 기본 field model로 변환합니다.
-    overrideField: applyTastingEventFieldOverrides,
+    overrideField: (field) => applyTastingEventFieldOverrides(field, supportsPriceTbc),
     // 5. form renderer 준비 레이어: 화면 렌더러가 순회할 섹션 배치를 만듭니다.
     createSections: createTastingEventFormSections,
   });
 }
 
 // 공통 field model에 시음회 화면에서 필요한 라벨, placeholder, 단위 override를 적용합니다.
-function applyTastingEventFieldOverrides(field: CurationBasicFieldModel): CurationBasicFieldModel {
+function applyTastingEventFieldOverrides(
+  field: CurationBasicFieldModel,
+  supportsPriceTbc: boolean
+): CurationBasicFieldModel {
   switch (field.key) {
     case 'eventTime':
       return field.kind === 'text' || field.kind === 'time'
@@ -60,7 +65,22 @@ function applyTastingEventFieldOverrides(field: CurationBasicFieldModel): Curati
           } satisfies CurationBooleanRadioFieldModel)
         : field;
     case 'entryFee':
-      return field.kind === 'number' ? { ...field, suffix: '원' } : field;
+      return field.kind === 'number'
+        ? ({
+            ...field,
+            suffix: '원',
+            ...(supportsPriceTbc
+              ? {
+                  linkedCheckbox: {
+                    label: '가격 미정',
+                    fieldKey: 'is_tbc',
+                    valueWhenChecked: 0,
+                    valueWhenUnchecked: 0,
+                  },
+                }
+              : {}),
+          } satisfies CurationNumberFieldModel)
+        : field;
     case 'capacity':
       return field.kind === 'number'
         ? ({
@@ -93,6 +113,7 @@ function createTastingEventFormSections(fields: CurationFieldModel[]): CurationF
   const participationFields = fields.filter(
     (field) =>
       !DATE_LOCATION_FIELD_KEYS.includes(field.key) &&
+      field.key !== 'is_tbc' &&
       field.kind !== 'alcohol-card-list' &&
       field.kind !== 'hidden'
   );
