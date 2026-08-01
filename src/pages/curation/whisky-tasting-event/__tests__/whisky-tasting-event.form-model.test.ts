@@ -43,13 +43,18 @@ const tastingEventSpec: CurationV2Spec = {
         description: '시음회 장소명',
         'x-field-style': 'address-search',
         'x-display-name': '장소명',
+        'x-place-search-targets': {
+          placeName: 'placeName',
+          kakaoPlaceId: 'id',
+          barAddress: 'address',
+        },
       },
       kakaoPlaceId: {
         type: 'string',
         minLength: 1,
         maxLength: 20,
         description: 'Kakao Places 장소 ID',
-        'x-field-style': 'address-search',
+        'x-field-style': 'hidden',
         'x-display-name': 'Kakao 장소 ID',
       },
       barAddress: {
@@ -57,6 +62,7 @@ const tastingEventSpec: CurationV2Spec = {
         maxLength: 200,
         description: '장소 및 바 주소',
         'x-field-style': 'plain-text',
+        'x-read-only': true,
         'x-display-name': '장소 및 바(bar) 주소',
       },
       detailAddress: {
@@ -158,12 +164,18 @@ describe('createWhiskyTastingEventFormModel', () => {
     expect(fieldsByKey.barAddress).toMatchObject({
       label: '장소 및 바(bar) 주소',
       kind: 'text',
+      readOnly: true,
     });
     expect(fieldsByKey.placeName).toMatchObject({
       label: '장소명',
       kind: 'address',
       required: false,
       maxLength: 100,
+      placeSearchTargets: {
+        placeName: 'placeName',
+        kakaoPlaceId: 'id',
+        barAddress: 'address',
+      },
     });
     expect(fieldsByKey.kakaoPlaceId).toMatchObject({
       label: 'Kakao 장소 ID',

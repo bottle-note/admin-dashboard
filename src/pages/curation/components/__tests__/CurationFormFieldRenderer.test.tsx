@@ -51,7 +51,7 @@ function FieldHarness({
 }
 
 describe('CurationFormFieldRenderer', () => {
-  it('장소 검색 결과를 request spec에 있는 장소 필드로 함께 매핑한다', async () => {
+  it('시음회 스펙이 선언한 target만 장소 검색 결과로 매핑한다', async () => {
     const user = userEvent.setup();
 
     render(
@@ -61,12 +61,18 @@ describe('CurationFormFieldRenderer', () => {
           label: '장소명',
           required: false,
           kind: 'address',
+          placeSearchTargets: {
+            placeName: 'placeName',
+            kakaoPlaceId: 'id',
+            barAddress: 'address',
+          },
         }}
         defaultValues={{
           placeName: '',
           kakaoPlaceId: '',
           barAddress: '',
-          detailAddress: '',
+          address: '프로그램 주소는 변경하지 않음',
+          detailAddress: '2층 안쪽 입구',
         }}
       />
     );
@@ -74,31 +80,38 @@ describe('CurationFormFieldRenderer', () => {
     await user.click(await screen.findByRole('button', { name: '장소 선택' }));
 
     await waitFor(() => {
-      expect(JSON.parse(screen.getByTestId('form-values').textContent ?? '{}')).toMatchObject({
+      expect(JSON.parse(screen.getByTestId('form-values').textContent ?? '{}')).toEqual({
         placeName: '보틀노트 테이스팅룸',
         kakaoPlaceId: '27288225',
         barAddress: '서울 강남구 테헤란로 123',
-        detailAddress: '',
+        address: '프로그램 주소는 변경하지 않음',
+        detailAddress: '2층 안쪽 입구',
       });
     });
   });
 
-  it('프로그램 주소 검색도 같은 선택값을 address와 Kakao 장소 ID에 매핑한다', async () => {
+  it('프로그램 스펙은 address target만 장소 검색 결과로 매핑한다', async () => {
     const user = userEvent.setup();
 
     render(
       <FieldHarness
         field={{
-          key: 'address',
-          label: '장소 및 주소',
+          key: 'placeName',
+          label: '장소명',
           required: false,
           kind: 'address',
+          placeSearchTargets: {
+            placeName: 'placeName',
+            kakaoPlaceId: 'id',
+            address: 'address',
+          },
         }}
         defaultValues={{
           placeName: '',
           kakaoPlaceId: '',
           address: '',
-          detailLocation: '',
+          barAddress: '시음회 주소는 변경하지 않음',
+          detailAddress: 'B홀 2층',
         }}
       />
     );
@@ -106,13 +119,34 @@ describe('CurationFormFieldRenderer', () => {
     await user.click(await screen.findByRole('button', { name: '장소 선택' }));
 
     await waitFor(() => {
-      expect(JSON.parse(screen.getByTestId('form-values').textContent ?? '{}')).toMatchObject({
+      expect(JSON.parse(screen.getByTestId('form-values').textContent ?? '{}')).toEqual({
         placeName: '보틀노트 테이스팅룸',
         kakaoPlaceId: '27288225',
         address: '서울 강남구 테헤란로 123',
-        detailLocation: '',
+        barAddress: '시음회 주소는 변경하지 않음',
+        detailAddress: 'B홀 2층',
       });
     });
+  });
+
+  it('x-read-only plain text는 disabled가 아닌 readOnly input으로 렌더링한다', () => {
+    render(
+      <FieldHarness
+        field={{
+          key: 'barAddress',
+          label: '장소 및 바 주소',
+          required: true,
+          kind: 'text',
+          readOnly: true,
+        }}
+        defaultValues={{ barAddress: '서울 강남구 테헤란로 123' }}
+      />
+    );
+
+    const input = screen.getByLabelText('장소 및 바 주소');
+    expect(input).toHaveValue('서울 강남구 테헤란로 123');
+    expect(input).toHaveProperty('readOnly', true);
+    expect(input).not.toBeDisabled();
   });
 
   it('hidden field는 라벨 없이 전송용 input으로만 렌더링한다', () => {

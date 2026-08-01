@@ -96,7 +96,7 @@ interface PlaceSearchPaginationState {
 
 export interface PlaceSearchInputProps {
   registration: UseFormRegisterReturn;
-  onAddressSelect: (address: string) => void;
+  onAddressSelect?: (address: string) => void;
   onPlaceSelect?: (place: SelectedPlace) => void;
   placeholder?: string;
   maxLength?: number;
@@ -189,7 +189,7 @@ export function PlaceSearchInput({
 
   const handleSelectPlace = (place: KakaoPlaceDocument) => {
     const address = place.road_address_name || place.address_name;
-    onAddressSelect(address);
+    onAddressSelect?.(address);
     onPlaceSelect?.({
       id: place.id,
       placeName: place.place_name,

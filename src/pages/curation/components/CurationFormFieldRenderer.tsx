@@ -200,6 +200,7 @@ function TextInputField({
       type={field.kind === 'text' ? 'text' : field.kind}
       maxLength={field.maxLength}
       placeholder={field.placeholder}
+      readOnly={field.readOnly}
       {...form.register(name)}
     />
   );
@@ -305,29 +306,29 @@ function AddressField({
       placeholder={field.placeholder}
       maxLength={field.maxLength}
       registration={form.register(name)}
-      onAddressSelect={(next) =>
-        form.setValue(name, next, { shouldDirty: true, shouldValidate: true })
-      }
-      onPlaceSelect={(place) => syncPlaceSelection(form, place)}
+      onPlaceSelect={(place) => syncPlaceSelection(form, field.placeSearchTargets, place)}
     />
   );
 }
 
 function syncPlaceSelection(
   form: ReturnType<typeof useFormContext<FieldValues>>,
+  targets: CurationTextFieldModel['placeSearchTargets'],
   place: SelectedPlace
 ) {
-  const valuesByField = {
+  if (!targets) return;
+
+  const valuesBySource = {
     placeName: place.placeName,
-    kakaoPlaceId: place.id,
-    barAddress: place.address,
+    id: place.id,
     address: place.address,
   };
 
-  for (const [fieldName, value] of Object.entries(valuesByField)) {
-    if (typeof form.getValues(fieldName) !== 'string') continue;
-
-    form.setValue(fieldName, value, { shouldDirty: true, shouldValidate: true });
+  for (const [fieldName, source] of Object.entries(targets)) {
+    form.setValue(fieldName, valuesBySource[source], {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
   }
 }
 

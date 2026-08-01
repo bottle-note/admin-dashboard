@@ -16,6 +16,9 @@ export type CurationFieldKind =
   | 'alcohol-card-list'
   | 'object-array';
 
+export type CurationPlaceSearchTargetSource = 'placeName' | 'id' | 'address';
+export type CurationPlaceSearchTargets = Record<string, CurationPlaceSearchTargetSource>;
+
 export interface CurationBaseFieldModel {
   key: string;
   label: string;
@@ -27,12 +30,14 @@ export interface CurationBaseFieldModel {
   defaultValue?: unknown;
   nullable?: boolean;
   ariaLabel?: string;
+  readOnly?: boolean;
 }
 
 export interface CurationTextFieldModel extends CurationBaseFieldModel {
   kind: 'text' | 'textarea' | 'date' | 'time' | 'address' | 'hidden';
   minLength?: number;
   maxLength?: number;
+  placeSearchTargets?: CurationPlaceSearchTargets;
 }
 
 export interface CurationNumberFieldModel extends CurationBaseFieldModel {
@@ -224,6 +229,28 @@ export function getSchemaXString(schema: JsonSchemaNode, key: `x-${string}`): st
   return typeof value === 'string' ? value : undefined;
 }
 
+export function getSchemaXBoolean(schema: JsonSchemaNode, key: `x-${string}`): boolean | undefined {
+  const value = schema[key];
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+export function getSchemaPlaceSearchTargets(
+  schema: JsonSchemaNode
+): CurationPlaceSearchTargets | undefined {
+  const targets = schema['x-place-search-targets'];
+  if (!targets || typeof targets !== 'object' || Array.isArray(targets)) return undefined;
+
+  const validSources = new Set<CurationPlaceSearchTargetSource>(['placeName', 'id', 'address']);
+  const entries = Object.entries(targets).filter(
+    (entry): entry is [string, CurationPlaceSearchTargetSource] =>
+      entry[0].length > 0 &&
+      typeof entry[1] === 'string' &&
+      validSources.has(entry[1] as CurationPlaceSearchTargetSource)
+  );
+
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
 export function getSchemaDisplayLabel(schema: JsonSchemaNode): string {
   return getSchemaXString(schema, 'x-display-name') ?? schema.description ?? schema.title ?? '';
 }
@@ -246,7 +273,6 @@ function resolveSchemaKind(
   schema: JsonSchemaNode,
   fieldStyle?: string
 ): CurationFieldKind {
-  if (fieldStyle === 'address-search' && key.toLowerCase().endsWith('placeid')) return 'hidden';
   if (fieldStyle === 'long-text') return 'textarea';
   if (fieldStyle === 'plain-text') return 'text';
   if (fieldStyle === 'address-search') return 'address';
@@ -288,6 +314,7 @@ export function createCurationBasicFieldModel(
     placeholder: getSchemaPlaceholder(fieldSchema),
     defaultValue: fieldSchema.default,
     nullable: fieldSchema.nullable,
+    readOnly: getSchemaXBoolean(fieldSchema, 'x-read-only'),
   };
   const kind = getSchemaFieldKind(key, fieldSchema);
 
@@ -321,10 +348,17 @@ export function createCurationBasicFieldModel(
         minItems: fieldSchema.minItems ?? 0,
         maxItems: typeof fieldSchema.maxItems === 'number' ? fieldSchema.maxItems : undefined,
       };
+    case 'address':
+      return {
+        ...base,
+        kind,
+        minLength: fieldSchema.minLength,
+        maxLength: fieldSchema.maxLength,
+        placeSearchTargets: getSchemaPlaceSearchTargets(fieldSchema),
+      };
     case 'textarea':
     case 'date':
     case 'time':
-    case 'address':
     case 'hidden':
     case 'text':
       return {

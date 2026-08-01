@@ -25,14 +25,34 @@ export const programSpec: CurationV2Spec = {
       placeName: {
         type: 'string',
         maxLength: 100,
-        'x-field-style': 'plain-text',
+        'x-field-style': 'address-search',
         'x-display-name': '장소명',
+        'x-place-search-targets': {
+          placeName: 'placeName',
+          kakaoPlaceId: 'id',
+          address: 'address',
+        },
+      },
+      kakaoPlaceId: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 20,
+        'x-field-style': 'hidden',
+        'x-display-name': 'Kakao 장소 ID',
       },
       address: {
         type: 'string',
         maxLength: 200,
         'x-field-style': 'plain-text',
+        'x-read-only': true,
         'x-display-name': '장소 및 주소',
+      },
+      detailAddress: {
+        type: 'string',
+        maxLength: 200,
+        nullable: true,
+        'x-field-style': 'plain-text',
+        'x-display-name': '상세 주소',
       },
       entryFee: {
         type: 'integer',
