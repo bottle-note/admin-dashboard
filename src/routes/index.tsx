@@ -18,7 +18,7 @@ import { BannerListPage } from '@/pages/banners/BannerList';
 import { BannerDetailPage } from '@/pages/banners/BannerDetail';
 import { BannerCreatePage } from '@/pages/banners/BannerCreate';
 import { CurationEntryPage } from '@/pages/curation/CurationEntry';
-import { CurationListPage } from '@/pages/curation/CurationList';
+import { CurationList } from '@/pages/curation-spec/CurationList';
 import { CurationDetailPage } from '@/pages/curation/CurationDetail';
 import { CurationCreatePage } from '@/pages/curation/CurationCreate';
 import { CurationSpecCode } from '@/types/api';
@@ -65,7 +65,7 @@ export function AppRoutes() {
           path="dashboard/curations"
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN', 'BAR_OWNER', 'COMMUNITY_MANAGER']}>
-              <CurationListPage />
+              <CurationList />
             </RoleProtectedRoute>
           }
         />
