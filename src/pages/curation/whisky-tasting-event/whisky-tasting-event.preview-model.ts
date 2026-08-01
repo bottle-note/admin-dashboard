@@ -19,6 +19,7 @@ export function createWhiskyTastingEventPreviewModel(
     payload: {
       capacity: getNumber(values.capacity) ?? 0,
       entryFee: getNumber(values.entryFee) ?? 0,
+      is_tbc: Boolean(values.is_tbc),
       eventDate: getString(values.eventDate),
       eventTime: getString(values.eventTime),
       guideText: getString(values.guideText),

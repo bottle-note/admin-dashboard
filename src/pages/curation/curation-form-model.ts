@@ -46,6 +46,12 @@ export interface CurationNumberFieldModel extends CurationBaseFieldModel {
     value: number;
     fallbackValue: number;
   };
+  linkedCheckbox?: {
+    label: string;
+    fieldKey: string;
+    valueWhenChecked: number;
+    valueWhenUnchecked: number;
+  };
 }
 
 export interface CurationBooleanRadioFieldModel extends CurationBaseFieldModel {

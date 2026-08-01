@@ -18,6 +18,7 @@ const tastingEventPreview: TastingEventPreviewData = {
     barAddress: '서울 강남구 테헤란로 123',
     detailAddress: '2층',
     entryFee: 75000,
+    is_tbc: false,
     capacity: 20,
     isRecruiting: true,
     applicationLink: 'https://forms.example.com/tasting',
@@ -59,5 +60,20 @@ describe('TastingEventPreview', () => {
 
     expect(screen.getAllByText('모집 인원 미정').length).toBeGreaterThan(0);
     expect(screen.queryByText('0명 정원')).not.toBeInTheDocument();
+  });
+
+  it('가격 미정이면 저장된 참가비보다 가격 미정 표시를 우선한다', () => {
+    render(
+      <TastingEventPreview
+        event={{
+          ...tastingEventPreview,
+          payload: { ...tastingEventPreview.payload, entryFee: 75000, is_tbc: true },
+        }}
+        today={new Date('2026-06-01')}
+      />
+    );
+
+    expect(screen.getByText('가격 미정')).toBeInTheDocument();
+    expect(screen.queryByText('75,000원')).not.toBeInTheDocument();
   });
 });

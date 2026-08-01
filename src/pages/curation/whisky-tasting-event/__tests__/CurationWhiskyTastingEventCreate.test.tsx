@@ -91,6 +91,21 @@ const tastingEventSpec: CurationV2Spec = {
         description: '시음회 시간',
         'x-display-name': '시음회 시간',
       },
+      placeName: {
+        type: 'string',
+        maxLength: 100,
+        description: '시음회 장소명',
+        'x-field-style': 'address-search',
+        'x-display-name': '장소명',
+      },
+      kakaoPlaceId: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 20,
+        description: 'Kakao Places 장소 ID',
+        'x-field-style': 'address-search',
+        'x-display-name': 'Kakao 장소 ID',
+      },
       barAddress: {
         type: 'string',
         maxLength: 200,
@@ -113,6 +128,12 @@ const tastingEventSpec: CurationV2Spec = {
         minimum: 0,
         description: '참가비',
         'x-display-name': '참가비(1인당)',
+      },
+      is_tbc: {
+        type: 'boolean',
+        description: '참가비 미정 여부. false이면 entryFee의 0은 무료를 뜻한다.',
+        'x-field-style': 'none',
+        'x-display-name': '참가비 미정 여부',
       },
       capacity: {
         type: 'integer',
@@ -395,7 +416,7 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
     expect(capacityInput).toBeEnabled();
   });
 
-  it('장소명 input 클릭으로 장소 검색을 열고 선택한 장소명을 빈 상세 주소에만 채운다', async () => {
+  it('장소명 input 클릭으로 장소 검색을 열고 선택한 장소 정보를 폼에 채운다', async () => {
     const user = userEvent.setup();
     mockSpecSuccess();
     setKakaoPlacesMock();
@@ -436,12 +457,9 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
     await user.click(await screen.findByText('도시남 바'));
 
     expect(placeNameInput).toHaveValue('도시남 바');
-    expect(placeNameInput).not.toHaveAttribute('readonly');
+    expect(placeNameInput).toHaveAttribute('readonly');
     expect(screen.getByLabelText('장소 및 바(bar) 주소')).toHaveValue('서울 강남구 테헤란로 123');
-    expect(screen.getByLabelText('상세 주소')).toHaveValue('도시남 바');
-
-    fireEvent.change(placeNameInput, { target: { value: '도시남 바 수정' } });
-    expect(placeNameInput).toHaveValue('도시남 바 수정');
+    expect(screen.getByLabelText('상세 주소')).toHaveValue('');
 
     fireEvent.change(screen.getByLabelText('상세 주소'), { target: { value: '2층 별실' } });
     await user.click(screen.getByRole('button', { name: '장소 검색' }));
@@ -884,6 +902,7 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
         detailAddress: '2층 도시남 바',
         isRecruiting: true,
         entryFee: 75000,
+        is_tbc: false,
         capacity: 0,
         applicationLink: 'https://forms.example.com/tasting',
         guideText: '시작 10분 전 입장해 주세요.',
@@ -912,6 +931,33 @@ describe('CurationCreatePage whisky tasting event strategy', () => {
       },
     });
     expect(screen.queryByText('BOTTLE_NOTE')).not.toBeInTheDocument();
+  });
+
+  it('가격 미정을 선택하면 참가비를 0원으로 고정하고 입력과 미리보기를 연동한다', async () => {
+    const user = userEvent.setup();
+    mockSpecSuccess();
+
+    render(<CurationCreatePage />);
+
+    const entryFeeInput = await screen.findByLabelText('참가비(1인당)');
+    const priceTbcCheckbox = screen.getByRole('checkbox', { name: '가격 미정' });
+
+    fireEvent.change(entryFeeInput, { target: { value: '75000' } });
+    expect(screen.getByText('75,000원')).toBeInTheDocument();
+
+    await user.click(priceTbcCheckbox);
+
+    expect(priceTbcCheckbox).toBeChecked();
+    expect(entryFeeInput).toHaveValue(0);
+    expect(entryFeeInput).toBeDisabled();
+    expect(screen.getAllByText('가격 미정').length).toBeGreaterThan(1);
+
+    await user.click(priceTbcCheckbox);
+
+    expect(priceTbcCheckbox).not.toBeChecked();
+    expect(entryFeeInput).toHaveValue(0);
+    expect(entryFeeInput).not.toBeDisabled();
+    expect(screen.getByText('무료')).toBeInTheDocument();
   });
 
   it('광고 전용 시음회는 신청링크 없이 저장하고 payload에는 빈 문자열을 전송한다', async () => {
