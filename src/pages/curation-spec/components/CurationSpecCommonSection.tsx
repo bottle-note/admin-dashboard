@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 
-import { CurationImageUploadField } from '../../curation/components/CurationImageUploadField';
+import { CurationImageUploadField } from './CurationImageUploadField';
 
 export function CurationSpecCommonSection({
   onImageUploadingChange,

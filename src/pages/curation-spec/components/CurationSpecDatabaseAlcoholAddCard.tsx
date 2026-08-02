@@ -6,10 +6,6 @@ import { Button } from '@/components/ui/button';
 import { useAdminAlcoholDetailLookup } from '@/hooks/useAdminAlcohols';
 import { useToast } from '@/hooks/useToast';
 
-import {
-  createBottleNoteCurationWhiskyItem,
-  createBottleNoteCurationWhiskyItemFromDetail,
-} from '../../curation/curation-whisky-card-list.mapper';
 import type { AlcoholSectionConfig } from '../curation-sections.type';
 import type {
   WhiskyTastingEventAlcoholItemSchema,
@@ -47,32 +43,40 @@ export function CurationSpecDatabaseAlcoholAddCard({
 
     try {
       const detail = await fetchAlcoholDetail(whisky.alcoholId);
-      const mappedItem = createBottleNoteCurationWhiskyItemFromDetail(detail);
 
       onAdd({
         source: 'BOTTLE_NOTE',
         alcohol: {
-          ...mappedItem.alcohol,
-          selectedTags: mappedItem.alcohol.selectedTags.slice(0, maxSelectedTags),
+          alcoholId: detail.alcoholId,
+          korName: detail.korName,
+          engName: detail.engName,
+          imageUrl: detail.imageUrl,
+          abv: detail.abv ?? '',
+          cask: detail.cask ?? '',
+          volume: detail.volume ?? '',
+          regionName: detail.korRegion ?? detail.engRegion ?? '',
+          korCategory: detail.korCategory,
+          selectedTags: Array.from(
+            new Set(detail.tastingTags.map((tag) => tag.korName).filter(Boolean))
+          ).slice(0, maxSelectedTags),
         },
         stats: {
-          rating: mappedItem.stats?.rating ?? null,
-          totalRatingsCount: mappedItem.stats?.totalRatingsCount ?? 0,
+          rating: detail.avgRating ?? null,
+          totalRatingsCount: detail.totalRatingsCount ?? 0,
         },
-        comment: mappedItem.comment ?? '',
+        comment: '',
       });
     } catch {
-      const fallbackItem = createBottleNoteCurationWhiskyItem(whisky);
       onAdd({
         source: 'BOTTLE_NOTE',
         alcohol: {
-          alcoholId: fallbackItem.alcohol.alcoholId,
-          korName: fallbackItem.alcohol.korName,
-          engName: fallbackItem.alcohol.engName,
-          imageUrl: fallbackItem.alcohol.imageUrl,
-          selectedTags: fallbackItem.alcohol.selectedTags,
+          alcoholId: whisky.alcoholId,
+          korName: whisky.korName,
+          engName: whisky.engName,
+          imageUrl: whisky.imageUrl,
+          selectedTags: [],
         },
-        comment: fallbackItem.comment ?? '',
+        comment: '',
       });
       showToast({
         type: 'error',

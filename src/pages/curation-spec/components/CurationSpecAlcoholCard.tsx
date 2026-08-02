@@ -8,13 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
-import { CurationTastingTagCombobox } from '../../curation/components/CurationTastingTagCombobox';
 import type { AlcoholSectionConfig, CurationSpecSections } from '../curation-sections.type';
 import type {
   WhiskyCurationPairingListSchema,
   WhiskyTastingEventAlcoholItemSchema,
 } from '../curation-spec.schema';
 import { PairingFields } from '../whisky-pairing/PairingFields';
+import { CurationTastingTagCombobox } from './CurationTastingTagCombobox';
 
 export function CurationSpecAlcoholCard({
   name,
