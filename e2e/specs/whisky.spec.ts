@@ -26,7 +26,7 @@ test.describe('위스키 목록', () => {
     await expect(listPage.table()).toBeVisible();
   });
 
-  test('검색으로 위스키를 필터링할 수 있다', async ({ page }) => {
+  test('검색으로 위스키를 필터링할 수 있다', async () => {
     await listPage.goto();
 
     // 검색 수행
@@ -72,7 +72,7 @@ test.describe('위스키 상세', () => {
     detailPage = new WhiskyDetailPage(page);
   });
 
-  test('상세 페이지에서 위스키 정보를 볼 수 있다', async ({ page }) => {
+  test('상세 페이지에서 위스키 정보를 볼 수 있다', async () => {
     // 목록에서 첫 번째 위스키로 이동
     await listPage.goto();
     const rowCount = await listPage.getRowCount();

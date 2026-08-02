@@ -1,4 +1,4 @@
-import { type Page, type Locator } from '@playwright/test';
+import { type Page } from '@playwright/test';
 
 /**
  * 모든 Page Object의 기본 클래스

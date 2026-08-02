@@ -24,7 +24,7 @@ test.describe('테이스팅 태그 관리', () => {
     await expect(page.getByRole('heading', { name: '테이스팅 태그 관리' })).toBeVisible();
   });
 
-  test('검색으로 태그를 필터링할 수 있다', async ({ page }) => {
+  test('검색으로 태그를 필터링할 수 있다', async () => {
     await listPage.goto();
 
     // 검색 수행 (API 응답 대기 포함)
