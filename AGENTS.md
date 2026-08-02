@@ -1,177 +1,65 @@
 # Bottlenote Admin Dashboard Agent Guide
 
-This is the shared instruction file for coding agents working in this
-repository. Keep tool-specific instructions in their own files only when they
-are not useful to other agents.
+## 1. 프로젝트
 
-## Project
+Bottlenote Admin Dashboard는 위스키 테이스팅 플랫폼 **보틀노트**의 운영자용 웹 애플리케이션이다. Vite, React 18, TypeScript로 구성되어 있으며, 운영자가 앱에 노출되는 데이터를 관리하고 서비스 운영에 필요한 지표와 상태를 확인하는 대시보드 역할을 한다.
 
-Bottlenote Admin Dashboard is a Vite + React 18 + TypeScript admin app for
-managing whisky tasting platform data such as banners, curations, whisky,
-tasting tags, users, inquiries, policies, and distilleries.
-
-## Project-Local Skills
-
-Project-specific agent skills live in `.agents/skills` and belong to this
-repository. Do not rely on user-global skills for Bottlenote admin workflow.
-
-When a user request matches one of these project skills, open the skill's
-`SKILL.md` and follow it before planning or editing:
-
-- `.agents/skills/bottlenote-admin-feature-builder/SKILL.md`: use as the
-  router for vague admin feature, bug, API, implementation, verification, or PR
-  requests.
-- `.agents/skills/bottlenote-admin-feature-spec/SKILL.md`: use to turn API
-  docs, response shapes, and product intent into
-  `docs/features/<feature-slug>/spec.md`.
-- `.agents/skills/bottlenote-admin-feature-design/SKILL.md`: use to turn an
-  approved `spec.md` into `docs/features/<feature-slug>/design.md` using this
-  app's existing shadcn/Tailwind admin UI patterns.
-- `.agents/skills/bottlenote-admin-feature-plan/SKILL.md`: use to turn
-  `spec.md` and `design.md` into a decision-complete
-  `docs/features/<feature-slug>/plan.md`.
-- `.agents/skills/bottlenote-admin-feature-implement/SKILL.md`: use to
-  implement from `docs/features/<feature-slug>/plan.md` without reinterpreting
-  the spec/design.
-- `.agents/skills/bottlenote-admin-api/SKILL.md`: use for API documentation
-  checks, endpoint additions or changes, request/response type mismatches, and
-  types/services/hooks API contract work. For feature work, include API
-  findings in that feature's `spec.md` and `plan.md`.
-- `.agents/skills/bottlenote-admin-korean-pr/SKILL.md`: use when the user asks
-  to prepare or create a Korean PR for completed work.
-
-Use `.context/` only for temporary scratch notes, unresolved investigation
-state, or Conductor handoff details that should not be committed. Feature
-requirements and implementation decisions should live under
-`docs/features/<feature-slug>/`.
-
-Typical delivery flow:
-
-1. Read the latest API docs or provided response shape.
-2. Write or update `docs/features/<feature-slug>/spec.md`.
-3. Write or update `docs/features/<feature-slug>/design.md`.
-4. Write or update `docs/features/<feature-slug>/plan.md`.
-5. Implement only from `plan.md` following existing project structure.
-6. Verify with code tests and UI/manual checks.
-7. Let the user inspect the result.
-8. Create a Korean PR when requested.
-
-## Commands
+주요 명령어:
 
 ```bash
-pnpm dev           # development server, dev environment
-pnpm dev:local     # development server, local environment
-pnpm build         # production build
-pnpm test          # unit/hook tests in watch mode
-pnpm test:run      # unit/hook tests once
-pnpm test:e2e      # Playwright E2E tests
-pnpm test:e2e:ui   # Playwright UI mode
-pnpm test:all      # unit + E2E tests
-pnpm lint          # ESLint
+pnpm dev          # dev 환경 실행
+pnpm dev:local    # local 환경 실행
+pnpm build        # 타입 검사 및 프로덕션 빌드
+pnpm lint         # ESLint
+pnpm test:e2e     # Playwright E2E
 ```
 
-## Architecture
+## 2. 도메인 지식: 이 어드민이 존재하는 이유
 
-```text
-src/
-├── components/
-│   ├── common/     # reusable components
-│   ├── layout/     # admin layout, sidebar, header
-│   └── ui/         # shadcn/ui primitives; do not edit directly
-├── pages/          # route-level page components
-├── hooks/          # custom hooks
-├── services/       # API service layer
-├── stores/         # Zustand stores
-├── types/api/      # API type definitions
-└── lib/            # utilities and API client setup
-```
+보틀노트 사용자 앱이 실제 제품 경험을 제공한다면, 이 어드민은 그 경험을 운영하기 위한 내부 도구다. 운영자는 여기서 위스키 정보, 큐레이션, 배너, 테이스팅 태그처럼 앱에 노출되는 콘텐츠와 기준 데이터를 관리하고, 문의·리뷰·사용자처럼 운영 과정에서 발생하는 데이터를 확인하며, 서비스 상태와 지표를 파악한다.
 
-## API Pattern
+따라서 어드민의 변경은 내부 화면 하나로 끝나지 않고 사용자 앱에 노출되는 데이터와 운영자의 업무 흐름에 영향을 줄 수 있다. 구현할 때는 화면을 단순 CRUD로만 보지 말고 다음을 우선 확인한다.
 
-New API work follows the 3-layer order:
+- 어떤 운영 목적을 해결하는 기능인지
+- 변경한 값이 사용자 앱에서 어디에 어떻게 노출되는지
+- 운영자가 실수했을 때 복구하기 어려운 변경인지
+- 목록, 검색, 정렬, 상태 변경이 실제 운영 흐름과 일치하는지
+- 권한에 따라 접근하거나 실행할 수 있는 작업이 달라지는지
 
-1. `src/types/api/*.api.ts` defines endpoints and request/response types.
-2. `src/services/*.service.ts` implements API calls and query keys.
-3. `src/hooks/use*.ts` wraps TanStack Query hooks.
+모든 도메인 구조를 이 문서에 미리 나열하지 않는다. 작업에 필요한 구체적인 도메인 규칙은 사용자 요청, 현재 화면과 코드, 백엔드 API 계약을 함께 확인해 판단한다. 기존 동작을 바꿔야 한다면 추측하지 말고 영향 범위를 먼저 확인한다.
 
-Do not define duplicate API types outside `src/types/api/`. Components should
-not call `fetch`, `axios`, or service functions directly when a project hook
-should own the data flow.
+## 3. 코드 작성 방식
 
-For mapper and payload work, avoid adding one-off utility functions solely for
-simple normalization or serialization. Prefer clear inline normalization at the
-mapping site, or extend an existing helper only when the logic is reused,
-non-trivial, or shared across modules.
+가장 중요한 기준은 **직관성**이다. 코드를 처음 읽는 사람이 추가 설명 없이 흐름을 이해할 수 있어야 한다.
 
-## Forms
+- 현재 요구사항을 해결하는 가장 작고 직접적인 구현을 선택한다.
+- 미래의 재사용을 예상한 추상화, 범용 프레임워크, 불필요한 wrapper나 helper를 만들지 않는다.
+- 한 곳에서만 쓰이는 짧은 변환이나 조건은 사용 지점에 명시적으로 작성한다.
+- 실제 중복이 있고 공통화가 이해를 더 쉽게 만들 때만 추상화한다.
+- 새 패턴을 만들기 전에 같은 도메인의 기존 구현을 따른다.
+- 관련 없는 코드 정리나 리팩터링을 작업 범위에 섞지 않는다.
+- `useMemo`와 `useCallback`은 실제 참조 안정성이나 성능 문제가 있을 때만 사용한다.
 
-Use React Hook Form + Zod schemas for forms. Place schemas in
-`src/pages/{domain}/*.schema.ts`.
+프로젝트의 기본 데이터 흐름은 유지한다.
 
-All fields are required by default unless there is a clear product or API
-reason for optional input. Use `FormField` from `src/components/common` to show
-labels, required markers, and validation errors consistently.
+- API 타입은 `src/types/api`, 호출은 `src/services`, TanStack Query 연결은 `src/hooks`에 둔다.
+- 컴포넌트에서 API를 직접 호출하거나 서버 데이터를 Zustand에 복제하지 않는다.
+- 폼은 React Hook Form과 Zod를 사용하며 스키마는 해당 페이지 도메인에 둔다.
+- 검색, 필터, 페이지네이션처럼 목록 상태에 영향을 주는 값은 URL 파라미터로 관리한다.
+- 백엔드 페이지네이션은 0부터 시작한다.
+- `src/components/ui`의 shadcn 생성 파일은 직접 수정하지 않는다.
+- 새 barrel 파일을 만들지 말고 필요한 모듈을 직접 import한다.
+- 사용자에게 보이는 어드민 문구와 toast는 주변 화면에 다른 기준이 없는 한 한국어로 작성한다.
 
-## Related Entities
+## 4. 테스트 방식
 
-For related entity management, follow the tasting tag pattern:
+테스트는 구현 세부사항보다 운영자가 실제로 수행하는 도메인 흐름을 검증한다.
 
-1. Keep the initial IDs for diffing.
-2. Manage add/remove interactions in local state.
-3. On save, calculate `toAdd` and `toRemove`.
-4. Call bulk add/remove APIs after the main save.
-
-## Tests
-
-For new hooks, services, and page behavior, write tests first unless the change
-is styling-only, type-only, or configuration-only.
-
-Test locations:
-
-| Target | Location |
-| --- | --- |
-| `hooks/use*.ts` | `src/hooks/__tests__/use*.test.ts` |
-| `pages/domain/*.tsx` | `src/pages/domain/__tests__/*.test.tsx` |
-| `services/*.service.ts` | `src/services/__tests__/*.service.test.ts` |
-
-Use MSW mocks from `src/test/mocks/` and test utilities from
-`src/test/test-utils.tsx`.
-
-## E2E
-
-Playwright specs live in `e2e/specs/` and use Page Object classes from
-`e2e/pages/`. Auth uses `e2e/fixtures/auth.fixture.ts`.
-
-E2E tests require `VITE_E2E_TEST_ID` and `VITE_E2E_TEST_PW`.
-
-## Conventions
-
-- Do not edit `src/components/ui/`; those files are generated shadcn/ui
-  primitives.
-- Do not create new barrel files such as `index.ts` unless there is an existing
-  local pattern that requires one.
-- Import modules directly instead of through broad barrels.
-- Keep server data in TanStack Query, not Zustand. Zustand should stay limited
-  to UI/auth state such as sidebar and auth.
-- Keep search, filters, and pagination in URL parameters when they affect list
-  pages.
-- Pagination is 0-based because that is the backend API contract.
-- Toast messages and user-facing admin copy should be Korean unless nearby UI
-  establishes otherwise.
-- Prefer ratio-, fraction-, and container-based responsive layouts over fixed
-  pixel widths for page grids and major layout columns. Use fixed dimensions
-  only for intrinsic UI elements such as icons, controls, thumbnails, or when a
-  product/design constraint explicitly requires it.
-- Use `useMemo` and `useCallback` only when they solve a real referential
-  stability or measured performance problem.
-- Leave unrelated worktree changes alone.
-
-## Reference Files
-
-- API type pattern: `src/types/api/tasting-tag.api.ts`
-- Service pattern: `src/services/tasting-tag.service.ts`
-- Hook pattern: `src/hooks/useTastingTags.ts`
-- Hook test pattern: `src/hooks/__tests__/useTastingTags.test.ts`
-- List page pattern: `src/pages/banners/BannerList.tsx`
-- Detail page pattern: `src/pages/banners/BannerDetail.tsx`
-- Page Object pattern: `e2e/pages/tasting-tag-list.page.ts`
+- 기본 검증 수단은 Playwright를 사용한 도메인별 E2E 테스트다.
+- 목록 진입, 검색·필터, 생성, 수정, 삭제, 정렬, 상태 변경 중 변경 사항과 관련된 핵심 흐름만 검증한다.
+- 테스트 개수를 늘리기 위한 테스트나 동일 동작을 여러 계층에서 반복 검증하는 테스트는 작성하지 않는다.
+- 신규 Vitest 단위 테스트, 컴포넌트 테스트, hook/service 테스트와 MSW 기반 mock 테스트는 기본적으로 추가하지 않는다.
+- Playwright에서도 실제 통합 동작 대신 API를 과도하게 mocking하지 않는다.
+- 기존 테스트는 요청 범위가 아니라면 삭제하거나 대규모로 고치지 않는다.
+- 순수하고 복잡한 계산처럼 E2E보다 작은 테스트가 명백히 더 정확한 예외가 있다면, 이유를 설명하고 최소 범위로 작성한다.
+- 코드 변경 후 `pnpm lint`와 `pnpm build`를 실행하고, 관련 도메인의 Playwright spec을 우선 실행한다. 환경이나 계정 문제로 E2E를 실행하지 못하면 그 사실과 필요한 수동 확인 항목을 명시한다.
