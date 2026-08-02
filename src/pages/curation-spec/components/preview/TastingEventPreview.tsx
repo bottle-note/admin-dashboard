@@ -171,10 +171,6 @@ function TastingEventPreviewInfoCard({
   return (
     <section className="px-5 py-5">
       <div className="flex flex-col gap-2 rounded-2xl bg-[var(--preview-bg-gray)] px-4 py-4">
-        <span className="inline-flex w-fit rounded-full bg-[var(--preview-main-coral)] px-2.5 py-1 text-[12px] font-bold text-white">
-          정보
-        </span>
-
         <div className="mt-2 flex h-full flex-col gap-4">
           {infoItems.map(({ key, Icon, title, description, actionHref }) => (
             <div key={key} className="flex gap-2.5">

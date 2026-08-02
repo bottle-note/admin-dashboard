@@ -1,6 +1,6 @@
 import { useFormContext, useWatch } from 'react-hook-form';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 import type { WhiskyTastingEventFormValues } from '../curation-spec.schema';
 import { CurationPreviewFrame } from './preview/CurationPreviewFrame';
@@ -14,10 +14,9 @@ export function CurationSpecTastingEventPreview() {
     <Card className="shadow-sm">
       <CardHeader>
         <CardTitle>미리보기</CardTitle>
-        <CardDescription>현재 입력값을 앱 화면 기준으로 확인합니다.</CardDescription>
       </CardHeader>
       <CardContent>
-        <CurationPreviewFrame title="시음회">
+        <CurationPreviewFrame title={values.name}>
           <TastingEventPreview values={values} />
         </CurationPreviewFrame>
       </CardContent>
