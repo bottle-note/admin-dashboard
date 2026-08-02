@@ -24,7 +24,6 @@ import {
 import type {
   CurationV2CreateRequest,
   CurationV2CreateResponse,
-  CurationDeleteResponse,
   CurationV2Detail,
   CurationV2SearchParams,
   CurationV2Spec,
@@ -212,30 +211,4 @@ export function useCurationUpdate(
       },
     }
   );
-}
-
-/**
- * 큐레이션 삭제 훅
- */
-export function useCurationDelete(
-  options?: Omit<UseApiMutationOptions<CurationDeleteResponse, number>, 'successMessage'>
-) {
-  const queryClient = useQueryClient();
-  const { onSuccess, ...restOptions } = options ?? {};
-
-  return useApiMutation<CurationDeleteResponse, number>(curationService.delete, {
-    successMessage: '큐레이션이 삭제되었습니다.',
-    ...restOptions,
-    onSuccess: (data, curationId, context) => {
-      queryClient.invalidateQueries({ queryKey: curationKeys.lists() });
-      queryClient.removeQueries({ queryKey: curationKeys.detail(curationId) });
-      if (onSuccess) {
-        (onSuccess as (data: CurationDeleteResponse, variables: number, context: unknown) => void)(
-          data,
-          curationId,
-          context
-        );
-      }
-    },
-  });
 }

@@ -3,9 +3,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { FormProvider, useForm, type Resolver } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 
-import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
-import { useCurationCreate, useCurationDelete, useCurationUpdate } from '@/hooks/useCurations';
+import { useCurationCreate, useCurationUpdate } from '@/hooks/useCurations';
 import type { CurationV2CreateRequest, CurationV2Spec } from '@/types/api';
 
 import type { CurationSpecSections } from '../curation-sections.type';
@@ -37,7 +36,6 @@ export function CurationSpecWhiskyCurationForm({
   onBack,
 }: CurationSpecWhiskyCurationFormProps) {
   const navigate = useNavigate();
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImageUploading, setIsImageUploading] = useState(false);
   const form = useForm<WhiskyCurationFormValues>({
     resolver: zodResolver(
@@ -51,11 +49,7 @@ export function CurationSpecWhiskyCurationForm({
   const updateMutation = useCurationUpdate({
     onSuccess: () => navigate('/dashboard/curations'),
   });
-  const deleteMutation = useCurationDelete({
-    onSuccess: () => navigate('/dashboard/curations'),
-  });
-  const isMutationPending =
-    createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
+  const isMutationPending = createMutation.isPending || updateMutation.isPending;
 
   const handleSubmit = form.handleSubmit((values) => {
     const {
@@ -88,11 +82,6 @@ export function CurationSpecWhiskyCurationForm({
     createMutation.mutate(request);
   });
 
-  const handleDelete = () => {
-    if (!curationId) return;
-    deleteMutation.mutate(curationId);
-  };
-
   return (
     <div className="space-y-6">
       <DetailPageHeader
@@ -103,7 +92,6 @@ export function CurationSpecWhiskyCurationForm({
             ? {
                 mode: 'edit',
                 onUpdate: handleSubmit,
-                onDelete: () => setIsDeleteDialogOpen(true),
                 isPending: isMutationPending,
                 disabled: isImageUploading,
               }
@@ -125,15 +113,6 @@ export function CurationSpecWhiskyCurationForm({
           <aside className="lg:sticky lg:top-6">{preview}</aside>
         </div>
       </FormProvider>
-
-      <DeleteConfirmDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        onConfirm={handleDelete}
-        title="큐레이션 삭제"
-        description="정말 이 큐레이션을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
-        isPending={deleteMutation.isPending}
-      />
     </div>
   );
 }

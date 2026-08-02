@@ -37,11 +37,6 @@ export const CurationV2Api = {
     endpoint: '/admin/api/v2/curations/:curationId',
     method: 'PUT',
   },
-  /** 큐레이션 삭제 */
-  delete: {
-    endpoint: '/admin/api/v1/curations/:curationId',
-    method: 'DELETE',
-  },
 } as const;
 
 // ============================================
@@ -213,10 +208,6 @@ export interface CurationV2ApiTypes {
     request: CurationV2ApiTypes['create']['request'];
     response: CurationV2MutationResponse;
   };
-  /** 큐레이션 삭제 */
-  delete: {
-    response: CurationV2MutationResponse;
-  };
 }
 
 // ============================================
@@ -236,5 +227,3 @@ export type CurationV2CreateResponse = CurationV2ApiTypes['create']['response'];
 export type CurationV2UpdateRequest = CurationV2ApiTypes['update']['request'];
 
 export type CurationV2UpdateResponse = CurationV2ApiTypes['update']['response'];
-
-export type CurationDeleteResponse = CurationV2ApiTypes['delete']['response'];
