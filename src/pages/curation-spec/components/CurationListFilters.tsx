@@ -83,7 +83,7 @@ export function CurationListFilters({
           <SelectItem value={ALL_VALUE}>스펙 전체</SelectItem>
           {specs.map((spec) => (
             <SelectItem key={spec.code} value={spec.code}>
-              {spec.name || spec.code}
+              {spec.name}
             </SelectItem>
           ))}
         </SelectContent>

@@ -69,7 +69,7 @@ export function CurationListTable({
                   <div className="text-xs text-muted-foreground">ID: {item.id}</div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline">{specNames[item.specCode] ?? item.specCode}</Badge>
+                  <Badge variant="outline">{specNames[item.specCode]}</Badge>
                 </TableCell>
                 <TableCell className="font-mono text-sm">{item.displayOrder}</TableCell>
                 <TableCell>
