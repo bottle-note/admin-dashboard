@@ -8,3 +8,4 @@ export { WhiskyListPage } from './whisky-list.page';
 export { WhiskyDetailPage } from './whisky-detail.page';
 export { BannerListPage } from './banner-list.page';
 export { BannerDetailPage } from './banner-detail.page';
+export { CurationPage, type CurationCode } from './curation.page';
