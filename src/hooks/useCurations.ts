@@ -153,25 +153,22 @@ export function useCurationCreate(
     ...restOptions
   } = options ?? {};
 
-  return useApiMutation<CurationV2CreateResponse, CurationV2CreateRequest>(
-    curationService.create,
-    {
-      successMessage,
-      ...restOptions,
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries({ queryKey: curationKeys.lists() });
-        if (onSuccess) {
-          (
-            onSuccess as (
-              data: CurationV2CreateResponse,
-              variables: CurationV2CreateRequest,
-              context: unknown
-            ) => void
-          )(data, variables, context);
-        }
-      },
-    }
-  );
+  return useApiMutation<CurationV2CreateResponse, CurationV2CreateRequest>(curationService.create, {
+    successMessage,
+    ...restOptions,
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: curationKeys.lists() });
+      if (onSuccess) {
+        (
+          onSuccess as (
+            data: CurationV2CreateResponse,
+            variables: CurationV2CreateRequest,
+            context: unknown
+          ) => void
+        )(data, variables, context);
+      }
+    },
+  });
 }
 
 /**
