@@ -7,16 +7,13 @@ import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { useCurationCreate, useCurationDelete, useCurationUpdate } from '@/hooks/useCurations';
 import type { CurationV2CreateRequest, CurationV2Spec } from '@/types/api';
 
-import type {
-  WhiskyTastingEventFormValues,
-  WhiskyTastingEventRequestSpec,
-} from '../curation-spec.schema';
-import { getWhiskyTastingEventSections } from '../curation-sections';
+import type { ProgramFormValues, ProgramRequestSpec } from '../curation-spec.schema';
+import { getProgramSections } from '../curation-sections';
 import { CurationSpecCommonSection } from './CurationSpecCommonSection';
+import { CurationSpecProgramPreview } from './CurationSpecProgramPreview';
 import { CurationSpecRenderer } from './CurationSpecRenderer';
-import { CurationSpecTastingEventPreview } from './CurationSpecTastingEventPreview';
 
-export function CurationSpecTastingEventForm({
+export function CurationSpecProgramForm({
   spec,
   curationId,
   requestSpec,
@@ -25,16 +22,14 @@ export function CurationSpecTastingEventForm({
 }: {
   spec: CurationV2Spec;
   curationId?: number;
-  requestSpec: WhiskyTastingEventRequestSpec;
-  initialValues: WhiskyTastingEventFormValues;
+  requestSpec: ProgramRequestSpec;
+  initialValues: ProgramFormValues;
   onBack: () => void;
 }) {
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImageUploading, setIsImageUploading] = useState(false);
-  const form = useForm<WhiskyTastingEventFormValues>({
-    defaultValues: initialValues,
-  });
+  const form = useForm<ProgramFormValues>({ defaultValues: initialValues });
   const createMutation = useCurationCreate({
     onSuccess: () => navigate('/dashboard/curations'),
   });
@@ -56,16 +51,49 @@ export function CurationSpecTastingEventForm({
       exposureEndDate,
       displayOrder,
       isActive,
-      ...payload
+      eventStartDate,
+      eventEndDate,
+      placeName,
+      kakaoPlaceId,
+      address,
+      detailLocation,
+      organizer,
+      sponsor,
+      entryFee,
+      is_tbc,
+      officialUrl,
+      registrationUrl,
+      programTags,
+      programs,
     } = values;
 
-    if (payload.kakaoPlaceId === '') {
-      delete payload.kakaoPlaceId;
-    }
-
-    if (payload.isRecruiting === false) {
-      payload.applicationLink = '';
-    }
+    const payload = {
+      eventStartDate,
+      eventEndDate,
+      placeName,
+      address,
+      programs: programs.map((program) => ({
+        name: program.name,
+        type: program.type,
+        programDate: program.programDate,
+        startTime: program.startTime,
+        description: program.description,
+        ...(program.endTime ? { endTime: program.endTime } : {}),
+        ...(program.venue ? { venue: program.venue } : {}),
+        ...(program.host ? { host: program.host } : {}),
+        ...(program.applicationUrl ? { applicationUrl: program.applicationUrl } : {}),
+        ...(program.whiskies?.length ? { whiskies: program.whiskies } : {}),
+      })),
+      ...(kakaoPlaceId ? { kakaoPlaceId } : {}),
+      ...(detailLocation ? { detailLocation } : {}),
+      ...(organizer ? { organizer } : {}),
+      ...(sponsor ? { sponsor } : {}),
+      ...(!is_tbc && Number.isFinite(entryFee) ? { entryFee } : {}),
+      ...(is_tbc !== undefined ? { is_tbc } : {}),
+      ...(officialUrl ? { officialUrl } : {}),
+      ...(registrationUrl ? { registrationUrl } : {}),
+      ...(programTags?.length ? { programTags } : {}),
+    };
 
     const request: CurationV2CreateRequest = {
       specId: spec.id,
@@ -119,10 +147,10 @@ export function CurationSpecTastingEventForm({
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start">
           <div className="min-w-0 space-y-6">
             <CurationSpecCommonSection onImageUploadingChange={setIsImageUploading} />
-            <CurationSpecRenderer sections={getWhiskyTastingEventSections(requestSpec)} />
+            <CurationSpecRenderer sections={getProgramSections(requestSpec)} />
           </div>
           <aside className="lg:sticky lg:top-6">
-            <CurationSpecTastingEventPreview />
+            <CurationSpecProgramPreview />
           </aside>
         </div>
       </FormProvider>

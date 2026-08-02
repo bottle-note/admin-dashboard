@@ -146,6 +146,105 @@ export const whiskyTastingEventFormSchema = whiskyTastingEventPayloadSchema.exte
   isActive: z.boolean(),
 });
 
+const programWhiskyListSchema = z.looseObject({
+  ...schemaNodeShape,
+  type: z.literal('array'),
+  items: alcoholItemSchema,
+  minItems: z.number().default(0),
+  maxItems: z.number(),
+  'x-field-style': z.literal('alcohol-card-list'),
+});
+
+const programItemRequestSpecSchema = z.looseObject({
+  ...schemaNodeShape,
+  type: z.literal('object'),
+  required: z.array(z.string()),
+  properties: z.looseObject({
+    name: schemaNode,
+    type: schemaNode,
+    programDate: schemaNode,
+    startTime: schemaNode,
+    endTime: schemaNode,
+    venue: schemaNode,
+    host: schemaNode,
+    description: schemaNode,
+    applicationUrl: schemaNode,
+    whiskies: programWhiskyListSchema,
+  }),
+});
+
+export const programListRequestSpecSchema = z.looseObject({
+  ...schemaNodeShape,
+  type: z.literal('array'),
+  items: programItemRequestSpecSchema,
+  minItems: z.number(),
+  maxItems: z.number(),
+});
+
+export const programRequestSpecSchema = z.looseObject({
+  ...schemaNodeShape,
+  type: z.literal('object'),
+  required: z.array(z.string()),
+  properties: z.looseObject({
+    eventStartDate: schemaNode,
+    eventEndDate: schemaNode,
+    placeName: schemaNode,
+    kakaoPlaceId: schemaNode,
+    address: schemaNode,
+    detailAddress: schemaNode,
+    detailLocation: schemaNode,
+    organizer: schemaNode,
+    sponsor: schemaNode,
+    entryFee: schemaNode,
+    is_tbc: schemaNode,
+    officialUrl: schemaNode,
+    registrationUrl: schemaNode,
+    programTags: schemaNode,
+    programs: programListRequestSpecSchema,
+  }),
+});
+
+const programItemPayloadSchema = z.looseObject({
+  name: z.string(),
+  type: z.enum(['MASTER_CLASS', 'TASTING', 'SEMINAR', 'BOOTH_EVENT', 'OTHER']),
+  programDate: z.string(),
+  startTime: z.string(),
+  endTime: z.string().nullable().optional(),
+  venue: z.string().nullable().optional(),
+  host: z.string().nullable().optional(),
+  description: z.string(),
+  applicationUrl: z.string().nullable().optional(),
+  whiskies: z.array(tastingEventAlcoholItemPayloadSchema).optional(),
+});
+
+export const programPayloadSchema = z.looseObject({
+  eventStartDate: z.string(),
+  eventEndDate: z.string(),
+  placeName: z.string(),
+  kakaoPlaceId: z.string().optional(),
+  address: z.string(),
+  detailAddress: z.string().nullable().optional(),
+  detailLocation: z.string().nullable().optional(),
+  organizer: z.string().nullable().optional(),
+  sponsor: z.string().nullable().optional(),
+  entryFee: z.number().nullable().optional(),
+  is_tbc: z.boolean().optional(),
+  officialUrl: z.string().nullable().optional(),
+  registrationUrl: z.string().nullable().optional(),
+  programTags: z.array(z.string()).optional(),
+  programs: z.array(programItemPayloadSchema),
+});
+
+export const programFormSchema = programPayloadSchema.extend({
+  name: z.string(),
+  description: z.string(),
+  imageUrls: z.array(z.string()),
+  exposureStartDate: z.string(),
+  exposureEndDate: z.string(),
+  displayOrder: z.number(),
+  isActive: z.boolean(),
+});
+
 export type WhiskyTastingEventRequestSpec = z.infer<typeof whiskyTastingEventRequestSpecSchema>;
 
 export type WhiskyTastingEventAlcoholListSchema = z.infer<
@@ -157,3 +256,13 @@ export type WhiskyTastingEventAlcoholItemSchema = z.infer<typeof alcoholItemSche
 export type WhiskyTastingEventPayload = z.infer<typeof whiskyTastingEventPayloadSchema>;
 
 export type WhiskyTastingEventFormValues = z.infer<typeof whiskyTastingEventFormSchema>;
+
+export type ProgramRequestSpec = z.infer<typeof programRequestSpecSchema>;
+
+export type ProgramListRequestSpec = z.infer<typeof programListRequestSpecSchema>;
+
+export type ProgramItemRequestSpec = z.infer<typeof programItemRequestSpecSchema>;
+
+export type ProgramPayload = z.infer<typeof programPayloadSchema>;
+
+export type ProgramFormValues = z.infer<typeof programFormSchema>;

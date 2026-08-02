@@ -1,28 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { JsonSchemaNode } from '@/types/api';
 
+import type { CurationSpecSections } from '../curation-sections';
+import type { ProgramListRequestSpec } from '../curation-spec.schema';
 import { CurationSpecField } from './CurationSpecField';
+import { CurationSpecProgramListField } from './CurationSpecProgramListField';
 
-export function CurationSpecRenderer({
-  sections,
-}: {
-  sections: Record<
-    string,
-    {
-      subtitle: string;
-      contentClassName: string;
-      fields: Record<
-        string,
-        {
-          schema: JsonSchemaNode;
-          required: boolean;
-          className?: string;
-          disabledBy?: string;
-        }
-      >;
-    }
-  >;
-}) {
+export function CurationSpecRenderer({ sections }: { sections: CurationSpecSections }) {
   return (
     <>
       {Object.entries(sections).map(([title, section], index) => (
@@ -41,16 +24,28 @@ export function CurationSpecRenderer({
           </CardHeader>
           {/* 섹션 컨텐츠 */}
           <CardContent className={`pt-6 ${section.contentClassName}`}>
-            {Object.entries(section.fields).map(([key, field]) => (
-              <CurationSpecField
-                key={key}
-                name={key}
-                schema={field.schema}
-                required={field.required}
-                className={field.className}
-                disabledBy={field.disabledBy}
-              />
-            ))}
+            {Object.entries(section.fields).map(([key, field]) =>
+              key === 'programs' ? (
+                <CurationSpecProgramListField
+                  key={key}
+                  name={key}
+                  schema={field.schema as ProgramListRequestSpec}
+                  required={field.required}
+                />
+              ) : (
+                <CurationSpecField
+                  key={key}
+                  name={key}
+                  schema={field.schema}
+                  required={field.required}
+                  label={field.label}
+                  className={field.className}
+                  disabledWhen={field.disabledWhen}
+                  requiredWhen={field.requiredWhen}
+                  optionLabels={field.optionLabels}
+                />
+              )
+            )}
           </CardContent>
         </Card>
       ))}

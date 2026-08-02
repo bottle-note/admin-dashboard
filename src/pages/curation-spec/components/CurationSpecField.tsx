@@ -5,6 +5,13 @@ import { PlaceSearchInput } from '@/components/common/PlaceSearchInput';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { JsonSchemaNode } from '@/types/api';
 
@@ -15,20 +22,43 @@ export function CurationSpecField({
   name,
   schema,
   required,
+  label,
   className,
-  disabledBy,
+  disabledWhen,
+  requiredWhen,
+  optionLabels,
 }: {
   name: string;
   schema: JsonSchemaNode;
   required: boolean;
+  label?: string;
   className?: string;
-  disabledBy?: string;
+  disabledWhen?: {
+    field: string;
+    equals: unknown;
+  };
+  requiredWhen?: {
+    field: string;
+    equals: unknown;
+  };
+  optionLabels?: Record<string, string>;
 }) {
   const form = useFormContext<FieldValues>();
-  const watchedValue = useWatch({ control: form.control, name: disabledBy ?? name });
-  const disabled = disabledBy ? watchedValue === true : false;
+  const fieldValue = useWatch({ control: form.control, name });
+  const disabledConditionValue = useWatch({
+    control: form.control,
+    name: disabledWhen?.field ?? name,
+  });
+  const requiredConditionValue = useWatch({
+    control: form.control,
+    name: requiredWhen?.field ?? name,
+  });
+  const disabled = disabledWhen ? Object.is(disabledConditionValue, disabledWhen.equals) : false;
+  const isRequired =
+    required || (requiredWhen ? Object.is(requiredConditionValue, requiredWhen.equals) : false);
   const fieldStyle = schema['x-field-style'];
-  const label = schema['x-display-name'] as string;
+  const fieldLabel = label ?? (schema['x-display-name'] as string);
+  const requiredMessage = isRequired ? `${fieldLabel}은(는) 필수입니다.` : false;
 
   if (fieldStyle === 'hidden') {
     return <input type="hidden" {...form.register(name)} />;
@@ -40,7 +70,7 @@ export function CurationSpecField({
       <CurationSpecAlcoholCardListField
         name={name}
         schema={schema as WhiskyTastingEventAlcoholListSchema}
-        required={required}
+        required={isRequired}
       />
     );
   }
@@ -54,13 +84,13 @@ export function CurationSpecField({
     >;
 
     return (
-      <FormField label={label} required={required} error={error} className={className}>
+      <FormField label={fieldLabel} required={isRequired} error={error} className={className}>
         <PlaceSearchInput
-          aria-label={label}
+          aria-label={fieldLabel}
           maxLength={schema.maxLength}
           placeholder={schema.example as string}
           disabled={disabled}
-          registration={form.register(name)}
+          registration={form.register(name, { required: requiredMessage })}
           onPlaceSelect={(place) => {
             const values = {
               placeName: place.placeName,
@@ -82,15 +112,93 @@ export function CurationSpecField({
 
   if (fieldStyle === 'long-text') {
     return (
-      <FormField label={label} required={required} error={error} className={className}>
+      <FormField label={fieldLabel} required={isRequired} error={error} className={className}>
         <Textarea
-          aria-label={label}
+          aria-label={fieldLabel}
           rows={5}
           maxLength={schema.maxLength}
           placeholder={schema.example as string}
           disabled={disabled}
-          {...form.register(name)}
+          {...form.register(name, { required: requiredMessage })}
         />
+      </FormField>
+    );
+  }
+
+  if (schema.type === 'string' && schema.enum) {
+    const options = schema.enum as string[];
+    const labels = optionLabels as Record<string, string>;
+
+    return (
+      <FormField label={fieldLabel} required={isRequired} error={error} className={className}>
+        <Select
+          value={fieldValue as string}
+          disabled={disabled}
+          onValueChange={(value) =>
+            form.setValue(name, value, {
+              shouldDirty: true,
+              shouldValidate: true,
+            })
+          }
+        >
+          <SelectTrigger aria-label={fieldLabel}>
+            <SelectValue placeholder={`${fieldLabel} 선택`} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option) => (
+              <SelectItem key={option} value={option}>
+                {labels[option]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FormField>
+    );
+  }
+
+  if (schema.type === 'array' && schema.items?.enum) {
+    const options = schema.items.enum as string[];
+    const labels = optionLabels as Record<string, string>;
+    const selectedValues = fieldValue as string[];
+    const isMaxReached = selectedValues.length >= (schema.maxItems as number);
+
+    return (
+      <FormField label={fieldLabel} required={isRequired} error={error} className={className}>
+        <div className="flex flex-wrap gap-2">
+          {options.map((option) => {
+            const checked = selectedValues.includes(option);
+            const id = `${name}-${option}`;
+
+            return (
+              <div key={option}>
+                <Checkbox
+                  id={id}
+                  className="peer sr-only"
+                  checked={checked}
+                  disabled={disabled || (!checked && isMaxReached)}
+                  onCheckedChange={(nextChecked) =>
+                    form.setValue(
+                      name,
+                      nextChecked === true
+                        ? [...selectedValues, option]
+                        : selectedValues.filter((value) => value !== option),
+                      {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      }
+                    )
+                  }
+                />
+                <Label
+                  htmlFor={id}
+                  className="inline-flex h-9 cursor-pointer items-center rounded-full border px-4 text-sm font-normal peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground"
+                >
+                  {labels[option]}
+                </Label>
+              </div>
+            );
+          })}
+        </div>
       </FormField>
     );
   }
@@ -101,7 +209,7 @@ export function CurationSpecField({
         <div className="flex items-center gap-2">
           <Checkbox
             id={name}
-            checked={watchedValue === true}
+            checked={fieldValue === true}
             disabled={disabled}
             onCheckedChange={(checked) =>
               form.setValue(name, checked === true, {
@@ -111,8 +219,8 @@ export function CurationSpecField({
             }
           />
           <Label htmlFor={name} className="cursor-pointer font-normal">
-            {label}
-            {required && <span className="ml-1 text-destructive">*</span>}
+            {fieldLabel}
+            {isRequired && <span className="ml-1 text-destructive">*</span>}
           </Label>
         </div>
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
@@ -122,30 +230,36 @@ export function CurationSpecField({
 
   if (schema.type === 'integer' || schema.type === 'number') {
     return (
-      <FormField label={label} required={required} error={error} className={className}>
+      <FormField label={fieldLabel} required={isRequired} error={error} className={className}>
         <Input
-          aria-label={label}
+          aria-label={fieldLabel}
           type="number"
           min={schema.minimum}
           max={schema.maximum}
           placeholder={schema.example as string}
           disabled={disabled}
-          {...form.register(name, { valueAsNumber: true })}
+          {...form.register(name, { required: requiredMessage, valueAsNumber: true })}
         />
       </FormField>
     );
   }
 
   return (
-    <FormField label={label} required={required} error={error} className={className}>
+    <FormField label={fieldLabel} required={isRequired} error={error} className={className}>
       <Input
-        aria-label={label}
-        type={fieldStyle === 'time' ? 'time' : schema.format === 'date' ? 'date' : 'text'}
+        aria-label={fieldLabel}
+        type={
+          fieldStyle === 'time' || schema.format === 'time'
+            ? 'time'
+            : schema.format === 'date'
+              ? 'date'
+              : 'text'
+        }
         maxLength={schema.maxLength}
         readOnly={schema['x-read-only'] as boolean}
         placeholder={schema.example as string}
         disabled={disabled}
-        {...form.register(name)}
+        {...form.register(name, { required: requiredMessage })}
       />
     </FormField>
   );

@@ -6,8 +6,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useCurationDetail } from '@/hooks/useCurations';
 import { CurationSpecCode, type CurationV2Detail } from '@/types/api';
 
+import { CurationSpecProgramForm } from './components/CurationSpecProgramForm';
 import { CurationSpecTastingEventForm } from './components/CurationSpecTastingEventForm';
 import {
+  programPayloadSchema,
+  programRequestSpecSchema,
   whiskyTastingEventPayloadSchema,
   whiskyTastingEventRequestSpecSchema,
 } from './curation-spec.schema';
@@ -99,9 +102,64 @@ function CurationDetailContent({
         />
       );
     }
+    case CurationSpecCode.PROGRAM: {
+      const requestSpec = programRequestSpecSchema.safeParse(curation.spec.requestSpec);
+      const payload = programPayloadSchema.safeParse(curation.payload);
+
+      if (!requestSpec.success || !payload.success) {
+        return (
+          <div className="space-y-6">
+            <DetailPageHeader title="큐레이션 상세" onBack={onBack} />
+            <Card className="shadow-none">
+              <CardContent className="p-6">
+                <h2 className="font-semibold">큐레이션 스펙을 해석하지 못했습니다.</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  프로그램 스펙 또는 상세 데이터가 현재 화면의 계약과 일치하지 않습니다.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      }
+
+      return (
+        <CurationSpecProgramForm
+          spec={curation.spec}
+          curationId={curation.id}
+          requestSpec={requestSpec.data}
+          initialValues={{
+            ...payload.data,
+            name: curation.name,
+            description: curation.description ?? '',
+            imageUrls: curation.imageUrls,
+            exposureStartDate: curation.exposureStartDate ?? '',
+            exposureEndDate: curation.exposureEndDate ?? '',
+            displayOrder: curation.displayOrder,
+            isActive: curation.isActive,
+            kakaoPlaceId: payload.data.kakaoPlaceId ?? '',
+            detailLocation: payload.data.detailLocation ?? '',
+            organizer: payload.data.organizer ?? '',
+            sponsor: payload.data.sponsor ?? '',
+            entryFee: payload.data.entryFee ?? 0,
+            is_tbc: payload.data.is_tbc ?? false,
+            officialUrl: payload.data.officialUrl ?? '',
+            registrationUrl: payload.data.registrationUrl ?? '',
+            programTags: payload.data.programTags ?? [],
+            programs: payload.data.programs.map((program) => ({
+              ...program,
+              endTime: program.endTime ?? '',
+              venue: program.venue ?? '',
+              host: program.host ?? '',
+              applicationUrl: program.applicationUrl ?? '',
+              whiskies: program.whiskies ?? [],
+            })),
+          }}
+          onBack={onBack}
+        />
+      );
+    }
     case CurationSpecCode.RECOMMENDED_WHISKY:
     case CurationSpecCode.WHISKY_PAIRING:
-    case CurationSpecCode.PROGRAM:
       return (
         <div className="space-y-6">
           <DetailPageHeader title={`[${curation.spec.name}] ${curation.name}`} onBack={onBack} />
