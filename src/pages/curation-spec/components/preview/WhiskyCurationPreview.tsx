@@ -2,11 +2,11 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import type {
-  CurationWhiskyCardValue,
-  CurationWhiskyMirror,
-} from '../../../curation/curation-whisky-card-list.types';
-import { CurationPreviewWhiskyCard } from './CurationPreviewWhiskyCard';
+import {
+  CurationPreviewWhiskyCard,
+  type CurationPreviewWhiskyCardAlcohol,
+  type CurationPreviewWhiskyCardStats,
+} from './CurationPreviewWhiskyCard';
 import { tastingEventPreviewThemeStyle } from './previewTheme';
 
 export interface WhiskyCurationPreviewPairing {
@@ -15,16 +15,24 @@ export interface WhiskyCurationPreviewPairing {
   itemImageUrl?: string;
 }
 
+interface WhiskyCurationPreviewItem {
+  source: string;
+  alcohol: CurationPreviewWhiskyCardAlcohol;
+  stats?: CurationPreviewWhiskyCardStats | null;
+  comment?: string | null;
+  pairings?: WhiskyCurationPreviewPairing[];
+}
+
 export interface WhiskyCurationPreviewData {
   specName: string;
   name: string;
   description?: string | null;
   imageUrls: string[];
-  alcohol?: CurationWhiskyMirror;
-  stats?: CurationWhiskyCardValue['stats'];
+  alcohol?: CurationPreviewWhiskyCardAlcohol;
+  stats?: CurationPreviewWhiskyCardStats | null;
   comment?: string | null;
   pairings?: WhiskyCurationPreviewPairing[];
-  items?: Array<CurationWhiskyCardValue & { pairings?: WhiskyCurationPreviewPairing[] }>;
+  items?: WhiskyCurationPreviewItem[];
 }
 
 interface WhiskyCurationPreviewProps {
@@ -83,16 +91,14 @@ export function WhiskyCurationPreview({
   );
 }
 
-function getVisibleItems(
-  curation: WhiskyCurationPreviewData
-): Array<CurationWhiskyCardValue & { pairings?: WhiskyCurationPreviewPairing[] }> {
+function getVisibleItems(curation: WhiskyCurationPreviewData): WhiskyCurationPreviewItem[] {
   const visibleItems =
     curation.items?.filter(
       (item) =>
         normalizeText(item.alcohol.korName) ||
         normalizeText(item.alcohol.engName) ||
         normalizeText(item.comment) ||
-        item.alcohol.selectedTags.length > 0
+        (item.alcohol.selectedTags?.length ?? 0) > 0
     ) ?? [];
 
   if (visibleItems.length > 0) return visibleItems;
@@ -109,7 +115,7 @@ function getVisibleItems(
   ];
 }
 
-function createPreviewFallbackAlcohol(): CurationWhiskyMirror {
+function createPreviewFallbackAlcohol(): CurationPreviewWhiskyCardAlcohol {
   return {
     alcoholId: null,
     korName: '',
@@ -192,7 +198,7 @@ function WhiskyPreviewItem({
   order,
   pairingTitle,
 }: {
-  item: CurationWhiskyCardValue & { pairings?: WhiskyCurationPreviewPairing[] };
+  item: WhiskyCurationPreviewItem;
   order: number;
   pairingTitle: string;
 }) {
