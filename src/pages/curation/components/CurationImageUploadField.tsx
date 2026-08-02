@@ -15,12 +15,10 @@ interface CurationImageFormState {
 }
 
 interface CurationImageUploadFieldProps {
-  onUploadingChange: (isUploading: boolean) => void;
+  onUploadingChange?: (isUploading: boolean) => void;
 }
 
-export function CurationImageUploadField({
-  onUploadingChange,
-}: CurationImageUploadFieldProps) {
+export function CurationImageUploadField({ onUploadingChange }: CurationImageUploadFieldProps) {
   const form = useFormContext<CurationImageFormState>();
   const imageUploadInputRef = useRef<HTMLInputElement>(null);
   const imageUrlsRef = useRef<string[]>([]);
@@ -43,7 +41,7 @@ export function CurationImageUploadField({
   }, [imageUrls]);
 
   useEffect(() => {
-    onUploadingChange(isImageUploading);
+    onUploadingChange?.(isImageUploading);
   }, [isImageUploading, onUploadingChange]);
 
   useEffect(() => {

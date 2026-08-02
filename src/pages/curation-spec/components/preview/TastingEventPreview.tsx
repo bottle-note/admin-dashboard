@@ -1,15 +1,31 @@
-import type {
-  TastingEventPreviewAlcoholItem,
-  TastingEventPreviewData,
-  TastingEventPreviewModel,
-} from './types';
-import { buildTastingEventPreviewModel } from './buildTastingEventPreviewModel';
+import { cn } from '@/lib/utils';
+
+import type { WhiskyTastingEventFormValues } from '../../curation-spec.schema';
 import { CurationPreviewWhiskyCard } from './CurationPreviewWhiskyCard';
 import { tastingEventPreviewThemeStyle } from './previewTheme';
 
-const cx = (...classNames: Array<string | false | null | undefined>) => {
-  return classNames.filter(Boolean).join(' ');
-};
+export type TastingEventPreviewValues = Pick<
+  WhiskyTastingEventFormValues,
+  | 'name'
+  | 'description'
+  | 'imageUrls'
+  | 'capacity'
+  | 'entryFee'
+  | 'is_tbc'
+  | 'eventDate'
+  | 'eventTime'
+  | 'guideText'
+  | 'placeName'
+  | 'barAddress'
+  | 'detailAddress'
+  | 'isRecruiting'
+  | 'applicationLink'
+  | 'alcohols'
+>;
+
+type TastingEventPreviewAlcoholItem = TastingEventPreviewValues['alcohols'][number];
+
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 const CalendarIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
@@ -52,31 +68,54 @@ const UsersIcon = () => (
 );
 
 interface TastingEventPreviewProps {
-  event: TastingEventPreviewData;
+  values: TastingEventPreviewValues;
   today?: Date;
   className?: string;
 }
 
-export function TastingEventPreview({ event, today, className }: TastingEventPreviewProps) {
-  const model = buildTastingEventPreviewModel(event, { today });
+export function TastingEventPreview({ values, today, className }: TastingEventPreviewProps) {
+  const coverImageUrl = values.imageUrls[0];
+  const galleryImageUrls = values.imageUrls.filter((imageUrl) => imageUrl !== coverImageUrl);
+  const eventDateLabel = formatEventDate(values.eventDate);
+  const eventTimeLabel = formatEventTime(values.eventTime);
+  const capacityLabel = formatCapacity(values.capacity);
 
   return (
-    <article className={cx('w-full bg-white', className)} style={tastingEventPreviewThemeStyle}>
-      <TastingEventPreviewHero model={model} />
-      <TastingEventPreviewInfoCard model={model} />
-      <TastingEventPreviewDescription description={model.description} />
-      <TastingEventPreviewGallery imageUrls={model.imageUrls} />
-      <TastingEventPreviewLineup alcohols={model.alcohols} />
-      <TastingEventPreviewCta model={model} />
+    <article className={cn('w-full bg-white', className)} style={tastingEventPreviewThemeStyle}>
+      <TastingEventPreviewHero
+        values={values}
+        coverImageUrl={coverImageUrl}
+        eventDateLabel={eventDateLabel}
+        capacityLabel={capacityLabel}
+      />
+      <TastingEventPreviewInfoCard
+        values={values}
+        eventDateTimeLabel={`${eventDateLabel} · ${eventTimeLabel}`}
+        capacityLabel={capacityLabel}
+      />
+      <TastingEventPreviewDescription description={values.description} />
+      <TastingEventPreviewGallery imageUrls={galleryImageUrls} />
+      <TastingEventPreviewLineup alcohols={values.alcohols} />
+      <TastingEventPreviewCta values={values} today={today} />
     </article>
   );
 }
 
-function TastingEventPreviewHero({ model }: { model: TastingEventPreviewModel }) {
+function TastingEventPreviewHero({
+  values,
+  coverImageUrl,
+  eventDateLabel,
+  capacityLabel,
+}: {
+  values: TastingEventPreviewValues;
+  coverImageUrl?: string;
+  eventDateLabel: string;
+  capacityLabel: string;
+}) {
   return (
     <section className="relative h-60 w-full overflow-hidden bg-[var(--preview-section-white)]">
-      {model.coverImageUrl ? (
-        <img src={model.coverImageUrl} alt="" className="h-full w-full object-cover" />
+      {coverImageUrl ? (
+        <img src={coverImageUrl} alt="" className="h-full w-full object-cover" />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-sm text-[var(--preview-main-gray)]">
           대표 이미지
@@ -87,34 +126,45 @@ function TastingEventPreviewHero({ model }: { model: TastingEventPreviewModel })
         <span className="inline-flex rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-bold text-[var(--preview-main-black)] backdrop-blur-sm">
           시음회
         </span>
-        <h1 className="mt-3 line-clamp-2 text-[20px] font-extrabold text-white">{model.title}</h1>
+        <h1 className="mt-3 line-clamp-2 text-[20px] font-extrabold text-white">{values.name}</h1>
         <p className="mt-2 line-clamp-1 text-[10px] font-light text-white">
-          {model.eventDateLabel} · {model.placeLabel} · {model.capacityLabel}
+          {eventDateLabel} · {values.placeName || values.barAddress} · {capacityLabel}
         </p>
       </div>
     </section>
   );
 }
 
-function TastingEventPreviewInfoCard({ model }: { model: TastingEventPreviewModel }) {
+function TastingEventPreviewInfoCard({
+  values,
+  eventDateTimeLabel,
+  capacityLabel,
+}: {
+  values: TastingEventPreviewValues;
+  eventDateTimeLabel: string;
+  capacityLabel: string;
+}) {
+  const fullAddress = [values.barAddress, values.detailAddress].filter(Boolean).join(' ');
   const infoItems = [
     {
       key: 'date',
       Icon: CalendarIcon,
-      title: model.eventDateTimeLabel,
-      description: model.guideText,
+      title: eventDateTimeLabel,
+      description: values.guideText,
     },
     {
       key: 'place',
       Icon: PinIcon,
-      title: model.barAddress,
-      description: model.detailAddress,
-      actionHref: model.mapSearchUrl,
+      title: values.barAddress,
+      description: values.detailAddress,
+      actionHref: fullAddress
+        ? `https://map.naver.com/p/search/${encodeURIComponent(fullAddress)}`
+        : '',
     },
     {
       key: 'capacity',
       Icon: UsersIcon,
-      title: model.capacityLabel,
+      title: capacityLabel,
     },
   ];
 
@@ -162,7 +212,7 @@ function TastingEventPreviewInfoCard({ model }: { model: TastingEventPreviewMode
               참가비
             </span>
             <span className="text-[19px] font-bold leading-none text-[var(--preview-main-dark-gray)]">
-              {model.entryFeeLabel}
+              {formatEntryFee(values.entryFee, values.is_tbc)}
             </span>
           </div>
         </div>
@@ -189,9 +239,9 @@ function TastingEventPreviewGallery({ imageUrls }: { imageUrls: string[] }) {
   return (
     <section className="relative mt-5 w-full bg-[var(--preview-section-white)]">
       <div className="flex w-full snap-x overflow-x-auto">
-        {imageUrls.map((imageUrl) => (
+        {imageUrls.map((imageUrl, index) => (
           <img
-            key={imageUrl}
+            key={`${imageUrl}-${index}`}
             src={imageUrl}
             alt=""
             className="h-60 w-full shrink-0 snap-start object-cover"
@@ -202,8 +252,8 @@ function TastingEventPreviewGallery({ imageUrls }: { imageUrls: string[] }) {
         <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
           {imageUrls.map((imageUrl, index) => (
             <span
-              key={imageUrl}
-              className={cx('h-1.5 w-1.5 rounded-full', index === 0 ? 'bg-white' : 'bg-white/50')}
+              key={`${imageUrl}-${index}`}
+              className={cn('h-1.5 w-1.5 rounded-full', index === 0 ? 'bg-white' : 'bg-white/50')}
             />
           ))}
         </div>
@@ -225,7 +275,7 @@ function TastingEventPreviewLineup({ alcohols }: { alcohols: TastingEventPreview
       <div className="mt-4 divide-y divide-[var(--preview-bg-gray)] border-t border-[var(--preview-bg-gray)]">
         {alcohols.map((item, index) => (
           <TastingEventPreviewLineupItem
-            key={item.source ?? item.alcohol.alcoholId ?? `${item.alcohol.korName}-${index}`}
+            key={item.alcohol.alcoholId ?? `${item.source}-${item.alcohol.korName}-${index}`}
             item={item}
             order={index + 1}
           />
@@ -245,21 +295,31 @@ function TastingEventPreviewLineupItem({
   return <CurationPreviewWhiskyCard {...item} order={order} />;
 }
 
-function TastingEventPreviewCta({ model }: { model: TastingEventPreviewModel }) {
-  if (model.cta.type === 'hidden') {
+function TastingEventPreviewCta({
+  values,
+  today = new Date(),
+}: {
+  values: TastingEventPreviewValues;
+  today?: Date;
+}) {
+  const applicationLink = values.applicationLink?.trim() ?? '';
+
+  if (!applicationLink) {
     return null;
   }
 
+  const isApplicationOpen = values.isRecruiting && !isBeforeDate(values.eventDate, today);
+
   return (
     <section className="sticky bottom-0 px-5 pb-8 pt-2">
-      {model.cta.type === 'apply' ? (
+      {isApplicationOpen ? (
         <a
-          href={model.cta.href}
+          href={applicationLink}
           target="_blank"
           rel="noreferrer"
           className="flex h-[52px] w-full items-center justify-center rounded-xl bg-[var(--preview-sub-coral)]"
         >
-          <span className="text-[15px] font-bold text-white">{model.cta.label}</span>
+          <span className="text-[15px] font-bold text-white">시음회 신청하기</span>
         </a>
       ) : (
         <button
@@ -267,9 +327,52 @@ function TastingEventPreviewCta({ model }: { model: TastingEventPreviewModel }) 
           disabled
           className="flex h-[52px] w-full cursor-not-allowed items-center justify-center rounded-xl bg-[var(--preview-bright-gray)]"
         >
-          <span className="text-[15px] font-bold text-white">{model.cta.label}</span>
+          <span className="text-[15px] font-bold text-white">모집 마감</span>
         </button>
       )}
     </section>
   );
+}
+
+function formatEventDate(value: string): string {
+  const eventDate = new Date(value);
+
+  if (Number.isNaN(eventDate.getTime())) return value;
+
+  return `${eventDate.getMonth() + 1}월 ${eventDate.getDate()}일 (${WEEKDAYS[eventDate.getDay()]})`;
+}
+
+function formatEventTime(value: string): string {
+  const [hour, minute] = value.split(':');
+  return hour && minute ? `${hour}:${minute}` : value;
+}
+
+function formatCapacity(value: number): string {
+  return value === 0 ? '모집 인원 미정' : `${value.toLocaleString('ko-KR')}명 정원`;
+}
+
+function formatEntryFee(value: number, isTbc?: boolean): string {
+  if (isTbc) return '가격 미정';
+  return value > 0 ? `${value.toLocaleString('ko-KR')}원` : '무료';
+}
+
+function isBeforeDate(value: string, today: Date): boolean {
+  const eventDate = toDateOnlyTime(value);
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+
+  return eventDate !== null && eventDate < todayDate;
+}
+
+function toDateOnlyTime(value: string): number | null {
+  const [datePart = ''] = value.split('T');
+  const [year, month, date] = datePart.split('-').map(Number);
+
+  if (year && month && date) {
+    return new Date(year, month - 1, date).getTime();
+  }
+
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) return null;
+
+  return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate()).getTime();
 }

@@ -7,6 +7,7 @@ import {
   CurationV2Api,
   type CurationV2CreateRequest,
   type CurationV2CreateResponse,
+  type CurationDeleteResponse,
   type CurationV2Detail,
   type CurationV2ListItem,
   type CurationV2PageMeta,
@@ -122,5 +123,13 @@ export const curationService = {
   ): Promise<CurationV2UpdateResponse> => {
     const endpoint = CurationV2Api.update.endpoint.replace(':curationId', String(curationId));
     return apiClient.put<CurationV2UpdateResponse, CurationV2UpdateRequest>(endpoint, data);
+  },
+
+  /**
+   * 큐레이션 삭제
+   */
+  delete: async (curationId: number): Promise<CurationDeleteResponse> => {
+    const endpoint = CurationV2Api.delete.endpoint.replace(':curationId', String(curationId));
+    return apiClient.delete<CurationDeleteResponse>(endpoint);
   },
 };

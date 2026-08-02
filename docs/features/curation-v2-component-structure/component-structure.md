@@ -43,7 +43,7 @@ flowchart TD
   FieldRenderer --> WhiskyCardList["CurationWhiskyCardListField"]
   PairingPresentation --> PairingFields["WhiskyPairingFields"]
 
-  TastingForm --> TastingPreview["WhiskyTastingEventPreviewPanel"]
+  TastingForm --> TastingPreview["CurationSpecTastingEventPreview"]
   WhiskyForm --> WhiskyPreview["WhiskyCurationPreviewPanel"]
   WhiskyPreview --> AppPreview["WhiskyCurationPreview"]
 
@@ -69,3 +69,11 @@ flowchart TD
 - `CurationBasicInfoSection`: shared basic fields. Tasting event keeps ad exposure copy; recommendation and pairing override to plain exposure copy.
 - `CurationFormSection` and `CurationFormFieldRenderer`: JSON schema-derived payload fields.
 - `curation.api.ts` -> `curation.service.ts` -> `useCurations.ts`: API type, service, TanStack Query hook ownership.
+
+## Preview Ownership
+
+- 앱 미리보기 presentation은 `src/pages/curation-spec/components/preview/`가 소유한다.
+- `CurationSpecTastingEventPreview`는 React Hook Form 값 구독과 admin card 조립만 담당한다.
+- `TastingEventPreview`는 `WhiskyTastingEventFormValues` 중 필요한 필드를 직접 받아 렌더링한다.
+- 별도의 전체 preview model builder는 두지 않고 날짜, 참가비, 모집 상태처럼 규칙이 있는 계산만 작은 순수 함수로 유지한다.
+- preview 모듈은 barrel을 만들지 않고 필요한 파일을 직접 import한다.

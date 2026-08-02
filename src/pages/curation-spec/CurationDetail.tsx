@@ -1,4 +1,3 @@
-import { FormProvider, useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router';
 
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
@@ -7,14 +6,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useCurationDetail } from '@/hooks/useCurations';
 import { CurationSpecCode, type CurationV2Detail } from '@/types/api';
 
-import { CurationSpecRenderer } from './components/CurationSpecRenderer';
+import { CurationSpecTastingEventForm } from './components/CurationSpecTastingEventForm';
 import {
   whiskyTastingEventPayloadSchema,
   whiskyTastingEventRequestSpecSchema,
-  type WhiskyTastingEventPayload,
-  type WhiskyTastingEventRequestSpec,
 } from './curation-spec.schema';
-import { getWhiskyTastingEventSections } from './curation-sections';
 
 export function CurationDetail() {
   const navigate = useNavigate();
@@ -22,28 +18,23 @@ export function CurationDetail() {
   const parsedId = Number(id);
   const curationId = Number.isInteger(parsedId) && parsedId > 0 ? parsedId : undefined;
   const { data, isLoading, isError, refetch } = useCurationDetail(curationId);
+  const handleBack = () => navigate('/dashboard/curations');
 
-  return (
-    <div className="space-y-6">
-      <DetailPageHeader
-        title={data ? `[${data.spec.name}] ${data.name}` : '큐레이션 상세'}
-        onBack={() => navigate('/dashboard/curations')}
-        action={
-          data
-            ? {
-                mode: 'edit',
-                onUpdate: () => console.log('Update curation:', data),
-                onDelete: () => console.log('Delete curation:', data),
-              }
-            : undefined
-        }
-      />
-
-      {isLoading ? (
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <DetailPageHeader title="큐레이션 상세" onBack={handleBack} />
         <div className="py-12 text-center text-muted-foreground">
           큐레이션 정보를 불러오는 중입니다.
         </div>
-      ) : isError || !data ? (
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="space-y-6">
+        <DetailPageHeader title="큐레이션 상세" onBack={handleBack} />
         <Card className="shadow-none">
           <CardContent className="flex items-center justify-between gap-4 p-6">
             <p className="text-sm text-muted-foreground">
@@ -54,14 +45,20 @@ export function CurationDetail() {
             </Button>
           </CardContent>
         </Card>
-      ) : (
-        <CurationDetailContent curation={data} />
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  return <CurationDetailContent curation={data} onBack={handleBack} />;
 }
 
-function CurationDetailContent({ curation }: { curation: CurationV2Detail }) {
+function CurationDetailContent({
+  curation,
+  onBack,
+}: {
+  curation: CurationV2Detail;
+  onBack: () => void;
+}) {
   switch (curation.spec.code) {
     case CurationSpecCode.WHISKY_TASTING_EVENT: {
       const requestSpec = whiskyTastingEventRequestSpecSchema.safeParse(curation.spec.requestSpec);
@@ -69,42 +66,52 @@ function CurationDetailContent({ curation }: { curation: CurationV2Detail }) {
 
       if (!requestSpec.success || !payload.success) {
         return (
-          <Card className="shadow-none">
-            <CardContent className="p-6">
-              <h2 className="font-semibold">큐레이션 스펙을 해석하지 못했습니다.</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                시음회 스펙 또는 상세 데이터가 현재 화면의 계약과 일치하지 않습니다.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <DetailPageHeader title="큐레이션 상세" onBack={onBack} />
+            <Card className="shadow-none">
+              <CardContent className="p-6">
+                <h2 className="font-semibold">큐레이션 스펙을 해석하지 못했습니다.</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  시음회 스펙 또는 상세 데이터가 현재 화면의 계약과 일치하지 않습니다.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         );
       }
 
-      return <WhiskyTastingEventDetail requestSpec={requestSpec.data} payload={payload.data} />;
+      return (
+        <CurationSpecTastingEventForm
+          spec={curation.spec}
+          curationId={curation.id}
+          requestSpec={requestSpec.data}
+          initialValues={{
+            ...payload.data,
+            name: curation.name,
+            description: curation.description ?? '',
+            imageUrls: curation.imageUrls,
+            exposureStartDate: curation.exposureStartDate ?? '',
+            exposureEndDate: curation.exposureEndDate ?? '',
+            displayOrder: curation.displayOrder,
+            isActive: curation.isActive,
+          }}
+          onBack={onBack}
+        />
+      );
     }
     case CurationSpecCode.RECOMMENDED_WHISKY:
     case CurationSpecCode.WHISKY_PAIRING:
     case CurationSpecCode.PROGRAM:
-      return null;
+      return (
+        <div className="space-y-6">
+          <DetailPageHeader title={`[${curation.spec.name}] ${curation.name}`} onBack={onBack} />
+        </div>
+      );
   }
 
-  return null;
-}
-
-function WhiskyTastingEventDetail({
-  requestSpec,
-  payload,
-}: {
-  requestSpec: WhiskyTastingEventRequestSpec;
-  payload: WhiskyTastingEventPayload;
-}) {
-  const form = useForm<WhiskyTastingEventPayload>({
-    defaultValues: payload,
-  });
-
   return (
-    <FormProvider {...form}>
-      <CurationSpecRenderer sections={getWhiskyTastingEventSections(requestSpec)} />
-    </FormProvider>
+    <div className="space-y-6">
+      <DetailPageHeader title={`[${curation.spec.name}] ${curation.name}`} onBack={onBack} />
+    </div>
   );
 }

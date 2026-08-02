@@ -20,7 +20,7 @@ import { CurationBasicInfoSection } from '../components/CurationBasicInfoSection
 import { CurationFormErrorFocusProvider } from '../components/CurationFormErrorFocusProvider';
 import { CurationFormSection } from '../components/CurationFormSection';
 import { useCurationFormErrorFocus } from '../form-error-focus';
-import { WhiskyTastingEventPreviewPanel } from './components/WhiskyTastingEventPreviewPanel';
+import { CurationSpecTastingEventPreview } from '../../curation-spec/components/CurationSpecTastingEventPreview';
 import type { WhiskyTastingEventFormModel } from './whisky-tasting-event.form-model';
 import {
   buildWhiskyTastingEventPayload,
@@ -153,7 +153,7 @@ export function WhiskyTastingEventForm({
             </div>
 
             <aside className="lg:sticky lg:top-6">
-              <WhiskyTastingEventPreviewPanel />
+              <CurationSpecTastingEventPreview />
             </aside>
           </div>
         </CurationFormErrorFocusProvider>

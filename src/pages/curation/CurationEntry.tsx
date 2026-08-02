@@ -21,13 +21,15 @@ import {
   type KnownCurationV2SpecCode,
 } from '@/types/api';
 
+import { CurationPreviewFrame } from '../curation-spec/components/preview/CurationPreviewFrame';
 import {
-  CurationPreviewFrame,
   TastingEventPreview,
+  type TastingEventPreviewValues,
+} from '../curation-spec/components/preview/TastingEventPreview';
+import {
   WhiskyCurationPreview,
-  type TastingEventPreviewData,
   type WhiskyCurationPreviewData,
-} from './_preview';
+} from '../curation-spec/components/preview/WhiskyCurationPreview';
 
 interface CurationSpecUiConfig {
   hasPreview: boolean;
@@ -301,7 +303,7 @@ function CurationEntryPreview({ specCode }: { specCode: KnownCurationV2SpecCode 
   return (
     <CurationPreviewFrame title={config.label}>
       {specCode === CurationSpecCode.WHISKY_TASTING_EVENT ? (
-        <TastingEventPreview event={TASTING_EVENT_PREVIEW_SAMPLE} />
+        <TastingEventPreview values={TASTING_EVENT_PREVIEW_SAMPLE} />
       ) : (
         <WhiskyCurationPreview
           curation={
@@ -328,35 +330,31 @@ const SAMPLE_WHISKY = {
   selectedTags: ['바닐라', '꿀', '과일'],
 };
 
-const TASTING_EVENT_PREVIEW_SAMPLE: TastingEventPreviewData = {
+const TASTING_EVENT_PREVIEW_SAMPLE: TastingEventPreviewValues = {
   name: '도시남 X 보틀노트 시음회',
   description: '성수의 작은 바에서 입문자도 편하게 즐길 수 있는 싱글몰트 라인업을 소개합니다.',
-  coverImageUrl:
-    'https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=800&q=80',
   imageUrls: [
     'https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80',
   ],
-  payload: {
-    capacity: 12,
-    entryFee: 35000,
-    eventDate: '2026-07-18',
-    eventTime: '19:30',
-    guideText: '시음 시작 10분 전까지 도착해주세요.',
-    placeName: '성수 오가닉바',
-    barAddress: '서울 성동구 연무장길 1',
-    detailAddress: '2층',
-    isRecruiting: true,
-    applicationLink: 'https://bottle-note.example.com',
-    alcohols: [
-      {
-        source: 'BOTTLE_NOTE',
-        alcohol: SAMPLE_WHISKY,
-        stats: { rating: 4.2, totalRatingsCount: 128 },
-        comment: '부드러운 바닐라와 꿀 향이 선명해 첫 잔으로 좋습니다.',
-      },
-    ],
-  },
+  capacity: 12,
+  entryFee: 35000,
+  eventDate: '2026-07-18',
+  eventTime: '19:30',
+  guideText: '시음 시작 10분 전까지 도착해주세요.',
+  placeName: '성수 오가닉바',
+  barAddress: '서울 성동구 연무장길 1',
+  detailAddress: '2층',
+  isRecruiting: true,
+  applicationLink: 'https://bottle-note.example.com',
+  alcohols: [
+    {
+      source: 'BOTTLE_NOTE',
+      alcohol: SAMPLE_WHISKY,
+      stats: { rating: 4.2, totalRatingsCount: 128 },
+      comment: '부드러운 바닐라와 꿀 향이 선명해 첫 잔으로 좋습니다.',
+    },
+  ],
 };
 
 const GENERAL_CURATION_PREVIEW_SAMPLE: WhiskyCurationPreviewData = {

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import type {
   CurationWhiskyCardValue,
   CurationWhiskyMirror,
-} from '../curation-whisky-card-list.types';
+} from '../../../curation/curation-whisky-card-list.types';
 import { CurationPreviewWhiskyCard } from './CurationPreviewWhiskyCard';
 import { tastingEventPreviewThemeStyle } from './previewTheme';
 
@@ -197,8 +197,7 @@ function WhiskyPreviewItem({
   pairingTitle: string;
 }) {
   const visiblePairings =
-    item.pairings?.filter((pairing) => pairing.itemName.trim() || pairing.pairingNote.trim()) ??
-    [];
+    item.pairings?.filter((pairing) => pairing.itemName.trim() || pairing.pairingNote.trim()) ?? [];
 
   return (
     <CurationPreviewWhiskyCard

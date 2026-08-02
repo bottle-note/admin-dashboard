@@ -2,11 +2,9 @@ import { useFormContext, useWatch } from 'react-hook-form';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-import { CurationPreviewFrame, WhiskyCurationPreview } from '../../_preview';
-import type {
-  WhiskyCurationFormModel,
-  WhiskyCurationFormState,
-} from '../whisky-curation.schema';
+import { CurationPreviewFrame } from '../../../curation-spec/components/preview/CurationPreviewFrame';
+import { WhiskyCurationPreview } from '../../../curation-spec/components/preview/WhiskyCurationPreview';
+import type { WhiskyCurationFormModel, WhiskyCurationFormState } from '../whisky-curation.schema';
 
 interface WhiskyCurationPreviewPanelProps {
   formModel: WhiskyCurationFormModel;

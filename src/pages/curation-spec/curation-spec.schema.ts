@@ -105,9 +105,18 @@ const tastingEventAlcoholPayloadSchema = z.looseObject({
   selectedTags: z.array(z.string()),
 });
 
+const tastingEventAlcoholStatsPayloadSchema = z
+  .looseObject({
+    rating: z.number().nullable().optional(),
+    totalRatingsCount: z.number().optional(),
+  })
+  .nullable()
+  .optional();
+
 const tastingEventAlcoholItemPayloadSchema = z.looseObject({
   source: z.enum(['BOTTLE_NOTE', 'MANUAL']),
   alcohol: tastingEventAlcoholPayloadSchema,
+  stats: tastingEventAlcoholStatsPayloadSchema,
   comment: z.string().nullable().optional(),
 });
 
@@ -127,6 +136,16 @@ export const whiskyTastingEventPayloadSchema = z.looseObject({
   alcohols: z.array(tastingEventAlcoholItemPayloadSchema),
 });
 
+export const whiskyTastingEventFormSchema = whiskyTastingEventPayloadSchema.extend({
+  name: z.string(),
+  description: z.string(),
+  imageUrls: z.array(z.string()),
+  exposureStartDate: z.string(),
+  exposureEndDate: z.string(),
+  displayOrder: z.number(),
+  isActive: z.boolean(),
+});
+
 export type WhiskyTastingEventRequestSpec = z.infer<typeof whiskyTastingEventRequestSpecSchema>;
 
 export type WhiskyTastingEventAlcoholListSchema = z.infer<
@@ -136,3 +155,5 @@ export type WhiskyTastingEventAlcoholListSchema = z.infer<
 export type WhiskyTastingEventAlcoholItemSchema = z.infer<typeof alcoholItemSchema>;
 
 export type WhiskyTastingEventPayload = z.infer<typeof whiskyTastingEventPayloadSchema>;
+
+export type WhiskyTastingEventFormValues = z.infer<typeof whiskyTastingEventFormSchema>;
