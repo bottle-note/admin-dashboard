@@ -366,7 +366,7 @@ const GENERAL_CURATION_PREVIEW_SAMPLE: WhiskyCurationPreviewData = {
     'https://images.unsplash.com/photo-1606765962248-7ff407b51667?auto=format&fit=crop&w=800&q=80',
   ],
   alcohol: SAMPLE_WHISKY,
-  stats: { rating: 4.2, totalRatingsCount: 128, reviewCount: 42, totalPickCount: 210 },
+  stats: { rating: 4.2, totalRatingsCount: 128 },
   comment: '밸런스가 좋아 니트와 하이볼 모두 부담 없이 즐길 수 있습니다.',
 };
 
@@ -379,7 +379,7 @@ const WHISKY_PAIRING_PREVIEW_SAMPLE: WhiskyCurationPreviewData = {
     'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=80',
   ],
   alcohol: SAMPLE_WHISKY,
-  stats: { rating: 4.2, totalRatingsCount: 128, reviewCount: 42, totalPickCount: 210 },
+  stats: { rating: 4.2, totalRatingsCount: 128 },
   comment: '가벼운 단맛과 산미가 살아 있는 디저트와 잘 어울립니다.',
   pairings: [
     {
