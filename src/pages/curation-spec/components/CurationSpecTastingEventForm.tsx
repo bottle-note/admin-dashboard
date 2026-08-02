@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { FormProvider, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { FormProvider, useForm, type Resolver } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
@@ -7,9 +8,10 @@ import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { useCurationCreate, useCurationDelete, useCurationUpdate } from '@/hooks/useCurations';
 import type { CurationV2CreateRequest, CurationV2Spec } from '@/types/api';
 
-import type {
-  WhiskyTastingEventFormValues,
-  WhiskyTastingEventRequestSpec,
+import {
+  createWhiskyTastingEventFormValidationSchema,
+  type WhiskyTastingEventFormValues,
+  type WhiskyTastingEventRequestSpec,
 } from '../curation-spec.schema';
 import { getWhiskyTastingEventSections } from '../curation-sections';
 import { CurationSpecCommonSection } from './CurationSpecCommonSection';
@@ -33,6 +35,9 @@ export function CurationSpecTastingEventForm({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImageUploading, setIsImageUploading] = useState(false);
   const form = useForm<WhiskyTastingEventFormValues>({
+    resolver: zodResolver(
+      createWhiskyTastingEventFormValidationSchema(requestSpec)
+    ) as Resolver<WhiskyTastingEventFormValues>,
     defaultValues: initialValues,
   });
   const createMutation = useCurationCreate({

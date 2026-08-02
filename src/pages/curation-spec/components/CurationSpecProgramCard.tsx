@@ -2,6 +2,7 @@ import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 
+import type { ProgramSectionConfig } from '../curation-sections';
 import type {
   ProgramItemRequestSpec,
   WhiskyTastingEventAlcoholListSchema,
@@ -9,18 +10,11 @@ import type {
 import { CurationSpecAlcoholCardListField } from './CurationSpecAlcoholCardListField';
 import { CurationSpecField } from './CurationSpecField';
 
-const PROGRAM_TYPE_LABELS = {
-  MASTER_CLASS: '마스터 클래스',
-  TASTING: '테이스팅',
-  SEMINAR: '세미나',
-  BOOTH_EVENT: '부스 이벤트',
-  OTHER: '기타',
-};
-
 export function CurationSpecProgramCard({
   name,
   index,
   schema,
+  config,
   onRemove,
   onMoveUp,
   onMoveDown,
@@ -31,6 +25,7 @@ export function CurationSpecProgramCard({
   name: string;
   index: number;
   schema: ProgramItemRequestSpec;
+  config: ProgramSectionConfig;
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -44,14 +39,16 @@ export function CurationSpecProgramCard({
   return (
     <div className="overflow-hidden rounded-[10px] border border-border bg-card">
       <div className="flex items-center justify-between gap-4 border-b bg-muted/40 px-5 py-4">
-        <h3 className="font-semibold">프로그램 {index + 1}</h3>
+        <h3 className="font-semibold">
+          {config.itemLabel} {index + 1}
+        </h3>
         <div className="flex items-center gap-1">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            aria-label={`프로그램 ${index + 1} 위로 이동`}
+            aria-label={`${config.itemLabel} ${index + 1} 위로 이동`}
             onClick={onMoveUp}
             disabled={!canMoveUp}
           >
@@ -62,7 +59,7 @@ export function CurationSpecProgramCard({
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            aria-label={`프로그램 ${index + 1} 아래로 이동`}
+            aria-label={`${config.itemLabel} ${index + 1} 아래로 이동`}
             onClick={onMoveDown}
             disabled={!canMoveDown}
           >
@@ -73,7 +70,7 @@ export function CurationSpecProgramCard({
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            aria-label={`프로그램 ${index + 1} 삭제`}
+            aria-label={`${config.itemLabel} ${index + 1} 삭제`}
             onClick={onRemove}
             disabled={!canRemove}
           >
@@ -92,7 +89,7 @@ export function CurationSpecProgramCard({
           name={`${name}.type`}
           schema={fields.type}
           required={required.includes('type')}
-          optionLabels={PROGRAM_TYPE_LABELS}
+          optionLabels={config.fields.type.optionLabels}
         />
         <CurationSpecField
           name={`${name}.programDate`}
@@ -125,21 +122,19 @@ export function CurationSpecProgramCard({
           name={`${name}.description`}
           schema={fields.description}
           required={required.includes('description')}
-          className="md:col-span-2"
+          className={config.fields.description.className}
         />
         <CurationSpecField
           name={`${name}.applicationUrl`}
           schema={fields.applicationUrl}
           required={required.includes('applicationUrl')}
-          className="md:col-span-2"
+          className={config.fields.applicationUrl.className}
         />
 
         <div className="space-y-3 border-t pt-5 md:col-span-2">
           <div>
-            <h4 className="text-sm font-semibold">시음 라인업</h4>
-            <p className="mt-1 text-sm text-muted-foreground">
-              프로그램에서 소개할 위스키를 등록해주세요.
-            </p>
+            <h4 className="text-sm font-semibold">{config.fields.whiskies.title}</h4>
+            <p className="mt-1 text-sm text-muted-foreground">{config.fields.whiskies.subtitle}</p>
           </div>
           <CurationSpecAlcoholCardListField
             name={`${name}.whiskies`}

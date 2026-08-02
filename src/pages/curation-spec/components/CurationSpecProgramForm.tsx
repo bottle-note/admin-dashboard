@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { FormProvider, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { FormProvider, useForm, type Resolver } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
@@ -7,7 +8,11 @@ import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { useCurationCreate, useCurationDelete, useCurationUpdate } from '@/hooks/useCurations';
 import type { CurationV2CreateRequest, CurationV2Spec } from '@/types/api';
 
-import type { ProgramFormValues, ProgramRequestSpec } from '../curation-spec.schema';
+import {
+  createProgramFormValidationSchema,
+  type ProgramFormValues,
+  type ProgramRequestSpec,
+} from '../curation-spec.schema';
 import { getProgramSections } from '../curation-sections';
 import { CurationSpecCommonSection } from './CurationSpecCommonSection';
 import { CurationSpecProgramPreview } from './CurationSpecProgramPreview';
@@ -29,7 +34,12 @@ export function CurationSpecProgramForm({
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImageUploading, setIsImageUploading] = useState(false);
-  const form = useForm<ProgramFormValues>({ defaultValues: initialValues });
+  const form = useForm<ProgramFormValues>({
+    resolver: zodResolver(
+      createProgramFormValidationSchema(requestSpec)
+    ) as Resolver<ProgramFormValues>,
+    defaultValues: initialValues,
+  });
   const createMutation = useCurationCreate({
     onSuccess: () => navigate('/dashboard/curations'),
   });

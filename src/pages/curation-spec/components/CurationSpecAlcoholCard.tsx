@@ -59,6 +59,7 @@ export function CurationSpecAlcoholCard({
     control: form.control,
     name: selectedTagsPath,
   }) as string[];
+  const selectedTagsError = form.getFieldState(selectedTagsPath, form.formState).error?.message;
 
   const handleAddTag = (value: string) => {
     const tag = value.trim();
@@ -147,9 +148,6 @@ export function CurationSpecAlcoholCard({
             <div className="flex max-w-md items-center justify-between gap-3">
               <p className="text-sm font-medium text-foreground">
                 {selectedTagsSchema['x-display-name'] as string}
-                {alcoholSchema.required.includes('selectedTags') && (
-                  <span className="ml-1 text-destructive">*</span>
-                )}
               </p>
               <span className="text-xs font-medium text-muted-foreground">
                 {selectedTags.length}/{selectedTagsSchema.maxItems}
@@ -190,6 +188,7 @@ export function CurationSpecAlcoholCard({
                 </Badge>
               ))}
             </div>
+            {selectedTagsError && <p className="text-sm text-destructive">{selectedTagsError}</p>}
           </div>
         </div>
       </div>

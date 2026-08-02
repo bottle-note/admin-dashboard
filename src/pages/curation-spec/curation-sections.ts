@@ -23,6 +23,20 @@ export type CurationSpecSections = Record<
           equals: unknown;
         };
         optionLabels?: Record<string, string>;
+        // code가 프로그램인 경우.
+        program?: {
+          itemLabel: string;
+          addButtonLabel: string;
+          fields: Record<
+            string,
+            {
+              className?: string;
+              optionLabels?: Record<string, string>;
+              title?: string;
+              subtitle?: string;
+            }
+          >;
+        };
       }
     >;
   }
@@ -211,15 +225,45 @@ export function getProgramSections(requestSpec: ProgramRequestSpec) {
         },
       },
     },
-    프로그램: {
-      subtitle: '행사에서 진행할 프로그램과 시음 위스키를 입력해주세요.',
+    '프로그램 및 이벤트': {
+      subtitle: '행사에 포함된 프로그램(마스터클래스·테이스팅 등)을 추가해주세요. 1개 이상.',
       contentClassName: 'space-y-4',
       fields: {
         programs: {
           schema: fields.programs,
           required: required.includes('programs'),
+          program: {
+            itemLabel: '프로그램',
+            addButtonLabel: '프로그램 추가',
+            fields: {
+              name: {},
+              type: {
+                optionLabels: {
+                  MASTER_CLASS: '마스터 클래스',
+                  TASTING: '테이스팅',
+                  SEMINAR: '세미나',
+                  BOOTH_EVENT: '부스 이벤트',
+                  OTHER: '기타',
+                },
+              },
+              description: {
+                className: 'md:col-span-2',
+              },
+              applicationUrl: {
+                className: 'md:col-span-2',
+              },
+              whiskies: {
+                title: '술 목록',
+                subtitle: '프로그램에서 소개할 위스키를 등록해주세요.',
+              },
+            },
+          },
         },
       },
     },
   } satisfies CurationSpecSections;
 }
+
+export type ProgramSectionConfig = ReturnType<
+  typeof getProgramSections
+>['프로그램 및 이벤트']['fields']['programs']['program'];

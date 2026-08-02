@@ -1,17 +1,15 @@
 import { useState, type DragEvent } from 'react';
 import { useFieldArray, useFormContext, useWatch, type FieldValues } from 'react-hook-form';
-import { Loader2, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
-import { WhiskySearchSelect, type SelectedWhisky } from '@/components/common/WhiskySearchSelect';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAdminAlcoholDetailLookup } from '@/hooks/useAdminAlcohols';
-import { useToast } from '@/hooks/useToast';
 
 import type {
   WhiskyTastingEventAlcoholListSchema,
   WhiskyTastingEventPayload,
 } from '../curation-spec.schema';
+import { CurationSpecDatabaseAlcoholAddCard } from './CurationSpecDatabaseAlcoholAddCard';
 import { CurationSpecDatabaseAlcoholCard } from './CurationSpecDatabaseAlcoholCard';
 import { CurationSpecManualAlcoholCard } from './CurationSpecManualAlcoholCard';
 
@@ -33,51 +31,15 @@ export function CurationSpecAlcoholCardListField({
     name,
   }) as WhiskyTastingEventPayload['alcohols'];
   const alcoholFieldArray = useFieldArray({ control: form.control, name });
-  const fetchAlcoholDetail = useAdminAlcoholDetailLookup();
-  const { showToast } = useToast();
   const [isAdding, setIsAdding] = useState(false);
-  const [isLoadingAlcohol, setIsLoadingAlcohol] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const itemSchema = schema.items;
-  const alcoholSchema = itemSchema.properties.alcohol;
-  const selectedTagsSchema = alcoholSchema.properties.selectedTags;
   const isMaxReached = alcohols.length >= schema.maxItems;
   const selectedAlcoholIds = alcohols
     .map((item) => item.alcohol.alcoholId)
     .filter((alcoholId): alcoholId is number => typeof alcoholId === 'number');
   const error = form.getFieldState(name, form.formState).error?.message;
-
-  const handleSelectAlcohol = async (whisky: SelectedWhisky) => {
-    setIsLoadingAlcohol(true);
-
-    try {
-      const detail = await fetchAlcoholDetail(whisky.alcoholId);
-
-      alcoholFieldArray.append({
-        source: 'BOTTLE_NOTE',
-        alcohol: {
-          alcoholId: detail.alcoholId,
-          korName: detail.korName,
-          engName: detail.engName,
-          imageUrl: detail.imageUrl,
-          abv: detail.abv ?? '',
-          cask: detail.cask ?? '',
-          volume: detail.volume ?? '',
-          regionName: detail.korRegion ?? detail.engRegion ?? '',
-          korCategory: detail.korCategory,
-          selectedTags: detail.tastingTags
-            .map((tag) => tag.korName)
-            .slice(0, selectedTagsSchema.maxItems),
-        },
-      });
-      setIsAdding(false);
-    } catch {
-      showToast({ type: 'error', message: '위스키 정보를 불러오지 못했습니다.' });
-    } finally {
-      setIsLoadingAlcohol(false);
-    }
-  };
 
   const handleAddManualAlcohol = () => {
     alcoholFieldArray.append({
@@ -147,7 +109,7 @@ export function CurationSpecAlcoholCardListField({
     <div className="space-y-4" onDragOver={handleAutoScroll}>
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
-          {schema.minItems}-{schema.maxItems}개까지 등록할 수 있습니다.
+          최대 {schema.maxItems}개까지 등록할 수 있습니다.
           {required && <span className="ml-1 text-destructive">*</span>}
         </p>
         <Badge variant="secondary">{alcohols.length}</Badge>
@@ -204,48 +166,18 @@ export function CurationSpecAlcoholCardListField({
       )}
 
       {isAdding && (
-        <div className="rounded-[10px] border border-border bg-card p-5">
-          <div className="flex items-start justify-between gap-4">
-            <h3 className="text-base font-semibold text-foreground">
-              시음 위스키 {alcohols.length + 1}
-              {required && <span className="ml-1 text-destructive">*</span>}
-            </h3>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 rounded-md bg-destructive/20 px-2 text-xs font-medium text-destructive hover:bg-destructive/30 hover:text-destructive"
-              onClick={() => setIsAdding(false)}
-              disabled={isLoadingAlcohol}
-            >
-              삭제
-            </Button>
-          </div>
-
-          {isLoadingAlcohol && (
-            <p className="mt-5 flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              DB 위스키 정보를 불러오는 중입니다.
-            </p>
-          )}
-
-          <div className="mt-5 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-            <WhiskySearchSelect
-              onSelect={(whisky) => void handleSelectAlcohol(whisky)}
-              excludeIds={selectedAlcoholIds}
-              placeholder="위스키 검색 ..."
-              disabled={isLoadingAlcohol}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleAddManualAlcohol}
-              disabled={isLoadingAlcohol}
-            >
-              직접 입력
-            </Button>
-          </div>
-        </div>
+        <CurationSpecDatabaseAlcoholAddCard
+          index={alcohols.length}
+          schema={itemSchema}
+          required={required}
+          excludeIds={selectedAlcoholIds}
+          onAdd={(item) => {
+            alcoholFieldArray.append(item);
+            setIsAdding(false);
+          }}
+          onAddManual={handleAddManualAlcohol}
+          onCancel={() => setIsAdding(false)}
+        />
       )}
 
       <Button

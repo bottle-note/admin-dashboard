@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-import type { CurationSpecSections } from '../curation-sections';
+import type { CurationSpecSections, ProgramSectionConfig } from '../curation-sections';
 import type { ProgramListRequestSpec } from '../curation-spec.schema';
 import { CurationSpecField } from './CurationSpecField';
 import { CurationSpecProgramListField } from './CurationSpecProgramListField';
@@ -31,6 +31,7 @@ export function CurationSpecRenderer({ sections }: { sections: CurationSpecSecti
                   name={key}
                   schema={field.schema as ProgramListRequestSpec}
                   required={field.required}
+                  config={field.program as ProgramSectionConfig}
                 />
               ) : (
                 <CurationSpecField

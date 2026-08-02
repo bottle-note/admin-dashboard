@@ -245,6 +245,174 @@ export const programFormSchema = programPayloadSchema.extend({
   isActive: z.boolean(),
 });
 
+function getArrayDisplayName(spec: { 'x-display-name'?: string }, fallback: string) {
+  return spec['x-display-name'] ?? fallback;
+}
+
+function addRequiredStringIssues(
+  values: Record<string, unknown>,
+  requiredKeys: string[] | undefined,
+  properties: Record<string, unknown>,
+  context: z.RefinementCtx,
+  pathPrefix: Array<string | number> = []
+) {
+  requiredKeys?.forEach((key) => {
+    const value = values[key];
+    if (typeof value !== 'string' || value.trim().length > 0) return;
+
+    const property = properties[key];
+    const displayName =
+      property && typeof property === 'object' && 'x-display-name' in property
+        ? String(property['x-display-name'])
+        : key;
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [...pathPrefix, key],
+      message: `${displayName}은(는) 필수입니다.`,
+    });
+  });
+}
+
+function addAlcoholRequiredStringIssues(
+  alcohols: WhiskyTastingEventPayload['alcohols'],
+  spec: WhiskyTastingEventAlcoholListSchema,
+  context: z.RefinementCtx,
+  pathPrefix: Array<string | number>
+) {
+  alcohols.forEach((item, index) => {
+    addRequiredStringIssues(
+      item as Record<string, unknown>,
+      spec.items.required,
+      spec.items.properties,
+      context,
+      [...pathPrefix, index]
+    );
+    addRequiredStringIssues(
+      item.alcohol as Record<string, unknown>,
+      spec.items.properties.alcohol.required,
+      spec.items.properties.alcohol.properties,
+      context,
+      [...pathPrefix, index, 'alcohol']
+    );
+  });
+}
+
+function createAlcoholListValidationSchema(
+  spec: WhiskyTastingEventAlcoholListSchema,
+  fallbackDisplayName: string
+) {
+  const displayName = getArrayDisplayName(spec, fallbackDisplayName);
+  const selectedTagsSpec = spec.items.properties.alcohol.properties.selectedTags;
+  const selectedTagsDisplayName = getArrayDisplayName(selectedTagsSpec, '테이스팅 태그');
+  const alcoholItemValidationSchema = tastingEventAlcoholItemPayloadSchema.extend({
+    alcohol: tastingEventAlcoholPayloadSchema.extend({
+      selectedTags: z
+        .array(z.string())
+        .max(
+          selectedTagsSpec.maxItems,
+          `${selectedTagsDisplayName}는 최대 ${selectedTagsSpec.maxItems}개까지 추가할 수 있습니다.`
+        ),
+    }),
+  });
+
+  return z
+    .array(alcoholItemValidationSchema)
+    .min(spec.minItems, `${displayName}는 최소 ${spec.minItems}개 이상 추가해야 합니다.`)
+    .max(spec.maxItems, `${displayName}는 최대 ${spec.maxItems}개까지 추가할 수 있습니다.`);
+}
+
+export function createWhiskyTastingEventFormValidationSchema(
+  requestSpec: WhiskyTastingEventRequestSpec
+) {
+  return whiskyTastingEventFormSchema
+    .extend({
+      alcohols: createAlcoholListValidationSchema(requestSpec.properties.alcohols, '시음 위스키'),
+    })
+    .superRefine((values, context) => {
+      addRequiredStringIssues(values, requestSpec.required, requestSpec.properties, context);
+      addAlcoholRequiredStringIssues(values.alcohols, requestSpec.properties.alcohols, context, [
+        'alcohols',
+      ]);
+
+      if (values.isRecruiting === true && !values.applicationLink?.trim()) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['applicationLink'],
+          message: '신청 링크은(는) 필수입니다.',
+        });
+      }
+    });
+}
+
+export function createProgramFormValidationSchema(requestSpec: ProgramRequestSpec) {
+  const programTagsSpec = requestSpec.properties.programTags;
+  const programsSpec = requestSpec.properties.programs;
+  const whiskiesSpec = programsSpec.items.properties.whiskies;
+  const programTagsDisplayName = getArrayDisplayName(programTagsSpec, '프로그램 태그');
+  const programsDisplayName = getArrayDisplayName(programsSpec, '프로그램');
+  let programTagsValidationSchema = z.array(z.string());
+
+  if (programTagsSpec.minItems !== undefined) {
+    programTagsValidationSchema = programTagsValidationSchema.min(
+      programTagsSpec.minItems,
+      `${programTagsDisplayName}는 최소 ${programTagsSpec.minItems}개 이상 추가해야 합니다.`
+    );
+  }
+
+  if (programTagsSpec.maxItems !== undefined) {
+    programTagsValidationSchema = programTagsValidationSchema.max(
+      programTagsSpec.maxItems,
+      `${programTagsDisplayName}는 최대 ${programTagsSpec.maxItems}개까지 추가할 수 있습니다.`
+    );
+  }
+
+  const whiskyListValidationSchema = createAlcoholListValidationSchema(whiskiesSpec, '시음 위스키');
+  const programItemValidationSchema = programItemPayloadSchema.extend({
+    whiskies: programsSpec.items.required.includes('whiskies')
+      ? whiskyListValidationSchema
+      : whiskyListValidationSchema.optional(),
+  });
+  const programsValidationSchema = z
+    .array(programItemValidationSchema)
+    .min(
+      programsSpec.minItems,
+      `${programsDisplayName}은 최소 ${programsSpec.minItems}개 이상 추가해야 합니다.`
+    )
+    .max(
+      programsSpec.maxItems,
+      `${programsDisplayName}은 최대 ${programsSpec.maxItems}개까지 추가할 수 있습니다.`
+    );
+
+  return programFormSchema
+    .extend({
+      programTags: requestSpec.required?.includes('programTags')
+        ? programTagsValidationSchema
+        : programTagsValidationSchema.optional(),
+      programs: programsValidationSchema,
+    })
+    .superRefine((values, context) => {
+      addRequiredStringIssues(values, requestSpec.required, requestSpec.properties, context);
+
+      values.programs.forEach((program, index) => {
+        addRequiredStringIssues(
+          program as Record<string, unknown>,
+          programsSpec.items.required,
+          programsSpec.items.properties,
+          context,
+          ['programs', index]
+        );
+
+        if (program.whiskies) {
+          addAlcoholRequiredStringIssues(program.whiskies, whiskiesSpec, context, [
+            'programs',
+            index,
+            'whiskies',
+          ]);
+        }
+      });
+    });
+}
+
 export type WhiskyTastingEventRequestSpec = z.infer<typeof whiskyTastingEventRequestSpecSchema>;
 
 export type WhiskyTastingEventAlcoholListSchema = z.infer<

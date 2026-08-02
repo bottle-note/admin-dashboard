@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
+import type { ProgramSectionConfig } from '../curation-sections';
 import type { ProgramFormValues, ProgramListRequestSpec } from '../curation-spec.schema';
 import { CurationSpecProgramCard } from './CurationSpecProgramCard';
 
@@ -11,10 +12,12 @@ export function CurationSpecProgramListField({
   name,
   schema,
   required,
+  config,
 }: {
   name: string;
   schema: ProgramListRequestSpec;
   required: boolean;
+  config: ProgramSectionConfig;
 }) {
   const form = useFormContext<FieldValues>();
   const programs = useWatch({ control: form.control, name }) as ProgramFormValues['programs'];
@@ -56,6 +59,7 @@ export function CurationSpecProgramListField({
             name={`${name}.${index}`}
             index={index}
             schema={schema.items}
+            config={config}
             onRemove={() => programFieldArray.remove(index)}
             onMoveUp={() => programFieldArray.move(index, index - 1)}
             onMoveDown={() => programFieldArray.move(index, index + 1)}
@@ -74,7 +78,7 @@ export function CurationSpecProgramListField({
         disabled={isMaxReached}
       >
         <Plus className="h-5 w-5" />
-        프로그램 추가
+        {config.addButtonLabel}
       </Button>
     </div>
   );
