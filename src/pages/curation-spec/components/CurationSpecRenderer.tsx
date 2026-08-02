@@ -1,97 +1,59 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { JsonSchemaNode } from '@/types/api';
 
-import {
-  createAlcoholCardListFieldModel,
-  createCurationBasicFieldModel,
-  getSchemaDisplayLabel,
-  type CurationFieldModel,
-} from '../../curation/curation-form-model';
-import { CurationFormFieldRenderer } from '../../curation/components/CurationFormFieldRenderer';
-import { CurationSectionCard } from '../../curation/components/CurationSectionCard';
+import { CurationSpecField } from './CurationSpecField';
 
 export function CurationSpecRenderer({
-  requestSpec,
   sections,
 }: {
-  requestSpec: JsonSchemaNode;
   sections: Record<
     string,
     {
       subtitle: string;
-      fields: Record<string, JsonSchemaNode>;
+      contentClassName: string;
+      fields: Record<
+        string,
+        {
+          schema: JsonSchemaNode;
+          required: boolean;
+          className?: string;
+          disabledBy?: string;
+        }
+      >;
     }
   >;
 }) {
   return (
     <>
-      {Object.entries(sections).map(([title, section], index) => {
-        const fieldModels = Object.keys(section.fields).map((key) =>
-          createFieldModel(requestSpec, key)
-        );
-        const firstField = fieldModels[0]!;
-
-        if (fieldModels.length === 1 && firstField.kind === 'alcohol-card-list') {
-          return (
-            <CurationFormFieldRenderer
-              key={title}
-              field={firstField}
-              sectionHeader={{
-                stepNumber: index + 2,
-                description: section.subtitle,
-              }}
-            />
-          );
-        }
-
-        return (
-          <CurationSectionCard
-            key={title}
-            stepNumber={index + 2}
-            title={title}
-            description={section.subtitle}
-            contentClassName="grid gap-4 md:grid-cols-2"
-          >
-            {fieldModels.map((field) => (
-              <CurationFormFieldRenderer
-                key={field.key}
-                field={field}
-                className={
-                  field.kind === 'textarea' || field.kind === 'address'
-                    ? 'md:col-span-2'
-                    : undefined
-                }
+      {Object.entries(sections).map(([title, section], index) => (
+        <Card key={title} className="overflow-hidden rounded-[10px] border-border shadow-none">
+          {/* 섹션 헤더*/}
+          <CardHeader className="border-b border-border bg-muted/50 px-6 py-4">
+            <div className="flex items-center gap-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground">
+                {index + 2}
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <CardTitle className="text-lg">{title}</CardTitle>
+                <CardDescription className="leading-5">{section.subtitle}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          {/* 섹션 컨텐츠 */}
+          <CardContent className={`pt-6 ${section.contentClassName}`}>
+            {Object.entries(section.fields).map(([key, field]) => (
+              <CurationSpecField
+                key={key}
+                name={key}
+                schema={field.schema}
+                required={field.required}
+                className={field.className}
+                disabledBy={field.disabledBy}
               />
             ))}
-          </CurationSectionCard>
-        );
-      })}
+          </CardContent>
+        </Card>
+      ))}
     </>
   );
-}
-
-function createFieldModel(requestSpec: JsonSchemaNode, key: string): CurationFieldModel {
-  const fieldSchema = requestSpec.properties![key]!;
-  const required = requestSpec.required!.includes(key);
-
-  if (fieldSchema['x-field-style'] === 'none') {
-    return {
-      key,
-      kind: 'hidden',
-      label: getSchemaDisplayLabel(fieldSchema),
-      required,
-    };
-  }
-
-  if (fieldSchema['x-field-style'] === 'alcohol-card-list') {
-    return createAlcoholCardListFieldModel({
-      key,
-      label: getSchemaDisplayLabel(fieldSchema),
-      required,
-      minItems: fieldSchema.minItems!,
-      maxItems: fieldSchema.maxItems,
-      itemSchema: fieldSchema.items!,
-    });
-  }
-
-  return createCurationBasicFieldModel(requestSpec, key);
 }
