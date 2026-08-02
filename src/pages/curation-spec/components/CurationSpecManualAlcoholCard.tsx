@@ -1,8 +1,11 @@
-import type { DragEvent } from 'react';
+import { useRef, type ChangeEvent, type DragEvent } from 'react';
 import { useFormContext, useWatch, type FieldValues } from 'react-hook-form';
+import { Loader2, Upload } from 'lucide-react';
 
 import { FormField } from '@/components/common/FormField';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { S3UploadPath, useImageUpload } from '@/hooks/useImageUpload';
 import type { JsonSchemaNode } from '@/types/api';
 
 import type { WhiskyTastingEventAlcoholItemSchema } from '../curation-spec.schema';
@@ -75,11 +78,10 @@ export function CurationSpecManualAlcoholCard({
           schema={alcoholFields.engName}
           required={alcoholSchema.required.includes('engName')}
         />
-        <AlcoholTextField
+        <AlcoholImageField
           name={`${name}.alcohol.imageUrl`}
           schema={alcoholFields.imageUrl}
           required={alcoholSchema.required.includes('imageUrl')}
-          className="md:col-span-2"
         />
         <AlcoholTextField
           name={`${name}.alcohol.abv`}
@@ -109,6 +111,70 @@ export function CurationSpecManualAlcoholCard({
         />
       </div>
     </CurationSpecAlcoholCard>
+  );
+}
+
+function AlcoholImageField({
+  name,
+  schema,
+  required,
+}: {
+  name: string;
+  schema: JsonSchemaNode;
+  required: boolean;
+}) {
+  const form = useFormContext<FieldValues>();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { upload, isUploading, error } = useImageUpload({
+    rootPath: S3UploadPath.CURATION,
+  });
+
+  const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const imageUrl = await upload(file);
+    if (!imageUrl) return;
+
+    form.setValue(name, imageUrl, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
+  return (
+    <FormField
+      label={schema.description as string}
+      required={required}
+      error={form.getFieldState(name, form.formState).error?.message ?? error?.message}
+      className="md:col-span-2"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          onChange={(event) => void handleImageUpload(event)}
+          disabled={isUploading}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => inputRef.current?.click()}
+          disabled={isUploading}
+        >
+          {isUploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="h-4 w-4" />
+          )}
+          {isUploading ? '업로드 중' : '이미지 업로드'}
+        </Button>
+        <span className="text-xs text-muted-foreground">PNG, JPG, WEBP 지원</span>
+      </div>
+    </FormField>
   );
 }
 
