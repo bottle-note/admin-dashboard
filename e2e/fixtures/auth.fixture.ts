@@ -8,9 +8,9 @@ import { LoginPage } from '../pages/login.page';
 export const test = base.extend<{
   loginPage: LoginPage;
 }>({
-  loginPage: async ({ page }, use) => {
+  loginPage: async ({ page }, provideLoginPage) => {
     const loginPage = new LoginPage(page);
-    await use(loginPage);
+    await provideLoginPage(loginPage);
   },
 });
 
