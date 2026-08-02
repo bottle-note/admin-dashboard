@@ -10,7 +10,7 @@ import {
   createBottleNoteCurationWhiskyItem,
   createBottleNoteCurationWhiskyItemFromDetail,
 } from '../../curation/curation-whisky-card-list.mapper';
-import type { AlcoholSectionConfig } from '../curation-sections';
+import type { AlcoholSectionConfig } from '../curation-sections.type';
 import type {
   WhiskyTastingEventAlcoholItemSchema,
   WhiskyTastingEventPayload,

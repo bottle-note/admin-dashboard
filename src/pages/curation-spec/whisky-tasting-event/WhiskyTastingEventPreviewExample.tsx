@@ -1,7 +1,9 @@
-import { TastingEventPreview } from './TastingEventPreview';
-import type { TastingEventPreviewValues } from './TastingEventPreview';
+import {
+  WhiskyTastingEventPreview,
+  type WhiskyTastingEventPreviewValues,
+} from './WhiskyTastingEventPreview';
 
-const exampleValues: TastingEventPreviewValues = {
+const exampleValues: WhiskyTastingEventPreviewValues = {
   name: '보틀노트 프라이빗 시음회',
   description:
     '보틀노트가 엄선한 위스키 라인업을 한자리에서 경험해보세요.\n각 제품의 향과 맛을 비교하며 취향에 맞는 위스키를 찾아볼 수 있습니다.',
@@ -43,6 +45,6 @@ const exampleValues: TastingEventPreviewValues = {
   ],
 };
 
-export function TastingEventPreviewExample() {
-  return <TastingEventPreview values={exampleValues} today={new Date()} />;
+export function WhiskyTastingEventPreviewExample() {
+  return <WhiskyTastingEventPreview values={exampleValues} today={new Date()} />;
 }

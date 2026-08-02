@@ -6,10 +6,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useCurationSpec, useCurationSpecs } from '@/hooks/useCurations';
 import { CurationSpecCode } from '@/types/api';
 
-import { CurationSpecProgramForm } from './components/CurationSpecProgramForm';
-import { CurationSpecTastingEventForm } from './components/CurationSpecTastingEventForm';
+import { CurationEntry } from './CurationEntry';
+import { ProgramForm } from './program/ProgramForm';
+import { RecommendedWhiskyForm } from './recommended-whisky/RecommendedWhiskyForm';
+import { WhiskyPairingForm } from './whisky-pairing/WhiskyPairingForm';
+import { WhiskyTastingEventForm } from './whisky-tasting-event/WhiskyTastingEventForm';
 import {
   programRequestSpecSchema,
+  whiskyCurationRequestSpecSchema,
   whiskyTastingEventRequestSpecSchema,
 } from './curation-spec.schema';
 
@@ -22,40 +26,24 @@ export function CurationCreateEntry() {
   const specQuery = useCurationSpec(selectedSpec?.id, selectedSpec?.version);
   const handleBack = () => navigate('/dashboard/curations');
 
-  if (specsQuery.isLoading || (selectedCode && specQuery.isLoading)) {
+  if (!selectedCode) {
+    return (
+      <CurationEntry
+        specs={specsQuery.data ?? []}
+        isLoading={specsQuery.isLoading}
+        isError={specsQuery.isError}
+        onRetry={() => void specsQuery.refetch()}
+        onSelect={(code) => setSearchParams({ code })}
+      />
+    );
+  }
+
+  if (specsQuery.isLoading || specQuery.isLoading) {
     return (
       <div className="space-y-6">
         <DetailPageHeader title="큐레이션 등록" onBack={handleBack} />
         <div className="py-12 text-center text-muted-foreground">
           큐레이션 스펙을 불러오는 중입니다.
-        </div>
-      </div>
-    );
-  }
-
-  if (!selectedCode && !specsQuery.isError) {
-    return (
-      <div className="space-y-6">
-        <DetailPageHeader title="큐레이션 등록" onBack={handleBack} />
-        <div className="grid gap-4 md:grid-cols-2">
-          {specsQuery.data
-            ?.filter(
-              (spec) =>
-                spec.isActive &&
-                (spec.code === CurationSpecCode.WHISKY_TASTING_EVENT ||
-                  spec.code === CurationSpecCode.PROGRAM)
-            )
-            .map((spec) => (
-              <button
-                key={spec.id}
-                type="button"
-                className="rounded-[10px] border bg-card p-6 text-left transition-colors hover:border-primary"
-                onClick={() => setSearchParams({ code: spec.code })}
-              >
-                <h2 className="font-semibold">{spec.name}</h2>
-                <p className="mt-2 text-sm text-muted-foreground">{spec.description}</p>
-              </button>
-            ))}
         </div>
       </div>
     );
@@ -93,7 +81,7 @@ export function CurationCreateEntry() {
     }
 
     return (
-      <CurationSpecProgramForm
+      <ProgramForm
         spec={specQuery.data}
         requestSpec={requestSpec.data}
         initialValues={{
@@ -137,6 +125,61 @@ export function CurationCreateEntry() {
     );
   }
 
+  if (
+    specQuery.data.code === CurationSpecCode.RECOMMENDED_WHISKY ||
+    specQuery.data.code === CurationSpecCode.WHISKY_PAIRING
+  ) {
+    const requestSpec = whiskyCurationRequestSpecSchema.safeParse(specQuery.data.requestSpec);
+
+    if (!requestSpec.success) {
+      return (
+        <InvalidSpec
+          onBack={handleBack}
+          specName={
+            specQuery.data.code === CurationSpecCode.RECOMMENDED_WHISKY
+              ? '추천 위스키'
+              : '위스키 페어링'
+          }
+        />
+      );
+    }
+
+    const initialValues = {
+      name: '',
+      description: '',
+      imageUrls: [],
+      exposureStartDate: '',
+      exposureEndDate: '',
+      displayOrder: 0,
+      isActive: true,
+      alcohols: [],
+    };
+
+    if (specQuery.data.code === CurationSpecCode.RECOMMENDED_WHISKY) {
+      return (
+        <RecommendedWhiskyForm
+          spec={specQuery.data}
+          requestSpec={requestSpec.data}
+          initialValues={initialValues}
+          onBack={handleBack}
+        />
+      );
+    }
+
+    return (
+      <WhiskyPairingForm
+        spec={specQuery.data}
+        requestSpec={requestSpec.data}
+        initialValues={initialValues}
+        onBack={handleBack}
+      />
+    );
+  }
+
+  if (specQuery.data.code !== CurationSpecCode.WHISKY_TASTING_EVENT) {
+    return <InvalidSpec onBack={handleBack} specName={specQuery.data.name} />;
+  }
+
   const requestSpec = whiskyTastingEventRequestSpecSchema.safeParse(specQuery.data.requestSpec);
 
   if (!requestSpec.success) {
@@ -144,7 +187,7 @@ export function CurationCreateEntry() {
   }
 
   return (
-    <CurationSpecTastingEventForm
+    <WhiskyTastingEventForm
       spec={specQuery.data}
       requestSpec={requestSpec.data}
       initialValues={{

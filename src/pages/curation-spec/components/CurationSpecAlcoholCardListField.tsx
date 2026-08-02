@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-import type { AlcoholSectionConfig } from '../curation-sections';
+import type { AlcoholSectionConfig, CurationSpecSections } from '../curation-sections.type';
 import type {
   WhiskyCurationRequestSpec,
   WhiskyTastingEventAlcoholListSchema,
@@ -23,11 +23,13 @@ export function CurationSpecAlcoholCardListField({
   schema,
   required,
   config,
+  pairingConfig,
 }: {
   name: string;
   schema: WhiskyTastingEventAlcoholListSchema | WhiskyCurationRequestSpec;
   required: boolean;
   config?: AlcoholSectionConfig;
+  pairingConfig?: NonNullable<CurationSpecSections[string]['fields'][string]['pairing']>;
 }) {
   const form = useFormContext<FieldValues>();
   const alcohols = useWatch({
@@ -39,6 +41,7 @@ export function CurationSpecAlcoholCardListField({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const itemSchema = schema.type === 'array' ? schema.items : schema;
+  const pairingSchema = schema.type === 'object' ? schema.properties.pairings : undefined;
   const resolvedConfig: AlcoholSectionConfig = config ?? {
     itemLabel: (schema['x-display-name'] as string | undefined) ?? '라인업',
     emptyMessage: `${(schema['x-display-name'] as string | undefined) ?? '라인업'}을 추가해주세요.`,
@@ -66,6 +69,15 @@ export function CurationSpecAlcoholCardListField({
         selectedTags: [],
       },
       comment: '',
+      ...(pairingSchema
+        ? {
+            pairings: Array.from({ length: pairingSchema.minItems }, () => ({
+              itemName: '',
+              pairingNote: '',
+              itemImageUrl: '',
+            })),
+          }
+        : {}),
     });
     setIsAdding(false);
   };
@@ -142,6 +154,8 @@ export function CurationSpecAlcoholCardListField({
                 index={index}
                 schema={itemSchema}
                 config={resolvedConfig}
+                pairingSchema={pairingSchema}
+                pairingConfig={pairingConfig}
                 required={required}
                 isDragOver={dragOverIndex === index && draggedIndex !== index}
                 onRemove={() => alcoholFieldArray.remove(index)}
@@ -161,6 +175,8 @@ export function CurationSpecAlcoholCardListField({
                 index={index}
                 schema={itemSchema}
                 config={resolvedConfig}
+                pairingSchema={pairingSchema}
+                pairingConfig={pairingConfig}
                 required={required}
                 isDragOver={dragOverIndex === index && draggedIndex !== index}
                 onRemove={() => alcoholFieldArray.remove(index)}
@@ -186,7 +202,18 @@ export function CurationSpecAlcoholCardListField({
           required={required}
           excludeIds={selectedAlcoholIds}
           onAdd={(item) => {
-            alcoholFieldArray.append(item);
+            alcoholFieldArray.append({
+              ...item,
+              ...(pairingSchema
+                ? {
+                    pairings: Array.from({ length: pairingSchema.minItems }, () => ({
+                      itemName: '',
+                      pairingNote: '',
+                      itemImageUrl: '',
+                    })),
+                  }
+                : {}),
+            });
             setIsAdding(false);
           }}
           onAddManual={handleAddManualAlcohol}

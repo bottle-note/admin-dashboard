@@ -37,33 +37,21 @@ vi.mock('../curation-spec.schema', async (importOriginal) => {
     whiskyCurationRequestSpecSchema: {
       safeParse: (value: unknown) => ({ success: true, data: value }),
     },
-    whiskyCurationPayloadSchema: {
+    whiskyCurationDetailPayloadSchema: {
       safeParse: (value: unknown) => ({ success: true, data: value }),
     },
   };
 });
 
-vi.mock('../curation-sections', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../curation-sections')>();
+vi.mock('../recommended-whisky/RecommendedWhiskyForm', () => ({
+  RecommendedWhiskyForm: ({ initialValues }: { initialValues: { alcohols: unknown[] } }) => (
+    <div data-testid="whisky-curation-form">추천:{initialValues.alcohols.length}</div>
+  ),
+}));
 
-  return {
-    ...actual,
-    getRecommendedWhiskySections: () => ({ 추천: {} }),
-    getWhiskyPairingSections: () => ({ 페어링: {} }),
-  };
-});
-
-vi.mock('../components/CurationSpecWhiskyCurationForm', () => ({
-  CurationSpecWhiskyCurationForm: ({
-    sections,
-    initialValues,
-  }: {
-    sections: Record<string, unknown>;
-    initialValues: { alcohols: unknown[] };
-  }) => (
-    <div data-testid="whisky-curation-form">
-      {Object.keys(sections)[0]}:{initialValues.alcohols.length}
-    </div>
+vi.mock('../whisky-pairing/WhiskyPairingForm', () => ({
+  WhiskyPairingForm: ({ initialValues }: { initialValues: { alcohols: unknown[] } }) => (
+    <div data-testid="whisky-curation-form">페어링:{initialValues.alcohols.length}</div>
   ),
 }));
 

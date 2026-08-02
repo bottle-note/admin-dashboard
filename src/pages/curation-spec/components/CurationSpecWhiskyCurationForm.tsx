@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FormProvider, useForm, type Resolver } from 'react-hook-form';
 import { useNavigate } from 'react-router';
@@ -8,7 +8,7 @@ import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { useCurationCreate, useCurationDelete, useCurationUpdate } from '@/hooks/useCurations';
 import type { CurationV2CreateRequest, CurationV2Spec } from '@/types/api';
 
-import type { CurationSpecSections } from '../curation-sections';
+import type { CurationSpecSections } from '../curation-sections.type';
 import {
   createWhiskyCurationFormValidationSchema,
   type WhiskyCurationFormValues,
@@ -16,7 +16,16 @@ import {
 } from '../curation-spec.schema';
 import { CurationSpecCommonSection } from './CurationSpecCommonSection';
 import { CurationSpecRenderer } from './CurationSpecRenderer';
-import { CurationSpecWhiskyCurationPreview } from './CurationSpecWhiskyCurationPreview';
+
+export interface CurationSpecWhiskyCurationFormProps {
+  spec: CurationV2Spec;
+  curationId?: number;
+  requestSpec: WhiskyCurationRequestSpec;
+  sections: CurationSpecSections;
+  initialValues: WhiskyCurationFormValues;
+  preview: ReactNode;
+  onBack: () => void;
+}
 
 export function CurationSpecWhiskyCurationForm({
   spec,
@@ -24,15 +33,9 @@ export function CurationSpecWhiskyCurationForm({
   requestSpec,
   sections,
   initialValues,
+  preview,
   onBack,
-}: {
-  spec: CurationV2Spec;
-  curationId?: number;
-  requestSpec: WhiskyCurationRequestSpec;
-  sections: CurationSpecSections;
-  initialValues: WhiskyCurationFormValues;
-  onBack: () => void;
-}) {
+}: CurationSpecWhiskyCurationFormProps) {
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isImageUploading, setIsImageUploading] = useState(false);
@@ -119,9 +122,7 @@ export function CurationSpecWhiskyCurationForm({
             <CurationSpecCommonSection onImageUploadingChange={setIsImageUploading} />
             <CurationSpecRenderer sections={sections} />
           </div>
-          <aside className="lg:sticky lg:top-6">
-            <CurationSpecWhiskyCurationPreview specName={spec.name} />
-          </aside>
+          <aside className="lg:sticky lg:top-6">{preview}</aside>
         </div>
       </FormProvider>
 

@@ -1,10 +1,10 @@
 import { cn } from '@/lib/utils';
 
-import type { WhiskyTastingEventFormValues } from '../../curation-spec.schema';
-import { CurationPreviewWhiskyCard } from './CurationPreviewWhiskyCard';
-import { tastingEventPreviewThemeStyle } from './previewTheme';
+import type { WhiskyTastingEventFormValues } from '../curation-spec.schema';
+import { CurationPreviewWhiskyCard } from '../components/preview/CurationPreviewWhiskyCard';
+import { tastingEventPreviewThemeStyle } from '../components/preview/previewTheme';
 
-export type TastingEventPreviewValues = Pick<
+export type WhiskyTastingEventPreviewValues = Pick<
   WhiskyTastingEventFormValues,
   | 'name'
   | 'description'
@@ -23,7 +23,7 @@ export type TastingEventPreviewValues = Pick<
   | 'alcohols'
 >;
 
-type TastingEventPreviewAlcoholItem = TastingEventPreviewValues['alcohols'][number];
+type TastingEventPreviewAlcoholItem = WhiskyTastingEventPreviewValues['alcohols'][number];
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -67,13 +67,17 @@ const UsersIcon = () => (
   </svg>
 );
 
-interface TastingEventPreviewProps {
-  values: TastingEventPreviewValues;
+interface WhiskyTastingEventPreviewProps {
+  values: WhiskyTastingEventPreviewValues;
   today?: Date;
   className?: string;
 }
 
-export function TastingEventPreview({ values, today, className }: TastingEventPreviewProps) {
+export function WhiskyTastingEventPreview({
+  values,
+  today,
+  className,
+}: WhiskyTastingEventPreviewProps) {
   const coverImageUrl = values.imageUrls[0];
   const galleryImageUrls = values.imageUrls.filter((imageUrl) => imageUrl !== coverImageUrl);
   const eventDateLabel = formatEventDate(values.eventDate);
@@ -107,7 +111,7 @@ function TastingEventPreviewHero({
   eventDateLabel,
   capacityLabel,
 }: {
-  values: TastingEventPreviewValues;
+  values: WhiskyTastingEventPreviewValues;
   coverImageUrl?: string;
   eventDateLabel: string;
   capacityLabel: string;
@@ -140,7 +144,7 @@ function TastingEventPreviewInfoCard({
   eventDateTimeLabel,
   capacityLabel,
 }: {
-  values: TastingEventPreviewValues;
+  values: WhiskyTastingEventPreviewValues;
   eventDateTimeLabel: string;
   capacityLabel: string;
 }) {
@@ -295,7 +299,7 @@ function TastingEventPreviewCta({
   values,
   today = new Date(),
 }: {
-  values: TastingEventPreviewValues;
+  values: WhiskyTastingEventPreviewValues;
   today?: Date;
 }) {
   const applicationLink = values.applicationLink?.trim() ?? '';

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
 import {
   AlertCircle,
   CalendarDays,
@@ -13,7 +12,6 @@ import {
 import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useCurationSpecs } from '@/hooks/useCurations';
 import { cn } from '@/lib/utils';
 import {
   CurationSpecCode,
@@ -21,15 +19,15 @@ import {
   type KnownCurationV2SpecCode,
 } from '@/types/api';
 
-import { CurationPreviewFrame } from '../curation-spec/components/preview/CurationPreviewFrame';
+import { CurationPreviewFrame } from './components/preview/CurationPreviewFrame';
+import type { ProgramFormValues, WhiskyCurationFormValues } from './curation-spec.schema';
+import { ProgramPreview } from './program/ProgramPreview';
+import { RecommendedWhiskyPreview } from './recommended-whisky/RecommendedWhiskyPreview';
+import { WhiskyPairingPreview } from './whisky-pairing/WhiskyPairingPreview';
 import {
-  TastingEventPreview,
-  type TastingEventPreviewValues,
-} from '../curation-spec/components/preview/TastingEventPreview';
-import {
-  WhiskyCurationPreview,
-  type WhiskyCurationPreviewData,
-} from '../curation-spec/components/preview/WhiskyCurationPreview';
+  WhiskyTastingEventPreview,
+  type WhiskyTastingEventPreviewValues,
+} from './whisky-tasting-event/WhiskyTastingEventPreview';
 
 interface CurationSpecUiConfig {
   hasPreview: boolean;
@@ -96,7 +94,7 @@ const CURATION_SPEC_UI_CONFIG: Record<KnownCurationV2SpecCode, CurationSpecUiCon
     previewButtonClassName: 'bg-white/20 text-white hover:bg-white/30',
   },
   PROGRAM: {
-    hasPreview: false,
+    hasPreview: true,
     icon: Presentation,
     order: 4,
     label: '프로그램',
@@ -105,7 +103,7 @@ const CURATION_SPEC_UI_CONFIG: Record<KnownCurationV2SpecCode, CurationSpecUiCon
     example: '2026 바앤스피릿쇼 — 마스터클래스·시음·세미나',
     fields: ['이름', '설명', '커버', '행사 정보', '프로그램 목록', '프로그램별 위스키'],
     headerClassName: 'bg-primary',
-    previewButtonClassName: '',
+    previewButtonClassName: 'bg-white/20 text-white hover:bg-white/30',
   },
 };
 
@@ -122,13 +120,22 @@ function compareCurationSpecs(a: CurationV2SpecListItem, b: CurationV2SpecListIt
   return aOrder - bOrder || a.id - b.id;
 }
 
-export function CurationEntryPage() {
-  const navigate = useNavigate();
+export function CurationEntry({
+  specs,
+  isError,
+  isLoading,
+  onRetry,
+  onSelect,
+}: {
+  specs: CurationV2SpecListItem[];
+  isError: boolean;
+  isLoading: boolean;
+  onRetry: () => void;
+  onSelect: (code: string) => void;
+}) {
   const [selectedPreviewCode, setSelectedPreviewCode] = useState<KnownCurationV2SpecCode>(
     CurationSpecCode.WHISKY_TASTING_EVENT
   );
-  const { data: specs = [], isError, isLoading, refetch } = useCurationSpecs();
-
   const activeSpecs = specs.filter((spec) => spec.isActive).sort(compareCurationSpecs);
   const selectedPreviewConfig = CURATION_SPEC_UI_CONFIG[selectedPreviewCode];
 
@@ -139,7 +146,7 @@ export function CurationEntryPage() {
         description="템플릿마다 입력 항목과 모바일 노출 방식이 달라집니다. 시작 후엔 템플릿을 변경할 수 없으니 신중히 선택해주세요."
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
         <section className="space-y-4 lg:col-span-2" aria-label="큐레이션 유형 선택">
           {isLoading ? (
             <Card className="shadow-none">
@@ -162,7 +169,7 @@ export function CurationEntryPage() {
                     </p>
                   </div>
                 </div>
-                <Button type="button" variant="outline" onClick={() => void refetch()}>
+                <Button type="button" variant="outline" onClick={onRetry}>
                   다시 불러오기
                 </Button>
               </CardContent>
@@ -187,7 +194,7 @@ export function CurationEntryPage() {
               const example = config?.example ?? spec.name;
               const fields = config?.fields ?? ['이름', '설명', '커버', 'payload'];
               const handleStart = () => {
-                navigate(`/dashboard/curations/specs/${encodeURIComponent(spec.code)}/new`);
+                onSelect(spec.code);
               };
 
               return (
@@ -278,7 +285,7 @@ export function CurationEntryPage() {
           )}
         </section>
 
-        <Card className="shadow-none lg:sticky lg:top-20 lg:col-span-1">
+        <Card className="shadow-none lg:sticky lg:top-6 lg:col-span-1">
           <CardHeader>
             <CardTitle>
               <h2 className="text-base">미리보기</h2>
@@ -302,17 +309,15 @@ function CurationEntryPreview({ specCode }: { specCode: KnownCurationV2SpecCode 
 
   return (
     <CurationPreviewFrame title={config.label}>
-      {specCode === CurationSpecCode.WHISKY_TASTING_EVENT ? (
-        <TastingEventPreview values={TASTING_EVENT_PREVIEW_SAMPLE} />
-      ) : (
-        <WhiskyCurationPreview
-          curation={
-            specCode === CurationSpecCode.WHISKY_PAIRING
-              ? WHISKY_PAIRING_PREVIEW_SAMPLE
-              : GENERAL_CURATION_PREVIEW_SAMPLE
-          }
-          pairingTitle="추천 페어링"
-        />
+      {specCode === CurationSpecCode.WHISKY_TASTING_EVENT && (
+        <WhiskyTastingEventPreview values={TASTING_EVENT_PREVIEW_SAMPLE} />
+      )}
+      {specCode === CurationSpecCode.PROGRAM && <ProgramPreview values={PROGRAM_PREVIEW_SAMPLE} />}
+      {specCode === CurationSpecCode.RECOMMENDED_WHISKY && (
+        <RecommendedWhiskyPreview specName={config.label} values={RECOMMENDED_PREVIEW_SAMPLE} />
+      )}
+      {specCode === CurationSpecCode.WHISKY_PAIRING && (
+        <WhiskyPairingPreview specName={config.label} values={WHISKY_PAIRING_PREVIEW_SAMPLE} />
       )}
     </CurationPreviewFrame>
   );
@@ -330,7 +335,7 @@ const SAMPLE_WHISKY = {
   selectedTags: ['바닐라', '꿀', '과일'],
 };
 
-const TASTING_EVENT_PREVIEW_SAMPLE: TastingEventPreviewValues = {
+const TASTING_EVENT_PREVIEW_SAMPLE: WhiskyTastingEventPreviewValues = {
   name: '도시남 X 보틀노트 시음회',
   description: '성수의 작은 바에서 입문자도 편하게 즐길 수 있는 싱글몰트 라인업을 소개합니다.',
   imageUrls: [
@@ -357,42 +362,104 @@ const TASTING_EVENT_PREVIEW_SAMPLE: TastingEventPreviewValues = {
   ],
 };
 
-const GENERAL_CURATION_PREVIEW_SAMPLE: WhiskyCurationPreviewData = {
-  specName: '일반 큐레이션',
+const RECOMMENDED_PREVIEW_SAMPLE: WhiskyCurationFormValues = {
   name: '입문자를 위한 스카치 베스트 6',
   description: '처음 위스키를 시작하는 사용자에게 권하기 좋은 부드러운 스카치 위스키입니다.',
   imageUrls: [
     'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1606765962248-7ff407b51667?auto=format&fit=crop&w=800&q=80',
   ],
-  alcohol: SAMPLE_WHISKY,
-  stats: { rating: 4.2, totalRatingsCount: 128 },
-  comment: '밸런스가 좋아 니트와 하이볼 모두 부담 없이 즐길 수 있습니다.',
+  exposureStartDate: '',
+  exposureEndDate: '',
+  displayOrder: 0,
+  isActive: true,
+  alcohols: [
+    {
+      source: 'BOTTLE_NOTE',
+      alcohol: SAMPLE_WHISKY,
+      stats: { rating: 4.2, totalRatingsCount: 128 },
+      comment: '밸런스가 좋아 니트와 하이볼 모두 부담 없이 즐길 수 있습니다.',
+    },
+  ],
 };
 
-const WHISKY_PAIRING_PREVIEW_SAMPLE: WhiskyCurationPreviewData = {
-  specName: '페어링 · 위스키 → 음식',
+const WHISKY_PAIRING_PREVIEW_SAMPLE: WhiskyCurationFormValues = {
   name: '글렌피딕 12년과 어울리는 디저트',
   description: '부드러운 과일 향과 꿀 향을 살려주는 달콤한 페어링을 추천합니다.',
   imageUrls: [
     'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=80',
   ],
-  alcohol: SAMPLE_WHISKY,
-  stats: { rating: 4.2, totalRatingsCount: 128 },
-  comment: '가벼운 단맛과 산미가 살아 있는 디저트와 잘 어울립니다.',
-  pairings: [
+  exposureStartDate: '',
+  exposureEndDate: '',
+  displayOrder: 0,
+  isActive: true,
+  alcohols: [
     {
-      itemName: '바닐라 아이스크림',
-      pairingNote: '바닐라와 꿀 향을 더 부드럽게 이어줍니다.',
-      itemImageUrl:
-        'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=500&q=80',
+      source: 'BOTTLE_NOTE',
+      alcohol: SAMPLE_WHISKY,
+      stats: { rating: 4.2, totalRatingsCount: 128 },
+      comment: '가벼운 단맛과 산미가 살아 있는 디저트와 잘 어울립니다.',
+      pairings: [
+        {
+          itemName: '바닐라 아이스크림',
+          pairingNote: '바닐라와 꿀 향을 더 부드럽게 이어줍니다.',
+          itemImageUrl:
+            'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=500&q=80',
+        },
+        {
+          itemName: '다크초콜릿',
+          pairingNote: '은은한 쌉싸름함이 과일 향을 또렷하게 만듭니다.',
+          itemImageUrl:
+            'https://images.unsplash.com/photo-1606312619070-d48b4c652a52?auto=format&fit=crop&w=500&q=80',
+        },
+      ],
     },
+  ],
+};
+
+const PROGRAM_PREVIEW_SAMPLE: ProgramFormValues = {
+  name: '2026 바앤스피릿쇼',
+  description: '위스키와 다양한 주류를 한자리에서 만나는 프로그램입니다.',
+  imageUrls: [
+    'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80',
+  ],
+  exposureStartDate: '',
+  exposureEndDate: '',
+  displayOrder: 0,
+  isActive: true,
+  eventStartDate: '2026-07-18',
+  eventEndDate: '2026-07-20',
+  placeName: '코엑스',
+  kakaoPlaceId: '',
+  address: '서울 강남구 영동대로 513',
+  detailLocation: 'B홀',
+  organizer: '보틀노트',
+  sponsor: '',
+  entryFee: 30000,
+  is_tbc: false,
+  officialUrl: '',
+  registrationUrl: '',
+  programTags: ['WHISKY'],
+  programs: [
     {
-      itemName: '다크초콜릿',
-      pairingNote: '은은한 쌉싸름함이 과일 향을 또렷하게 만듭니다.',
-      itemImageUrl:
-        'https://images.unsplash.com/photo-1606312619070-d48b4c652a52?auto=format&fit=crop&w=500&q=80',
+      name: '싱글몰트 마스터 클래스',
+      type: 'MASTER_CLASS',
+      programDate: '2026-07-18',
+      startTime: '14:00',
+      endTime: '15:30',
+      venue: '세미나룸 A',
+      host: '보틀노트',
+      description: '싱글몰트의 지역별 특징과 대표 위스키를 소개합니다.',
+      applicationUrl: '',
+      whiskies: [
+        {
+          source: 'BOTTLE_NOTE',
+          alcohol: SAMPLE_WHISKY,
+          stats: { rating: 4.2, totalRatingsCount: 128 },
+          comment: '마스터 클래스 시음 위스키',
+        },
+      ],
     },
   ],
 };

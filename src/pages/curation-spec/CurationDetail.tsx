@@ -6,21 +6,18 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useCurationDetail } from '@/hooks/useCurations';
 import { CurationSpecCode, type CurationV2Detail } from '@/types/api';
 
-import { CurationSpecProgramForm } from './components/CurationSpecProgramForm';
-import { CurationSpecTastingEventForm } from './components/CurationSpecTastingEventForm';
-import { CurationSpecWhiskyCurationForm } from './components/CurationSpecWhiskyCurationForm';
+import { ProgramForm } from './program/ProgramForm';
+import { RecommendedWhiskyForm } from './recommended-whisky/RecommendedWhiskyForm';
+import { WhiskyPairingForm } from './whisky-pairing/WhiskyPairingForm';
+import { WhiskyTastingEventForm } from './whisky-tasting-event/WhiskyTastingEventForm';
 import {
   programPayloadSchema,
   programRequestSpecSchema,
-  whiskyCurationPayloadSchema,
+  whiskyCurationDetailPayloadSchema,
   whiskyCurationRequestSpecSchema,
   whiskyTastingEventPayloadSchema,
   whiskyTastingEventRequestSpecSchema,
 } from './curation-spec.schema';
-import {
-  getRecommendedWhiskySections,
-  getWhiskyPairingSections,
-} from './curation-sections';
 
 export function CurationDetail() {
   const navigate = useNavigate();
@@ -91,7 +88,7 @@ function CurationDetailContent({
       }
 
       return (
-        <CurationSpecTastingEventForm
+        <WhiskyTastingEventForm
           spec={curation.spec}
           curationId={curation.id}
           requestSpec={requestSpec.data}
@@ -130,7 +127,7 @@ function CurationDetailContent({
       }
 
       return (
-        <CurationSpecProgramForm
+        <ProgramForm
           spec={curation.spec}
           curationId={curation.id}
           requestSpec={requestSpec.data}
@@ -167,18 +164,17 @@ function CurationDetailContent({
     }
     case CurationSpecCode.RECOMMENDED_WHISKY: {
       const requestSpec = whiskyCurationRequestSpecSchema.safeParse(curation.spec.requestSpec);
-      const payload = whiskyCurationPayloadSchema.safeParse(curation.payload);
+      const payload = whiskyCurationDetailPayloadSchema.safeParse(curation.payload);
 
       if (!requestSpec.success || !payload.success) {
         return <InvalidCurationSpec specName="추천 위스키" onBack={onBack} />;
       }
 
       return (
-        <CurationSpecWhiskyCurationForm
+        <RecommendedWhiskyForm
           spec={curation.spec}
           curationId={curation.id}
           requestSpec={requestSpec.data}
-          sections={getRecommendedWhiskySections(requestSpec.data)}
           initialValues={createWhiskyCurationInitialValues(curation, payload.data)}
           onBack={onBack}
         />
@@ -186,18 +182,17 @@ function CurationDetailContent({
     }
     case CurationSpecCode.WHISKY_PAIRING: {
       const requestSpec = whiskyCurationRequestSpecSchema.safeParse(curation.spec.requestSpec);
-      const payload = whiskyCurationPayloadSchema.safeParse(curation.payload);
+      const payload = whiskyCurationDetailPayloadSchema.safeParse(curation.payload);
 
       if (!requestSpec.success || !payload.success) {
         return <InvalidCurationSpec specName="위스키 페어링" onBack={onBack} />;
       }
 
       return (
-        <CurationSpecWhiskyCurationForm
+        <WhiskyPairingForm
           spec={curation.spec}
           curationId={curation.id}
           requestSpec={requestSpec.data}
-          sections={getWhiskyPairingSections(requestSpec.data)}
           initialValues={createWhiskyCurationInitialValues(curation, payload.data)}
           onBack={onBack}
         />
@@ -214,7 +209,7 @@ function CurationDetailContent({
 
 function createWhiskyCurationInitialValues(
   curation: CurationV2Detail,
-  alcohols: ReturnType<typeof whiskyCurationPayloadSchema.parse>
+  alcohols: ReturnType<typeof whiskyCurationDetailPayloadSchema.parse>
 ) {
   return {
     name: curation.name,

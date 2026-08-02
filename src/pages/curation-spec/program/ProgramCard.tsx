@@ -2,15 +2,15 @@ import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 
-import type { ProgramSectionConfig } from '../curation-sections';
 import type {
   ProgramItemRequestSpec,
   WhiskyTastingEventAlcoholListSchema,
 } from '../curation-spec.schema';
-import { CurationSpecAlcoholCardListField } from './CurationSpecAlcoholCardListField';
-import { CurationSpecField } from './CurationSpecField';
+import { CurationSpecAlcoholCardListField } from '../components/CurationSpecAlcoholCardListField';
+import { CurationSpecField } from '../components/CurationSpecField';
+import type { ProgramSectionConfig } from './program-sections';
 
-export function CurationSpecProgramCard({
+export function ProgramCard({
   name,
   index,
   schema,

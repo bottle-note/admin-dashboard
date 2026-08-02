@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { S3UploadPath, useImageUpload } from '@/hooks/useImageUpload';
 import type { JsonSchemaNode } from '@/types/api';
 
-import type { AlcoholSectionConfig } from '../curation-sections';
+import type { AlcoholSectionConfig, CurationSpecSections } from '../curation-sections.type';
 import type { WhiskyTastingEventAlcoholItemSchema } from '../curation-spec.schema';
+import type { WhiskyCurationPairingListSchema } from '../curation-spec.schema';
 import { CurationSpecAlcoholCard } from './CurationSpecAlcoholCard';
 
 export function CurationSpecManualAlcoholCard({
@@ -17,6 +18,8 @@ export function CurationSpecManualAlcoholCard({
   index,
   schema,
   config,
+  pairingSchema,
+  pairingConfig,
   required,
   isDragOver,
   onRemove,
@@ -33,6 +36,8 @@ export function CurationSpecManualAlcoholCard({
   index: number;
   schema: WhiskyTastingEventAlcoholItemSchema;
   config: AlcoholSectionConfig;
+  pairingSchema?: WhiskyCurationPairingListSchema;
+  pairingConfig?: NonNullable<CurationSpecSections[string]['fields'][string]['pairing']>;
   required: boolean;
   isDragOver: boolean;
   onRemove: () => void;
@@ -57,6 +62,8 @@ export function CurationSpecManualAlcoholCard({
       index={index}
       schema={schema}
       config={config}
+      pairingSchema={pairingSchema}
+      pairingConfig={pairingConfig}
       required={required}
       imageUrl={alcohol.imageUrl as string}
       imageAlt={alcohol.korName as string}

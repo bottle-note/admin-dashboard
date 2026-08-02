@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { getRecommendedWhiskySections } from '../recommended-whisky/recommended-whisky-sections';
+import { getWhiskyPairingSections } from '../whisky-pairing/whisky-pairing-sections';
 import {
-  getRecommendedWhiskySections,
-  getWhiskyPairingSections,
-} from '../curation-sections';
-import {
+  whiskyCurationDetailPayloadSchema,
   whiskyCurationPayloadSchema,
   whiskyCurationRequestSpecSchema,
 } from '../curation-spec.schema';
@@ -52,6 +51,7 @@ const recommendedWhiskyRequestSpec = {
 
 const whiskyPairingRequestSpec = {
   ...recommendedWhiskyRequestSpec,
+  'x-form-style': 'pairing-list',
   required: ['source', 'alcohol', 'pairings'],
   properties: {
     ...recommendedWhiskyRequestSpec.properties,
@@ -105,6 +105,9 @@ describe('추천·페어링 큐레이션 스펙', () => {
       true
     );
     expect(whiskyCurationRequestSpecSchema.safeParse(whiskyPairingRequestSpec).success).toBe(true);
+    expect(whiskyCurationRequestSpecSchema.parse(whiskyPairingRequestSpec)['x-form-style']).toBe(
+      'pairing-list'
+    );
   });
 
   it('payload는 위스키 항목 배열이며 페어링 음식도 함께 파싱한다', () => {
@@ -124,6 +127,35 @@ describe('추천·페어링 큐레이션 스펙', () => {
       ]).success
     ).toBe(true);
     expect(whiskyCurationPayloadSchema.safeParse({ alcohols: [alcoholItem] }).success).toBe(false);
+  });
+
+  it('기존 단건 상세 payload는 배열로 정규화한다', () => {
+    const parsed = whiskyCurationDetailPayloadSchema.parse(alcoholItem);
+
+    expect(parsed).toEqual([alcoholItem]);
+  });
+
+  it('페어링 이미지 필드가 없는 requestSpec도 파싱한다', () => {
+    const requestSpec = {
+      ...whiskyPairingRequestSpec,
+      properties: {
+        ...whiskyPairingRequestSpec.properties,
+        pairings: {
+          ...whiskyPairingRequestSpec.properties.pairings,
+          items: {
+            ...whiskyPairingRequestSpec.properties.pairings.items,
+            properties: {
+              itemName:
+                whiskyPairingRequestSpec.properties.pairings.items.properties.itemName,
+              pairingNote:
+                whiskyPairingRequestSpec.properties.pairings.items.properties.pairingNote,
+            },
+          },
+        },
+      },
+    };
+
+    expect(whiskyCurationRequestSpecSchema.safeParse(requestSpec).success).toBe(true);
   });
 
   it('추천 section 객체가 원본 requestSpec과 라인업 안내를 관리한다', () => {

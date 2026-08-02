@@ -13,12 +13,12 @@ import {
   type ProgramFormValues,
   type ProgramRequestSpec,
 } from '../curation-spec.schema';
-import { getProgramSections } from '../curation-sections';
-import { CurationSpecCommonSection } from './CurationSpecCommonSection';
-import { CurationSpecProgramPreview } from './CurationSpecProgramPreview';
-import { CurationSpecRenderer } from './CurationSpecRenderer';
+import { CurationSpecCommonSection } from '../components/CurationSpecCommonSection';
+import { CurationSpecRenderer } from '../components/CurationSpecRenderer';
+import { ProgramFormPreview } from './ProgramFormPreview';
+import { getProgramSections } from './program-sections';
 
-export function CurationSpecProgramForm({
+export function ProgramForm({
   spec,
   curationId,
   requestSpec,
@@ -160,7 +160,7 @@ export function CurationSpecProgramForm({
             <CurationSpecRenderer sections={getProgramSections(requestSpec)} />
           </div>
           <aside className="lg:sticky lg:top-6">
-            <CurationSpecProgramPreview />
+            <ProgramFormPreview />
           </aside>
         </div>
       </FormProvider>

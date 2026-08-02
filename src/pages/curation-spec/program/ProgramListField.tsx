@@ -4,11 +4,11 @@ import { Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-import type { ProgramSectionConfig } from '../curation-sections';
 import type { ProgramFormValues, ProgramListRequestSpec } from '../curation-spec.schema';
-import { CurationSpecProgramCard } from './CurationSpecProgramCard';
+import { ProgramCard } from './ProgramCard';
+import type { ProgramSectionConfig } from './program-sections';
 
-export function CurationSpecProgramListField({
+export function ProgramListField({
   name,
   schema,
   required,
@@ -54,7 +54,7 @@ export function CurationSpecProgramListField({
 
       <div className="min-w-0 space-y-4">
         {programFieldArray.fields.map((field, index) => (
-          <CurationSpecProgramCard
+          <ProgramCard
             key={field.id}
             name={`${name}.${index}`}
             index={index}

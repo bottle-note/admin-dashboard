@@ -3,10 +3,12 @@ import { screen } from '@testing-library/react';
 
 import { render } from '@/test/test-utils';
 
-import { TastingEventPreview } from '../TastingEventPreview';
-import type { TastingEventPreviewValues } from '../TastingEventPreview';
+import {
+  WhiskyTastingEventPreview,
+  type WhiskyTastingEventPreviewValues,
+} from '../../../whisky-tasting-event/WhiskyTastingEventPreview';
 
-const tastingEventPreview: TastingEventPreviewValues = {
+const tastingEventPreview: WhiskyTastingEventPreviewValues = {
   name: '싱글몰트 시음회',
   description: '셰리 캐스크 중심의 시음회',
   imageUrls: [],
@@ -39,14 +41,19 @@ const tastingEventPreview: TastingEventPreviewValues = {
 
 describe('TastingEventPreview', () => {
   it('위스키 설명의 개행을 미리보기에 적용한다', () => {
-    render(<TastingEventPreview values={tastingEventPreview} today={new Date('2026-06-01')} />);
+    render(
+      <WhiskyTastingEventPreview
+        values={tastingEventPreview}
+        today={new Date('2026-06-01')}
+      />
+    );
 
     expect(screen.getByText('첫 줄 설명 둘째 줄 설명')).toHaveClass('whitespace-pre-line');
   });
 
   it('모집 인원이 0명이면 미정으로 표시한다', () => {
     render(
-      <TastingEventPreview
+      <WhiskyTastingEventPreview
         values={{
           ...tastingEventPreview,
           capacity: 0,
@@ -61,7 +68,7 @@ describe('TastingEventPreview', () => {
 
   it('가격 미정이면 저장된 참가비보다 가격 미정 표시를 우선한다', () => {
     render(
-      <TastingEventPreview
+      <WhiskyTastingEventPreview
         values={{
           ...tastingEventPreview,
           entryFee: 75000,

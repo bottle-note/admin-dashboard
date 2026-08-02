@@ -15,7 +15,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import type { JsonSchemaNode } from '@/types/api';
 
-import type { AlcoholSectionConfig } from '../curation-sections';
+import type { AlcoholSectionConfig } from '../curation-sections.type';
 import type { WhiskyTastingEventAlcoholListSchema } from '../curation-spec.schema';
 import { CurationSpecAlcoholCardListField } from './CurationSpecAlcoholCardListField';
 

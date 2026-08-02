@@ -9,14 +9,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
 import { CurationTastingTagCombobox } from '../../curation/components/CurationTastingTagCombobox';
-import type { AlcoholSectionConfig } from '../curation-sections';
-import type { WhiskyTastingEventAlcoholItemSchema } from '../curation-spec.schema';
+import type { AlcoholSectionConfig, CurationSpecSections } from '../curation-sections.type';
+import type {
+  WhiskyCurationPairingListSchema,
+  WhiskyTastingEventAlcoholItemSchema,
+} from '../curation-spec.schema';
+import { PairingFields } from '../whisky-pairing/PairingFields';
 
 export function CurationSpecAlcoholCard({
   name,
   index,
   schema,
   config,
+  pairingSchema,
+  pairingConfig,
   required,
   imageUrl,
   imageAlt,
@@ -36,6 +42,8 @@ export function CurationSpecAlcoholCard({
   index: number;
   schema: WhiskyTastingEventAlcoholItemSchema;
   config: AlcoholSectionConfig;
+  pairingSchema?: WhiskyCurationPairingListSchema;
+  pairingConfig?: NonNullable<CurationSpecSections[string]['fields'][string]['pairing']>;
   required: boolean;
   imageUrl: string;
   imageAlt: string;
@@ -197,19 +205,29 @@ export function CurationSpecAlcoholCard({
         </div>
       </div>
 
-      <FormField
-        label={commentLabel}
-        required={schema.required.includes('comment')}
-        error={form.getFieldState(`${name}.comment`, form.formState).error?.message}
-        className="mt-4"
-      >
-        <Textarea
-          rows={5}
-          maxLength={commentSchema.maxLength}
-          placeholder={commentSchema.example as string}
-          {...form.register(`${name}.comment`)}
+      {!pairingSchema && (
+        <FormField
+          label={commentLabel}
+          required={schema.required.includes('comment')}
+          error={form.getFieldState(`${name}.comment`, form.formState).error?.message}
+          className="mt-4"
+        >
+          <Textarea
+            rows={5}
+            maxLength={commentSchema.maxLength}
+            placeholder={commentSchema.example as string}
+            {...form.register(`${name}.comment`)}
+          />
+        </FormField>
+      )}
+
+      {pairingSchema && pairingConfig && (
+        <PairingFields
+          name={`${name}.pairings`}
+          schema={pairingSchema}
+          config={pairingConfig}
         />
-      </FormField>
+      )}
     </div>
   );
 }

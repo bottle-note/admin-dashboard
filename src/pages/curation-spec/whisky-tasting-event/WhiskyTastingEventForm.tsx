@@ -13,12 +13,12 @@ import {
   type WhiskyTastingEventFormValues,
   type WhiskyTastingEventRequestSpec,
 } from '../curation-spec.schema';
-import { getWhiskyTastingEventSections } from '../curation-sections';
-import { CurationSpecCommonSection } from './CurationSpecCommonSection';
-import { CurationSpecRenderer } from './CurationSpecRenderer';
-import { CurationSpecTastingEventPreview } from './CurationSpecTastingEventPreview';
+import { CurationSpecCommonSection } from '../components/CurationSpecCommonSection';
+import { CurationSpecRenderer } from '../components/CurationSpecRenderer';
+import { WhiskyTastingEventFormPreview } from './WhiskyTastingEventFormPreview';
+import { getWhiskyTastingEventSections } from './whisky-tasting-event-sections';
 
-export function CurationSpecTastingEventForm({
+export function WhiskyTastingEventForm({
   spec,
   curationId,
   requestSpec,
@@ -127,7 +127,7 @@ export function CurationSpecTastingEventForm({
             <CurationSpecRenderer sections={getWhiskyTastingEventSections(requestSpec)} />
           </div>
           <aside className="lg:sticky lg:top-6">
-            <CurationSpecTastingEventPreview />
+            <WhiskyTastingEventFormPreview />
           </aside>
         </div>
       </FormProvider>
