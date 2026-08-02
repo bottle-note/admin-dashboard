@@ -9,12 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
 import { CurationTastingTagCombobox } from '../../curation/components/CurationTastingTagCombobox';
+import type { AlcoholSectionConfig } from '../curation-sections';
 import type { WhiskyTastingEventAlcoholItemSchema } from '../curation-spec.schema';
 
 export function CurationSpecAlcoholCard({
   name,
   index,
   schema,
+  config,
   required,
   imageUrl,
   imageAlt,
@@ -33,6 +35,7 @@ export function CurationSpecAlcoholCard({
   name: string;
   index: number;
   schema: WhiskyTastingEventAlcoholItemSchema;
+  config: AlcoholSectionConfig;
   required: boolean;
   imageUrl: string;
   imageAlt: string;
@@ -54,6 +57,9 @@ export function CurationSpecAlcoholCard({
   const alcoholSchema = itemFields.alcohol;
   const selectedTagsSchema = alcoholSchema.properties.selectedTags;
   const commentSchema = itemFields.comment;
+  const selectedTagsLabel =
+    config.fields.selectedTags?.label ?? (selectedTagsSchema['x-display-name'] as string);
+  const commentLabel = config.fields.comment?.label ?? (commentSchema['x-display-name'] as string);
   const selectedTagsPath = `${name}.alcohol.selectedTags`;
   const selectedTags = useWatch({
     control: form.control,
@@ -93,7 +99,7 @@ export function CurationSpecAlcoholCard({
             <GripVertical className="h-4 w-4" />
           </span>
           <h3 className="text-base font-semibold text-foreground">
-            시음 위스키 {index + 1}
+            {config.itemLabel} {index + 1}
             {required && <span className="ml-1 text-destructive">*</span>}
           </h3>
         </div>
@@ -102,7 +108,7 @@ export function CurationSpecAlcoholCard({
             type="button"
             variant="ghost"
             size="icon"
-            aria-label={`${index + 1}번 위스키 위로 이동`}
+            aria-label={`${index + 1}번 ${config.itemLabel} 위로 이동`}
             onClick={onMoveUp}
             disabled={!canMoveUp}
           >
@@ -112,7 +118,7 @@ export function CurationSpecAlcoholCard({
             type="button"
             variant="ghost"
             size="icon"
-            aria-label={`${index + 1}번 위스키 아래로 이동`}
+            aria-label={`${index + 1}번 ${config.itemLabel} 아래로 이동`}
             onClick={onMoveDown}
             disabled={!canMoveDown}
           >
@@ -146,9 +152,7 @@ export function CurationSpecAlcoholCard({
 
           <div className="space-y-2">
             <div className="flex max-w-md items-center justify-between gap-3">
-              <p className="text-sm font-medium text-foreground">
-                {selectedTagsSchema['x-display-name'] as string}
-              </p>
+              <p className="text-sm font-medium text-foreground">{selectedTagsLabel}</p>
               <span className="text-xs font-medium text-muted-foreground">
                 {selectedTags.length}/{selectedTagsSchema.maxItems}
               </span>
@@ -194,7 +198,7 @@ export function CurationSpecAlcoholCard({
       </div>
 
       <FormField
-        label={commentSchema['x-display-name'] as string}
+        label={commentLabel}
         required={schema.required.includes('comment')}
         error={form.getFieldState(`${name}.comment`, form.formState).error?.message}
         className="mt-4"

@@ -10,6 +10,7 @@ import {
   createBottleNoteCurationWhiskyItem,
   createBottleNoteCurationWhiskyItemFromDetail,
 } from '../../curation/curation-whisky-card-list.mapper';
+import type { AlcoholSectionConfig } from '../curation-sections';
 import type {
   WhiskyTastingEventAlcoholItemSchema,
   WhiskyTastingEventPayload,
@@ -20,6 +21,7 @@ type CurationSpecAlcoholItem = WhiskyTastingEventPayload['alcohols'][number];
 export function CurationSpecDatabaseAlcoholAddCard({
   index,
   schema,
+  config,
   required,
   excludeIds,
   onAdd,
@@ -28,6 +30,7 @@ export function CurationSpecDatabaseAlcoholAddCard({
 }: {
   index: number;
   schema: WhiskyTastingEventAlcoholItemSchema;
+  config: AlcoholSectionConfig;
   required: boolean;
   excludeIds: number[];
   onAdd: (item: CurationSpecAlcoholItem) => void;
@@ -84,7 +87,7 @@ export function CurationSpecDatabaseAlcoholAddCard({
     <div className="rounded-[10px] border border-border bg-card p-5">
       <div className="flex items-start justify-between gap-4">
         <h3 className="text-base font-semibold text-foreground">
-          시음 위스키 {index + 1}
+          {config.itemLabel} {index + 1}
           {required && <span className="ml-1 text-destructive">*</span>}
         </h3>
         <Button

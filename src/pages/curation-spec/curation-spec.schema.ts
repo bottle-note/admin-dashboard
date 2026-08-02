@@ -18,8 +18,11 @@ const schemaNodeShape = {
   maxLength: z.number().optional(),
   minItems: z.number().optional(),
   maxItems: z.number().optional(),
+  'x-container': z.string().optional(),
+  'x-form-style': z.string().optional(),
   'x-field-style': z.string().optional(),
   'x-display-name': z.string().optional(),
+  'x-upload-path': z.string().optional(),
   'x-read-only': z.boolean().optional(),
   'x-place-search-targets': z.record(z.string(), z.enum(['placeName', 'id', 'address'])).optional(),
 };
@@ -60,6 +63,43 @@ const alcoholItemSchema = z.looseObject({
     alcohol: alcoholSchema,
     comment: schemaNode,
   }),
+});
+
+const pairingItemSchema = z.looseObject({
+  ...schemaNodeShape,
+  type: z.literal('object'),
+  required: z.array(z.string()),
+  properties: z.looseObject({
+    itemName: schemaNode,
+    pairingNote: schemaNode,
+    itemImageUrl: schemaNode,
+  }),
+});
+
+const pairingListSchema = z.looseObject({
+  ...schemaNodeShape,
+  type: z.literal('array'),
+  items: pairingItemSchema,
+  minItems: z.number(),
+  maxItems: z.number(),
+  'x-field-style': z.literal('pairing-food-list'),
+});
+
+export const whiskyCurationRequestSpecSchema = z.looseObject({
+  ...schemaNodeShape,
+  type: z.literal('object'),
+  required: z.array(z.string()),
+  properties: z.looseObject({
+    source: schemaNode,
+    alcohol: alcoholSchema,
+    comment: schemaNode,
+    pairings: pairingListSchema.optional(),
+  }),
+  minItems: z.number().default(1),
+  maxItems: z.number().optional(),
+  'x-container': z.literal('array'),
+  'x-form-style': z.literal('alcohol-list').optional(),
+  'x-field-style': z.literal('alcohol-card').optional(),
 });
 
 export const whiskyTastingEventAlcoholListSchema = z.looseObject({
@@ -118,6 +158,29 @@ const tastingEventAlcoholItemPayloadSchema = z.looseObject({
   alcohol: tastingEventAlcoholPayloadSchema,
   stats: tastingEventAlcoholStatsPayloadSchema,
   comment: z.string().nullable().optional(),
+});
+
+const pairingItemPayloadSchema = z.looseObject({
+  itemName: z.string(),
+  pairingNote: z.string(),
+  itemImageUrl: z.string().nullable().optional(),
+});
+
+export const whiskyCurationPayloadItemSchema = tastingEventAlcoholItemPayloadSchema.extend({
+  pairings: z.array(pairingItemPayloadSchema).optional(),
+});
+
+export const whiskyCurationPayloadSchema = z.array(whiskyCurationPayloadItemSchema);
+
+export const whiskyCurationFormSchema = z.looseObject({
+  name: z.string().min(1, '큐레이션명은 필수입니다.'),
+  description: z.string(),
+  imageUrls: z.array(z.string()).max(3, '이미지는 최대 3개까지 등록할 수 있습니다.'),
+  exposureStartDate: z.string(),
+  exposureEndDate: z.string(),
+  displayOrder: z.number().int().min(0, '노출 순서는 0 이상이어야 합니다.'),
+  isActive: z.boolean(),
+  alcohols: whiskyCurationPayloadSchema,
 });
 
 export const whiskyTastingEventPayloadSchema = z.looseObject({
@@ -321,6 +384,88 @@ function createAlcoholListValidationSchema(
     .max(spec.maxItems, `${displayName}는 최대 ${spec.maxItems}개까지 추가할 수 있습니다.`);
 }
 
+export function createWhiskyCurationFormValidationSchema(
+  requestSpec: WhiskyCurationRequestSpec
+) {
+  const alcoholDisplayName =
+    requestSpec.properties.alcohol['x-display-name'] ?? requestSpec['x-display-name'] ?? '라인업';
+  const selectedTagsSpec = requestSpec.properties.alcohol.properties.selectedTags;
+  const commentSpec = requestSpec.properties.comment;
+  const pairingsSpec = requestSpec.properties.pairings;
+
+  return whiskyCurationFormSchema.superRefine((values, context) => {
+    if (values.alcohols.length < requestSpec.minItems) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['alcohols'],
+        message: `${alcoholDisplayName}은 최소 ${requestSpec.minItems}개 이상 추가해야 합니다.`,
+      });
+    }
+
+    if (requestSpec.maxItems !== undefined && values.alcohols.length > requestSpec.maxItems) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['alcohols'],
+        message: `${alcoholDisplayName}은 최대 ${requestSpec.maxItems}개까지 추가할 수 있습니다.`,
+      });
+    }
+
+    values.alcohols.forEach((item, index) => {
+      addRequiredStringIssues(
+        item as Record<string, unknown>,
+        requestSpec.required,
+        requestSpec.properties,
+        context,
+        ['alcohols', index]
+      );
+      addRequiredStringIssues(
+        item.alcohol as Record<string, unknown>,
+        requestSpec.properties.alcohol.required,
+        requestSpec.properties.alcohol.properties,
+        context,
+        ['alcohols', index, 'alcohol']
+      );
+
+      if (item.alcohol.selectedTags.length > selectedTagsSpec.maxItems) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['alcohols', index, 'alcohol', 'selectedTags'],
+          message: `테이스팅 태그는 최대 ${selectedTagsSpec.maxItems}개까지 추가할 수 있습니다.`,
+        });
+      }
+
+      if (commentSpec.maxLength !== undefined && (item.comment?.length ?? 0) > commentSpec.maxLength) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['alcohols', index, 'comment'],
+          message: `코멘트는 최대 ${commentSpec.maxLength}자까지 입력할 수 있습니다.`,
+        });
+      }
+
+      if (!pairingsSpec) return;
+
+      const pairings = item.pairings ?? [];
+      if (pairings.length < pairingsSpec.minItems || pairings.length > pairingsSpec.maxItems) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['alcohols', index, 'pairings'],
+          message: `페어링 음식은 ${pairingsSpec.minItems}-${pairingsSpec.maxItems}개까지 추가할 수 있습니다.`,
+        });
+      }
+
+      pairings.forEach((pairing, pairingIndex) => {
+        addRequiredStringIssues(
+          pairing as Record<string, unknown>,
+          pairingsSpec.items.required,
+          pairingsSpec.items.properties,
+          context,
+          ['alcohols', index, 'pairings', pairingIndex]
+        );
+      });
+    });
+  });
+}
+
 export function createWhiskyTastingEventFormValidationSchema(
   requestSpec: WhiskyTastingEventRequestSpec
 ) {
@@ -414,6 +559,12 @@ export function createProgramFormValidationSchema(requestSpec: ProgramRequestSpe
 }
 
 export type WhiskyTastingEventRequestSpec = z.infer<typeof whiskyTastingEventRequestSpecSchema>;
+
+export type WhiskyCurationRequestSpec = z.infer<typeof whiskyCurationRequestSpecSchema>;
+
+export type WhiskyCurationPayload = z.infer<typeof whiskyCurationPayloadSchema>;
+
+export type WhiskyCurationFormValues = z.infer<typeof whiskyCurationFormSchema>;
 
 export type WhiskyTastingEventAlcoholListSchema = z.infer<
   typeof whiskyTastingEventAlcoholListSchema

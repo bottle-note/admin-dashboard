@@ -1,7 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 import type { CurationSpecSections, ProgramSectionConfig } from '../curation-sections';
-import type { ProgramListRequestSpec } from '../curation-spec.schema';
+import type {
+  ProgramListRequestSpec,
+  WhiskyCurationRequestSpec,
+} from '../curation-spec.schema';
+import { CurationSpecAlcoholCardListField } from './CurationSpecAlcoholCardListField';
 import { CurationSpecField } from './CurationSpecField';
 import { CurationSpecProgramListField } from './CurationSpecProgramListField';
 
@@ -33,6 +37,14 @@ export function CurationSpecRenderer({ sections }: { sections: CurationSpecSecti
                   required={field.required}
                   config={field.program as ProgramSectionConfig}
                 />
+              ) : field.schema['x-container'] === 'array' ? (
+                <CurationSpecAlcoholCardListField
+                  key={key}
+                  name={key}
+                  schema={field.schema as WhiskyCurationRequestSpec}
+                  required={field.required}
+                  config={field.alcohol}
+                />
               ) : (
                 <CurationSpecField
                   key={key}
@@ -44,6 +56,7 @@ export function CurationSpecRenderer({ sections }: { sections: CurationSpecSecti
                   disabledWhen={field.disabledWhen}
                   requiredWhen={field.requiredWhen}
                   optionLabels={field.optionLabels}
+                  alcoholConfig={field.alcohol}
                 />
               )
             )}

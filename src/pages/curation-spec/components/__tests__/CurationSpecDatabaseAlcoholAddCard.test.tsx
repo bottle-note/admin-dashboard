@@ -28,6 +28,11 @@ describe('CurationSpecDatabaseAlcoholAddCard', () => {
       <CurationSpecDatabaseAlcoholAddCard
         index={0}
         schema={schema}
+        config={{
+          itemLabel: '라인업',
+          emptyMessage: '라인업을 추가해주세요.',
+          fields: {},
+        }}
         required={false}
         excludeIds={[]}
         onAdd={onAdd}

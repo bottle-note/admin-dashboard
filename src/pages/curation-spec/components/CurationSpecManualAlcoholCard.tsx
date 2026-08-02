@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { S3UploadPath, useImageUpload } from '@/hooks/useImageUpload';
 import type { JsonSchemaNode } from '@/types/api';
 
+import type { AlcoholSectionConfig } from '../curation-sections';
 import type { WhiskyTastingEventAlcoholItemSchema } from '../curation-spec.schema';
 import { CurationSpecAlcoholCard } from './CurationSpecAlcoholCard';
 
@@ -15,6 +16,7 @@ export function CurationSpecManualAlcoholCard({
   name,
   index,
   schema,
+  config,
   required,
   isDragOver,
   onRemove,
@@ -30,6 +32,7 @@ export function CurationSpecManualAlcoholCard({
   name: string;
   index: number;
   schema: WhiskyTastingEventAlcoholItemSchema;
+  config: AlcoholSectionConfig;
   required: boolean;
   isDragOver: boolean;
   onRemove: () => void;
@@ -53,6 +56,7 @@ export function CurationSpecManualAlcoholCard({
       name={name}
       index={index}
       schema={schema}
+      config={config}
       required={required}
       imageUrl={alcohol.imageUrl as string}
       imageAlt={alcohol.korName as string}
@@ -71,41 +75,49 @@ export function CurationSpecManualAlcoholCard({
         <AlcoholTextField
           name={`${name}.alcohol.korName`}
           schema={alcoholFields.korName}
+          label={config.fields.korName?.label}
           required={alcoholSchema.required.includes('korName')}
         />
         <AlcoholTextField
           name={`${name}.alcohol.engName`}
           schema={alcoholFields.engName}
+          label={config.fields.engName?.label}
           required={alcoholSchema.required.includes('engName')}
         />
         <AlcoholImageField
           name={`${name}.alcohol.imageUrl`}
           schema={alcoholFields.imageUrl}
+          label={config.fields.imageUrl?.label}
           required={alcoholSchema.required.includes('imageUrl')}
         />
         <AlcoholTextField
           name={`${name}.alcohol.abv`}
           schema={alcoholFields.abv}
+          label={config.fields.abv?.label}
           required={alcoholSchema.required.includes('abv')}
         />
         <AlcoholTextField
           name={`${name}.alcohol.volume`}
           schema={alcoholFields.volume}
+          label={config.fields.volume?.label}
           required={alcoholSchema.required.includes('volume')}
         />
         <AlcoholTextField
           name={`${name}.alcohol.cask`}
           schema={alcoholFields.cask}
+          label={config.fields.cask?.label}
           required={alcoholSchema.required.includes('cask')}
         />
         <AlcoholTextField
           name={`${name}.alcohol.regionName`}
           schema={alcoholFields.regionName}
+          label={config.fields.regionName?.label}
           required={alcoholSchema.required.includes('regionName')}
         />
         <AlcoholTextField
           name={`${name}.alcohol.korCategory`}
           schema={alcoholFields.korCategory}
+          label={config.fields.korCategory?.label}
           required={alcoholSchema.required.includes('korCategory')}
           className="md:col-span-2"
         />
@@ -117,10 +129,12 @@ export function CurationSpecManualAlcoholCard({
 function AlcoholImageField({
   name,
   schema,
+  label,
   required,
 }: {
   name: string;
   schema: JsonSchemaNode;
+  label?: string;
   required: boolean;
 }) {
   const form = useFormContext<FieldValues>();
@@ -145,7 +159,7 @@ function AlcoholImageField({
 
   return (
     <FormField
-      label={schema.description as string}
+      label={label ?? (schema.description as string)}
       required={required}
       error={form.getFieldState(name, form.formState).error?.message ?? error?.message}
       className="md:col-span-2"
@@ -181,11 +195,13 @@ function AlcoholImageField({
 function AlcoholTextField({
   name,
   schema,
+  label,
   required,
   className,
 }: {
   name: string;
   schema: JsonSchemaNode;
+  label?: string;
   required: boolean;
   className?: string;
 }) {
@@ -193,7 +209,7 @@ function AlcoholTextField({
 
   return (
     <FormField
-      label={schema.description as string}
+      label={label ?? (schema.description as string)}
       required={required}
       error={form.getFieldState(name, form.formState).error?.message}
       className={className}

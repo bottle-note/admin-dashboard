@@ -5,7 +5,9 @@ import { Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
+import type { AlcoholSectionConfig } from '../curation-sections';
 import type {
+  WhiskyCurationRequestSpec,
   WhiskyTastingEventAlcoholListSchema,
   WhiskyTastingEventPayload,
 } from '../curation-spec.schema';
@@ -20,10 +22,12 @@ export function CurationSpecAlcoholCardListField({
   name,
   schema,
   required,
+  config,
 }: {
   name: string;
-  schema: WhiskyTastingEventAlcoholListSchema;
+  schema: WhiskyTastingEventAlcoholListSchema | WhiskyCurationRequestSpec;
   required: boolean;
+  config?: AlcoholSectionConfig;
 }) {
   const form = useFormContext<FieldValues>();
   const alcohols = useWatch({
@@ -34,8 +38,13 @@ export function CurationSpecAlcoholCardListField({
   const [isAdding, setIsAdding] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const itemSchema = schema.items;
-  const isMaxReached = alcohols.length >= schema.maxItems;
+  const itemSchema = schema.type === 'array' ? schema.items : schema;
+  const resolvedConfig: AlcoholSectionConfig = config ?? {
+    itemLabel: (schema['x-display-name'] as string | undefined) ?? '라인업',
+    emptyMessage: `${(schema['x-display-name'] as string | undefined) ?? '라인업'}을 추가해주세요.`,
+    fields: {},
+  };
+  const isMaxReached = schema.maxItems !== undefined && alcohols.length >= schema.maxItems;
   const selectedAlcoholIds = alcohols
     .map((item) => item.alcohol.alcoholId)
     .filter((alcoholId): alcoholId is number => typeof alcoholId === 'number');
@@ -109,7 +118,9 @@ export function CurationSpecAlcoholCardListField({
     <div className="space-y-4" onDragOver={handleAutoScroll}>
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
-          최대 {schema.maxItems}개까지 등록할 수 있습니다.
+          {schema.maxItems === undefined
+            ? `${schema.minItems}개 이상 등록할 수 있습니다.`
+            : `${schema.minItems}-${schema.maxItems}개까지 등록할 수 있습니다.`}
           {required && <span className="ml-1 text-destructive">*</span>}
         </p>
         <Badge variant="secondary">{alcohols.length}</Badge>
@@ -119,7 +130,7 @@ export function CurationSpecAlcoholCardListField({
 
       {alcoholFieldArray.fields.length === 0 && !isAdding ? (
         <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-          시음 위스키를 추가해주세요.
+          {resolvedConfig.emptyMessage}
         </div>
       ) : (
         <div className="space-y-3">
@@ -130,6 +141,7 @@ export function CurationSpecAlcoholCardListField({
                 name={`${name}.${index}`}
                 index={index}
                 schema={itemSchema}
+                config={resolvedConfig}
                 required={required}
                 isDragOver={dragOverIndex === index && draggedIndex !== index}
                 onRemove={() => alcoholFieldArray.remove(index)}
@@ -148,6 +160,7 @@ export function CurationSpecAlcoholCardListField({
                 name={`${name}.${index}`}
                 index={index}
                 schema={itemSchema}
+                config={resolvedConfig}
                 required={required}
                 isDragOver={dragOverIndex === index && draggedIndex !== index}
                 onRemove={() => alcoholFieldArray.remove(index)}
@@ -169,6 +182,7 @@ export function CurationSpecAlcoholCardListField({
         <CurationSpecDatabaseAlcoholAddCard
           index={alcohols.length}
           schema={itemSchema}
+          config={resolvedConfig}
           required={required}
           excludeIds={selectedAlcoholIds}
           onAdd={(item) => {

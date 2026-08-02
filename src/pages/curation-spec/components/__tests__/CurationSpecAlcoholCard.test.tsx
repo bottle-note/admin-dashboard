@@ -6,6 +6,7 @@ import { render } from '@/test/test-utils';
 
 import type { WhiskyTastingEventAlcoholItemSchema } from '../../curation-spec.schema';
 import { CurationSpecAlcoholCard } from '../CurationSpecAlcoholCard';
+import { CurationSpecManualAlcoholCard } from '../CurationSpecManualAlcoholCard';
 
 const schema = {
   required: [],
@@ -47,6 +48,11 @@ function TestForm() {
         name="alcohols.0"
         index={0}
         schema={schema}
+        config={{
+          itemLabel: '라인업',
+          emptyMessage: '라인업을 추가해주세요.',
+          fields: {},
+        }}
         required={false}
         imageUrl=""
         imageAlt="테스트 위스키"
@@ -68,11 +74,108 @@ function TestForm() {
 }
 
 describe('CurationSpecAlcoholCard', () => {
+  it('section 설정의 항목 라벨을 카드 제목에 사용한다', () => {
+    render(<TestForm />);
+
+    expect(screen.getByRole('heading', { name: '라인업 1' })).toBeInTheDocument();
+    expect(screen.queryByText('시음 위스키 1')).not.toBeInTheDocument();
+  });
+
   it('테이스팅 태그를 스키마 required 여부와 관계없이 선택 입력으로 표시한다', () => {
     render(<TestForm />);
 
     const tastingTagLabel = screen.getByText('테이스팅 태그');
     expect(tastingTagLabel).not.toHaveTextContent('*');
     expect(screen.getByText('0/12')).toBeInTheDocument();
+  });
+});
+
+const manualSchema = {
+  required: [],
+  properties: {
+    alcohol: {
+      required: ['korName'],
+      properties: {
+        korName: { description: '위스키 한글명' },
+        engName: { description: '위스키 영문명' },
+        imageUrl: { description: '위스키 이미지' },
+        abv: { description: '도수' },
+        volume: { description: '용량' },
+        cask: { description: '캐스크' },
+        regionName: { description: '지역' },
+        korCategory: { description: '카테고리' },
+        selectedTags: {
+          maxItems: 12,
+          'x-display-name': '테이스팅 태그',
+        },
+      },
+    },
+    comment: {
+      maxLength: 500,
+      'x-display-name': '기대평',
+    },
+  },
+} as unknown as WhiskyTastingEventAlcoholItemSchema;
+
+function ManualAlcoholTestForm() {
+  const form = useForm({
+    defaultValues: {
+      alcohols: [
+        {
+          alcohol: {
+            korName: '',
+            engName: '',
+            imageUrl: '',
+            abv: '',
+            volume: '',
+            cask: '',
+            regionName: '',
+            korCategory: '',
+            selectedTags: [],
+          },
+          comment: '',
+        },
+      ],
+    },
+  });
+
+  return (
+    <FormProvider {...form}>
+      <CurationSpecManualAlcoholCard
+        name="alcohols.0"
+        index={0}
+        schema={manualSchema}
+        config={{
+          itemLabel: '라인업',
+          emptyMessage: '라인업을 추가해주세요.',
+          fields: {
+            korName: { label: '한글명' },
+            engName: { label: '영문명' },
+          },
+        }}
+        required={false}
+        isDragOver={false}
+        onRemove={vi.fn()}
+        onMoveUp={vi.fn()}
+        onMoveDown={vi.fn()}
+        canMoveUp={false}
+        canMoveDown={false}
+        onDragStart={vi.fn()}
+        onDragOver={vi.fn()}
+        onDrop={vi.fn()}
+        onDragEnd={vi.fn()}
+      />
+    </FormProvider>
+  );
+}
+
+describe('CurationSpecManualAlcoholCard', () => {
+  it('section 커스텀 라벨을 서버 description보다 우선한다', () => {
+    render(<ManualAlcoholTestForm />);
+
+    expect(screen.getByText('한글명')).toBeInTheDocument();
+    expect(screen.getByText('영문명')).toBeInTheDocument();
+    expect(screen.queryByText('위스키 한글명')).not.toBeInTheDocument();
+    expect(screen.queryByText('위스키 영문명')).not.toBeInTheDocument();
   });
 });

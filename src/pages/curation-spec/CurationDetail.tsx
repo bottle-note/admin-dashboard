@@ -8,12 +8,19 @@ import { CurationSpecCode, type CurationV2Detail } from '@/types/api';
 
 import { CurationSpecProgramForm } from './components/CurationSpecProgramForm';
 import { CurationSpecTastingEventForm } from './components/CurationSpecTastingEventForm';
+import { CurationSpecWhiskyCurationForm } from './components/CurationSpecWhiskyCurationForm';
 import {
   programPayloadSchema,
   programRequestSpecSchema,
+  whiskyCurationPayloadSchema,
+  whiskyCurationRequestSpecSchema,
   whiskyTastingEventPayloadSchema,
   whiskyTastingEventRequestSpecSchema,
 } from './curation-spec.schema';
+import {
+  getRecommendedWhiskySections,
+  getWhiskyPairingSections,
+} from './curation-sections';
 
 export function CurationDetail() {
   const navigate = useNavigate();
@@ -158,18 +165,99 @@ function CurationDetailContent({
         />
       );
     }
-    case CurationSpecCode.RECOMMENDED_WHISKY:
-    case CurationSpecCode.WHISKY_PAIRING:
+    case CurationSpecCode.RECOMMENDED_WHISKY: {
+      const requestSpec = whiskyCurationRequestSpecSchema.safeParse(curation.spec.requestSpec);
+      const payload = whiskyCurationPayloadSchema.safeParse(curation.payload);
+
+      if (!requestSpec.success || !payload.success) {
+        return <InvalidCurationSpec specName="추천 위스키" onBack={onBack} />;
+      }
+
       return (
-        <div className="space-y-6">
-          <DetailPageHeader title={`[${curation.spec.name}] ${curation.name}`} onBack={onBack} />
-        </div>
+        <CurationSpecWhiskyCurationForm
+          spec={curation.spec}
+          curationId={curation.id}
+          requestSpec={requestSpec.data}
+          sections={getRecommendedWhiskySections(requestSpec.data)}
+          initialValues={createWhiskyCurationInitialValues(curation, payload.data)}
+          onBack={onBack}
+        />
       );
+    }
+    case CurationSpecCode.WHISKY_PAIRING: {
+      const requestSpec = whiskyCurationRequestSpecSchema.safeParse(curation.spec.requestSpec);
+      const payload = whiskyCurationPayloadSchema.safeParse(curation.payload);
+
+      if (!requestSpec.success || !payload.success) {
+        return <InvalidCurationSpec specName="위스키 페어링" onBack={onBack} />;
+      }
+
+      return (
+        <CurationSpecWhiskyCurationForm
+          spec={curation.spec}
+          curationId={curation.id}
+          requestSpec={requestSpec.data}
+          sections={getWhiskyPairingSections(requestSpec.data)}
+          initialValues={createWhiskyCurationInitialValues(curation, payload.data)}
+          onBack={onBack}
+        />
+      );
+    }
   }
 
   return (
     <div className="space-y-6">
       <DetailPageHeader title={`[${curation.spec.name}] ${curation.name}`} onBack={onBack} />
+    </div>
+  );
+}
+
+function createWhiskyCurationInitialValues(
+  curation: CurationV2Detail,
+  alcohols: ReturnType<typeof whiskyCurationPayloadSchema.parse>
+) {
+  return {
+    name: curation.name,
+    description: curation.description ?? '',
+    imageUrls: curation.imageUrls,
+    exposureStartDate: curation.exposureStartDate ?? '',
+    exposureEndDate: curation.exposureEndDate ?? '',
+    displayOrder: curation.displayOrder,
+    isActive: curation.isActive,
+    alcohols: alcohols.map((item) => ({
+      ...item,
+      alcohol: {
+        ...item.alcohol,
+        alcoholId: item.alcohol.alcoholId ?? null,
+        engName: item.alcohol.engName ?? '',
+        imageUrl: item.alcohol.imageUrl ?? '',
+        abv: item.alcohol.abv ?? '',
+        cask: item.alcohol.cask ?? '',
+        volume: item.alcohol.volume ?? '',
+        regionName: item.alcohol.regionName ?? '',
+        korCategory: item.alcohol.korCategory ?? '',
+      },
+      comment: item.comment ?? '',
+      pairings: item.pairings?.map((pairing) => ({
+        ...pairing,
+        itemImageUrl: pairing.itemImageUrl ?? '',
+      })),
+    })),
+  };
+}
+
+function InvalidCurationSpec({ specName, onBack }: { specName: string; onBack: () => void }) {
+  return (
+    <div className="space-y-6">
+      <DetailPageHeader title="큐레이션 상세" onBack={onBack} />
+      <Card className="shadow-none">
+        <CardContent className="p-6">
+          <h2 className="font-semibold">큐레이션 스펙을 해석하지 못했습니다.</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {specName} 스펙 또는 상세 데이터가 현재 화면의 계약과 일치하지 않습니다.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

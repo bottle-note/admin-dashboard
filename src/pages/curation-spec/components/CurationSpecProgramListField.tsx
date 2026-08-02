@@ -41,7 +41,7 @@ export function CurationSpecProgramListField({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
           {schema.minItems}-{schema.maxItems}개까지 등록할 수 있습니다.
@@ -52,7 +52,7 @@ export function CurationSpecProgramListField({
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         {programFieldArray.fields.map((field, index) => (
           <CurationSpecProgramCard
             key={field.id}

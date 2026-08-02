@@ -1,6 +1,7 @@
 import type { DragEvent } from 'react';
 import { useFormContext, useWatch, type FieldValues } from 'react-hook-form';
 
+import type { AlcoholSectionConfig } from '../curation-sections';
 import type { WhiskyTastingEventAlcoholItemSchema } from '../curation-spec.schema';
 import { CurationSpecAlcoholCard } from './CurationSpecAlcoholCard';
 
@@ -8,6 +9,7 @@ export function CurationSpecDatabaseAlcoholCard({
   name,
   index,
   schema,
+  config,
   required,
   isDragOver,
   onRemove,
@@ -23,6 +25,7 @@ export function CurationSpecDatabaseAlcoholCard({
   name: string;
   index: number;
   schema: WhiskyTastingEventAlcoholItemSchema;
+  config: AlcoholSectionConfig;
   required: boolean;
   isDragOver: boolean;
   onRemove: () => void;
@@ -44,6 +47,7 @@ export function CurationSpecDatabaseAlcoholCard({
       name={name}
       index={index}
       schema={schema}
+      config={config}
       required={required}
       imageUrl={alcohol.imageUrl as string}
       imageAlt={alcohol.korName as string}

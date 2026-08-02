@@ -1,6 +1,32 @@
 import type { JsonSchemaNode } from '@/types/api';
 
-import type { ProgramRequestSpec, WhiskyTastingEventRequestSpec } from './curation-spec.schema';
+import type {
+  ProgramRequestSpec,
+  WhiskyCurationRequestSpec,
+  WhiskyTastingEventRequestSpec,
+} from './curation-spec.schema';
+
+export type AlcoholSectionConfig = {
+  itemLabel: string;
+  emptyMessage: string;
+  fields: Partial<
+    Record<
+      | 'korName'
+      | 'engName'
+      | 'imageUrl'
+      | 'abv'
+      | 'volume'
+      | 'cask'
+      | 'regionName'
+      | 'korCategory'
+      | 'selectedTags'
+      | 'comment',
+      {
+        label?: string;
+      }
+    >
+  >;
+};
 
 export type CurationSpecSections = Record<
   string,
@@ -23,6 +49,20 @@ export type CurationSpecSections = Record<
           equals: unknown;
         };
         optionLabels?: Record<string, string>;
+        alcohol?: AlcoholSectionConfig;
+        pairing?: {
+          itemLabel: string;
+          addButtonLabel: string;
+          fields: Partial<
+            Record<
+              'itemName' | 'pairingNote' | 'itemImageUrl',
+              {
+                label?: string;
+                placeholder?: string;
+              }
+            >
+          >;
+        };
         // code가 프로그램인 경우.
         program?: {
           itemLabel: string;
@@ -34,6 +74,7 @@ export type CurationSpecSections = Record<
               optionLabels?: Record<string, string>;
               title?: string;
               subtitle?: string;
+              alcohol?: AlcoholSectionConfig;
             }
           >;
         };
@@ -41,6 +82,51 @@ export type CurationSpecSections = Record<
     >;
   }
 >;
+
+export function getRecommendedWhiskySections(requestSpec: WhiskyCurationRequestSpec) {
+  return {
+    라인업: {
+      subtitle: '큐레이션에 노출할 라인업을 입력해주세요.',
+      contentClassName: 'space-y-4',
+      fields: {
+        alcohols: {
+          schema: requestSpec as JsonSchemaNode,
+          required: true,
+        },
+      },
+    },
+  } satisfies CurationSpecSections;
+}
+
+export function getWhiskyPairingSections(requestSpec: WhiskyCurationRequestSpec) {
+  return {
+    라인업: {
+      subtitle: '페어링할 라인업과 음식을 입력해주세요.',
+      contentClassName: 'space-y-4',
+      fields: {
+        alcohols: {
+          schema: requestSpec as JsonSchemaNode,
+          required: true,
+          pairing: {
+            itemLabel: '페어링 음식',
+            addButtonLabel: '페어링 음식 추가',
+            fields: {
+              itemName: {
+                label: '음식명',
+                placeholder: '예: 바닐라 아이스크림',
+              },
+              pairingNote: {
+                label: '페어링 설명',
+                placeholder: '라인업의 풍미와 잘 어울리는 이유를 입력해주세요.',
+              },
+              itemImageUrl: { label: '음식 이미지' },
+            },
+          },
+        },
+      },
+    },
+  } satisfies CurationSpecSections;
+}
 
 export function getWhiskyTastingEventSections(requestSpec: WhiskyTastingEventRequestSpec) {
   const fields = requestSpec.properties;
@@ -126,8 +212,8 @@ export function getWhiskyTastingEventSections(requestSpec: WhiskyTastingEventReq
         },
       },
     },
-    '시음 위스키': {
-      subtitle: '시음회에 사용될 위스키를 입력해주세요.',
+    라인업: {
+      subtitle: '시음회에 사용될 라인업을 입력해주세요.',
       contentClassName: 'space-y-4',
       fields: {
         alcohols: {
@@ -247,14 +333,24 @@ export function getProgramSections(requestSpec: ProgramRequestSpec) {
                 },
               },
               description: {
-                className: 'md:col-span-2',
+                className: 'min-w-0 md:col-span-2',
               },
               applicationUrl: {
-                className: 'md:col-span-2',
+                className: 'min-w-0 md:col-span-2',
               },
               whiskies: {
-                title: '술 목록',
-                subtitle: '프로그램에서 소개할 위스키를 등록해주세요.',
+                title: '라인업',
+                subtitle: '프로그램에서 소개할 라인업을 등록해주세요.',
+                alcohol: {
+                  itemLabel: '라인업',
+                  emptyMessage: '라인업을 추가해주세요.',
+                  fields: {
+                    korName: { label: '한글명' },
+                    engName: { label: '영문명' },
+                    imageUrl: { label: '이미지' },
+                    comment: { label: '기대평' },
+                  },
+                },
               },
             },
           },

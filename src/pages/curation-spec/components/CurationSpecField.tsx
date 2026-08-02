@@ -15,6 +15,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import type { JsonSchemaNode } from '@/types/api';
 
+import type { AlcoholSectionConfig } from '../curation-sections';
 import type { WhiskyTastingEventAlcoholListSchema } from '../curation-spec.schema';
 import { CurationSpecAlcoholCardListField } from './CurationSpecAlcoholCardListField';
 
@@ -27,6 +28,7 @@ export function CurationSpecField({
   disabledWhen,
   requiredWhen,
   optionLabels,
+  alcoholConfig,
 }: {
   name: string;
   schema: JsonSchemaNode;
@@ -42,6 +44,7 @@ export function CurationSpecField({
     equals: unknown;
   };
   optionLabels?: Record<string, string>;
+  alcoholConfig?: AlcoholSectionConfig;
 }) {
   const form = useFormContext<FieldValues>();
   const fieldValue = useWatch({ control: form.control, name });
@@ -71,6 +74,7 @@ export function CurationSpecField({
         name={name}
         schema={schema as WhiskyTastingEventAlcoholListSchema}
         required={isRequired}
+        config={alcoholConfig}
       />
     );
   }
@@ -170,7 +174,7 @@ export function CurationSpecField({
             const id = `${name}-${option}`;
 
             return (
-              <div key={option}>
+              <div key={option} className="relative">
                 <Checkbox
                   id={id}
                   className="peer sr-only"
