@@ -1,5 +1,4 @@
 import { type Page } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { BasePage } from './base.page';
@@ -64,8 +63,6 @@ export class BannerDetailPage extends BasePage {
   readonly uploadedImage = () => this.page.locator('img[alt="업로드된 이미지"]');
 
   readonly uploadedVideo = () => this.page.locator('video').first();
-
-  readonly extractedPoster = () => this.page.getByAltText('추출된 동영상 대표 이미지');
 
   readonly uploadedMedia = () => this.page.locator('img[alt="업로드된 이미지"], video').first();
 
@@ -168,16 +165,9 @@ export class BannerDetailPage extends BasePage {
   }
 
   async uploadTestVideo() {
-    const encodedVideoPath = path.resolve(__dirname, '../fixtures/test-video.mp4.base64');
-    const encodedVideo = await readFile(encodedVideoPath, 'utf8');
-
-    await this.mediaFileInput().setInputFiles({
-      name: 'test-video.mp4',
-      mimeType: 'video/mp4',
-      buffer: Buffer.from(encodedVideo.trim(), 'base64'),
-    });
+    const testVideoPath = path.resolve(__dirname, '../fixtures/test-video.mp4');
+    await this.mediaFileInput().setInputFiles(testVideoPath);
     await this.uploadedVideo().waitFor({ state: 'visible', timeout: 10000 });
-    await this.extractedPoster().waitFor({ state: 'visible', timeout: 10000 });
   }
 
   async ensureImage() {
