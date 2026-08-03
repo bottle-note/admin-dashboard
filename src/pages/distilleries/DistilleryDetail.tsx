@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
-import { ImageUpload } from '@/components/common/ImageUpload';
+import { MediaUpload } from '@/components/common/MediaUpload';
 import { FormField } from '@/components/common/FormField';
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
 import { RelatedWhiskyLookupCard } from '@/components/common/RelatedWhiskyLookupCard';
@@ -26,7 +26,7 @@ import {
   useDistilleryUpdate,
   useDistilleryDelete,
 } from '@/hooks/useDistilleries';
-import { useImageUpload, S3UploadPath } from '@/hooks/useImageUpload';
+import { useFileUpload, S3UploadPath } from '@/hooks/useFileUpload';
 
 import {
   distilleryFormSchema,
@@ -45,7 +45,7 @@ export function DistilleryDetailPage() {
   const { data: detailData, isLoading } = useDistilleryDetail(distilleryId);
 
   // 이미지 업로드 (S3 Presigned URL)
-  const { upload: uploadImage, isUploading: isImageUploading } = useImageUpload({
+  const { upload: uploadImage, isUploading: isImageUploading } = useFileUpload({
     rootPath: S3UploadPath.DISTILLERY,
   });
 
@@ -199,9 +199,9 @@ export function DistilleryDetailPage() {
                 <CardDescription>증류소 이미지를 업로드합니다. (선택)</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <ImageUpload
-                  imageUrl={imagePreviewUrl}
-                  onImageChange={handleImageChange}
+                <MediaUpload
+                  mediaUrl={imagePreviewUrl}
+                  onMediaChange={handleImageChange}
                   minHeight={150}
                 />
                 {isImageUploading && (

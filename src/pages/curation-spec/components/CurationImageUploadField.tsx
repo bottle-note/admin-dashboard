@@ -3,7 +3,7 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { GripVertical, Upload, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { S3UploadPath, useImageUpload } from '@/hooks/useImageUpload';
+import { S3UploadPath, useFileUpload } from '@/hooks/useFileUpload';
 
 const MAX_IMAGE_COUNT = 3;
 const IMAGE_UPLOAD_ACCEPT = 'image/png,image/jpeg,image/webp';
@@ -32,7 +32,7 @@ export function CurationImageUploadField({ onUploadingChange }: CurationImageUpl
   });
   const imageUrls = watchedImageUrls ?? EMPTY_IMAGE_URLS;
 
-  const { uploadMultiple: uploadImages, isUploading: isImageUploading } = useImageUpload({
+  const { uploadMultiple: uploadImages, isUploading: isImageUploading } = useFileUpload({
     rootPath: S3UploadPath.CURATION,
   });
 

@@ -23,7 +23,7 @@ import {
 } from '@/components/common/PreparedImageField';
 import { RelatedWhiskyLookupCard } from '@/components/common/RelatedWhiskyLookupCard';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
-import { useImageUpload, S3UploadPath } from '@/hooks/useImageUpload';
+import { useFileUpload, S3UploadPath } from '@/hooks/useFileUpload';
 import {
   useRegionCreate,
   useRegionDelete,
@@ -93,7 +93,7 @@ export function RegionDetailPage() {
     upload: uploadRegionImage,
     isUploading: isImageUploading,
     error: imageUploadError,
-  } = useImageUpload({
+  } = useFileUpload({
     rootPath: S3UploadPath.REGION,
   });
 

@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
-import { ImageUpload } from '@/components/common/ImageUpload';
+import { MediaUpload } from '@/components/common/MediaUpload';
 import { FormField } from '@/components/common/FormField';
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
 import {
@@ -302,9 +302,9 @@ export function TastingTagDetailPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ImageUpload
-                  imageUrl={iconBase64}
-                  onImageChange={handleIconChange}
+                <MediaUpload
+                  mediaUrl={iconBase64}
+                  onMediaChange={handleIconChange}
                   minHeight={150}
                 />
               </CardContent>

@@ -16,11 +16,7 @@ import {
   useBannerUpdate,
 } from '@/hooks/useBanners';
 
-import {
-  bannerFormSchema,
-  DEFAULT_BANNER_FORM,
-  isAlwaysVisibleDate,
-} from './banner.schema';
+import { bannerFormSchema, DEFAULT_BANNER_FORM, isAlwaysVisibleDate } from './banner.schema';
 import type { BannerFormValues } from './banner.schema';
 import type { BannerDetail } from '@/types/api';
 import { extractCurationIdFromTargetUrl } from './banner-curation-link';
@@ -34,7 +30,7 @@ export interface UseBannerDetailFormReturn {
   isNewMode: boolean;
   isPending: boolean;
   bannerData: BannerDetail | undefined;
-  onSubmit: (data: BannerFormValues, options?: { imagePreviewUrl: string | null }) => void;
+  onSubmit: (data: BannerFormValues) => void;
   handleBack: () => void;
   handleDelete: () => void;
 }
@@ -95,6 +91,7 @@ export function useBannerDetailForm(id: string | undefined): UseBannerDetailForm
         isActive: bannerData.isActive,
         mediaType: bannerData.mediaType ?? 'IMAGE',
         imageUrl: bannerData.imageUrl ?? '',
+        posterUrl: bannerData.posterUrl ?? undefined,
         descriptionA: bannerData.descriptionA ?? '',
         descriptionB: bannerData.descriptionB ?? '',
         textPosition: bannerData.textPosition,
@@ -110,16 +107,14 @@ export function useBannerDetailForm(id: string | undefined): UseBannerDetailForm
     }
   }, [bannerData, form]);
 
-  const onSubmit = (
-    data: BannerFormValues,
-    options?: { imagePreviewUrl: string | null }
-  ) => {
+  const onSubmit = (data: BannerFormValues) => {
     const commonFields = {
       name: data.name,
       bannerType: data.bannerType,
       isActive: data.isActive,
       mediaType: data.mediaType,
-      imageUrl: data.imageUrl || options?.imagePreviewUrl || '',
+      imageUrl: data.imageUrl,
+      ...(data.mediaType === 'VIDEO' && data.posterUrl ? { posterUrl: data.posterUrl } : {}),
       descriptionA: data.descriptionA ?? '',
       descriptionB: data.descriptionB ?? '',
       textPosition: data.textPosition,

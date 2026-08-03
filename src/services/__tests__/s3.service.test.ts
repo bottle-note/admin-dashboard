@@ -70,7 +70,7 @@ describe('s3Service', () => {
     });
   });
 
-  describe('uploadImage', () => {
+  describe('uploadFile', () => {
     let capturedContentType: string | null;
     let capturedUploadContentType: string | null;
 
@@ -99,7 +99,7 @@ describe('s3Service', () => {
     it('이미지 파일 업로드 시 file.type이 contentType으로 전달된다', async () => {
       const file = new File(['test'], 'banner.webp', { type: 'image/webp' });
 
-      await s3Service.uploadImage(file, 'admin/banner');
+      await s3Service.uploadFile(file, 'admin/banner');
 
       expect(capturedContentType).toBe('image/webp');
     });
@@ -107,7 +107,7 @@ describe('s3Service', () => {
     it('동영상 파일 업로드 시 file.type이 contentType으로 전달된다', async () => {
       const file = new File(['test'], 'banner.mp4', { type: 'video/mp4' });
 
-      await s3Service.uploadImage(file, 'admin/banner');
+      await s3Service.uploadFile(file, 'admin/banner');
 
       expect(capturedContentType).toBe('video/mp4');
     });
@@ -115,7 +115,7 @@ describe('s3Service', () => {
     it('명시적 contentType이 file.type보다 우선한다', async () => {
       const file = new File(['test'], 'banner.mp4', { type: 'video/mp4' });
 
-      await s3Service.uploadImage(file, 'admin/banner', 'video/webm');
+      await s3Service.uploadFile(file, 'admin/banner', 'video/webm');
 
       expect(capturedContentType).toBe('video/webm');
     });
@@ -123,7 +123,7 @@ describe('s3Service', () => {
     it('S3 PUT 요청에 올바른 Content-Type 헤더가 포함된다', async () => {
       const file = new File(['test'], 'banner.mp4', { type: 'video/mp4' });
 
-      await s3Service.uploadImage(file, 'admin/banner');
+      await s3Service.uploadFile(file, 'admin/banner');
 
       expect(capturedUploadContentType).toBe('video/mp4');
     });
@@ -131,7 +131,7 @@ describe('s3Service', () => {
     it('명시적 contentType이 presign과 S3 PUT 양쪽에 일치하게 전달된다', async () => {
       const file = new File(['test'], 'banner.mp4', { type: 'video/mp4' });
 
-      await s3Service.uploadImage(file, 'admin/banner', 'video/webm');
+      await s3Service.uploadFile(file, 'admin/banner', 'video/webm');
 
       expect(capturedContentType).toBe('video/webm');
       expect(capturedUploadContentType).toBe('video/webm');
@@ -140,13 +140,13 @@ describe('s3Service', () => {
     it('업로드 성공 시 viewUrl을 반환한다', async () => {
       const file = new File(['test'], 'banner.jpg', { type: 'image/jpeg' });
 
-      const viewUrl = await s3Service.uploadImage(file, 'admin/banner');
+      const viewUrl = await s3Service.uploadFile(file, 'admin/banner');
 
       expect(viewUrl).toBe('https://cdn.example.com/admin/banner/test-uuid.jpg');
     });
   });
 
-  describe('uploadImages', () => {
+  describe('uploadFiles', () => {
     it('각 파일별 contentType으로 presign을 발급하고 같은 Content-Type으로 PUT 업로드한다', async () => {
       const capturedPresignContentTypes: Array<string | null> = [];
       const capturedUploadContentTypes: Array<string | null> = [];
@@ -183,7 +183,7 @@ describe('s3Service', () => {
         new File(['webp'], 'two.webp', { type: 'image/webp' }),
       ];
 
-      const viewUrls = await s3Service.uploadImages(files, 'admin/curation');
+      const viewUrls = await s3Service.uploadFiles(files, 'admin/curation');
 
       expect(capturedPresignContentTypes).toEqual(['image/png', 'image/webp']);
       expect(capturedUploadContentTypes).toEqual(['image/png', 'image/webp']);

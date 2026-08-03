@@ -6,7 +6,7 @@ import { FormField } from '@/components/common/FormField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useImageUpload } from '@/hooks/useImageUpload';
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 import type { CurationSpecSections } from '../curation-sections.type';
 import type { WhiskyCurationPairingListSchema } from '../curation-spec.schema';
@@ -103,7 +103,7 @@ function PairingItem({
   const [isUploading, setIsUploading] = useState(false);
   const fields = schema.items.properties;
   const imageSchema = fields.itemImageUrl;
-  const { upload, error: uploadError } = useImageUpload({
+  const { upload, error: uploadError } = useFileUpload({
     rootPath: imageSchema?.['x-upload-path'] ?? 'admin/curation',
   });
   const itemNameLabel =

@@ -121,6 +121,8 @@ export interface BannerApiTypes {
       bannerType: BannerType;
       /** 이미지 URL */
       imageUrl: string;
+      /** 동영상 대표 이미지 URL */
+      posterUrl: string | null;
       /** 정렬 순서 */
       sortOrder: number;
       /** 노출 시작일시 (nullable = 상시노출) */
@@ -168,6 +170,8 @@ export interface BannerApiTypes {
       descriptionFontColor: string;
       /** 배너 이미지 URL */
       imageUrl: string;
+      /** 동영상 대표 이미지 URL */
+      posterUrl: string | null;
       /** 텍스트 위치 */
       textPosition: TextPosition;
       /** 클릭 시 이동할 URL */
@@ -208,6 +212,8 @@ export interface BannerApiTypes {
       descriptionFontColor: string;
       /** 배너 이미지 URL */
       imageUrl: string;
+      /** 동영상 대표 이미지 URL */
+      posterUrl?: string;
       /** 텍스트 위치 */
       textPosition: TextPosition;
       /** 클릭 시 이동할 URL */
@@ -255,6 +261,8 @@ export interface BannerApiTypes {
       descriptionFontColor: string;
       /** 배너 이미지 URL */
       imageUrl: string;
+      /** 동영상 대표 이미지 URL */
+      posterUrl?: string;
       /** 텍스트 위치 */
       textPosition: TextPosition;
       /** 클릭 시 이동할 URL */

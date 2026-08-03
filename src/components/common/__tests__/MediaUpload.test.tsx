@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { isFileTypeAllowed, isVideoFile, ImageUpload } from '../ImageUpload';
+import { isFileTypeAllowed, isVideoFile, MediaUpload } from '../MediaUpload';
 
 // ============================================
 // 1. 파일 검증 유틸리티 테스트
@@ -89,53 +89,14 @@ describe('isVideoFile', () => {
       expect(isVideoFile(null as unknown as File)).toBe(false);
     });
   });
-
-  describe('URL 오버로드', () => {
-    it('.mp4 확장자 → true', () => {
-      expect(isVideoFile('https://cdn.example.com/banner.mp4')).toBe(true);
-    });
-
-    it('.webm 확장자 → true', () => {
-      expect(isVideoFile('https://cdn.example.com/banner.webm')).toBe(true);
-    });
-
-    it('.mov 확장자 → true', () => {
-      expect(isVideoFile('https://cdn.example.com/banner.mov')).toBe(true);
-    });
-
-    it('쿼리 파라미터가 붙어도 정상 판별한다', () => {
-      expect(isVideoFile('https://cdn.example.com/banner.mp4?token=abc123')).toBe(true);
-    });
-
-    it('대소문자 무관하게 판별한다', () => {
-      expect(isVideoFile('https://cdn.example.com/banner.MP4')).toBe(true);
-    });
-
-    it('.jpg 확장자 → false', () => {
-      expect(isVideoFile('https://cdn.example.com/banner.jpg')).toBe(false);
-    });
-
-    it('확장자 없는 URL → false', () => {
-      expect(isVideoFile('https://cdn.example.com/banner')).toBe(false);
-    });
-
-    it('blob URL → false (확장자 없음)', () => {
-      expect(isVideoFile('blob:http://localhost:5173/abc-123-def')).toBe(false);
-    });
-
-    it('null → false', () => {
-      expect(isVideoFile(null as unknown as string)).toBe(false);
-    });
-  });
 });
 
 // ============================================
 // 3. 파일 거부 + 4. 미리보기 렌더링 분기
 // ============================================
 
-describe('ImageUpload 컴포넌트', () => {
-  const createFile = (name: string, type: string) =>
-    new File(['test'], name, { type });
+describe('MediaUpload 컴포넌트', () => {
+  const createFile = (name: string, type: string) => new File(['test'], name, { type });
 
   describe('파일 거부 시 콜백', () => {
     it('허용되지 않은 파일은 onFileRejected를 호출한다', () => {
@@ -143,9 +104,9 @@ describe('ImageUpload 컴포넌트', () => {
       const onFileRejected = vi.fn();
 
       render(
-        <ImageUpload
-          imageUrl={null}
-          onImageChange={onImageChange}
+        <MediaUpload
+          mediaUrl={null}
+          onMediaChange={onImageChange}
           accept="image/*"
           onFileRejected={onFileRejected}
         />
@@ -165,9 +126,9 @@ describe('ImageUpload 컴포넌트', () => {
       const onFileRejected = vi.fn();
 
       render(
-        <ImageUpload
-          imageUrl={null}
-          onImageChange={onImageChange}
+        <MediaUpload
+          mediaUrl={null}
+          onMediaChange={onImageChange}
           accept="image/*,video/mp4"
           onFileRejected={onFileRejected}
         />
@@ -185,12 +146,7 @@ describe('ImageUpload 컴포넌트', () => {
 
   describe('미리보기 렌더링 분기', () => {
     it('이미지 URL이면 <img> 태그를 렌더링한다', () => {
-      render(
-        <ImageUpload
-          imageUrl="https://cdn.example.com/banner.jpg"
-          onImageChange={vi.fn()}
-        />
-      );
+      render(<MediaUpload mediaUrl="https://cdn.example.com/banner.jpg" onMediaChange={vi.fn()} />);
 
       expect(screen.getByAltText('업로드된 이미지')).toBeInTheDocument();
       expect(document.querySelector('video')).toBeNull();
@@ -198,15 +154,16 @@ describe('ImageUpload 컴포넌트', () => {
 
     it('비디오 CDN URL이면 <video> 태그를 렌더링한다', () => {
       render(
-        <ImageUpload
-          imageUrl="https://cdn.example.com/banner.mp4"
-          onImageChange={vi.fn()}
+        <MediaUpload
+          mediaUrl="https://cdn.example.com/banner-without-extension"
+          mediaType="VIDEO"
+          onMediaChange={vi.fn()}
         />
       );
 
       const video = document.querySelector('video') as HTMLVideoElement;
       expect(video).toBeInTheDocument();
-      expect(video.getAttribute('src')).toBe('https://cdn.example.com/banner.mp4');
+      expect(video.getAttribute('src')).toBe('https://cdn.example.com/banner-without-extension');
       expect(video.hasAttribute('controls')).toBe(true);
       expect(video.loop).toBe(true);
       // muted는 React에서 DOM property로 설정됨 (hasAttribute로 확인 불가)
@@ -216,18 +173,19 @@ describe('ImageUpload 컴포넌트', () => {
     it('비디오 파일 업로드 시 blob URL이어도 <video> 태그를 렌더링한다', () => {
       const onImageChange = vi.fn();
 
-      render(
-        <ImageUpload
-          imageUrl={null}
-          onImageChange={onImageChange}
-          accept="image/*,video/mp4"
-        />
+      const { rerender } = render(
+        <MediaUpload mediaUrl={null} onMediaChange={onImageChange} accept="image/*,video/mp4" />
       );
 
       const input = document.querySelector('input[type="file"]')!;
       const mp4File = createFile('banner.mp4', 'video/mp4');
 
       fireEvent.change(input, { target: { files: [mp4File] } });
+
+      const blobUrl = onImageChange.mock.calls[0]?.[1] as string;
+      rerender(
+        <MediaUpload mediaUrl={blobUrl} onMediaChange={onImageChange} accept="image/*,video/mp4" />
+      );
 
       const video = document.querySelector('video');
       expect(video).toBeInTheDocument();
@@ -238,11 +196,7 @@ describe('ImageUpload 컴포넌트', () => {
       const onImageChange = vi.fn();
 
       const { rerender } = render(
-        <ImageUpload
-          imageUrl={null}
-          onImageChange={onImageChange}
-          accept="image/*,video/mp4"
-        />
+        <MediaUpload mediaUrl={null} onMediaChange={onImageChange} accept="image/*,video/mp4" />
       );
 
       // 1. 비디오 파일 업로드
@@ -258,11 +212,7 @@ describe('ImageUpload 컴포넌트', () => {
 
       // 3. 부모가 imageUrl prop을 blob URL로 다시 내려줌 (실제 앱 동작)
       rerender(
-        <ImageUpload
-          imageUrl={blobUrl}
-          onImageChange={onImageChange}
-          accept="image/*,video/mp4"
-        />
+        <MediaUpload mediaUrl={blobUrl} onMediaChange={onImageChange} accept="image/*,video/mp4" />
       );
 
       // 4. <video>가 유지되어야 함 (<img>로 바뀌면 엑박)
@@ -273,18 +223,19 @@ describe('ImageUpload 컴포넌트', () => {
     it('이미지 파일 업로드 시 <img> 태그를 렌더링한다', () => {
       const onImageChange = vi.fn();
 
-      render(
-        <ImageUpload
-          imageUrl={null}
-          onImageChange={onImageChange}
-          accept="image/*,video/mp4"
-        />
+      const { rerender } = render(
+        <MediaUpload mediaUrl={null} onMediaChange={onImageChange} accept="image/*,video/mp4" />
       );
 
       const input = document.querySelector('input[type="file"]')!;
       const jpgFile = createFile('banner.jpg', 'image/jpeg');
 
       fireEvent.change(input, { target: { files: [jpgFile] } });
+
+      const blobUrl = onImageChange.mock.calls[0]?.[1] as string;
+      rerender(
+        <MediaUpload mediaUrl={blobUrl} onMediaChange={onImageChange} accept="image/*,video/mp4" />
+      );
 
       expect(screen.getByAltText('업로드된 이미지')).toBeInTheDocument();
       expect(document.querySelector('video')).toBeNull();
@@ -293,22 +244,14 @@ describe('ImageUpload 컴포넌트', () => {
 
   describe('accept 속성', () => {
     it('기본값은 image/*', () => {
-      render(
-        <ImageUpload imageUrl={null} onImageChange={vi.fn()} />
-      );
+      render(<MediaUpload mediaUrl={null} onMediaChange={vi.fn()} />);
 
       const input = document.querySelector('input[type="file"]');
       expect(input?.getAttribute('accept')).toBe('image/*');
     });
 
     it('커스텀 accept가 반영된다', () => {
-      render(
-        <ImageUpload
-          imageUrl={null}
-          onImageChange={vi.fn()}
-          accept="image/*,video/mp4"
-        />
-      );
+      render(<MediaUpload mediaUrl={null} onMediaChange={vi.fn()} accept="image/*,video/mp4" />);
 
       const input = document.querySelector('input[type="file"]');
       expect(input?.getAttribute('accept')).toBe('image/*,video/mp4');
@@ -318,9 +261,9 @@ describe('ImageUpload 컴포넌트', () => {
   describe('커스텀 텍스트', () => {
     it('description과 supportText가 반영된다', () => {
       render(
-        <ImageUpload
-          imageUrl={null}
-          onImageChange={vi.fn()}
+        <MediaUpload
+          mediaUrl={null}
+          onMediaChange={vi.fn()}
           description="파일을 드래그하세요"
           supportText="MP4, PNG 지원"
         />

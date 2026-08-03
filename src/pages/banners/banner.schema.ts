@@ -41,43 +41,59 @@ function formatDateTime(date: Date, startOfDay: boolean): string {
 // ============================================
 
 /** 배너 폼 Zod 스키마 */
-export const bannerFormSchema = z.object({
-  name: z.string().min(1, '설명은 필수입니다'),
-  bannerType: z.enum(['SURVEY', 'CURATION', 'AD', 'PARTNERSHIP', 'ETC'], {
-    message: '배너 타입을 선택해주세요',
-  }),
-  isActive: z.boolean(),
-  mediaType: z.enum(['IMAGE', 'VIDEO'], {
-    message: '미디어 유형을 선택해주세요',
-  }),
-  imageUrl: z.string().min(1, '미디어 파일을 업로드해주세요'),
-  descriptionA: z.string(),
-  descriptionB: z.string(),
-  textPosition: z.enum(['LT', 'LB', 'RT', 'RB', 'CENTER'], {
-    message: '텍스트 위치를 선택해주세요',
-  }),
-  nameFontColor: z.string().regex(/^[0-9a-fA-F]{6}$/, '올바른 HEX 색상을 입력해주세요 (예: ffffff)'),
-  descriptionFontColor: z.string().regex(/^[0-9a-fA-F]{6}$/, '올바른 HEX 색상을 입력해주세요 (예: ffffff)'),
-  targetUrl: z.string(),
-  isExternalUrl: z.boolean(),
-  isAlwaysVisible: z.boolean(),
-  startDate: z.string({ error: '시작일을 입력해주세요' }).min(1, '시작일을 입력해주세요'),
-  endDate: z.string({ error: '종료일을 입력해주세요' }).min(1, '종료일을 입력해주세요'),
-  /** 큐레이션 ID (CURATION 타입인 경우에만 사용) */
-  curationId: z.number().nullable(),
-}).refine(
-  (data) => {
-    // CURATION 타입인 경우 큐레이션 선택 필수
-    if (data.bannerType === 'CURATION') {
-      return data.curationId !== null;
+export const bannerFormSchema = z
+  .object({
+    name: z.string().min(1, '설명은 필수입니다'),
+    bannerType: z.enum(['SURVEY', 'CURATION', 'AD', 'PARTNERSHIP', 'ETC'], {
+      message: '배너 타입을 선택해주세요',
+    }),
+    isActive: z.boolean(),
+    mediaType: z.enum(['IMAGE', 'VIDEO'], {
+      message: '미디어 유형을 선택해주세요',
+    }),
+    imageUrl: z.string().min(1, '미디어 파일을 업로드해주세요'),
+    posterUrl: z.string().min(1, '동영상 대표 이미지를 업로드해주세요').optional(),
+    descriptionA: z.string(),
+    descriptionB: z.string(),
+    textPosition: z.enum(['LT', 'LB', 'RT', 'RB', 'CENTER'], {
+      message: '텍스트 위치를 선택해주세요',
+    }),
+    nameFontColor: z
+      .string()
+      .regex(/^[0-9a-fA-F]{6}$/, '올바른 HEX 색상을 입력해주세요 (예: ffffff)'),
+    descriptionFontColor: z
+      .string()
+      .regex(/^[0-9a-fA-F]{6}$/, '올바른 HEX 색상을 입력해주세요 (예: ffffff)'),
+    targetUrl: z.string(),
+    isExternalUrl: z.boolean(),
+    isAlwaysVisible: z.boolean(),
+    startDate: z.string({ error: '시작일을 입력해주세요' }).min(1, '시작일을 입력해주세요'),
+    endDate: z.string({ error: '종료일을 입력해주세요' }).min(1, '종료일을 입력해주세요'),
+    /** 큐레이션 ID (CURATION 타입인 경우에만 사용) */
+    curationId: z.number().nullable(),
+  })
+  .refine(
+    (data) => {
+      // CURATION 타입인 경우 큐레이션 선택 필수
+      if (data.bannerType === 'CURATION') {
+        return data.curationId !== null;
+      }
+      return true;
+    },
+    {
+      message: '큐레이션을 선택해주세요',
+      path: ['curationId'],
     }
-    return true;
-  },
-  {
-    message: '큐레이션을 선택해주세요',
-    path: ['curationId'],
-  }
-);
+  )
+  .superRefine((data, context) => {
+    if (data.mediaType === 'VIDEO' && !data.posterUrl) {
+      context.addIssue({
+        code: 'custom',
+        path: ['posterUrl'],
+        message: '동영상 대표 이미지를 업로드해주세요',
+      });
+    }
+  });
 
 /** 배너 폼 타입 */
 export type BannerFormValues = z.infer<typeof bannerFormSchema>;
