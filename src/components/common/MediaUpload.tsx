@@ -1,5 +1,5 @@
 /**
- * 이미지 업로드 컴포넌트
+ * 이미지와 동영상 파일 선택 컴포넌트
  * - 드래그 앤 드롭 지원
  * - 클릭하여 파일 선택
  * - 미리보기 및 삭제 기능
@@ -27,64 +27,70 @@ export function isFileTypeAllowed(fileType: string, accept: string): boolean {
   });
 }
 
-/** 파일이 비디오 타입인지 확인 */
-export function isVideoFile(file: File | null): boolean;
-export function isVideoFile(url: string | null): boolean;
-export function isVideoFile(input: File | string | null): boolean {
-  if (!input) return false;
-  if (typeof input === 'string') {
-    return input.match(/\.(mp4|webm|mov)(\?|$)/i) !== null;
-  }
-  return input.type.startsWith('video/');
+/** 선택한 파일이 동영상인지 확인한다. */
+export function isVideoFile(file: File | null): boolean {
+  return file?.type.startsWith('video/') ?? false;
 }
 
 /**
- * ImageUpload 컴포넌트의 props
- * @param imageUrl - 현재 미디어 URL (초기값 또는 서버에서 로드된 값)
- * @param onImageChange - 미디어 변경 시 호출되는 콜백
+ * MediaUpload 컴포넌트의 props
+ * @param mediaUrl - 현재 미디어 URL (초기값 또는 서버에서 로드된 값)
+ * @param mediaType - 서버 URL의 미디어 유형. URL 확장자로 유형을 추론하지 않는다.
+ * @param onMediaChange - 미디어 변경 시 호출되는 콜백
  * @param minHeight - 최소 높이 (기본: 200px)
  * @param accept - 허용 파일 타입 (기본: 'image/*')
  * @param onFileRejected - 허용되지 않은 파일 업로드 시 콜백
  * @param description - 업로드 영역 안내 텍스트
  * @param supportText - 지원 포맷 안내 텍스트
  */
-export interface ImageUploadProps {
-  imageUrl: string | null;
-  onImageChange: (file: File | null, previewUrl: string | null) => void;
+export interface MediaUploadProps {
+  mediaUrl: string | null;
+  mediaType?: 'IMAGE' | 'VIDEO';
+  onMediaChange: (file: File | null, previewUrl: string | null) => void;
   minHeight?: number;
   accept?: string;
   onFileRejected?: (file: File) => void;
   description?: string;
   supportText?: string;
+  disabled?: boolean;
 }
 
-export function ImageUpload({
-  imageUrl,
-  onImageChange,
+export function MediaUpload({
+  mediaUrl,
+  mediaType = 'IMAGE',
+  onMediaChange,
   minHeight = 200,
   accept = DEFAULT_ACCEPT,
   onFileRejected,
   description = '이미지를 드래그하거나 클릭하여 업로드',
   supportText = 'PNG, JPG, WEBP 지원',
-}: ImageUploadProps) {
+  disabled = false,
+}: MediaUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(imageUrl);
-  const [isVideo, setIsVideo] = useState(() => isVideoFile(imageUrl));
+  const [selectedMediaType, setSelectedMediaType] = useState<'IMAGE' | 'VIDEO' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const blobUrlRef = useRef<string | null>(null);
+  const isVideo = mediaUrl?.startsWith('blob:')
+    ? selectedMediaType === 'VIDEO'
+    : mediaType === 'VIDEO';
 
   useEffect(() => {
-    setPreviewUrl(imageUrl);
-    if (!imageUrl) {
-      setIsVideo(false);
-    } else if (!imageUrl.startsWith('blob:')) {
-      // CDN URL은 확장자로 판별, blob URL은 handleFile에서 설정한 값을 유지
-      setIsVideo(isVideoFile(imageUrl));
+    return () => {
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (blobUrlRef.current && mediaUrl !== blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
     }
-  }, [imageUrl]);
+  }, [mediaUrl]);
 
   const handleFile = useCallback(
     (file: File) => {
+      if (disabled) return;
+
       if (!isFileTypeAllowed(file.type, accept)) {
         onFileRejected?.(file);
         return;
@@ -93,17 +99,17 @@ export function ImageUpload({
       if (blobUrlRef.current) {
         URL.revokeObjectURL(blobUrlRef.current);
       }
-      setIsVideo(file.type.startsWith('video/'));
+      setSelectedMediaType(file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE');
       const url = URL.createObjectURL(file);
       blobUrlRef.current = url;
-      setPreviewUrl(url);
-      onImageChange(file, url);
+      onMediaChange(file, url);
     },
-    [accept, onFileRejected, onImageChange]
+    [accept, disabled, onFileRejected, onMediaChange]
   );
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    if (disabled) return;
     setIsDragging(true);
   };
 
@@ -115,6 +121,7 @@ export function ImageUpload({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
+    if (disabled) return;
 
     const file = e.dataTransfer.files[0];
     if (file) {
@@ -130,13 +137,14 @@ export function ImageUpload({
   };
 
   const handleRemove = () => {
+    if (disabled) return;
+
     if (blobUrlRef.current) {
       URL.revokeObjectURL(blobUrlRef.current);
       blobUrlRef.current = null;
     }
-    setPreviewUrl(null);
-    setIsVideo(false);
-    onImageChange(null, null);
+    setSelectedMediaType(null);
+    onMediaChange(null, null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -144,11 +152,11 @@ export function ImageUpload({
 
   return (
     <div className="space-y-4">
-      {previewUrl ? (
+      {mediaUrl ? (
         <div className="relative">
           {isVideo ? (
             <video
-              src={previewUrl}
+              src={mediaUrl}
               className="w-full rounded-lg border"
               controls
               muted
@@ -156,13 +164,14 @@ export function ImageUpload({
               playsInline
             />
           ) : (
-            <img src={previewUrl} alt="업로드된 이미지" className="w-full rounded-lg border" />
+            <img src={mediaUrl} alt="업로드된 이미지" className="w-full rounded-lg border" />
           )}
           <Button
             type="button"
             variant="destructive"
             size="icon"
             className="absolute right-2 top-2 h-8 w-8"
+            disabled={disabled}
             onClick={handleRemove}
           >
             <X className="h-4 w-4" />
@@ -170,7 +179,9 @@ export function ImageUpload({
         </div>
       ) : (
         <div
-          className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
+          className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
+            disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+          } ${
             isDragging
               ? 'border-primary bg-primary/5'
               : 'border-muted-foreground/25 hover:border-primary/50'
@@ -179,7 +190,9 @@ export function ImageUpload({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => {
+            if (!disabled) fileInputRef.current?.click();
+          }}
         >
           <Upload className="mb-2 h-10 w-10 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">{description}</p>
@@ -190,6 +203,7 @@ export function ImageUpload({
         ref={fileInputRef}
         type="file"
         accept={accept}
+        disabled={disabled}
         className="hidden"
         onChange={handleFileSelect}
       />

@@ -1,7 +1,4 @@
-/**
- * S3 이미지 업로드 서비스
- * Presigned URL을 통한 S3 직접 업로드 처리
- */
+/** Presigned URL을 통한 S3 파일 업로드 서비스 */
 
 import { apiClient } from '@/lib/api-client';
 import { S3Api, type PresignUrlParams, type PresignUrlResponse } from '@/types/api/s3.api';
@@ -45,15 +42,8 @@ export const s3Service = {
     }
   },
 
-  /**
-   * 이미지 업로드 (Presigned URL 발급 + S3 업로드 통합)
-   * 단일 이미지 업로드 시 편의를 위한 통합 메서드
-   *
-   * @param file - 업로드할 파일
-   * @param rootPath - 업로드 경로
-   * @returns CDN 조회 URL (viewUrl)
-   */
-  uploadImage: async (file: File, rootPath: string, contentType?: string): Promise<string> => {
+  /** Presigned URL을 발급해 파일 하나를 업로드하고 CDN 조회 URL을 반환한다. */
+  uploadFile: async (file: File, rootPath: string, contentType?: string): Promise<string> => {
     // 1. Presigned URL 발급
     const presignResponse = await s3Service.getPresignedUrls({
       rootPath,
@@ -74,17 +64,10 @@ export const s3Service = {
     return uploadInfo.viewUrl;
   },
 
-  /**
-   * 다중 이미지 업로드
-   * 여러 이미지를 병렬로 업로드
-   *
-   * @param files - 업로드할 파일 배열
-   * @param rootPath - 업로드 경로
-   * @returns CDN 조회 URL 배열 (순서 보장)
-   */
-  uploadImages: async (files: File[], rootPath: string): Promise<string[]> => {
+  /** 여러 파일을 병렬로 업로드하고 입력 순서대로 CDN 조회 URL을 반환한다. */
+  uploadFiles: async (files: File[], rootPath: string): Promise<string[]> => {
     if (files.length === 0) return [];
 
-    return Promise.all(files.map((file) => s3Service.uploadImage(file, rootPath)));
+    return Promise.all(files.map((file) => s3Service.uploadFile(file, rootPath)));
   },
 };

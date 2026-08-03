@@ -5,7 +5,7 @@
 
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ImageUpload } from '@/components/common/ImageUpload';
+import { MediaUpload } from '@/components/common/MediaUpload';
 
 /**
  * WhiskyImageCard 컴포넌트의 props
@@ -44,7 +44,11 @@ export function WhiskyImageCard({
         <CardDescription>이미지를 드래그하거나 클릭하여 업로드합니다.</CardDescription>
       </CardHeader>
       <CardContent className={disabled ? 'pointer-events-none opacity-60' : ''}>
-        <ImageUpload imageUrl={imageUrl} onImageChange={disabled ? () => {} : onImageChange} />
+        <MediaUpload
+          mediaUrl={imageUrl}
+          onMediaChange={disabled ? () => {} : onImageChange}
+          disabled={disabled}
+        />
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
       </CardContent>
     </Card>

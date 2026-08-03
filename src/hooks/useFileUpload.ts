@@ -1,7 +1,4 @@
-/**
- * 이미지 업로드 훅
- * S3 Presigned URL을 통한 이미지 업로드 기능 제공
- */
+/** S3 Presigned URL을 통한 파일 업로드 훅 */
 
 import { useState, useCallback } from 'react';
 import { s3Service } from '@/services/s3.service';
@@ -12,26 +9,26 @@ import { S3UploadPath, type S3UploadPathType } from '@/types/api/s3.api';
 // ============================================
 
 /**
- * useImageUpload 훅 옵션
+ * useFileUpload 훅 옵션
  * @param rootPath - S3 업로드 경로
  * @param onSuccess - 업로드 성공 콜백
  * @param onError - 업로드 실패 콜백
  */
-export interface UseImageUploadOptions {
+export interface UseFileUploadOptions {
   rootPath: S3UploadPathType | string;
   onSuccess?: (viewUrl: string) => void;
   onError?: (error: Error) => void;
 }
 
 /**
- * useImageUpload 훅 반환값
+ * useFileUpload 훅 반환값
  * @param upload - 단일 이미지 업로드 함수
  * @param uploadMultiple - 다중 이미지 업로드 함수
  * @param isUploading - 업로드 진행 중 여부
  * @param error - 업로드 에러
  * @param reset - 에러 상태 초기화
  */
-export interface UseImageUploadReturn {
+export interface UseFileUploadReturn {
   upload: (file: File) => Promise<string | null>;
   uploadMultiple: (files: File[]) => Promise<string[]>;
   isUploading: boolean;
@@ -48,7 +45,7 @@ export interface UseImageUploadReturn {
  *
  * @example
  * ```tsx
- * const { upload, isUploading, error } = useImageUpload({
+ * const { upload, isUploading, error } = useFileUpload({
  *   rootPath: S3UploadPath.ALCOHOL,
  *   onSuccess: (url) => console.log('Uploaded:', url),
  * });
@@ -61,14 +58,14 @@ export interface UseImageUploadReturn {
  * };
  * ```
  */
-export function useImageUpload(options: UseImageUploadOptions): UseImageUploadReturn {
+export function useFileUpload(options: UseFileUploadOptions): UseFileUploadReturn {
   const { rootPath, onSuccess, onError } = options;
 
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   /**
-   * 단일 이미지 업로드
+   * 단일 파일 업로드
    * @returns 성공 시 viewUrl, 실패 시 null
    */
   const upload = useCallback(
@@ -77,11 +74,11 @@ export function useImageUpload(options: UseImageUploadOptions): UseImageUploadRe
       setError(null);
 
       try {
-        const viewUrl = await s3Service.uploadImage(file, rootPath);
+        const viewUrl = await s3Service.uploadFile(file, rootPath);
         onSuccess?.(viewUrl);
         return viewUrl;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error('이미지 업로드 실패');
+        const error = err instanceof Error ? err : new Error('파일 업로드 실패');
         setError(error);
         onError?.(error);
         return null;
@@ -93,8 +90,8 @@ export function useImageUpload(options: UseImageUploadOptions): UseImageUploadRe
   );
 
   /**
-   * 다중 이미지 업로드
-   * @returns 성공한 이미지들의 viewUrl 배열
+   * 다중 파일 업로드
+   * @returns 성공한 파일들의 viewUrl 배열
    */
   const uploadMultiple = useCallback(
     async (files: File[]): Promise<string[]> => {
@@ -104,10 +101,10 @@ export function useImageUpload(options: UseImageUploadOptions): UseImageUploadRe
       setError(null);
 
       try {
-        const viewUrls = await s3Service.uploadImages(files, rootPath);
+        const viewUrls = await s3Service.uploadFiles(files, rootPath);
         return viewUrls;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error('이미지 업로드 실패');
+        const error = err instanceof Error ? err : new Error('파일 업로드 실패');
         setError(error);
         onError?.(error);
         return [];

@@ -38,9 +38,18 @@ describe('bannerFormSchema', () => {
       expect(result.success).toBe(true);
     });
 
-    it('mediaType이 VIDEO이면 통과한다', () => {
-      const result = bannerFormSchema.safeParse({ ...validBase, mediaType: 'VIDEO' });
+    it('mediaType이 VIDEO이고 posterUrl이 있으면 통과한다', () => {
+      const result = bannerFormSchema.safeParse({
+        ...validBase,
+        mediaType: 'VIDEO',
+        posterUrl: 'https://example.com/poster.webp',
+      });
       expect(result.success).toBe(true);
+    });
+
+    it('mediaType이 VIDEO인데 posterUrl이 없으면 통과하지 못한다', () => {
+      const result = bannerFormSchema.safeParse({ ...validBase, mediaType: 'VIDEO' });
+      expect(result.success).toBe(false);
     });
 
     it('mediaType 기본값은 IMAGE이다', () => {

@@ -21,7 +21,7 @@ import {
   WhiskyRelatedKeywordsCard,
 } from './components';
 import { useWhiskyDetailForm } from './useWhiskyDetailForm';
-import { useImageUpload, S3UploadPath } from '@/hooks/useImageUpload';
+import { useFileUpload, S3UploadPath } from '@/hooks/useFileUpload';
 import { useToast } from '@/hooks/useToast';
 
 import type { AlcoholTastingTag } from '@/types/api';
@@ -49,7 +49,7 @@ export function WhiskyDetailPage() {
   const { showToast } = useToast();
 
   // 이미지 업로드 훅
-  const { upload: uploadImage, isUploading: isImageUploading } = useImageUpload({
+  const { upload: uploadImage, isUploading: isImageUploading } = useFileUpload({
     rootPath: S3UploadPath.ALCOHOL,
   });
 

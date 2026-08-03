@@ -244,8 +244,9 @@ test.describe('배너 동영상 업로드', () => {
     // 동영상 업로드
     await detailPage.uploadTestVideo();
 
-    // <video> 태그로 미리보기가 표시되는지 확인
+    // <video>와 0.1초 프레임에서 추출한 poster가 표시되는지 확인
     await expect(detailPage.uploadedVideo()).toBeVisible();
+    await expect(detailPage.extractedPoster()).toBeVisible();
     // <img> 태그는 표시되지 않아야 함
     await expect(detailPage.uploadedImage()).not.toBeVisible();
   });

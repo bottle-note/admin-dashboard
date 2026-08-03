@@ -5,7 +5,7 @@ import { Loader2, Upload } from 'lucide-react';
 import { FormField } from '@/components/common/FormField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { S3UploadPath, useImageUpload } from '@/hooks/useImageUpload';
+import { S3UploadPath, useFileUpload } from '@/hooks/useFileUpload';
 import type { JsonSchemaNode } from '@/types/api';
 
 import type { AlcoholSectionConfig, CurationSpecSections } from '../curation-sections.type';
@@ -146,7 +146,7 @@ function AlcoholImageField({
 }) {
   const form = useFormContext<FieldValues>();
   const inputRef = useRef<HTMLInputElement>(null);
-  const { upload, isUploading, error } = useImageUpload({
+  const { upload, isUploading, error } = useFileUpload({
     rootPath: S3UploadPath.CURATION,
   });
 

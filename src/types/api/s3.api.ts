@@ -1,6 +1,6 @@
 /**
  * S3 Presigned URL API 타입 정의
- * 이미지 업로드를 위한 Presigned URL 발급 관련 타입
+ * 파일 업로드를 위한 Presigned URL 발급 관련 타입
  */
 
 // ============================================
@@ -32,8 +32,8 @@ export interface PresignUrlParams {
 }
 
 /**
- * 이미지 업로드 정보
- * @param order - 이미지 순서
+ * 파일 업로드 정보. 이름은 백엔드 응답 계약을 따른다.
+ * @param order - 파일 순서
  * @param viewUrl - CDN 조회 URL (저장용)
  * @param uploadUrl - S3 업로드 URL (Presigned)
  */
@@ -61,11 +61,11 @@ export interface PresignUrlResponse {
 // 업로드 경로 상수
 // ============================================
 
-/** 이미지 업로드 경로 */
+/** 파일 업로드 경로 */
 export const S3UploadPath = {
   /** 위스키/알콜 이미지 */
   ALCOHOL: 'admin/alcohol',
-  /** 배너 이미지 */
+  /** 배너 미디어 */
   BANNER: 'admin/banner',
   /** 큐레이션 커버 이미지 */
   CURATION: 'admin/curation',

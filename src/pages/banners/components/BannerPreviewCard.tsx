@@ -18,13 +18,18 @@ const BANNER_HEIGHT = 227;
 
 interface BannerPreviewCardProps {
   form: UseFormReturn<BannerFormValues>;
-  imagePreviewUrl: string | null;
+  mediaPreviewUrl: string | null;
+  posterPreviewUrl: string | null;
 }
 
-export function BannerPreviewCard({ form, imagePreviewUrl }: BannerPreviewCardProps) {
+export function BannerPreviewCard({
+  form,
+  mediaPreviewUrl,
+  posterPreviewUrl,
+}: BannerPreviewCardProps) {
   const [selectedWidth, setSelectedWidth] = useState<number>(PREVIEW_WIDTHS[1].width);
 
-  if (!imagePreviewUrl) return null;
+  if (!mediaPreviewUrl) return null;
 
   return (
     <Card>
@@ -39,7 +44,7 @@ export function BannerPreviewCard({ form, imagePreviewUrl }: BannerPreviewCardPr
                 'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                 selectedWidth === width
                   ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
               )}
               onClick={() => setSelectedWidth(width)}
             >
@@ -56,7 +61,8 @@ export function BannerPreviewCard({ form, imagePreviewUrl }: BannerPreviewCardPr
           >
             {form.watch('mediaType') === 'VIDEO' ? (
               <video
-                src={imagePreviewUrl}
+                src={mediaPreviewUrl}
+                poster={posterPreviewUrl ?? undefined}
                 className="h-full w-full object-cover"
                 autoPlay
                 muted
@@ -65,7 +71,7 @@ export function BannerPreviewCard({ form, imagePreviewUrl }: BannerPreviewCardPr
               />
             ) : (
               <img
-                src={imagePreviewUrl}
+                src={mediaPreviewUrl}
                 alt="배너 미리보기"
                 className="h-full w-full object-cover"
               />
@@ -123,25 +129,23 @@ function BannerTextOverlay({
 
   const isBottom = textPosition === 'LB' || textPosition === 'RB';
 
-  const titleBlock = (descriptionA || descriptionB) ? (
-    <div style={{ color: `#${descriptionFontColor}` }}>
-      {descriptionA && <p className="text-xl font-semibold leading-tight">{descriptionA}</p>}
-      {descriptionB && <p className="text-xl font-semibold leading-tight">{descriptionB}</p>}
-    </div>
-  ) : null;
+  const titleBlock =
+    descriptionA || descriptionB ? (
+      <div style={{ color: `#${descriptionFontColor}` }}>
+        {descriptionA && <p className="text-xl font-semibold leading-tight">{descriptionA}</p>}
+        {descriptionB && <p className="text-xl font-semibold leading-tight">{descriptionB}</p>}
+      </div>
+    ) : null;
 
   const descBlock = name ? (
-    <p
-      className="text-sm"
-      style={{ color: `#${nameFontColor}` }}
-    >
+    <p className="text-sm" style={{ color: `#${nameFontColor}` }}>
       {name}
     </p>
   ) : null;
 
   return (
     <div
-      className={`absolute ${positionClasses[textPosition]} ${textAlignClasses[textPosition]} flex flex-col gap-2 max-w-[60%]`}
+      className={`absolute ${positionClasses[textPosition]} ${textAlignClasses[textPosition]} flex max-w-[60%] flex-col gap-2`}
     >
       {isBottom ? (
         <>
