@@ -4,7 +4,7 @@
  * - 상세 조회 및 수정 (id가 숫자인 경우)
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams } from 'react-router';
 import { Save, Trash2 } from 'lucide-react';
 
@@ -53,25 +53,39 @@ export function WhiskyDetailPage() {
     rootPath: S3UploadPath.ALCOHOL,
   });
 
-  // 로컬 상태
-  const [tastingTags, setTastingTags] = useState<AlcoholTastingTag[]>([]);
+  // 현재 경로에서 사용자가 편집한 태그만 별도로 보관한다.
+  // 수정 전에는 서버 상세값을 그대로 사용하므로, refetch가 로컬 편집값을 덮어쓰지 않는다.
+  const [editedTastingTags, setEditedTastingTags] = useState<{
+    targetId: string;
+    tags: AlcoholTastingTag[];
+  } | null>(null);
   const [relatedKeywords, setRelatedKeywords] = useState<string[]>([]);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [editedImagePreview, setEditedImagePreview] = useState<{
+    targetId: string;
+    previewUrl: string | null;
+  } | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // whiskyData 변경 시 로컬 상태 동기화
-  useEffect(() => {
-    if (whiskyData) {
-      setTastingTags(whiskyData.tastingTags);
-      setImagePreviewUrl(whiskyData.imageUrl);
-      // TODO: API에 relatedKeywords 필드 추가 시 아래 주석 해제
-      // setRelatedKeywords(whiskyData.relatedKeywords ?? []);
-    }
-  }, [whiskyData]);
+  const currentTargetId = id ?? 'new';
+  const tastingTags =
+    editedTastingTags?.targetId === currentTargetId
+      ? editedTastingTags.tags
+      : [...(whiskyData?.tastingTags ?? [])].sort((a, b) => a.id - b.id);
+  const imagePreviewUrl =
+    editedImagePreview?.targetId === currentTargetId
+      ? editedImagePreview.previewUrl
+      : (whiskyData?.imageUrl ?? null);
+
+  const handleTastingTagsChange = (tags: AlcoholTastingTag[]) => {
+    setEditedTastingTags({
+      targetId: currentTargetId,
+      tags: [...tags].sort((a, b) => a.id - b.id),
+    });
+  };
 
   const handleImageChange = async (file: File | null, previewUrl: string | null) => {
     // 즉시 프리뷰 표시
-    setImagePreviewUrl(previewUrl);
+    setEditedImagePreview({ targetId: currentTargetId, previewUrl });
 
     if (file) {
       // S3에 업로드하고 CDN URL 획득
@@ -95,7 +109,7 @@ export function WhiskyDetailPage() {
     },
     () => {
       showToast({ type: 'warning', message: '입력 정보를 확인해주세요.' });
-    },
+    }
   );
 
   const handleDeleteConfirm = () => {
@@ -108,11 +122,7 @@ export function WhiskyDetailPage() {
       {/* 헤더 */}
       <DetailPageHeader
         title={isNewMode ? '위스키 등록' : '위스키 상세'}
-        subtitle={
-          isDeleted
-            ? undefined
-            : whiskyData ? `ID: ${id}` : undefined
-        }
+        subtitle={isDeleted ? undefined : whiskyData ? `ID: ${id}` : undefined}
         onBack={handleBack}
         actions={
           isDeleted ? (
@@ -172,12 +182,16 @@ export function WhiskyDetailPage() {
           {/* 테이스팅 태그 섹션 */}
           <WhiskyTastingTagCard
             tastingTags={tastingTags}
-            onTagsChange={setTastingTags}
+            onTagsChange={handleTastingTagsChange}
             disabled={isDeleted}
           />
 
           {/* 연관 키워드 섹션 */}
-          <WhiskyRelatedKeywordsCard keywords={relatedKeywords} onKeywordsChange={setRelatedKeywords} disabled={isDeleted} />
+          <WhiskyRelatedKeywordsCard
+            keywords={relatedKeywords}
+            onKeywordsChange={setRelatedKeywords}
+            disabled={isDeleted}
+          />
         </div>
       )}
 
