@@ -26,6 +26,18 @@ import { useToast } from '@/hooks/useToast';
 
 import type { AlcoholTastingTag } from '@/types/api';
 
+function normalizeTastingTags(tags: AlcoholTastingTag[]) {
+  const seenTagIds = new Set<number>();
+
+  return tags
+    .filter((tag) => {
+      if (seenTagIds.has(tag.id)) return false;
+      seenTagIds.add(tag.id);
+      return true;
+    })
+    .sort((a, b) => a.id - b.id);
+}
+
 export function WhiskyDetailPage() {
   const { id } = useParams<{ id: string }>();
 
@@ -67,10 +79,11 @@ export function WhiskyDetailPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const currentTargetId = id ?? 'new';
-  const tastingTags =
+  const tastingTags = normalizeTastingTags(
     editedTastingTags?.targetId === currentTargetId
       ? editedTastingTags.tags
-      : [...(whiskyData?.tastingTags ?? [])].sort((a, b) => a.id - b.id);
+      : (whiskyData?.tastingTags ?? [])
+  );
   const imagePreviewUrl =
     editedImagePreview?.targetId === currentTargetId
       ? editedImagePreview.previewUrl
@@ -79,7 +92,7 @@ export function WhiskyDetailPage() {
   const handleTastingTagsChange = (tags: AlcoholTastingTag[]) => {
     setEditedTastingTags({
       targetId: currentTargetId,
-      tags: [...tags].sort((a, b) => a.id - b.id),
+      tags: normalizeTastingTags(tags),
     });
   };
 
