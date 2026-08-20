@@ -27,6 +27,7 @@ export function CurationSpecField({
   className,
   disabledWhen,
   requiredWhen,
+  setValueWhenChecked,
   optionLabels,
   alcoholConfig,
 }: {
@@ -42,6 +43,10 @@ export function CurationSpecField({
   requiredWhen?: {
     field: string;
     equals: unknown;
+  };
+  setValueWhenChecked?: {
+    field: string;
+    value: unknown;
   };
   optionLabels?: Record<string, string>;
   alcoholConfig?: AlcoholSectionConfig;
@@ -215,12 +220,21 @@ export function CurationSpecField({
             id={name}
             checked={fieldValue === true}
             disabled={disabled}
-            onCheckedChange={(checked) =>
-              form.setValue(name, checked === true, {
+            onCheckedChange={(checked) => {
+              const isChecked = checked === true;
+
+              form.setValue(name, isChecked, {
                 shouldDirty: true,
                 shouldValidate: true,
-              })
-            }
+              });
+
+              if (isChecked && setValueWhenChecked) {
+                form.setValue(setValueWhenChecked.field, setValueWhenChecked.value, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                });
+              }
+            }}
           />
           <Label htmlFor={name} className="cursor-pointer font-normal">
             {fieldLabel}

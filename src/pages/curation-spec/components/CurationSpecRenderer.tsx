@@ -57,6 +57,7 @@ export function CurationSpecRenderer({ sections }: { sections: CurationSpecSecti
                   className={field.className}
                   disabledWhen={field.disabledWhen}
                   requiredWhen={field.requiredWhen}
+                  setValueWhenChecked={field.setValueWhenChecked}
                   optionLabels={field.optionLabels}
                   alcoholConfig={field.alcohol}
                 />

@@ -32,6 +32,7 @@ const tastingEventValues = {
   barAddress: '',
   detailAddress: '',
   capacity: 0,
+  isCapacityUnspecified: false,
   entryFee: 0,
   guideText: '',
   alcohols: [],

@@ -41,6 +41,11 @@ test.describe('code별 큐레이션 폼', () => {
     await expect(curationPage.field('placeName')).toHaveAttribute('readonly', '');
     await expect(curationPage.field('barAddress')).toHaveAttribute('readonly', '');
     await curationPage.field('capacity').fill('10');
+    await page.getByRole('checkbox', { name: '모집 인원 미정' }).click();
+    await expect(curationPage.field('capacity')).toHaveValue('0');
+    await expect(curationPage.field('capacity')).toBeDisabled();
+    await page.getByRole('checkbox', { name: '모집 인원 미정' }).click();
+    await expect(curationPage.field('capacity')).toBeEnabled();
     await curationPage.field('entryFee').fill('10000');
 
     await expect(curationPage.field('applicationLink')).toBeDisabled();
