@@ -1,0 +1,7 @@
+interface:
+  display_name: "Admin Feature Delivery"
+  short_description: "실제 API부터 검증하는 어드민 기능 단계별 구현"
+  default_prompt: "Use $admin-feature-delivery to deliver a new admin feature through reviewable phases."
+
+policy:
+  allow_implicit_invocation: true
