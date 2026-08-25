@@ -28,7 +28,25 @@ pnpm test:e2e     # Playwright E2E
 
 모든 도메인 구조를 이 문서에 미리 나열하지 않는다. 작업에 필요한 구체적인 도메인 규칙은 사용자 요청, 현재 화면과 코드, 백엔드 API 계약을 함께 확인해 판단한다. 기존 동작을 바꿔야 한다면 추측하지 말고 영향 범위를 먼저 확인한다.
 
-## 3. 코드 작성 방식
+## 3. API 계약 확인
+
+API와 관련된 작업은 공개된 최신 Admin OpenAPI 문서를 기준으로 한다.
+
+- 사람이 문서를 탐색할 때는 `https://bottle-note.github.io/workspace/#admin`을 사용한다.
+- 에이전트는 화면을 훑거나 예전 문서 URL을 추측하지 말고, 원본 OpenAPI JSON인 `https://bottle-note.github.io/workspace/openapi.admin.json`을 직접 조회한다. 로컬에 오래된 사본을 기준으로 삼지 않는다.
+- 필요한 경로와 HTTP 메서드를 `paths`에서 찾고, 요청·응답의 `$ref`는 `components.schemas`까지 따라가서 필수 여부, nullable 여부, enum, 형식, 상태 코드를 확인한다.
+- 확인한 계약을 현재 `src/types/api`, `src/services`, `src/hooks` 구현과 비교한다. 둘이 다르면 임의로 맞추지 말고 차이와 영향 범위를 먼저 밝힌다.
+- 과거 기능 문서에 적힌 API 주소나 dev 서버의 Swagger 후보 경로는 당시 조사 기록일 수 있으므로 현재 계약의 근거로 사용하지 않는다.
+- 문서상 응답은 `success`, `code`, `data`, `errors`, `meta` 공통 형식이며 실제 결과는 `data` 안에 있다는 점을 반영한다.
+
+예를 들어 특정 API만 확인할 때는 전체 문서를 대화에 복사하지 말고 필요한 부분만 조회한다.
+
+```bash
+curl -fsSL https://bottle-note.github.io/workspace/openapi.admin.json \
+  | jq '.paths["/v1/example"]'
+```
+
+## 4. 코드 작성 방식
 
 가장 중요한 기준은 **직관성**이다. 코드를 처음 읽는 사람이 추가 설명 없이 흐름을 이해할 수 있어야 한다.
 
@@ -51,7 +69,7 @@ pnpm test:e2e     # Playwright E2E
 - 새 barrel 파일을 만들지 말고 필요한 모듈을 직접 import한다.
 - 사용자에게 보이는 어드민 문구와 toast는 주변 화면에 다른 기준이 없는 한 한국어로 작성한다.
 
-## 4. 테스트 방식
+## 5. 테스트 방식
 
 테스트는 구현 세부사항보다 운영자가 실제로 수행하는 도메인 흐름을 검증한다.
 
