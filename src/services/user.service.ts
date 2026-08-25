@@ -36,10 +36,7 @@ export const userService = {
    * 페이지 기반 페이지네이션 (meta에 페이지 정보 포함)
    */
   list: async (params?: UserSearchParams): Promise<UserListResponse> => {
-    const response = await apiClient.getWithMeta<UserListItem[]>(
-      UserApi.list.endpoint,
-      { params }
-    );
+    const response = await apiClient.get<UserListItem[]>(UserApi.list.endpoint, { params });
 
     return {
       items: response.data ?? [],

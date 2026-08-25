@@ -42,7 +42,7 @@ export const regionService = {
    * 페이지 기반 페이지네이션 (meta에 페이지 정보 포함)
    */
   list: async (params?: RegionSearchParams): Promise<RegionListResponse> => {
-    const response = await apiClient.getWithMeta<RegionListItem[]>(RegionApi.list.endpoint, {
+    const response = await apiClient.get<RegionListItem[]>(RegionApi.list.endpoint, {
       params,
     });
 
@@ -63,7 +63,8 @@ export const regionService = {
    */
   detail: async (id: number): Promise<RegionDetail> => {
     const endpoint = RegionApi.detail.endpoint.replace(':id', String(id));
-    return apiClient.get<RegionDetail>(endpoint);
+    const response = await apiClient.get<RegionDetail>(endpoint);
+    return response.data;
   },
 
   /**

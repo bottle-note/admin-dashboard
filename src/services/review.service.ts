@@ -36,10 +36,7 @@ export const reviewService = {
    * 페이지 기반 페이지네이션 (meta에 페이지 정보 포함)
    */
   list: async (params?: ReviewSearchParams): Promise<ReviewListResponse> => {
-    const response = await apiClient.getWithMeta<ReviewListItem[]>(
-      ReviewApi.list.endpoint,
-      { params }
-    );
+    const response = await apiClient.get<ReviewListItem[]>(ReviewApi.list.endpoint, { params });
 
     return {
       items: response.data ?? [],

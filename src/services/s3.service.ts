@@ -14,9 +14,10 @@ export const s3Service = {
    * @returns Presigned URL 정보
    */
   getPresignedUrls: async (params: PresignUrlParams): Promise<PresignUrlResponse> => {
-    return apiClient.get<PresignUrlResponse>(S3Api.presignUrl.endpoint, {
+    const response = await apiClient.get<PresignUrlResponse>(S3Api.presignUrl.endpoint, {
       params,
     });
+    return response.data;
   },
 
   /**

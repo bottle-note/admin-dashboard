@@ -14,26 +14,9 @@ import { ApiError, normalizeError } from './api-error';
 
 class ApiClient {
   /**
-   * GET 요청 - 데이터만 반환
+   * GET 요청 - 데이터와 메타데이터를 포함한 전체 응답 반환
    */
-  async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    try {
-      const response = await api.get<ApiResponse<T>>(url, config);
-
-      if (!response.data.success) {
-        throw new ApiError(response.data);
-      }
-
-      return response.data.data;
-    } catch (error) {
-      throw normalizeError(error);
-    }
-  }
-
-  /**
-   * GET 요청 - 전체 응답 반환 (페이지네이션 메타 필요시)
-   */
-  async getWithMeta<T, TMeta extends ApiMeta = ApiMeta>(
+  async get<T, TMeta extends ApiMeta = ApiMeta>(
     url: string,
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T, TMeta>> {

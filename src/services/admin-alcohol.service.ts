@@ -51,7 +51,7 @@ export const adminAlcoholService = {
    * 페이지 기반 페이지네이션 (meta에 페이지 정보 포함)
    */
   search: async (params?: AlcoholSearchParams): Promise<AlcoholListResponse> => {
-    const response = await apiClient.getWithMeta<AlcoholListItem[]>(AlcoholApi.search.endpoint, {
+    const response = await apiClient.get<AlcoholListItem[]>(AlcoholApi.search.endpoint, {
       params,
     });
 
@@ -73,7 +73,7 @@ export const adminAlcoholService = {
    * 선택 컴포넌트용 핵심 필드 + 커서 기반 페이지네이션
    */
   lookup: async (params?: AlcoholLookupParams): Promise<AlcoholLookupResponse> => {
-    const response = await apiClient.getWithMeta<AlcoholLookupItem[]>(AlcoholApi.lookup.endpoint, {
+    const response = await apiClient.get<AlcoholLookupItem[]>(AlcoholApi.lookup.endpoint, {
       params,
     });
     const pageable = response.meta.pageable;
@@ -94,7 +94,8 @@ export const adminAlcoholService = {
    */
   getDetail: async (alcoholId: number): Promise<AlcoholDetail> => {
     const endpoint = AlcoholApi.detail.endpoint.replace(':alcoholId', String(alcoholId));
-    return apiClient.get<AlcoholDetail>(endpoint);
+    const response = await apiClient.get<AlcoholDetail>(endpoint);
+    return response.data;
   },
 
   /**
@@ -112,7 +113,10 @@ export const adminAlcoholService = {
    * 서버 응답은 그룹(AlcoholCategory)별로 묶인 카테고리 페어 목록.
    */
   getCategoryReferences: async (): Promise<CategoryReferenceMap> => {
-    return apiClient.get<CategoryReferenceMap>(AlcoholApi.categoryReference.endpoint);
+    const response = await apiClient.get<CategoryReferenceMap>(
+      AlcoholApi.categoryReference.endpoint
+    );
+    return response.data;
   },
 
   /**

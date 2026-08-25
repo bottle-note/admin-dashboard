@@ -42,10 +42,9 @@ export const tastingTagService = {
    * 페이지 기반 페이지네이션 (meta에 페이지 정보 포함)
    */
   list: async (params?: TastingTagSearchParams): Promise<TastingTagListResponse> => {
-    const response = await apiClient.getWithMeta<TastingTagListItem[]>(
-      TastingTagApi.list.endpoint,
-      { params }
-    );
+    const response = await apiClient.get<TastingTagListItem[]>(TastingTagApi.list.endpoint, {
+      params,
+    });
 
     return {
       items: response.data ?? [],
@@ -90,7 +89,8 @@ export const tastingTagService = {
    */
   detail: async (id: number): Promise<TastingTagDetail> => {
     const endpoint = TastingTagApi.detail.endpoint.replace(':id', String(id));
-    return apiClient.get<TastingTagDetail>(endpoint);
+    const response = await apiClient.get<TastingTagDetail>(endpoint);
+    return response.data;
   },
 
   /**

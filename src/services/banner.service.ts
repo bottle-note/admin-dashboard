@@ -45,7 +45,7 @@ export const bannerService = {
    * 배너 목록 조회
    */
   search: async (params?: BannerSearchParams): Promise<BannerListResponse> => {
-    const response = await apiClient.getWithMeta<BannerListItem[]>(BannerApi.search.endpoint, {
+    const response = await apiClient.get<BannerListItem[]>(BannerApi.search.endpoint, {
       params,
     });
 
@@ -66,7 +66,8 @@ export const bannerService = {
    */
   getDetail: async (bannerId: number): Promise<BannerDetail> => {
     const endpoint = BannerApi.detail.endpoint.replace(':bannerId', String(bannerId));
-    return apiClient.get<BannerDetail>(endpoint);
+    const response = await apiClient.get<BannerDetail>(endpoint);
+    return response.data;
   },
 
   /**

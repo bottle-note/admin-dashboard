@@ -20,10 +20,10 @@ export interface MfdsDeclarationListResponse {
 
 export const mfdsDeclarationService = {
   list: async (params?: MfdsDeclarationSearchParams): Promise<MfdsDeclarationListResponse> => {
-    const response = await apiClient.getWithMeta<
-      MfdsDeclarationListItem[],
-      MfdsDeclarationListMeta
-    >(MfdsDeclarationApi.list.endpoint, { params });
+    const response = await apiClient.get<MfdsDeclarationListItem[], MfdsDeclarationListMeta>(
+      MfdsDeclarationApi.list.endpoint,
+      { params }
+    );
 
     return {
       items: response.data ?? [],

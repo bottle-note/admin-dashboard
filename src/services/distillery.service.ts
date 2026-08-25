@@ -42,10 +42,9 @@ export const distilleryService = {
    * 페이지 기반 페이지네이션 (meta에 페이지 정보 포함)
    */
   list: async (params?: DistillerySearchParams): Promise<DistilleryListResponse> => {
-    const response = await apiClient.getWithMeta<DistilleryListItem[]>(
-      DistilleryApi.list.endpoint,
-      { params }
-    );
+    const response = await apiClient.get<DistilleryListItem[]>(DistilleryApi.list.endpoint, {
+      params,
+    });
 
     return {
       items: response.data ?? [],
@@ -64,7 +63,8 @@ export const distilleryService = {
    */
   detail: async (id: number): Promise<DistilleryDetail> => {
     const endpoint = DistilleryApi.detail.endpoint.replace(':id', String(id));
-    return apiClient.get<DistilleryDetail>(endpoint);
+    const response = await apiClient.get<DistilleryDetail>(endpoint);
+    return response.data;
   },
 
   /**
