@@ -29,6 +29,7 @@ import {
   MFDS_NORMALIZATION_STATUS_OPTIONS,
 } from './mfds-normalization-status';
 import { MFDS_ALCOHOL_MATCH_STATUS_MAP } from './mfds-alcohol-match-status';
+import { ImporterSearchSelect } from './ImporterSearchSelect';
 
 const MATCH_DECISION_LABELS: Record<string, string> = {
   CANDIDATE: '후보 선택',
@@ -73,16 +74,15 @@ export function MfdsDeclarationListPage() {
   const alcoholMatchDecision = urlParams.get('alcoholMatchDecision') ?? '';
   const cursor = getPositiveNumber(urlParams.get('cursor'));
   const pageSize = getPositiveNumber(urlParams.get('pageSize'), 20) ?? 20;
+  const selectedImporterId = getPositiveNumber(importerId);
 
   const [keywordDraft, setKeywordDraft] = useState<string | null>(null);
-  const [importerIdDraft, setImporterIdDraft] = useState<string | null>(null);
   const [cursorHistory, setCursorHistory] = useState<Array<number | undefined>>([]);
   const keywordInput = keywordDraft ?? keyword;
-  const importerIdInput = importerIdDraft ?? importerId;
 
   const searchParams: MfdsDeclarationSearchParams = {
     keyword: keyword || undefined,
-    importerId: getPositiveNumber(importerId),
+    importerId: selectedImporterId,
     normalizationStatus: getNormalizationStatus(normalizationStatus),
     alcoholMatched:
       alcoholMatched === 'true' ? true : alcoholMatched === 'false' ? false : undefined,
@@ -121,12 +121,10 @@ export function MfdsDeclarationListPage() {
     updateUrlParams(
       {
         keyword: keywordInput.trim() || undefined,
-        importerId: getPositiveNumber(importerIdInput.trim()) ? importerIdInput.trim() : undefined,
       },
       { resetCursor: true }
     );
     setKeywordDraft(null);
-    setImporterIdDraft(null);
   };
 
   const handleNextPage = () => {
@@ -152,8 +150,8 @@ export function MfdsDeclarationListPage() {
         </p>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-6">
-        <div className="relative lg:col-span-2">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_280px_auto]">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             aria-label="제품명 또는 수입신고번호 검색"
@@ -164,14 +162,17 @@ export function MfdsDeclarationListPage() {
             className="pl-9"
           />
         </div>
-        <Input
-          aria-label="수입사 ID"
-          inputMode="numeric"
-          placeholder="수입사 ID"
-          value={importerIdInput}
-          onChange={(event) => setImporterIdDraft(event.target.value.replace(/\D/g, ''))}
-          onKeyDown={(event) => isNonComposingEnterKey(event) && handleSearch()}
+        <ImporterSearchSelect
+          selectedImporterId={selectedImporterId}
+          onSelect={(selectedImporter) =>
+            updateUrlParams({ importerId: String(selectedImporter.id) }, { resetCursor: true })
+          }
+          onClear={() => updateUrlParams({ importerId: undefined }, { resetCursor: true })}
         />
+        <Button onClick={handleSearch}>검색</Button>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Select
           value={normalizationStatus || ALL}
           onValueChange={(value) =>
@@ -181,7 +182,7 @@ export function MfdsDeclarationListPage() {
             )
           }
         >
-          <SelectTrigger aria-label="정규화 상태">
+          <SelectTrigger aria-label="정규화 상태" className="w-full sm:w-[180px]">
             <SelectValue placeholder="정규화 상태" />
           </SelectTrigger>
           <SelectContent>
@@ -202,7 +203,7 @@ export function MfdsDeclarationListPage() {
             )
           }
         >
-          <SelectTrigger aria-label="술 연결 여부">
+          <SelectTrigger aria-label="술 연결 여부" className="w-full sm:w-[180px]">
             <SelectValue placeholder="술 연결 여부" />
           </SelectTrigger>
           <SelectContent>
@@ -211,10 +212,6 @@ export function MfdsDeclarationListPage() {
             <SelectItem value="false">연결 안 됨</SelectItem>
           </SelectContent>
         </Select>
-        <Button onClick={handleSearch}>검색</Button>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
         <Select
           value={alcoholMatchDecision || ALL}
           onValueChange={(value) =>
@@ -224,7 +221,7 @@ export function MfdsDeclarationListPage() {
             )
           }
         >
-          <SelectTrigger aria-label="매칭 판정" className="w-[180px]">
+          <SelectTrigger aria-label="매칭 판정" className="w-full sm:w-[180px]">
             <SelectValue placeholder="매칭 판정" />
           </SelectTrigger>
           <SelectContent>

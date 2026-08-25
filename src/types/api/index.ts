@@ -14,3 +14,4 @@ export * from './curation.api';
 export * from './user.api';
 export * from './review.api';
 export * from './mfds-declaration.api';
+export * from './mfds-importer.api';

@@ -3,6 +3,7 @@
  */
 
 import type { ApiMeta } from './common';
+import type { MfdsImporterItem } from './mfds-importer.api';
 
 export const MfdsDeclarationApi = {
   list: {
@@ -33,8 +34,6 @@ export type MfdsNormalizationStatus =
   | 'UNPARSED';
 
 export type MfdsImporterLinkSource = 'PAGE_NAME' | 'PAGE_RCNO' | 'MANUAL';
-
-export type MfdsImporterAdminStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface MfdsDeclarationSearchParams {
   normalizationStatus?: MfdsNormalizationStatus;
@@ -71,27 +70,6 @@ export interface MfdsDeclarationListMeta extends ApiMeta {
 export interface MfdsMatchCandidate {
   candidateId: number;
   score: number;
-}
-
-export interface MfdsImporterItem {
-  id: number;
-  officialBusinessCode: string;
-  licenseNo: string;
-  businessName: string;
-  representativeName: string | null;
-  permitDate: string | null;
-  institutionName: string | null;
-  primaryAddress: string | null;
-  telephoneNo: string | null;
-  industryName: string | null;
-  operatingStatus: string;
-  description: string | null;
-  adminNote: string | null;
-  adminStatus: MfdsImporterAdminStatus;
-  reviewedBy: string | null;
-  reviewedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface MfdsDeclarationDetail {

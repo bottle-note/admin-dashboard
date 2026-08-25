@@ -99,7 +99,7 @@
   - `normalizationStatus`
   - `alcoholMatched`
   - `alcoholMatchDecision`
-  - `importerId`
+  - 수입사 이름을 검색해 선택하고, 선택된 수입사의 `importerId`를 요청과 URL에 사용
 - 페이징:
   - ID 내림차순 커서 방식
   - `cursor`, `pageSize`를 URL 파라미터로 관리한다.
@@ -188,6 +188,7 @@
   - Query: `adminStatus`, `keyword`, `cursor`, `pageSize`
   - Response data: `MfdsImporterItem[]`
   - Response meta: `nextCursor`, `hasNext`를 사용한 커서 페이징
+  - 수입 신고 목록의 수입사 검색·선택에도 이 API를 재사용한다.
 - `GET /v1/mfds/importers/{importerId}`
   - Response data: `MfdsImporterItem`
 - 수입사별 신고 이력은 `GET /v1/mfds/declarations?importerId={importerId}`를 재사용한다.
