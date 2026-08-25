@@ -60,9 +60,7 @@ export function Pagination({
   const isPageBased = currentPage !== undefined && totalPages !== undefined;
 
   // 현재 표시 범위 계산
-  const startItem = isPageBased
-    ? currentPage * pageSize + 1
-    : 1;
+  const startItem = isPageBased ? currentPage * pageSize + 1 : 1;
   const endItem = isPageBased
     ? Math.min((currentPage + 1) * pageSize, totalElements ?? 0)
     : currentItemCount;
@@ -89,19 +87,20 @@ export function Pagination({
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-4">
         <p className="text-sm text-muted-foreground">
-          {totalElements !== undefined ? (
+          {totalElements !== undefined && isPageBased ? (
             <>
-              총 {totalElements.toLocaleString()}개 중{' '}
-              {startItem.toLocaleString()}-{endItem.toLocaleString()}개 표시
+              총 {totalElements.toLocaleString()}개 중 {startItem.toLocaleString()}-
+              {endItem.toLocaleString()}개 표시
+            </>
+          ) : totalElements !== undefined ? (
+            <>
+              총 {totalElements.toLocaleString()}개 · 현재 목록 {currentItemCount}개
             </>
           ) : (
             <>{currentItemCount}개 표시</>
           )}
         </p>
-        <Select
-          value={String(pageSize)}
-          onValueChange={(v) => onPageSizeChange(Number(v))}
-        >
+        <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
           <SelectTrigger className="w-[100px]">
             <SelectValue />
           </SelectTrigger>
@@ -120,21 +119,11 @@ export function Pagination({
             {currentPage + 1} / {totalPages} 페이지
           </span>
         )}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handlePrevious}
-          disabled={!canGoPrevious}
-        >
+        <Button variant="outline" size="sm" onClick={handlePrevious} disabled={!canGoPrevious}>
           <ChevronLeft className="h-4 w-4" />
           이전
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleNext}
-          disabled={!hasNext}
-        >
+        <Button variant="outline" size="sm" onClick={handleNext} disabled={!hasNext}>
           다음
           <ChevronRight className="h-4 w-4" />
         </Button>

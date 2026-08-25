@@ -15,6 +15,7 @@ import {
   Layers,
   Factory,
   MapPinned,
+  FileSearch,
 } from 'lucide-react';
 import type { MenuGroup } from '@/types/menu';
 
@@ -121,6 +122,25 @@ export const menuConfig: MenuGroup[] = [
                 path: '/distilleries/new',
               },
             ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'mfds',
+    items: [
+      {
+        id: 'mfds-management',
+        label: '수입 정보',
+        icon: FileSearch,
+        roles: ['ROOT_ADMIN'],
+        children: [
+          {
+            id: 'mfds-declaration-list',
+            label: '수입 신고 목록',
+            icon: List,
+            path: '/mfds/declarations',
           },
         ],
       },

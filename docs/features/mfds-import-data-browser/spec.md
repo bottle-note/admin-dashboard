@@ -220,6 +220,10 @@ OpenAPI에 명확하지 않은 항목은 인증된 dev API의 실제 응답으�
 - 확인된 매칭 판정은 `AMBIGUOUS`, `AUTO_SELECTED`, `CONFLICT_REVIEW`, `NO_MATCH`, `REVIEW`였다.
 - OpenAPI에는 nullable 표시가 없지만 실제 응답에서 `volumeMl`, `abvPercent`, `importerId`, `importerLinkSource`, `selectedAlcoholId`가 `null`일 수 있었다. 프론트 타입은 실제 응답에 맞춰 이 필드들의 `null`을 허용한다.
 - 백엔드의 목록 응답 DTO와 매퍼는 14개 필드를 항상 응답에 포함한다. 엔티티 컬럼과 연결·매칭 해제 로직까지 확인한 결과 `baseProductNameKo`, `baseProductNameEn`, `volumeMl`, `abvPercent`, `importerId`, `importerBaseName`, `importerLinkSource`, `selectedAlcoholId`, `alcoholMatchDecision`, `matchedAt`은 `null`일 수 있고, `id`, `rcno`, `normalizationStatus`, `createdAt`은 저장된 신고에서 필수다.
+- 상세, 저장 후보, RCNO 연결 근거 API를 실제 데이터 2건으로 확인했다. 상세 응답은 DTO의 모든 키를 포함하고, 원문·정제·검토·연결·선택 값은 데이터 상태에 따라 `null`이 될 수 있다.
+- 저장 후보 응답의 `selection`은 항상 존재하지만 확정되지 않은 ID는 `null`이다. 자동 판정 문자열이 있어도 선택 ID가 없으면 확정으로 표시하지 않는다.
+- 저장된 술 후보의 `scoreDetail`은 백엔드 계약상 항상 `null`이며, 삭제되거나 찾을 수 없는 참조 후보는 ID와 점수만 있고 이름이 `null`일 수 있다.
+- RCNO 연결 근거는 없으면 빈 배열이고, 존재할 때 출처 URL과 관측 시각은 `null`일 수 있다.
 
 ## Acceptance Criteria
 

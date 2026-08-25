@@ -28,6 +28,8 @@ import { DistilleryListPage } from '@/pages/distilleries/DistilleryList';
 import { DistilleryDetailPage } from '@/pages/distilleries/DistilleryDetail';
 import { RegionListPage } from '@/pages/regions/RegionList';
 import { RegionDetailPage } from '@/pages/regions/RegionDetail';
+import { MfdsDeclarationListPage } from '@/pages/mfds/MfdsDeclarationList';
+import { MfdsDeclarationDetailPage } from '@/pages/mfds/MfdsDeclarationDetail';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -249,6 +251,24 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
               <ReviewListPage />
+            </RoleProtectedRoute>
+          }
+        />
+
+        {/* MFDS import declarations - ROOT_ADMIN only */}
+        <Route
+          path="mfds/declarations"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <MfdsDeclarationListPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="mfds/declarations/:declarationId"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <MfdsDeclarationDetailPage />
             </RoleProtectedRoute>
           }
         />

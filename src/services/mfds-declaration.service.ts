@@ -9,9 +9,19 @@ import {
   type MfdsDeclarationListItem,
   type MfdsDeclarationListMeta,
   type MfdsDeclarationSearchParams,
+  type MfdsDeclarationDetail,
+  type MfdsMatchingCandidates,
+  type MfdsRcnoLinkItem,
 } from '@/types/api';
 
-export const mfdsDeclarationKeys = createQueryKeys('mfds-declarations');
+const mfdsDeclarationBaseKeys = createQueryKeys('mfds-declarations');
+
+export const mfdsDeclarationKeys = {
+  ...mfdsDeclarationBaseKeys,
+  matchingCandidates: (declarationId: number) =>
+    [...mfdsDeclarationBaseKeys.detail(declarationId), 'matching-candidates'] as const,
+  rcnoLinks: (rcno: string) => [...mfdsDeclarationBaseKeys.all, 'rcno-links', rcno] as const,
+};
 
 export interface MfdsDeclarationListResponse {
   items: MfdsDeclarationListItem[];
@@ -29,5 +39,26 @@ export const mfdsDeclarationService = {
       items: response.data ?? [],
       meta: response.meta,
     };
+  },
+  detail: async (declarationId: number): Promise<MfdsDeclarationDetail> => {
+    const response = await apiClient.get<MfdsDeclarationDetail>(
+      MfdsDeclarationApi.detail.endpoint(declarationId)
+    );
+    return response.data;
+  },
+  matchingCandidates: async (declarationId: number): Promise<MfdsMatchingCandidates> => {
+    const response = await apiClient.get<MfdsMatchingCandidates>(
+      MfdsDeclarationApi.matchingCandidates.endpoint(declarationId)
+    );
+    return response.data;
+  },
+  rcnoLinks: async (rcno: string): Promise<MfdsRcnoLinkItem[]> => {
+    const response = await apiClient.get<MfdsRcnoLinkItem[]>(
+      MfdsDeclarationApi.rcnoLinks.endpoint,
+      {
+        params: { rcno },
+      }
+    );
+    return response.data;
   },
 };
