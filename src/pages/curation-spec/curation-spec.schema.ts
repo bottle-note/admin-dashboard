@@ -213,6 +213,7 @@ export const whiskyTastingEventFormSchema = whiskyTastingEventPayloadSchema.exte
   exposureEndDate: z.string(),
   displayOrder: z.number(),
   isActive: z.boolean(),
+  isCapacityUnspecified: z.boolean(),
 });
 
 const programWhiskyListSchema = z.looseObject({

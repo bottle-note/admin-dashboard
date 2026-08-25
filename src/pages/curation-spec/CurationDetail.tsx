@@ -101,6 +101,7 @@ function CurationDetailContent({
             exposureEndDate: curation.exposureEndDate ?? '',
             displayOrder: curation.displayOrder,
             isActive: curation.isActive,
+            isCapacityUnspecified: payload.data.capacity === 0,
           }}
           onBack={onBack}
         />

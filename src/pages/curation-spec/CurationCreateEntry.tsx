@@ -204,6 +204,7 @@ export function CurationCreateEntry() {
         barAddress: '',
         detailAddress: '',
         capacity: 0,
+        isCapacityUnspecified: false,
         entryFee: 0,
         isRecruiting: false,
         is_tbc: false,

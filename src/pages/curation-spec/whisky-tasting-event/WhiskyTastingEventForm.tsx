@@ -47,6 +47,12 @@ export function WhiskyTastingEventForm({
   const isMutationPending = createMutation.isPending || updateMutation.isPending;
 
   const handleSubmit = form.handleSubmit((values) => {
+    const { isCapacityUnspecified, ...curationValues } = values;
+
+    if (isCapacityUnspecified) {
+      curationValues.capacity = 0;
+    }
+
     const {
       name,
       description,
@@ -56,7 +62,7 @@ export function WhiskyTastingEventForm({
       displayOrder,
       isActive,
       ...payload
-    } = values;
+    } = curationValues;
 
     if (payload.kakaoPlaceId === '') {
       delete payload.kakaoPlaceId;

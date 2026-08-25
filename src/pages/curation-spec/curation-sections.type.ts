@@ -42,6 +42,10 @@ export type CurationSpecSections = Record<
           field: string;
           equals: unknown;
         };
+        setValueWhenChecked?: {
+          field: string;
+          value: unknown;
+        };
         optionLabels?: Record<string, string>;
         alcohol?: AlcoholSectionConfig;
         pairing?: {
