@@ -5,7 +5,7 @@
 
 import type { AxiosRequestConfig } from 'axios';
 import { api } from './axios';
-import type { ApiResponse } from '@/types/api';
+import type { ApiMeta, ApiResponse } from '@/types/api';
 import { ApiError, normalizeError } from './api-error';
 
 // ============================================
@@ -33,9 +33,12 @@ class ApiClient {
   /**
    * GET 요청 - 전체 응답 반환 (페이지네이션 메타 필요시)
    */
-  async getWithMeta<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async getWithMeta<T, TMeta extends ApiMeta = ApiMeta>(
+    url: string,
+    config?: AxiosRequestConfig
+  ): Promise<ApiResponse<T, TMeta>> {
     try {
-      const response = await api.get<ApiResponse<T>>(url, config);
+      const response = await api.get<ApiResponse<T, TMeta>>(url, config);
 
       if (!response.data.success) {
         throw new ApiError(response.data);

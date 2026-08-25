@@ -35,6 +35,8 @@ API와 관련된 작업은 공개된 최신 Admin OpenAPI 문서를 기준으로
 - 사람이 문서를 탐색할 때는 `https://bottle-note.github.io/workspace/#admin`을 사용한다.
 - 에이전트는 화면을 훑거나 예전 문서 URL을 추측하지 말고, 원본 OpenAPI JSON인 `https://bottle-note.github.io/workspace/openapi.admin.json`을 직접 조회한다. 로컬에 오래된 사본을 기준으로 삼지 않는다.
 - 필요한 경로와 HTTP 메서드를 `paths`에서 찾고, 요청·응답의 `$ref`는 `components.schemas`까지 따라가서 필수 여부, nullable 여부, enum, 형식, 상태 코드를 확인한다.
+- OpenAPI에 필수 여부나 nullable 정보가 없거나 실제 동작과 모순되면 추측해서 모든 필드를 optional로 두지 않는다. `bottle-note/bottle-note-api-server`의 현재 소스에서 컨트롤러 → 요청·응답 DTO → 매퍼·서비스 → 엔티티 컬럼과 상태 변경 로직 순서로 확인하고, dev API의 안전한 실제 응답과 비교한다.
+- 백엔드 소스와 dev 응답까지 확인한 결과를 타입의 필수값·nullable에 반영한다. OpenAPI, 백엔드 소스, 실제 응답이 서로 다르면 어느 한쪽을 임의로 정답 처리하지 말고 차이와 배포 시점을 기능 문서에 기록한다.
 - 확인한 계약을 현재 `src/types/api`, `src/services`, `src/hooks` 구현과 비교한다. 둘이 다르면 임의로 맞추지 말고 차이와 영향 범위를 먼저 밝힌다.
 - 과거 기능 문서에 적힌 API 주소나 dev 서버의 Swagger 후보 경로는 당시 조사 기록일 수 있으므로 현재 계약의 근거로 사용하지 않는다.
 - 문서상 응답은 `success`, `code`, `data`, `errors`, `meta` 공통 형식이며 실제 결과는 `data` 안에 있다는 점을 반영한다.
