@@ -5,7 +5,15 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   useMfdsDeclarationDetail,
   useMfdsMatchingCandidates,
@@ -42,7 +50,7 @@ function DetailField({ label, children }: { label: string; children: ReactNode }
 }
 
 function EmptyCandidates() {
-  return <p className="text-sm text-muted-foreground">저장된 후보 없음</p>;
+  return <p className="text-sm text-muted-foreground">저장된 연결 후보 없음</p>;
 }
 
 export function MfdsDeclarationDetailPage() {
@@ -58,10 +66,10 @@ export function MfdsDeclarationDetailPage() {
   if (!declarationId) {
     return (
       <div className="space-y-6">
-        <DetailPageHeader title="수입 신고 상세" onBack={() => navigate('/mfds/declarations')} />
+        <DetailPageHeader title="신고 데이터 검토" onBack={() => navigate('/mfds/declarations')} />
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="mb-4 text-muted-foreground">올바르지 않은 수입 신고 ID입니다.</p>
+            <p className="mb-4 text-muted-foreground">올바르지 않은 신고 데이터 ID입니다.</p>
             <Button variant="outline" onClick={() => navigate('/mfds/declarations')}>
               목록으로 돌아가기
             </Button>
@@ -73,17 +81,19 @@ export function MfdsDeclarationDetailPage() {
 
   if (detailQuery.isLoading) {
     return (
-      <div className="py-16 text-center text-muted-foreground">수입 신고를 불러오는 중입니다.</div>
+      <div className="py-16 text-center text-muted-foreground">
+        신고 데이터를 불러오는 중입니다.
+      </div>
     );
   }
 
   if (detailQuery.isError || !detailQuery.data) {
     return (
       <div className="space-y-6">
-        <DetailPageHeader title="수입 신고 상세" onBack={() => navigate('/mfds/declarations')} />
+        <DetailPageHeader title="신고 데이터 검토" onBack={() => navigate('/mfds/declarations')} />
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="mb-4 text-muted-foreground">수입 신고 상세를 불러오지 못했습니다.</p>
+            <p className="mb-4 text-muted-foreground">신고 데이터를 불러오지 못했습니다.</p>
             <Button variant="outline" onClick={() => detailQuery.refetch()}>
               다시 시도
             </Button>
@@ -99,91 +109,134 @@ export function MfdsDeclarationDetailPage() {
   return (
     <div className="space-y-6">
       <DetailPageHeader
-        title={detail.baseProductNameKo ?? detail.skuDisplayNameKo ?? '수입 신고 상세'}
-        subtitle={`신고 ID ${detail.id} · RCNO ${detail.rcno}`}
+        title={detail.skuDisplayNameKo ?? detail.baseProductNameKo ?? '신고 데이터 검토'}
         onBack={() => navigate('/mfds/declarations')}
         action={{ mode: 'readonly' }}
       />
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>신고 기본 정보</CardTitle>
-            <CardDescription>식약처 원문과 정제된 제품 이름을 함께 표시합니다.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid gap-5 sm:grid-cols-2">
-              <DetailField label="RCNO">{detail.rcno}</DetailField>
-              <DetailField label="신고 ID">{detail.id}</DetailField>
-              <DetailField label="제품명 원문 (한글)">
-                {displayValue(detail.alcoholNameKo)}
-              </DetailField>
-              <DetailField label="제품명 원문 (영문)">
-                {displayValue(detail.alcoholNameEn)}
-              </DetailField>
-              <DetailField label="정제 기본 제품명 (한글)">
-                {displayValue(detail.baseProductNameKo)}
-              </DetailField>
-              <DetailField label="정제 기본 제품명 (영문)">
-                {displayValue(detail.baseProductNameEn)}
-              </DetailField>
-              <DetailField label="SKU 표시명 (한글)">
-                {displayValue(detail.skuDisplayNameKo)}
-              </DetailField>
-              <DetailField label="SKU 표시명 (영문)">
-                {displayValue(detail.skuDisplayNameEn)}
-              </DetailField>
-              <DetailField label="주종 (한글)">
-                {displayValue(detail.alcoholCategoryKo)}
-              </DetailField>
-              <DetailField label="주종 (영문)">
-                {displayValue(detail.alcoholCategoryEn)}
-              </DetailField>
-              <DetailField label="제조사">{displayValue(detail.manufacturerName)}</DetailField>
-              <DetailField label="제조 국가">
-                {displayValue(detail.manufactureCountryNameKo)}
-              </DetailField>
-              <DetailField label="수출 국가">
-                {displayValue(detail.exportCountryNameKo)}
-              </DetailField>
-            </dl>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>제품 규격</CardTitle>
-            <CardDescription>수집된 원문과 정제 결과를 비교할 수 있습니다.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid gap-5 sm:grid-cols-2">
-              <DetailField label="용량 원문">{displayValue(detail.volumeRaw)}</DetailField>
-              <DetailField label="정제 용량">{displayValue(detail.volumeMl, ' ml')}</DetailField>
-              <DetailField label="단위 용량">
-                {displayValue(detail.unitVolumeMl, ' ml')}
-              </DetailField>
-              <DetailField label="포장 수량">{displayValue(detail.packageCount, '개')}</DetailField>
-              <DetailField label="도수 원문">{displayValue(detail.abvRaw)}</DetailField>
-              <DetailField label="정제 도수">{displayValue(detail.abvPercent, '%')}</DetailField>
-              <DetailField label="숙성 연수">{displayValue(detail.ageYears, '년')}</DetailField>
-              <DetailField label="빈티지">{displayValue(detail.vintageYear)}</DetailField>
-              <DetailField label="에디션">{displayValue(detail.editionName)}</DetailField>
-              <DetailField label="캐스크 번호">{displayValue(detail.caskNumber)}</DetailField>
-              <DetailField label="배치 번호">{displayValue(detail.batchNumber)}</DetailField>
-              <DetailField label="소비기한 범위">
-                {detail.expiryStart || detail.expiryEnd
-                  ? `${detail.expiryStart ?? '-'} ~ ${detail.expiryEnd ?? '-'}`
-                  : '-'}
-              </DetailField>
-            </dl>
-          </CardContent>
-        </Card>
-      </div>
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">신고 정보 비교</h2>
+        <div className="rounded-lg border">
+          <div className="border-b bg-muted/30 px-4 py-3 text-sm font-medium">수집 제품명</div>
+          <dl className="grid gap-4 p-4 sm:grid-cols-2">
+            <DetailField label="한글">{displayValue(detail.alcoholNameKo)}</DetailField>
+            <DetailField label="영문">{displayValue(detail.alcoholNameEn)}</DetailField>
+          </dl>
+        </div>
+        <div className="overflow-hidden rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[140px]">분류</TableHead>
+                <TableHead className="w-[220px]">항목</TableHead>
+                <TableHead>정규화 결과</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell rowSpan={4} className="bg-muted/20 align-top font-medium">
+                  제품명
+                </TableCell>
+                <TableCell className="bg-muted/20 font-medium">SKU 표시명 (한글)</TableCell>
+                <TableCell>{displayValue(detail.skuDisplayNameKo)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 font-medium">SKU 표시명 (영문)</TableCell>
+                <TableCell>{displayValue(detail.skuDisplayNameEn)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 font-medium">기본 제품명 (한글)</TableCell>
+                <TableCell>{displayValue(detail.baseProductNameKo)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 font-medium">기본 제품명 (영문)</TableCell>
+                <TableCell>{displayValue(detail.baseProductNameEn)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell rowSpan={2} className="bg-muted/20 align-top font-medium">
+                  제품 분류
+                </TableCell>
+                <TableCell className="bg-muted/20 font-medium">주종 (한글)</TableCell>
+                <TableCell>{displayValue(detail.alcoholCategoryKo)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 font-medium">주종 (영문)</TableCell>
+                <TableCell>{displayValue(detail.alcoholCategoryEn)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell rowSpan={3} className="bg-muted/20 align-top font-medium">
+                  제조 정보
+                </TableCell>
+                <TableCell className="bg-muted/20 font-medium">제조사</TableCell>
+                <TableCell>{displayValue(detail.manufacturerName)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 font-medium">제조 국가</TableCell>
+                <TableCell>{displayValue(detail.manufactureCountryNameKo)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 font-medium">수출 국가</TableCell>
+                <TableCell>{displayValue(detail.exportCountryNameKo)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell rowSpan={5} className="bg-muted/20 align-top font-medium">
+                  제품 식별
+                </TableCell>
+                <TableCell className="bg-muted/20 font-medium">숙성 연수</TableCell>
+                <TableCell>{displayValue(detail.ageYears, '년')}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 font-medium">빈티지</TableCell>
+                <TableCell>{displayValue(detail.vintageYear)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 font-medium">에디션</TableCell>
+                <TableCell>{displayValue(detail.editionName)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 font-medium">캐스크 번호</TableCell>
+                <TableCell>{displayValue(detail.caskNumber)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 font-medium">배치 번호</TableCell>
+                <TableCell>{displayValue(detail.batchNumber)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell rowSpan={4} className="bg-muted/20 align-top font-medium">
+                  규격
+                </TableCell>
+                <TableCell className="bg-muted/20 font-medium">총용량</TableCell>
+                <TableCell>{displayValue(detail.volumeMl, ' ml')}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 font-medium">단위 용량</TableCell>
+                <TableCell>{displayValue(detail.unitVolumeMl, ' ml')}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 font-medium">포장 수량</TableCell>
+                <TableCell>{displayValue(detail.packageCount, '개')}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 font-medium">도수</TableCell>
+                <TableCell>{displayValue(detail.abvPercent, '%')}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 align-top font-medium">유통</TableCell>
+                <TableCell className="bg-muted/20 font-medium">소비기한</TableCell>
+                <TableCell>
+                  {detail.expiryStart || detail.expiryEnd
+                    ? `${detail.expiryStart ?? '-'} ~ ${detail.expiryEnd ?? '-'}`
+                    : '-'}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </section>
 
       <Card>
         <CardHeader>
-          <CardTitle>정제 및 검토 상태</CardTitle>
-          <CardDescription>자동 정제 결과와 운영 검토 기록입니다.</CardDescription>
+          <CardTitle>데이터 처리 상태</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <dl className="grid gap-5 md:grid-cols-4">
@@ -199,7 +252,7 @@ export function MfdsDeclarationDetailPage() {
                 </Badge>
               </div>
             </DetailField>
-            <DetailField label="정제 시각">{formatDateTime(detail.normalizedAt)}</DetailField>
+            <DetailField label="정규화 시각">{formatDateTime(detail.normalizedAt)}</DetailField>
             <DetailField label="검토 상태">{detail.reviewStatus}</DetailField>
             <DetailField label="검토 시각">{formatDateTime(detail.reviewedAt)}</DetailField>
             <DetailField label="검토자">{displayValue(detail.reviewedBy)}</DetailField>
@@ -235,8 +288,7 @@ export function MfdsDeclarationDetailPage() {
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>현재 수입사 연결</CardTitle>
-            <CardDescription>이 신고에 현재 연결되어 있는 수입사 정보입니다.</CardDescription>
+            <CardTitle>수입사 매핑 결과</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="mb-5">
@@ -265,10 +317,7 @@ export function MfdsDeclarationDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>RCNO 연결 근거</CardTitle>
-            <CardDescription>
-              현재 연결 상태가 아닌, 수집 당시 출처를 보존한 감사 정보입니다.
-            </CardDescription>
+            <CardTitle>수입사 매핑 근거</CardTitle>
           </CardHeader>
           <CardContent>
             {rcnoLinksQuery.isLoading ? (
@@ -276,7 +325,7 @@ export function MfdsDeclarationDetailPage() {
             ) : rcnoLinksQuery.isError ? (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  RCNO 연결 근거를 불러오지 못했습니다.
+                  수입사 매핑 근거를 불러오지 못했습니다.
                 </p>
                 <Button variant="outline" size="sm" onClick={() => rcnoLinksQuery.refetch()}>
                   다시 시도
@@ -313,7 +362,7 @@ export function MfdsDeclarationDetailPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">저장된 RCNO 연결 근거 없음</p>
+              <p className="text-sm text-muted-foreground">저장된 수입사 매핑 근거 없음</p>
             )}
           </CardContent>
         </Card>
@@ -321,26 +370,23 @@ export function MfdsDeclarationDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>보틀노트 매칭</CardTitle>
-          <CardDescription>
-            자동 판정과 실제 선택된 연결을 구분합니다. 선택 ID가 있어야 연결된 상태입니다.
-          </CardDescription>
+          <CardTitle>보틀노트 데이터 연결</CardTitle>
         </CardHeader>
         <CardContent className="space-y-8">
           <div className="grid gap-5 md:grid-cols-3">
-            <DetailField label="선택된 술">
+            <DetailField label="연결된 위스키">
               {detail.selectedAlcoholId ? (
                 <Link
                   className="text-primary hover:underline"
                   to={`/whisky/${detail.selectedAlcoholId}`}
                 >
-                  술 ID {detail.selectedAlcoholId}
+                  위스키 ID {detail.selectedAlcoholId}
                 </Link>
               ) : (
                 '연결된 정보 없음'
               )}
             </DetailField>
-            <DetailField label="선택된 증류소">
+            <DetailField label="연결된 증류소">
               {detail.selectedDistilleryId ? (
                 <Link
                   className="text-primary hover:underline"
@@ -352,7 +398,7 @@ export function MfdsDeclarationDetailPage() {
                 '연결된 정보 없음'
               )}
             </DetailField>
-            <DetailField label="선택된 지역">
+            <DetailField label="연결된 지역">
               {detail.selectedRegionId ? (
                 <Link
                   className="text-primary hover:underline"
@@ -364,22 +410,24 @@ export function MfdsDeclarationDetailPage() {
                 '연결된 정보 없음'
               )}
             </DetailField>
-            <DetailField label="술 자동 판정">
+            <DetailField label="위스키 연결 판정">
               {detail.alcoholMatchDecision
                 ? (MATCH_DECISION_LABELS[detail.alcoholMatchDecision] ??
                   detail.alcoholMatchDecision)
                 : '판정 없음'}
             </DetailField>
-            <DetailField label="매칭 시각">{formatDateTime(detail.matchedAt)}</DetailField>
-            <DetailField label="매칭 버전">{displayValue(candidates?.matchingVersion)}</DetailField>
+            <DetailField label="연결 처리 시각">{formatDateTime(detail.matchedAt)}</DetailField>
+            <DetailField label="연결 로직 버전">
+              {displayValue(candidates?.matchingVersion)}
+            </DetailField>
           </div>
 
           {candidatesQuery.isLoading ? (
-            <p className="text-sm text-muted-foreground">저장된 후보를 불러오는 중입니다.</p>
+            <p className="text-sm text-muted-foreground">저장된 연결 후보를 불러오는 중입니다.</p>
           ) : candidatesQuery.isError ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                저장된 매칭 후보를 불러오지 못했습니다.
+                저장된 연결 후보를 불러오지 못했습니다.
               </p>
               <Button variant="outline" size="sm" onClick={() => candidatesQuery.refetch()}>
                 다시 시도
@@ -388,7 +436,7 @@ export function MfdsDeclarationDetailPage() {
           ) : (
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="space-y-3">
-                <h3 className="font-semibold">술 후보</h3>
+                <h3 className="font-semibold">위스키 연결 후보</h3>
                 {candidates?.alcoholCandidates.length ? (
                   candidates.alcoholCandidates.map((candidate) => (
                     <div key={candidate.alcoholId} className="rounded-lg border p-3 text-sm">
@@ -408,7 +456,7 @@ export function MfdsDeclarationDetailPage() {
                 )}
               </div>
               <div className="space-y-3">
-                <h3 className="font-semibold">증류소 후보</h3>
+                <h3 className="font-semibold">증류소 연결 후보</h3>
                 {candidates?.distilleryCandidates.length ? (
                   candidates.distilleryCandidates.map((candidate) => (
                     <div key={candidate.id} className="rounded-lg border p-3 text-sm">
@@ -428,7 +476,7 @@ export function MfdsDeclarationDetailPage() {
                 )}
               </div>
               <div className="space-y-3">
-                <h3 className="font-semibold">지역 후보</h3>
+                <h3 className="font-semibold">지역 연결 후보</h3>
                 {candidates?.regionCandidates.length ? (
                   candidates.regionCandidates.map((candidate) => (
                     <div key={candidate.id} className="rounded-lg border p-3 text-sm">
@@ -454,14 +502,15 @@ export function MfdsDeclarationDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>시스템 기록</CardTitle>
-          <CardDescription>수입일이 아니라 어드민 데이터 처리 시각입니다.</CardDescription>
+          <CardTitle>데이터 처리 기록</CardTitle>
         </CardHeader>
         <CardContent>
-          <dl className="grid gap-5 sm:grid-cols-3">
+          <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+            <DetailField label="데이터 ID">{detail.id}</DetailField>
+            <DetailField label="RCNO">{detail.rcno}</DetailField>
             <DetailField label="데이터 적재 시각">{formatDateTime(detail.createdAt)}</DetailField>
             <DetailField label="데이터 수정 시각">{formatDateTime(detail.updatedAt)}</DetailField>
-            <DetailField label="매칭 처리 시각">{formatDateTime(detail.matchedAt)}</DetailField>
+            <DetailField label="연결 처리 시각">{formatDateTime(detail.matchedAt)}</DetailField>
           </dl>
         </CardContent>
       </Card>

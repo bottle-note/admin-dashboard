@@ -132,13 +132,13 @@ export const menuConfig: MenuGroup[] = [
     items: [
       {
         id: 'mfds-management',
-        label: '수입 정보',
+        label: '식약처 데이터 관리',
         icon: FileSearch,
         roles: ['ROOT_ADMIN'],
         children: [
           {
             id: 'mfds-declaration-list',
-            label: '수입 신고 목록',
+            label: '수입 신고 데이터 검토',
             icon: List,
             path: '/mfds/declarations',
           },

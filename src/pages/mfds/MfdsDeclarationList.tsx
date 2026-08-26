@@ -54,7 +54,13 @@ function getNormalizationStatus(value: string) {
 }
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString('ko-KR');
+  return new Date(value).toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 function formatSpecification(volumeMl: number | null, abvPercent: number | null) {
@@ -144,9 +150,9 @@ export function MfdsDeclarationListPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">수입 신고 목록</h1>
+        <h1 className="text-2xl font-bold">수입 신고 데이터 검토</h1>
         <p className="text-muted-foreground">
-          식약처 수입 신고의 정제 상태와 보틀노트 연결 결과를 조회합니다.
+          식약처에서 수집한 신고 데이터의 정규화 상태와 보틀노트 연결 결과를 검토합니다.
         </p>
       </div>
 
@@ -203,8 +209,8 @@ export function MfdsDeclarationListPage() {
             )
           }
         >
-          <SelectTrigger aria-label="술 연결 여부" className="w-full sm:w-[180px]">
-            <SelectValue placeholder="술 연결 여부" />
+          <SelectTrigger aria-label="보틀노트 연결 여부" className="w-full sm:w-[180px]">
+            <SelectValue placeholder="보틀노트 연결 여부" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL}>연결 여부 전체</SelectItem>
@@ -221,11 +227,11 @@ export function MfdsDeclarationListPage() {
             )
           }
         >
-          <SelectTrigger aria-label="매칭 판정" className="w-full sm:w-[180px]">
-            <SelectValue placeholder="매칭 판정" />
+          <SelectTrigger aria-label="연결 판정" className="w-full sm:w-[180px]">
+            <SelectValue placeholder="연결 판정" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>매칭 판정 전체</SelectItem>
+            <SelectItem value={ALL}>연결 판정 전체</SelectItem>
             {Object.entries(MATCH_DECISION_LABELS).map(([value, label]) => (
               <SelectItem key={value} value={value}>
                 {label}
@@ -242,13 +248,13 @@ export function MfdsDeclarationListPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[80px]">ID</TableHead>
+              <TableHead className="w-[80px]">데이터 ID</TableHead>
               <TableHead>RCNO</TableHead>
               <TableHead>제품명</TableHead>
               <TableHead>규격</TableHead>
               <TableHead>수입사</TableHead>
               <TableHead>정규화</TableHead>
-              <TableHead>술 매칭</TableHead>
+              <TableHead>보틀노트 연결</TableHead>
               <TableHead>적재 시각</TableHead>
             </TableRow>
           </TableHeader>
@@ -256,14 +262,14 @@ export function MfdsDeclarationListPage() {
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-40 text-center text-muted-foreground">
-                  수입 신고를 불러오는 중입니다.
+                  수입 신고 데이터를 불러오는 중입니다.
                 </TableCell>
               </TableRow>
             ) : isError ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-40 text-center">
                   <p className="mb-3 text-muted-foreground">
-                    수입 신고 목록을 불러오지 못했습니다.
+                    수입 신고 데이터를 불러오지 못했습니다.
                   </p>
                   <Button variant="outline" size="sm" onClick={() => refetch()}>
                     다시 시도
@@ -274,8 +280,8 @@ export function MfdsDeclarationListPage() {
               <TableRow>
                 <TableCell colSpan={8} className="h-40 text-center text-muted-foreground">
                   {hasFilters
-                    ? '조건에 맞는 수입 신고가 없습니다.'
-                    : '수집된 수입 신고가 없습니다.'}
+                    ? '조건에 맞는 신고 데이터가 없습니다.'
+                    : '수집된 신고 데이터가 없습니다.'}
                 </TableCell>
               </TableRow>
             ) : (
