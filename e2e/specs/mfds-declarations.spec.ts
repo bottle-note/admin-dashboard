@@ -26,7 +26,7 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
     await firstDataRow.click();
 
     await expect(page).toHaveURL(/\/mfds\/declarations\/\d+$/);
-    await expect(page.getByText('신고 정보 비교', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '정규화 결과' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: '분류' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: '정규화 결과' })).toBeVisible();
     await expect(page.getByText('규격 정규화 결과', { exact: true })).toHaveCount(0);

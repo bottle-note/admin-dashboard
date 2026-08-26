@@ -38,7 +38,7 @@ const REVIEW_STATUS_LABELS: Record<string, string> = {
 
 function displayValue(value: string | number | null | undefined, suffix = '') {
   if (value === null || value === undefined || value === '') return '-';
-  return `${typeof value === 'number' ? value.toLocaleString() : value}${suffix}`;
+  return `${value}${suffix}`;
 }
 
 function formatDateTime(value: string | null | undefined) {
@@ -199,7 +199,7 @@ export function MfdsDeclarationDetailPage() {
       )}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">신고 정보 비교</h2>
+        <h2 className="text-lg font-semibold">정규화 결과</h2>
         <div className="rounded-lg border">
           <div className="border-b bg-muted/30 px-4 py-3 text-sm font-medium">수집 제품명</div>
           <dl className="grid gap-4 p-4 sm:grid-cols-2">
@@ -290,11 +290,11 @@ export function MfdsDeclarationDetailPage() {
                   규격
                 </TableCell>
                 <TableCell className="bg-muted/20 font-medium">총용량</TableCell>
-                <TableCell>{displayValue(detail.volumeMl, ' ml')}</TableCell>
+                <TableCell>{displayValue(detail.volumeMl)}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className="bg-muted/20 font-medium">단위 용량</TableCell>
-                <TableCell>{displayValue(detail.unitVolumeMl, ' ml')}</TableCell>
+                <TableCell>{displayValue(detail.unitVolumeMl)}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className="bg-muted/20 font-medium">포장 수량</TableCell>
@@ -305,13 +305,15 @@ export function MfdsDeclarationDetailPage() {
                 <TableCell>{displayValue(detail.abvPercent, '%')}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell className="bg-muted/20 align-top font-medium">유통</TableCell>
-                <TableCell className="bg-muted/20 font-medium">소비기한</TableCell>
-                <TableCell>
-                  {detail.expiryStart || detail.expiryEnd
-                    ? `${detail.expiryStart ?? '-'} ~ ${detail.expiryEnd ?? '-'}`
-                    : '-'}
+                <TableCell rowSpan={2} className="bg-muted/20 align-top font-medium">
+                  유통
                 </TableCell>
+                <TableCell className="bg-muted/20 font-medium">소비기한 시작일</TableCell>
+                <TableCell>{displayValue(detail.expiryStart)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="bg-muted/20 font-medium">소비기한 종료일</TableCell>
+                <TableCell>{displayValue(detail.expiryEnd)}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
