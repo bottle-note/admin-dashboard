@@ -245,10 +245,10 @@ export function MfdsDeclarationListPage() {
       </div>
 
       <div className="overflow-x-auto rounded-lg border">
-        <Table>
+        <Table className="[&_td]:px-4 [&_th]:whitespace-nowrap [&_th]:px-4">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[80px]">데이터 ID</TableHead>
+              <TableHead className="w-[104px]">데이터 ID</TableHead>
               <TableHead>RCNO</TableHead>
               <TableHead>제품명</TableHead>
               <TableHead>규격</TableHead>

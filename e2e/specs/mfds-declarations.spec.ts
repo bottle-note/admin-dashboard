@@ -26,14 +26,27 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
     await firstDataRow.click();
 
     await expect(page).toHaveURL(/\/mfds\/declarations\/\d+$/);
-    await expect(page.getByRole('heading', { name: '정규화 결과' })).toBeVisible();
+    const processingRecord = page.getByText('데이터 처리 기록', { exact: true });
+    const normalizationHeading = page.getByRole('heading', { name: '정규화 결과' });
+    await expect(processingRecord).toBeVisible();
+    await expect(normalizationHeading).toBeVisible();
+    expect((await processingRecord.boundingBox())?.y).toBeLessThan(
+      (await normalizationHeading.boundingBox())?.y ?? 0
+    );
     await expect(page.getByRole('columnheader', { name: '분류' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: '정규화 결과' })).toBeVisible();
     await expect(page.getByText('규격 정규화 결과', { exact: true })).toHaveCount(0);
     await expect(page.getByLabel('정규화 상태')).toHaveText('정규화 완료');
     await expect(page.getByLabel('데이터 처리 상태')).toHaveCount(0);
-    await expect(page.getByText('수입사 매핑 근거', { exact: true })).toBeVisible();
-    await expect(page.getByText('보틀노트 데이터 연결', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '수입사 연결' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '연관 데이터 연결' })).toBeVisible();
+    await expect(page.getByText('수입사 매핑 근거', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('보틀노트 데이터 연결', { exact: true })).toHaveCount(0);
+    const importerSection = page.locator('section').filter({
+      has: page.getByRole('heading', { name: '수입사 연결' }),
+    });
+    await expect(importerSection.locator('a[href^="/mfds/importers/"]')).toBeVisible();
+    await expect(importerSection.getByRole('button', { name: '보기' })).toHaveCount(0);
   });
 
   test('정규화 필터를 URL에 유지한다', async ({ page }) => {
@@ -57,8 +70,13 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
       .click();
 
     const statusPanel = page.getByLabel('데이터 처리 상태');
+    const processingRecord = page.getByText('데이터 처리 기록', { exact: true });
     await expect(page.getByLabel('정규화 상태')).toHaveText('검토 필요');
+    await expect(processingRecord).toBeVisible();
     await expect(statusPanel).toContainText('검토 대기');
+    expect((await processingRecord.boundingBox())?.y).toBeLessThan(
+      (await statusPanel.boundingBox())?.y ?? 0
+    );
     await expect(statusPanel.getByText('정규화 처리 코드', { exact: true })).toBeVisible();
     await expect(statusPanel.locator('li code').first()).toBeVisible();
   });
