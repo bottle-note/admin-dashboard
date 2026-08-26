@@ -63,7 +63,10 @@ export const curationService = {
    * 큐레이션 스펙 목록 조회
    */
   listSpecs: async (): Promise<CurationV2SpecListItem[]> => {
-    return apiClient.get<CurationV2SpecListItem[]>(CurationV2Api.listSpecs.endpoint);
+    const response = await apiClient.get<CurationV2SpecListItem[]>(
+      CurationV2Api.listSpecs.endpoint
+    );
+    return response.data;
   },
 
   /**
@@ -71,17 +74,17 @@ export const curationService = {
    */
   getSpec: async (specId: number): Promise<CurationV2Spec> => {
     const endpoint = CurationV2Api.specDetail.endpoint.replace(':specId', String(specId));
-    return apiClient.get<CurationV2Spec>(endpoint);
+    const response = await apiClient.get<CurationV2Spec>(endpoint);
+    return response.data;
   },
 
   /**
    * Spec 기반 큐레이션 목록 조회
    */
   list: async (params?: CurationV2SearchParams): Promise<CurationListResponse> => {
-    const response = await apiClient.getWithMeta<CurationV2ListItem[]>(
-      CurationV2Api.list.endpoint,
-      { params }
-    );
+    const response = await apiClient.get<CurationV2ListItem[]>(CurationV2Api.list.endpoint, {
+      params,
+    });
 
     return {
       items: response.data ?? [],
@@ -100,7 +103,8 @@ export const curationService = {
    */
   getDetail: async (curationId: number): Promise<CurationV2Detail> => {
     const endpoint = CurationV2Api.detail.endpoint.replace(':curationId', String(curationId));
-    return apiClient.get<CurationV2Detail>(endpoint);
+    const response = await apiClient.get<CurationV2Detail>(endpoint);
+    return response.data;
   },
 
   /**

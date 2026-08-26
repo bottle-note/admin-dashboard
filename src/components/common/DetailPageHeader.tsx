@@ -31,12 +31,14 @@ type DetailPageHeaderAction =
 /**
  * DetailPageHeader 컴포넌트의 props
  * @param title - 페이지 제목
+ * @param titleAddon - 제목 옆에 표시할 상태 등의 부가 요소 (선택)
  * @param subtitle - 부제목 (선택)
  * @param onBack - 뒤로가기 클릭 시 호출되는 콜백
  * @param actions - 액션 버튼들 (저장, 삭제 등)
  */
 export interface DetailPageHeaderProps {
   title: string;
+  titleAddon?: ReactNode;
   subtitle?: string;
   onBack: () => void;
   action?: DetailPageHeaderAction;
@@ -45,6 +47,7 @@ export interface DetailPageHeaderProps {
 
 export function DetailPageHeader({
   title,
+  titleAddon,
   subtitle,
   onBack,
   action,
@@ -59,7 +62,10 @@ export function DetailPageHeader({
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold">{title}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold">{title}</h1>
+            {titleAddon}
+          </div>
           {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
         </div>
       </div>
@@ -90,12 +96,7 @@ function DetailPageHeaderActionButtons({ action }: { action: DetailPageHeaderAct
   return (
     <>
       {action.onDelete && (
-        <Button
-          type="button"
-          variant="destructive"
-          onClick={action.onDelete}
-          disabled={isDisabled}
-        >
+        <Button type="button" variant="destructive" onClick={action.onDelete} disabled={isDisabled}>
           <Trash2 className="mr-2 h-4 w-4" />
           삭제
         </Button>

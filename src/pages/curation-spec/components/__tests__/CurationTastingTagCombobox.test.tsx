@@ -51,7 +51,7 @@ describe('CurationTastingTagCombobox', () => {
     render(<ControlledCurationTastingTagCombobox />);
 
     const trigger = screen.getByRole('combobox', { name: '테이스팅 태그' });
-    const container = trigger.parentElement;
+    const container = trigger.parentElement?.parentElement;
 
     expect(container).toBeInstanceOf(HTMLElement);
     vi.spyOn(container as HTMLElement, 'getBoundingClientRect').mockReturnValue({
@@ -67,8 +67,7 @@ describe('CurationTastingTagCombobox', () => {
     } as DOMRect);
 
     fireEvent.click(trigger);
-    const input = await screen.findByLabelText('테이스팅 태그 검색어');
-    fireEvent.change(input, { target: { value: '과' } });
+    fireEvent.change(trigger, { target: { value: '과' } });
 
     const dropdownItem = await screen.findByRole('button', { name: '과일 태그 선택' });
     const dropdown = dropdownItem.closest('.fixed');
@@ -91,7 +90,7 @@ describe('CurationTastingTagCombobox', () => {
     render(<ControlledCurationTastingTagCombobox selectedTagNames={['바닐라']} />);
 
     const trigger = screen.getByRole('combobox', { name: '테이스팅 태그' });
-    const container = trigger.parentElement;
+    const container = trigger.parentElement?.parentElement;
 
     expect(container).toBeInstanceOf(HTMLElement);
     vi.spyOn(container as HTMLElement, 'getBoundingClientRect').mockReturnValue({
@@ -107,8 +106,7 @@ describe('CurationTastingTagCombobox', () => {
     } as DOMRect);
 
     fireEvent.click(trigger);
-    const input = await screen.findByLabelText('테이스팅 태그 검색어');
-    fireEvent.change(input, { target: { value: '바' } });
+    fireEvent.change(trigger, { target: { value: '바' } });
 
     const emptyMessage = await screen.findByText('검색 결과가 없습니다');
     const dropdown = emptyMessage.closest('.fixed');
@@ -127,7 +125,7 @@ describe('CurationTastingTagCombobox', () => {
     render(<ControlledCurationTastingTagCombobox onCreate={onCreate} onSelect={onSelect} />);
 
     fireEvent.click(screen.getByRole('combobox', { name: '테이스팅 태그' }));
-    fireEvent.change(await screen.findByLabelText('테이스팅 태그 검색어'), {
+    fireEvent.change(screen.getByRole('combobox', { name: '테이스팅 태그' }), {
       target: { value: '셰리' },
     });
 
@@ -145,7 +143,7 @@ describe('CurationTastingTagCombobox', () => {
     render(<ControlledCurationTastingTagCombobox onCreate={onCreate} onSelect={onSelect} />);
 
     fireEvent.click(screen.getByRole('combobox', { name: '테이스팅 태그' }));
-    fireEvent.change(await screen.findByLabelText('테이스팅 태그 검색어'), {
+    fireEvent.change(screen.getByRole('combobox', { name: '테이스팅 태그' }), {
       target: { value: '과' },
     });
 
@@ -162,7 +160,7 @@ describe('CurationTastingTagCombobox', () => {
     render(<ControlledCurationTastingTagCombobox onCreate={onCreate} />);
 
     fireEvent.click(screen.getByRole('combobox', { name: '테이스팅 태그' }));
-    const input = await screen.findByLabelText('테이스팅 태그 검색어');
+    const input = screen.getByRole('combobox', { name: '테이스팅 태그' });
     fireEvent.change(input, { target: { value: '자' } });
     fireEvent.keyDown(input, {
       key: 'Enter',
@@ -183,7 +181,7 @@ describe('CurationTastingTagCombobox', () => {
     render(<ControlledCurationTastingTagCombobox selectedTagNames={['바닐라']} />);
 
     fireEvent.click(screen.getByRole('combobox', { name: '테이스팅 태그' }));
-    fireEvent.change(await screen.findByLabelText('테이스팅 태그 검색어'), {
+    fireEvent.change(screen.getByRole('combobox', { name: '테이스팅 태그' }), {
       target: { value: '바닐라' },
     });
 

@@ -33,7 +33,7 @@ export const helpService = {
   getList: async (
     params?: HelpListParams
   ): Promise<PaginatedData<HelpListItem>> => {
-    const response = await apiClient.getWithMeta<{
+    const response = await apiClient.get<{
       content: {
         totalCount: number;
         helpList: HelpListItem[];
@@ -59,7 +59,8 @@ export const helpService = {
    * 문의 상세 조회
    */
   getDetail: async (helpId: number): Promise<HelpDetail> => {
-    return apiClient.get<HelpDetail>(HelpApi.detail.endpoint(helpId));
+    const response = await apiClient.get<HelpDetail>(HelpApi.detail.endpoint(helpId));
+    return response.data;
   },
 
   /**

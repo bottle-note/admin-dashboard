@@ -81,18 +81,20 @@ export interface ApiMeta {
   totalElements?: number;
   totalPages?: number;
   hasNext?: boolean;
+  /** ID 커서 기반 페이지네이션의 다음 커서 */
+  nextCursor?: number | null;
 }
 
 /**
  * 공통 API 응답 래퍼
  * Bottle Note API 응답 구조와 일치
  */
-export interface ApiResponse<T> {
+export interface ApiResponse<T, TMeta extends ApiMeta = ApiMeta> {
   success: boolean;
   code: number;
   data: T;
   errors: ApiErrorItem[];
-  meta: ApiMeta;
+  meta: TMeta;
 }
 
 // ============================================

@@ -49,6 +49,11 @@
   }
 }
 
+table tbody td[class] {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
 @layer base {
   * {
     @apply border-border;
