@@ -19,6 +19,7 @@ import {
   useMfdsMatchingCandidates,
   useMfdsRcnoLinks,
 } from '@/hooks/useMfdsDeclarations';
+import { cn } from '@/lib/utils';
 import { MFDS_NORMALIZATION_STATUS_MAP } from './mfds-normalization-status';
 
 const MATCH_DECISION_LABELS: Record<string, string> = {
@@ -29,6 +30,10 @@ const MATCH_DECISION_LABELS: Record<string, string> = {
   REVIEW: '검토 필요',
   AMBIGUOUS: '후보 모호',
   CONFLICT_REVIEW: '충돌 검토',
+};
+
+const REVIEW_STATUS_LABELS: Record<string, string> = {
+  PENDING: '검토 대기',
 };
 
 function displayValue(value: string | number | null | undefined, suffix = '') {
@@ -105,14 +110,93 @@ export function MfdsDeclarationDetailPage() {
 
   const detail = detailQuery.data;
   const candidates = candidatesQuery.data;
+  const normalizationStatus = MFDS_NORMALIZATION_STATUS_MAP[detail.normalizationStatus];
+  const reviewStatusLabel = REVIEW_STATUS_LABELS[detail.reviewStatus] ?? detail.reviewStatus;
+  const hasReviewRecord = Boolean(detail.reviewedBy || detail.reviewedAt || detail.reviewNote);
+  const showStatusDetails =
+    detail.normalizationStatus !== 'NORMALIZED' &&
+    Boolean(
+      detail.normalizationReasons.length > 0 ||
+      detail.unparsedFragments.length > 0 ||
+      hasReviewRecord ||
+      (detail.reviewStatus && detail.reviewStatus !== 'NOT_REQUIRED')
+    );
 
   return (
     <div className="space-y-6">
       <DetailPageHeader
         title={detail.skuDisplayNameKo ?? detail.baseProductNameKo ?? '신고 데이터 검토'}
+        titleAddon={
+          <Badge
+            aria-label="정규화 상태"
+            variant="outline"
+            className={normalizationStatus.badgeClassName}
+          >
+            {normalizationStatus.label}
+          </Badge>
+        }
         onBack={() => navigate('/mfds/declarations')}
         action={{ mode: 'readonly' }}
       />
+
+      {showStatusDetails && (
+        <section
+          aria-label="데이터 처리 상태"
+          className={cn('rounded-lg border px-4 py-3', normalizationStatus.panelClassName)}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {detail.reviewStatus && detail.reviewStatus !== 'NOT_REQUIRED' && (
+              <Badge variant="outline" className="bg-background/80">
+                {reviewStatusLabel}
+              </Badge>
+            )}
+            {detail.normalizedAt && (
+              <span className="text-sm text-muted-foreground">
+                정규화 시각 {formatDateTime(detail.normalizedAt)}
+              </span>
+            )}
+          </div>
+
+          <div className="border-current/10 mt-4 grid gap-5 border-t pt-4 md:grid-cols-2">
+            {detail.normalizationReasons.length > 0 && (
+              <div className="space-y-2">
+                <h2 className="text-sm font-semibold">정규화 처리 코드</h2>
+                <ul className="list-inside list-disc space-y-1 text-sm">
+                  {detail.normalizationReasons.map((reason, index) => (
+                    <li key={`${reason}-${index}`}>
+                      <code className="text-xs">{reason}</code>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {detail.unparsedFragments.length > 0 && (
+              <div className="space-y-2">
+                <h2 className="text-sm font-semibold">미해석 원문</h2>
+                <div className="flex flex-wrap gap-2">
+                  {detail.unparsedFragments.map((fragment, index) => (
+                    <code
+                      key={`${fragment}-${index}`}
+                      className="rounded border bg-background/70 px-2 py-1 text-xs"
+                    >
+                      {fragment}
+                    </code>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {hasReviewRecord && (
+              <dl className="border-current/10 grid gap-4 border-t pt-4 md:col-span-2 md:grid-cols-3">
+                <DetailField label="검토자">{displayValue(detail.reviewedBy)}</DetailField>
+                <DetailField label="검토 시각">{formatDateTime(detail.reviewedAt)}</DetailField>
+                <DetailField label="검토 메모">{displayValue(detail.reviewNote)}</DetailField>
+              </dl>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">신고 정보 비교</h2>
@@ -233,57 +317,6 @@ export function MfdsDeclarationDetailPage() {
           </Table>
         </div>
       </section>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>데이터 처리 상태</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <dl className="grid gap-5 md:grid-cols-4">
-            <DetailField label="정규화 상태">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge
-                  variant="outline"
-                  className={
-                    MFDS_NORMALIZATION_STATUS_MAP[detail.normalizationStatus].badgeClassName
-                  }
-                >
-                  {MFDS_NORMALIZATION_STATUS_MAP[detail.normalizationStatus].label}
-                </Badge>
-              </div>
-            </DetailField>
-            <DetailField label="정규화 시각">{formatDateTime(detail.normalizedAt)}</DetailField>
-            <DetailField label="검토 상태">{detail.reviewStatus}</DetailField>
-            <DetailField label="검토 시각">{formatDateTime(detail.reviewedAt)}</DetailField>
-            <DetailField label="검토자">{displayValue(detail.reviewedBy)}</DetailField>
-            <DetailField label="검토 메모">{displayValue(detail.reviewNote)}</DetailField>
-          </dl>
-          <div className="grid gap-5 md:grid-cols-2">
-            <DetailField label="정규화 사유">
-              {detail.normalizationReasons.length > 0 ? (
-                <ul className="list-inside list-disc space-y-1">
-                  {detail.normalizationReasons.map((reason, index) => (
-                    <li key={`${reason}-${index}`}>{reason}</li>
-                  ))}
-                </ul>
-              ) : (
-                '정규화 사유 없음'
-              )}
-            </DetailField>
-            <DetailField label="파싱하지 못한 원문">
-              {detail.unparsedFragments.length > 0 ? (
-                <ul className="list-inside list-disc space-y-1">
-                  {detail.unparsedFragments.map((fragment, index) => (
-                    <li key={`${fragment}-${index}`}>{fragment}</li>
-                  ))}
-                </ul>
-              ) : (
-                '미해석 원문 없음'
-              )}
-            </DetailField>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>

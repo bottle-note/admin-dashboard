@@ -11,7 +11,7 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
         response.request().method() === 'GET'
     );
 
-    await page.goto(LIST_URL);
+    await page.goto(`${LIST_URL}?normalizationStatus=NORMALIZED`);
     expect((await listResponse).ok()).toBe(true);
 
     await expect(page.getByRole('heading', { name: '수입 신고 데이터 검토' })).toBeVisible();
@@ -30,7 +30,8 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
     await expect(page.getByRole('columnheader', { name: '분류' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: '정규화 결과' })).toBeVisible();
     await expect(page.getByText('규격 정규화 결과', { exact: true })).toHaveCount(0);
-    await expect(page.getByText('데이터 처리 상태', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('정규화 상태')).toHaveText('정규화 완료');
+    await expect(page.getByLabel('데이터 처리 상태')).toHaveCount(0);
     await expect(page.getByText('수입사 매핑 근거', { exact: true })).toBeVisible();
     await expect(page.getByText('보틀노트 데이터 연결', { exact: true })).toBeVisible();
   });
@@ -48,6 +49,18 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
     expect((await filteredResponse).ok()).toBe(true);
     await expect(page).toHaveURL(/normalizationStatus=REVIEW_REQUIRED/);
     await expect(page.locator('tbody')).toContainText('검토 필요');
+
+    await page
+      .locator('tbody tr')
+      .filter({ has: page.locator('td') })
+      .first()
+      .click();
+
+    const statusPanel = page.getByLabel('데이터 처리 상태');
+    await expect(page.getByLabel('정규화 상태')).toHaveText('검토 필요');
+    await expect(statusPanel).toContainText('검토 대기');
+    await expect(statusPanel.getByText('정규화 처리 코드', { exact: true })).toBeVisible();
+    await expect(statusPanel.locator('li code').first()).toBeVisible();
   });
 
   test('수입사 이름을 검색해 선택한 수입사로 신고를 필터링한다', async ({ page }) => {
