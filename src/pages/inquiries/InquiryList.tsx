@@ -49,7 +49,10 @@ const TYPE_OPTIONS: { value: HelpType | 'ALL'; label: string }[] = [
   { value: 'ETC', label: '기타' },
 ];
 
-const STATUS_BADGE_VARIANT: Record<HelpStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+const STATUS_BADGE_VARIANT: Record<
+  HelpStatus,
+  'default' | 'secondary' | 'destructive' | 'outline'
+> = {
   CREATING: 'outline',
   WAITING: 'secondary',
   SUCCESS: 'default',
@@ -74,9 +77,9 @@ const TYPE_LABEL: Record<HelpType, string> = {
 
 export function InquiryListPage() {
   const [searchParams, setSearchParams] = useState<HelpListParams>({
-    pageSize: 20,
+    page: 0,
+    size: 20,
   });
-  const [cursorHistory, setCursorHistory] = useState<(number | undefined)[]>([]);
   const [selectedHelpId, setSelectedHelpId] = useState<number | null>(null);
   const [responseContent, setResponseContent] = useState('');
   const [answerStatus, setAnswerStatus] = useState<'SUCCESS' | 'REJECT'>('SUCCESS');
@@ -86,29 +89,26 @@ export function InquiryListPage() {
   const answerMutation = useHelpAnswer();
 
   const handleStatusChange = (value: string) => {
-    setCursorHistory([]);
     setSearchParams((prev) => ({
       ...prev,
       status: value === 'ALL' ? undefined : (value as HelpStatus),
-      cursor: undefined,
+      page: 0,
     }));
   };
 
   const handleTypeChange = (value: string) => {
-    setCursorHistory([]);
     setSearchParams((prev) => ({
       ...prev,
       type: value === 'ALL' ? undefined : (value as HelpType),
-      cursor: undefined,
+      page: 0,
     }));
   };
 
   const handlePageSizeChange = (size: number) => {
-    setCursorHistory([]);
     setSearchParams((prev) => ({
       ...prev,
-      pageSize: size,
-      cursor: undefined,
+      size,
+      page: 0,
     }));
   };
 
@@ -142,28 +142,6 @@ export function InquiryListPage() {
     );
   };
 
-  const handleNextPage = () => {
-    if (data?.pageable.hasNext) {
-      setCursorHistory((prev) => [...prev, searchParams.cursor]);
-      setSearchParams((prev) => ({
-        ...prev,
-        cursor: data.pageable.cursor,
-      }));
-    }
-  };
-
-  const handlePreviousPage = () => {
-    if (cursorHistory.length > 0) {
-      const newHistory = [...cursorHistory];
-      const previousCursor = newHistory.pop();
-      setCursorHistory(newHistory);
-      setSearchParams((prev) => ({
-        ...prev,
-        cursor: previousCursor,
-      }));
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* 헤더 */}
@@ -173,11 +151,8 @@ export function InquiryListPage() {
       </div>
 
       {/* 필터 */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <Select
-          value={searchParams.status ?? 'ALL'}
-          onValueChange={handleStatusChange}
-        >
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <Select value={searchParams.status ?? 'ALL'} onValueChange={handleStatusChange}>
           <SelectTrigger className="w-full sm:w-[150px]">
             <SelectValue placeholder="상태" />
           </SelectTrigger>
@@ -189,10 +164,7 @@ export function InquiryListPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select
-          value={searchParams.type ?? 'ALL'}
-          onValueChange={handleTypeChange}
-        >
+        <Select value={searchParams.type ?? 'ALL'} onValueChange={handleTypeChange}>
           <SelectTrigger className="w-full sm:w-[150px]">
             <SelectValue placeholder="유형" />
           </SelectTrigger>
@@ -222,18 +194,16 @@ export function InquiryListPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={6} className="py-8 text-center">
                   <span className="text-muted-foreground">로딩 중...</span>
                 </TableCell>
               </TableRow>
             ) : data?.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={6} className="py-8 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <MessageSquare className="h-8 w-8 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      문의가 없습니다.
-                    </span>
+                    <span className="text-muted-foreground">문의가 없습니다.</span>
                   </div>
                 </TableCell>
               </TableRow>
@@ -244,9 +214,7 @@ export function InquiryListPage() {
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => handleRowClick(item.helpId)}
                 >
-                  <TableCell className="font-mono text-sm">
-                    {item.helpId}
-                  </TableCell>
+                  <TableCell className="font-mono text-sm">{item.helpId}</TableCell>
                   <TableCell className="font-medium">{item.title}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{TYPE_LABEL[item.type]}</Badge>
@@ -256,9 +224,7 @@ export function InquiryListPage() {
                       {STATUS_LABEL[item.status]}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {item.userNickname}
-                  </TableCell>
+                  <TableCell className="text-muted-foreground">{item.userNickname}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {new Date(item.createAt).toLocaleDateString('ko-KR')}
                   </TableCell>
@@ -272,30 +238,27 @@ export function InquiryListPage() {
       {/* 페이지네이션 */}
       {data && data.items.length > 0 && (
         <Pagination
-          pageSize={searchParams.pageSize ?? 20}
+          currentPage={data.meta.page}
+          totalPages={data.meta.totalPages}
+          totalElements={data.meta.totalElements}
+          pageSize={data.meta.size}
           currentItemCount={data.items.length}
-          hasNext={data.pageable.hasNext}
-          hasPrevious={cursorHistory.length > 0}
-          onNextPage={handleNextPage}
-          onPreviousPage={handlePreviousPage}
+          hasNext={data.meta.hasNext}
+          onPageChange={(page) => setSearchParams((prev) => ({ ...prev, page }))}
           onPageSizeChange={handlePageSizeChange}
         />
       )}
 
       {/* 상세/답변 다이얼로그 */}
       <Dialog open={selectedHelpId !== null} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>문의 상세</DialogTitle>
-            <DialogDescription>
-              문의 내용을 확인하고 답변을 등록합니다.
-            </DialogDescription>
+            <DialogDescription>문의 내용을 확인하고 답변을 등록합니다.</DialogDescription>
           </DialogHeader>
 
           {isDetailLoading ? (
-            <div className="py-8 text-center text-muted-foreground">
-              로딩 중...
-            </div>
+            <div className="py-8 text-center text-muted-foreground">로딩 중...</div>
           ) : detailData ? (
             <div className="space-y-6">
               {/* 문의 정보 */}
@@ -311,9 +274,7 @@ export function InquiryListPage() {
                   </span>
                 </div>
                 <h3 className="text-lg font-semibold">{detailData.title}</h3>
-                <p className="whitespace-pre-wrap text-muted-foreground">
-                  {detailData.content}
-                </p>
+                <p className="whitespace-pre-wrap text-muted-foreground">{detailData.content}</p>
 
                 {/* 첨부 이미지 */}
                 {detailData.imageUrlList.length > 0 && (
@@ -329,7 +290,7 @@ export function InquiryListPage() {
                         <img
                           src={img.viewUrl}
                           alt={`첨부 이미지 ${img.order}`}
-                          className="h-24 w-24 rounded-lg object-cover border hover:opacity-80"
+                          className="h-24 w-24 rounded-lg border object-cover hover:opacity-80"
                         />
                       </a>
                     ))}
@@ -340,10 +301,8 @@ export function InquiryListPage() {
               {/* 기존 답변 */}
               {detailData.responseContent && (
                 <div className="rounded-lg bg-muted p-4">
-                  <p className="text-sm font-medium mb-2">답변 내용</p>
-                  <p className="whitespace-pre-wrap">
-                    {detailData.responseContent}
-                  </p>
+                  <p className="mb-2 text-sm font-medium">답변 내용</p>
+                  <p className="whitespace-pre-wrap">{detailData.responseContent}</p>
                 </div>
               )}
 
@@ -364,9 +323,7 @@ export function InquiryListPage() {
                     <label className="text-sm font-medium">처리 상태</label>
                     <Select
                       value={answerStatus}
-                      onValueChange={(v) =>
-                        setAnswerStatus(v as 'SUCCESS' | 'REJECT')
-                      }
+                      onValueChange={(v) => setAnswerStatus(v as 'SUCCESS' | 'REJECT')}
                     >
                       <SelectTrigger className="mt-2 w-[200px]">
                         <SelectValue />

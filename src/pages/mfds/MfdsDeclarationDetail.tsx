@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
@@ -29,6 +29,7 @@ import {
   MFDS_UNKNOWN_RELATION_CODE,
 } from './mfds-alcohol-match-status';
 import { MFDS_NORMALIZATION_STATUS_MAP } from './mfds-normalization-status';
+import { MfdsWhiskyMatchingSheet } from './MfdsWhiskyMatchingSheet';
 
 const REVIEW_STATUS_LABELS: Record<string, string> = {
   PENDING: '검토 대기',
@@ -101,6 +102,7 @@ function RelationCodeBadge({ value }: { value: string | null | undefined }) {
 export function MfdsDeclarationDetailPage() {
   const navigate = useNavigate();
   const { declarationId: declarationIdParam } = useParams<{ declarationId: string }>();
+  const [isWhiskyMatchingOpen, setIsWhiskyMatchingOpen] = useState(false);
   const parsedId = Number(declarationIdParam);
   const declarationId = Number.isInteger(parsedId) && parsedId > 0 ? parsedId : undefined;
 
@@ -457,103 +459,9 @@ export function MfdsDeclarationDetailPage() {
                 </TableCell>
                 <TableCell>{formatDateTime(detail.matchedAt)}</TableCell>
                 <TableCell>
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        보기
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent className="overflow-y-auto sm:max-w-lg">
-                      <SheetHeader>
-                        <SheetTitle>보틀노트 위스키 연결 상세</SheetTitle>
-                        <SheetDescription className="sr-only">
-                          연결된 위스키와 저장된 연결 후보를 확인합니다.
-                        </SheetDescription>
-                      </SheetHeader>
-                      <div className="mt-6 space-y-8">
-                        <section className="space-y-3">
-                          <h3 className="font-semibold">현재 연결</h3>
-                          {detail.selectedAlcoholId ? (
-                            <div className="flex items-center gap-4 rounded-lg border p-4">
-                              {selectedAlcohol?.imageUrl && (
-                                <img
-                                  src={selectedAlcohol.imageUrl}
-                                  alt=""
-                                  className="h-16 w-16 rounded-md object-cover"
-                                />
-                              )}
-                              <div>
-                                <Link
-                                  className="font-medium text-primary hover:underline"
-                                  to={`/whisky/${detail.selectedAlcoholId}`}
-                                >
-                                  {selectedAlcohol?.korName ??
-                                    selectedAlcohol?.engName ??
-                                    `ID ${detail.selectedAlcoholId}`}
-                                </Link>
-                                <div className="mt-2">
-                                  <RelationCodeBadge value={detail.alcoholMatchDecision} />
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">연결된 위스키 없음</p>
-                          )}
-                        </section>
-                        <section className="space-y-3">
-                          <h3 className="font-semibold">연결 후보</h3>
-                          {candidatesQuery.isLoading ? (
-                            <p className="text-sm text-muted-foreground">
-                              저장된 연결 후보를 불러오는 중입니다.
-                            </p>
-                          ) : candidatesQuery.isError ? (
-                            <div className="space-y-3">
-                              <p className="text-sm text-muted-foreground">
-                                저장된 연결 후보를 불러오지 못했습니다.
-                              </p>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => candidatesQuery.refetch()}
-                              >
-                                다시 시도
-                              </Button>
-                            </div>
-                          ) : candidates?.alcoholCandidates.length ? (
-                            candidates.alcoholCandidates.map((candidate) => (
-                              <Link
-                                key={candidate.alcoholId}
-                                className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
-                                to={`/whisky/${candidate.alcoholId}`}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                {candidate.imageUrl && (
-                                  <img
-                                    src={candidate.imageUrl}
-                                    alt=""
-                                    className="h-14 w-14 rounded-md object-cover"
-                                  />
-                                )}
-                                <div>
-                                  <p className="font-medium">
-                                    {candidate.korName ??
-                                      candidate.engName ??
-                                      `ID ${candidate.alcoholId}`}
-                                  </p>
-                                  <p className="mt-1 text-sm text-muted-foreground">
-                                    점수 {candidate.score.toFixed(3)}
-                                  </p>
-                                </div>
-                              </Link>
-                            ))
-                          ) : (
-                            <EmptyCandidates />
-                          )}
-                        </section>
-                      </div>
-                    </SheetContent>
-                  </Sheet>
+                  <Button variant="outline" size="sm" onClick={() => setIsWhiskyMatchingOpen(true)}>
+                    연결 관리
+                  </Button>
                 </TableCell>
               </TableRow>
 
@@ -762,6 +670,15 @@ export function MfdsDeclarationDetailPage() {
           </Table>
         </div>
       </section>
+
+      <MfdsWhiskyMatchingSheet
+        declarationId={detail.id}
+        declarationName={detail.skuDisplayNameKo ?? detail.baseProductNameKo ?? '신고 데이터 검토'}
+        rcno={detail.rcno}
+        selectedAlcoholId={detail.selectedAlcoholId}
+        open={isWhiskyMatchingOpen}
+        onOpenChange={setIsWhiskyMatchingOpen}
+      />
     </div>
   );
 }

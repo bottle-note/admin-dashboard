@@ -5,7 +5,6 @@
 import { useCallback } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useApiQuery } from './useApiQuery';
-import { useInfiniteApiQuery } from './useInfiniteApiQuery';
 import { useApiMutation, type UseApiMutationOptions } from './useApiMutation';
 import { useToast } from './useToast';
 import { getErrorMessage, type ApiError } from '@/lib/api-error';
@@ -87,29 +86,29 @@ export function flattenAdminAlcoholPages(data: { pages: AlcoholListResponse[] } 
   return data?.pages.flatMap((page) => page.items) ?? [];
 }
 
-export type AdminAlcoholLookupInfiniteParams = Omit<AlcoholLookupParams, 'cursor'>;
+export type AdminAlcoholLookupInfiniteParams = Omit<AlcoholLookupParams, 'page'>;
 
-const DEFAULT_ALCOHOL_LOOKUP_PAGE_SIZE = 10;
+const DEFAULT_ALCOHOL_LOOKUP_SIZE = 10;
 
 export function useAdminAlcoholLookupInfinite(
   params?: AdminAlcoholLookupInfiniteParams,
   options: { enabled?: boolean } = {}
 ) {
-  const pageSize = params?.pageSize ?? DEFAULT_ALCOHOL_LOOKUP_PAGE_SIZE;
+  const size = params?.size ?? DEFAULT_ALCOHOL_LOOKUP_SIZE;
 
-  return useInfiniteApiQuery(
-    adminAlcoholKeys.list({ ...params, pageSize, lookup: true }),
-    (cursor) =>
+  return useInfiniteQuery<AlcoholLookupResponse, ApiError>({
+    queryKey: adminAlcoholKeys.list({ ...params, size, lookup: true }),
+    queryFn: async ({ pageParam }) =>
       adminAlcoholService.lookup({
         ...params,
-        cursor: cursor ?? 0,
-        pageSize,
+        page: pageParam as number,
+        size,
       }),
-    {
-      enabled: options.enabled ?? true,
-      staleTime: 1000 * 60,
-    }
-  );
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => (lastPage.meta.hasNext ? lastPage.meta.page + 1 : undefined),
+    enabled: options.enabled ?? true,
+    staleTime: 1000 * 60,
+  });
 }
 
 export function flattenAdminAlcoholLookupPages(

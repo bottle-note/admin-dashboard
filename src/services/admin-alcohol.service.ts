@@ -18,7 +18,6 @@ import {
   type AlcoholUpdateRequest,
   type AlcoholUpdateResponse,
   type CategoryReferenceMap,
-  type Pageable,
 } from '@/types/api';
 
 // ============================================
@@ -38,7 +37,13 @@ export interface AlcoholListResponse {
 
 export interface AlcoholLookupResponse {
   items: AlcoholLookupItem[];
-  pageable: Pageable;
+  meta: {
+    page: number;
+    size: number;
+    totalElements: number;
+    totalPages: number;
+    hasNext: boolean;
+  };
 }
 
 // ============================================
@@ -70,21 +75,24 @@ export const adminAlcoholService = {
 
   /**
    * 술 lookup 조회
-   * 선택 컴포넌트용 핵심 필드 + 커서 기반 페이지네이션
+   * 선택 컴포넌트용 핵심 필드 + 페이지 기반 페이지네이션
    */
   lookup: async (params?: AlcoholLookupParams): Promise<AlcoholLookupResponse> => {
     const response = await apiClient.get<AlcoholLookupItem[]>(AlcoholApi.lookup.endpoint, {
       params,
     });
-    const pageable = response.meta.pageable;
+    const page = response.meta.page ?? params?.page ?? 0;
+    const size = response.meta.size ?? params?.size ?? 20;
+    const totalPages = response.meta.totalPages ?? 0;
 
     return {
       items: response.data ?? [],
-      pageable: {
-        currentCursor: pageable?.currentCursor ?? params?.cursor ?? 0,
-        cursor: pageable?.cursor ?? 0,
-        pageSize: pageable?.pageSize ?? params?.pageSize ?? 20,
-        hasNext: pageable?.hasNext ?? false,
+      meta: {
+        page,
+        size,
+        totalElements: response.meta.totalElements ?? 0,
+        totalPages,
+        hasNext: response.meta.hasNext ?? page + 1 < totalPages,
       },
     };
   },

@@ -47,6 +47,26 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
     });
     await expect(importerSection.locator('a[href^="/mfds/importers/"]')).toBeVisible();
     await expect(importerSection.getByRole('button', { name: '보기' })).toHaveCount(0);
+
+    const matchingSection = page.locator('section').filter({
+      has: page.getByRole('heading', { name: '연관 데이터 연결' }),
+    });
+    await matchingSection.getByRole('button', { name: '연결 관리' }).click();
+    await expect(page.getByRole('heading', { name: /보틀노트 위스키 연결/ })).toBeVisible();
+    await expect(page.getByText(/RCNO/)).toBeVisible();
+    await expect(page.getByRole('button', { name: '후보 다시 계산' })).toBeVisible();
+    const lookupResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/v1/alcohols/lookup') && response.request().method() === 'GET'
+    );
+    await page.getByRole('button', { name: '위스키 직접 찾기' }).click();
+    expect((await lookupResponse).ok()).toBe(true);
+    const whiskyLookupDialog = page.getByRole('dialog').filter({
+      has: page.getByRole('heading', { name: '연결할 보틀노트 위스키 찾기' }),
+    });
+    await expect(whiskyLookupDialog).toBeVisible();
+    await expect(whiskyLookupDialog.getByRole('textbox', { name: '위스키 검색' })).toBeVisible();
+    await expect(whiskyLookupDialog.getByText('위스키 목록', { exact: true })).toBeVisible();
   });
 
   test('정규화 필터를 URL에 유지한다', async ({ page }) => {

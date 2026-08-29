@@ -11,8 +11,7 @@ import {
   type HelpDetail,
   type HelpAnswerRequest,
   type HelpAnswerResponse,
-  type PaginatedData,
-  type Pageable,
+  type HelpListMeta,
 } from '@/types/api';
 
 // ============================================
@@ -21,6 +20,11 @@ import {
 
 export const helpKeys = createQueryKeys('helps');
 
+export interface HelpListResponse {
+  items: HelpListItem[];
+  meta: HelpListMeta;
+}
+
 // ============================================
 // Service
 // ============================================
@@ -28,30 +32,23 @@ export const helpKeys = createQueryKeys('helps');
 export const helpService = {
   /**
    * 문의 목록 조회
-   * 커서 기반 페이지네이션
+   * 페이지 기반 페이지네이션
    */
-  getList: async (
-    params?: HelpListParams
-  ): Promise<PaginatedData<HelpListItem>> => {
-    const response = await apiClient.get<{
-      content: {
-        totalCount: number;
-        helpList: HelpListItem[];
-      };
-      cursorPageable: Pageable;
-    }>(HelpApi.list.endpoint, { params });
-
-    const data = response.data;
+  getList: async (params?: HelpListParams): Promise<HelpListResponse> => {
+    const response = await apiClient.get<HelpListItem[]>(HelpApi.list.endpoint, { params });
+    const page = response.meta.page ?? params?.page ?? 0;
+    const size = response.meta.size ?? params?.size ?? 20;
+    const totalPages = response.meta.totalPages ?? 0;
 
     return {
-      items: data.content?.helpList ?? [],
-      pageable: data.cursorPageable ?? {
-        currentCursor: 0,
-        cursor: 0,
-        pageSize: params?.pageSize ?? 20,
-        hasNext: false,
+      items: response.data ?? [],
+      meta: {
+        page,
+        size,
+        totalElements: response.meta.totalElements ?? 0,
+        totalPages,
+        hasNext: response.meta.hasNext ?? page + 1 < totalPages,
       },
-      totalCount: data.content?.totalCount ?? 0,
     };
   },
 
@@ -66,10 +63,7 @@ export const helpService = {
   /**
    * 문의 답변 등록
    */
-  answer: async (
-    helpId: number,
-    body: HelpAnswerRequest
-  ): Promise<HelpAnswerResponse> => {
+  answer: async (helpId: number, body: HelpAnswerRequest): Promise<HelpAnswerResponse> => {
     return apiClient.post<HelpAnswerResponse, HelpAnswerRequest>(
       HelpApi.answer.endpoint(helpId),
       body

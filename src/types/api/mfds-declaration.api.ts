@@ -19,6 +19,21 @@ export const MfdsDeclarationApi = {
       `/admin/api/v1/mfds/declarations/${declarationId}/matching/candidates`,
     method: 'GET',
   },
+  matchingRun: {
+    endpoint: (declarationId: number) =>
+      `/admin/api/v1/mfds/declarations/${declarationId}/matching/run`,
+    method: 'POST',
+  },
+  matchingConfirm: {
+    endpoint: (declarationId: number) =>
+      `/admin/api/v1/mfds/declarations/${declarationId}/matching/confirm`,
+    method: 'POST',
+  },
+  matchingRelease: {
+    endpoint: (declarationId: number) =>
+      `/admin/api/v1/mfds/declarations/${declarationId}/matching/release`,
+    method: 'POST',
+  },
   rcnoLinks: {
     endpoint: '/admin/api/v1/mfds/rcno-links',
     method: 'GET',
@@ -160,6 +175,29 @@ export interface MfdsMatchingCandidates {
   alcoholCandidates: MfdsAlcoholCandidateItem[];
   distilleryCandidates: MfdsReferenceCandidateItem[];
   regionCandidates: MfdsReferenceCandidateItem[];
+}
+
+export interface MfdsMatchingRunResponse {
+  declarationId: number;
+  matchingVersion: string | null;
+  matchedAt: string | null;
+  alcoholCandidates: MfdsAlcoholCandidateItem[];
+  distilleryCandidates: MfdsReferenceCandidateItem[];
+  regionCandidates: MfdsReferenceCandidateItem[];
+}
+
+export interface MfdsMatchingConfirmRequest {
+  alcoholId: number;
+}
+
+export interface MfdsMatchingConfirmResponse {
+  declarationId: number;
+  selectedAlcoholId: number | null;
+  alcoholMatchDecision: string | null;
+  selectedDistilleryId: number | null;
+  distilleryMatchSource: string | null;
+  selectedRegionId: number | null;
+  regionMatchSource: string | null;
 }
 
 export interface MfdsRcnoLinkItem {

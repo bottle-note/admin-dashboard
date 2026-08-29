@@ -36,7 +36,7 @@ export function RelatedWhiskyLookupCard({
   const lookupQuery = useAdminAlcoholLookupInfinite(
     {
       ...params,
-      pageSize: 20,
+      size: 20,
     },
     {
       enabled,

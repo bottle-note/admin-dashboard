@@ -3,12 +3,14 @@
  */
 
 import { useApiQuery } from './useApiQuery';
+import { useApiMutation } from './useApiMutation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   mfdsDeclarationKeys,
   mfdsDeclarationService,
   type MfdsDeclarationListResponse,
 } from '@/services/mfds-declaration.service';
-import type { MfdsDeclarationSearchParams } from '@/types/api';
+import type { MfdsDeclarationSearchParams, MfdsMatchingConfirmRequest } from '@/types/api';
 
 export function useMfdsDeclarationList(params?: MfdsDeclarationSearchParams) {
   return useApiQuery<MfdsDeclarationListResponse>(
@@ -45,4 +47,45 @@ export function useMfdsRcnoLinks(rcno: string | undefined) {
     () => mfdsDeclarationService.rcnoLinks(validRcno),
     { enabled: validRcno.length > 0 }
   );
+}
+
+export function useMfdsMatchingActions(declarationId: number | undefined) {
+  const queryClient = useQueryClient();
+  const validDeclarationId = declarationId !== undefined && declarationId > 0 ? declarationId : 0;
+
+  const invalidateDeclaration = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: mfdsDeclarationKeys.lists() }),
+      queryClient.invalidateQueries({ queryKey: mfdsDeclarationKeys.detail(validDeclarationId) }),
+      queryClient.invalidateQueries({
+        queryKey: mfdsDeclarationKeys.matchingCandidates(validDeclarationId),
+      }),
+    ]);
+
+  const runMatching = useApiMutation(
+    () => mfdsDeclarationService.runMatching(validDeclarationId),
+    {
+      successMessage: '매칭 후보를 다시 계산했습니다.',
+      onSuccess: invalidateDeclaration,
+    }
+  );
+
+  const confirmMatching = useApiMutation(
+    (data: MfdsMatchingConfirmRequest) =>
+      mfdsDeclarationService.confirmMatching(validDeclarationId, data),
+    {
+      successMessage: '보틀노트 위스키 연결을 확정했습니다.',
+      onSuccess: invalidateDeclaration,
+    }
+  );
+
+  const releaseMatching = useApiMutation(
+    () => mfdsDeclarationService.releaseMatching(validDeclarationId),
+    {
+      successMessage: '연결을 해제했습니다.',
+      onSuccess: invalidateDeclaration,
+    }
+  );
+
+  return { runMatching, confirmMatching, releaseMatching };
 }

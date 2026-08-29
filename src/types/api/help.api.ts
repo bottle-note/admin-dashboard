@@ -8,12 +8,7 @@
 // ============================================
 
 /** 문의 상태 */
-export type HelpStatus =
-  | 'CREATING'
-  | 'WAITING'
-  | 'SUCCESS'
-  | 'REJECT'
-  | 'DELETED';
+export type HelpStatus = 'CREATING' | 'WAITING' | 'SUCCESS' | 'REJECT' | 'DELETED';
 
 /** 문의 유형 */
 export type HelpType = 'WHISKEY' | 'REVIEW' | 'USER' | 'ETC';
@@ -56,10 +51,10 @@ export interface HelpApiTypes {
       status?: HelpStatus;
       /** 유형 필터 */
       type?: HelpType;
-      /** 커서 (페이지네이션) */
-      cursor?: number;
+      /** 페이지 번호 (0부터 시작) */
+      page?: number;
       /** 페이지 크기 (기본값: 20) */
-      pageSize?: number;
+      size?: number;
     };
     /** 응답 아이템 */
     response: {
@@ -78,14 +73,16 @@ export interface HelpApiTypes {
       /** 생성일시 */
       createAt: string;
     };
-    /** 커서 기반 페이지네이션 메타 */
+    /** 페이지 기반 페이지네이션 메타 */
     meta: {
-      /** 현재 커서 */
-      currentCursor: number;
-      /** 다음 커서 */
-      cursor: number;
+      /** 현재 페이지 번호 */
+      page: number;
       /** 페이지 크기 */
-      pageSize: number;
+      size: number;
+      /** 전체 항목 수 */
+      totalElements: number;
+      /** 전체 페이지 수 */
+      totalPages: number;
       /** 다음 페이지 존재 여부 */
       hasNext: boolean;
     };

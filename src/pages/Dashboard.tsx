@@ -20,7 +20,9 @@ interface StatCardProps {
 
 function StatCard({ title, value, icon, isLoading, href }: StatCardProps) {
   const inner = (
-    <div className={`rounded-lg border bg-card p-6${href ? ' transition-shadow hover:shadow-md' : ''}`}>
+    <div
+      className={`rounded-lg border bg-card p-6${href ? 'transition-shadow hover:shadow-md' : ''}`}
+    >
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
         <div className="text-muted-foreground">{icon}</div>
@@ -28,8 +30,10 @@ function StatCard({ title, value, icon, isLoading, href }: StatCardProps) {
       <p className="mt-2 text-2xl font-bold">
         {isLoading ? (
           <span className="text-muted-foreground">...</span>
+        ) : typeof value === 'number' ? (
+          value.toLocaleString()
         ) : (
-          typeof value === 'number' ? value.toLocaleString() : value
+          value
         )}
       </p>
     </div>
@@ -53,7 +57,7 @@ export function DashboardPage() {
     size: 1,
   });
   const { data: helpData, isLoading: isHelpLoading } = useHelpList({
-    pageSize: 1,
+    size: 1,
     status: 'WAITING',
   });
 
@@ -97,7 +101,7 @@ export function DashboardPage() {
         />
         <StatCard
           title="처리 대기 문의"
-          value={helpData?.totalCount ?? 0}
+          value={helpData?.meta.totalElements ?? 0}
           icon={<MessageSquare className="h-5 w-5" />}
           isLoading={isHelpLoading}
           href="/inquiries"

@@ -11,6 +11,9 @@ import {
   type MfdsDeclarationSearchParams,
   type MfdsDeclarationDetail,
   type MfdsMatchingCandidates,
+  type MfdsMatchingConfirmRequest,
+  type MfdsMatchingConfirmResponse,
+  type MfdsMatchingRunResponse,
   type MfdsRcnoLinkItem,
 } from '@/types/api';
 
@@ -52,6 +55,22 @@ export const mfdsDeclarationService = {
     );
     return response.data;
   },
+  runMatching: (declarationId: number): Promise<MfdsMatchingRunResponse> =>
+    apiClient.post<MfdsMatchingRunResponse>(
+      MfdsDeclarationApi.matchingRun.endpoint(declarationId)
+    ),
+  confirmMatching: (
+    declarationId: number,
+    data: MfdsMatchingConfirmRequest
+  ): Promise<MfdsMatchingConfirmResponse> =>
+    apiClient.post<MfdsMatchingConfirmResponse, MfdsMatchingConfirmRequest>(
+      MfdsDeclarationApi.matchingConfirm.endpoint(declarationId),
+      data
+    ),
+  releaseMatching: (declarationId: number): Promise<MfdsMatchingConfirmResponse> =>
+    apiClient.post<MfdsMatchingConfirmResponse>(
+      MfdsDeclarationApi.matchingRelease.endpoint(declarationId)
+    ),
   rcnoLinks: async (rcno: string): Promise<MfdsRcnoLinkItem[]> => {
     const response = await apiClient.get<MfdsRcnoLinkItem[]>(
       MfdsDeclarationApi.rcnoLinks.endpoint,
