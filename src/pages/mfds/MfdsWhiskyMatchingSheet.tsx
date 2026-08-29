@@ -411,6 +411,25 @@ export function MfdsWhiskyMatchingSheet({
                         disabled={isPending}
                         className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                       >
+                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-muted">
+                          {candidateWhisky.imageUrl ? (
+                            <img
+                              src={candidateWhisky.imageUrl}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                              No image
+                            </div>
+                          )}
+                        </div>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{name}</span>
+                          <span className="mt-1 block text-sm text-muted-foreground">
+                            점수 {candidate.score.toFixed(3)}
+                          </span>
+                        </span>
                         <CheckCircle2
                           className={
                             isSelected
@@ -419,12 +438,6 @@ export function MfdsWhiskyMatchingSheet({
                           }
                           aria-hidden="true"
                         />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium">{name}</span>
-                          <span className="mt-1 block text-sm text-muted-foreground">
-                            점수 {candidate.score.toFixed(3)}
-                          </span>
-                        </span>
                       </button>
                       <div className="border-t px-4 py-2">
                         <Link
