@@ -90,9 +90,9 @@ describe('useAdminAlcohols hooks', () => {
       expect(flattenAdminAlcoholPages(result.current.data)).toHaveLength(2);
     });
 
-    it('lookup API로 커서 기반 무한 스크롤을 조회한다', async () => {
+    it('lookup API로 페이지 기반 무한 스크롤을 조회한다', async () => {
       const { result } = renderHook(() =>
-        useAdminAlcoholLookupInfinite({ keyword: '글렌', pageSize: 1 })
+        useAdminAlcoholLookupInfinite({ keyword: '글렌', size: 1 })
       );
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -106,8 +106,8 @@ describe('useAdminAlcohols hooks', () => {
       ]);
     });
 
-    it('lookup API의 다음 cursor로 다음 페이지를 조회한다', async () => {
-      const { result } = renderHook(() => useAdminAlcoholLookupInfinite({ pageSize: 1 }));
+    it('lookup API의 다음 페이지를 조회한다', async () => {
+      const { result } = renderHook(() => useAdminAlcoholLookupInfinite({ size: 1 }));
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.hasNextPage).toBe(true);

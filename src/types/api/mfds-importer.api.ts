@@ -9,6 +9,18 @@ export const MfdsImporterApi = {
     endpoint: (importerId: number) => `/admin/api/v1/mfds/importers/${importerId}`,
     method: 'GET',
   },
+  create: {
+    endpoint: '/admin/api/v1/mfds/importers',
+    method: 'POST',
+  },
+  update: {
+    endpoint: (importerId: number) => `/admin/api/v1/mfds/importers/${importerId}`,
+    method: 'PUT',
+  },
+  delete: {
+    endpoint: (importerId: number) => `/admin/api/v1/mfds/importers/${importerId}`,
+    method: 'DELETE',
+  },
 } as const;
 
 export type MfdsImporterAdminStatus = 'ACTIVE' | 'INACTIVE';
@@ -39,6 +51,31 @@ export interface MfdsImporterItem {
   reviewedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MfdsImporterCreateRequest {
+  officialBusinessCode: string;
+  licenseNo: string;
+  businessName: string;
+  representativeName?: string;
+  sourceListUrl: string;
+  description?: string;
+  adminNote?: string;
+  adminStatus?: MfdsImporterAdminStatus;
+}
+
+export interface MfdsImporterUpdateRequest {
+  businessName: string;
+  description?: string;
+  adminNote?: string;
+  adminStatus: MfdsImporterAdminStatus;
+}
+
+export interface MfdsImporterMutationResult {
+  code: string;
+  message: string;
+  targetId: number;
+  responseAt: string;
 }
 
 export interface MfdsImporterListMeta extends ApiMeta {

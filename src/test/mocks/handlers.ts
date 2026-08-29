@@ -272,8 +272,8 @@ export const alcoholHandlers = [
     const category = url.searchParams.get('category');
     const regionId = url.searchParams.get('regionId');
     const distilleryId = url.searchParams.get('distilleryId');
-    const cursor = Number(url.searchParams.get('cursor') ?? 0);
-    const pageSize = Number(url.searchParams.get('pageSize') ?? 20);
+    const page = Number(url.searchParams.get('page') ?? 0);
+    const size = Number(url.searchParams.get('size') ?? 20);
 
     let items = mockAlcoholLookupItems;
 
@@ -300,17 +300,17 @@ export const alcoholHandlers = [
       items = items.filter((item) => item.distilleryId === Number(distilleryId));
     }
 
-    const sliced = items.slice(cursor, cursor + pageSize);
-    const nextCursor = cursor + sliced.length;
+    const totalElements = items.length;
+    const totalPages = Math.ceil(totalElements / size);
+    const sliced = items.slice(page * size, (page + 1) * size);
 
     return HttpResponse.json(
       wrapApiResponse(sliced, {
-        pageable: {
-          currentCursor: cursor,
-          cursor: nextCursor,
-          pageSize,
-          hasNext: nextCursor < items.length,
-        },
+        page,
+        size,
+        totalElements,
+        totalPages,
+        hasNext: page + 1 < totalPages,
       })
     );
   }),

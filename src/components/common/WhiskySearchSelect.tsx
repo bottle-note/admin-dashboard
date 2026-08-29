@@ -33,7 +33,7 @@ export function WhiskySearchSelect({
   const debouncedKeyword = useDebouncedValue(keyword.trim(), 300);
   const canSearch = debouncedKeyword.length >= 1;
   const query = useAdminAlcoholLookupInfinite(
-    canSearch ? { keyword: debouncedKeyword, pageSize: 10 } : undefined,
+    canSearch ? { keyword: debouncedKeyword, size: 10 } : undefined,
     { enabled: canSearch }
   );
   const fetchedItems = useMemo(() => flattenAdminAlcoholLookupPages(query.data), [query.data]);

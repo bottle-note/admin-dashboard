@@ -4,7 +4,10 @@ import {
   MfdsImporterApi,
   type MfdsImporterItem,
   type MfdsImporterListMeta,
+  type MfdsImporterCreateRequest,
+  type MfdsImporterMutationResult,
   type MfdsImporterSearchParams,
+  type MfdsImporterUpdateRequest,
 } from '@/types/api';
 
 export const mfdsImporterKeys = createQueryKeys('mfds-importers');
@@ -32,4 +35,19 @@ export const mfdsImporterService = {
     );
     return response.data;
   },
+  create: (data: MfdsImporterCreateRequest): Promise<MfdsImporterMutationResult> =>
+    apiClient.post<MfdsImporterMutationResult, MfdsImporterCreateRequest>(
+      MfdsImporterApi.create.endpoint,
+      data
+    ),
+  update: (
+    importerId: number,
+    data: MfdsImporterUpdateRequest
+  ): Promise<MfdsImporterMutationResult> =>
+    apiClient.put<MfdsImporterMutationResult, MfdsImporterUpdateRequest>(
+      MfdsImporterApi.update.endpoint(importerId),
+      data
+    ),
+  delete: (importerId: number): Promise<MfdsImporterMutationResult> =>
+    apiClient.delete<MfdsImporterMutationResult>(MfdsImporterApi.delete.endpoint(importerId)),
 };

@@ -3,12 +3,19 @@
  */
 
 import { useApiQuery } from './useApiQuery';
+import { useApiMutation } from './useApiMutation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   mfdsDeclarationKeys,
   mfdsDeclarationService,
   type MfdsDeclarationListResponse,
 } from '@/services/mfds-declaration.service';
-import type { MfdsDeclarationSearchParams } from '@/types/api';
+import type {
+  MfdsDeclarationImporterLinkRequest,
+  MfdsDeclarationStatusUpdateRequest,
+  MfdsDeclarationSearchParams,
+  MfdsMatchingConfirmRequest,
+} from '@/types/api';
 
 export function useMfdsDeclarationList(params?: MfdsDeclarationSearchParams) {
   return useApiQuery<MfdsDeclarationListResponse>(
@@ -44,5 +51,96 @@ export function useMfdsRcnoLinks(rcno: string | undefined) {
     mfdsDeclarationKeys.rcnoLinks(validRcno),
     () => mfdsDeclarationService.rcnoLinks(validRcno),
     { enabled: validRcno.length > 0 }
+  );
+}
+
+export function useMfdsMatchingActions(declarationId: number | undefined) {
+  const queryClient = useQueryClient();
+  const validDeclarationId = declarationId !== undefined && declarationId > 0 ? declarationId : 0;
+
+  const invalidateDeclaration = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: mfdsDeclarationKeys.lists() }),
+      queryClient.invalidateQueries({ queryKey: mfdsDeclarationKeys.detail(validDeclarationId) }),
+      queryClient.invalidateQueries({
+        queryKey: mfdsDeclarationKeys.matchingCandidates(validDeclarationId),
+      }),
+    ]);
+
+  const runMatching = useApiMutation(
+    () => mfdsDeclarationService.runMatching(validDeclarationId),
+    {
+      successMessage: '매칭 후보를 다시 계산했습니다.',
+      onSuccess: invalidateDeclaration,
+    }
+  );
+
+  const confirmMatching = useApiMutation(
+    (data: MfdsMatchingConfirmRequest) =>
+      mfdsDeclarationService.confirmMatching(validDeclarationId, data),
+    {
+      successMessage: '보틀노트 위스키 연결을 확정했습니다.',
+      onSuccess: invalidateDeclaration,
+    }
+  );
+
+  const releaseMatching = useApiMutation(
+    () => mfdsDeclarationService.releaseMatching(validDeclarationId),
+    {
+      successMessage: '연결을 해제했습니다.',
+      onSuccess: invalidateDeclaration,
+    }
+  );
+
+  return { runMatching, confirmMatching, releaseMatching };
+}
+
+export function useMfdsImporterLinkActions(declarationId: number | undefined) {
+  const queryClient = useQueryClient();
+  const validDeclarationId = declarationId !== undefined && declarationId > 0 ? declarationId : 0;
+
+  const invalidateDeclaration = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: mfdsDeclarationKeys.lists() }),
+      queryClient.invalidateQueries({ queryKey: mfdsDeclarationKeys.detail(validDeclarationId) }),
+    ]);
+
+  const linkImporter = useApiMutation(
+    (data: MfdsDeclarationImporterLinkRequest) =>
+      mfdsDeclarationService.linkImporter(validDeclarationId, data),
+    {
+      successMessage: '수입사를 연결했습니다.',
+      onSuccess: invalidateDeclaration,
+    }
+  );
+
+  const unlinkImporter = useApiMutation(
+    () => mfdsDeclarationService.unlinkImporter(validDeclarationId),
+    {
+      successMessage: '수입사 연결을 해제했습니다.',
+      onSuccess: invalidateDeclaration,
+    }
+  );
+
+  return { linkImporter, unlinkImporter };
+}
+
+export function useMfdsNormalizationStatusUpdate(declarationId: number | undefined) {
+  const queryClient = useQueryClient();
+  const validDeclarationId = declarationId !== undefined && declarationId > 0 ? declarationId : 0;
+
+  return useApiMutation(
+    (data: MfdsDeclarationStatusUpdateRequest) =>
+      mfdsDeclarationService.updateNormalizationStatus(validDeclarationId, data),
+    {
+      successMessage: '검토 결과를 저장했습니다.',
+      onSuccess: () =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: mfdsDeclarationKeys.lists() }),
+          queryClient.invalidateQueries({
+            queryKey: mfdsDeclarationKeys.detail(validDeclarationId),
+          }),
+        ]),
+    }
   );
 }

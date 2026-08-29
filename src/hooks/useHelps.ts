@@ -5,14 +5,12 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useApiQuery } from './useApiQuery';
 import { useApiMutation } from './useApiMutation';
-import { helpService, helpKeys } from '@/services/help.service';
+import { helpService, helpKeys, type HelpListResponse } from '@/services/help.service';
 import type {
   HelpListParams,
-  HelpListItem,
   HelpDetail,
   HelpAnswerRequest,
   HelpAnswerResponse,
-  PaginatedData,
 } from '@/types/api';
 
 /**
@@ -23,19 +21,15 @@ import type {
  * const { data, isLoading } = useHelpList({ status: 'WAITING' });
  *
  * if (data) {
- *   console.log(data.items);     // 문의 목록
- *   console.log(data.pageable);  // 페이지네이션 정보
+ *   console.log(data.items); // 문의 목록
+ *   console.log(data.meta);  // 페이지네이션 정보
  * }
  * ```
  */
 export function useHelpList(params?: HelpListParams) {
-  return useApiQuery<PaginatedData<HelpListItem>>(
-    helpKeys.list(params),
-    () => helpService.getList(params),
-    {
-      staleTime: 1000 * 30, // 30초
-    }
-  );
+  return useApiQuery<HelpListResponse>(helpKeys.list(params), () => helpService.getList(params), {
+    staleTime: 1000 * 30, // 30초
+  });
 }
 
 /**
@@ -73,16 +67,16 @@ export function useHelpDetail(helpId: number | null) {
 export function useHelpAnswer() {
   const queryClient = useQueryClient();
 
-  return useApiMutation<
-    HelpAnswerResponse,
-    { helpId: number; body: HelpAnswerRequest }
-  >(({ helpId, body }) => helpService.answer(helpId, body), {
-    successMessage: '답변이 등록되었습니다.',
-    onSuccess: (_, { helpId }) => {
-      // 해당 문의 상세 캐시 무효화
-      queryClient.invalidateQueries({ queryKey: helpKeys.detail(helpId) });
-      // 문의 목록 캐시 무효화
-      queryClient.invalidateQueries({ queryKey: helpKeys.lists() });
-    },
-  });
+  return useApiMutation<HelpAnswerResponse, { helpId: number; body: HelpAnswerRequest }>(
+    ({ helpId, body }) => helpService.answer(helpId, body),
+    {
+      successMessage: '답변이 등록되었습니다.',
+      onSuccess: (_, { helpId }) => {
+        // 해당 문의 상세 캐시 무효화
+        queryClient.invalidateQueries({ queryKey: helpKeys.detail(helpId) });
+        // 문의 목록 캐시 무효화
+        queryClient.invalidateQueries({ queryKey: helpKeys.lists() });
+      },
+    }
+  );
 }

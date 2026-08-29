@@ -14,10 +14,40 @@ export const MfdsDeclarationApi = {
     endpoint: (declarationId: number) => `/admin/api/v1/mfds/declarations/${declarationId}`,
     method: 'GET',
   },
+  importer: {
+    endpoint: (declarationId: number) =>
+      `/admin/api/v1/mfds/declarations/${declarationId}/importer`,
+    method: 'POST',
+  },
+  importerUnlink: {
+    endpoint: (declarationId: number) =>
+      `/admin/api/v1/mfds/declarations/${declarationId}/importer`,
+    method: 'DELETE',
+  },
   matchingCandidates: {
     endpoint: (declarationId: number) =>
       `/admin/api/v1/mfds/declarations/${declarationId}/matching/candidates`,
     method: 'GET',
+  },
+  matchingRun: {
+    endpoint: (declarationId: number) =>
+      `/admin/api/v1/mfds/declarations/${declarationId}/matching/run`,
+    method: 'POST',
+  },
+  matchingConfirm: {
+    endpoint: (declarationId: number) =>
+      `/admin/api/v1/mfds/declarations/${declarationId}/matching/confirm`,
+    method: 'POST',
+  },
+  matchingRelease: {
+    endpoint: (declarationId: number) =>
+      `/admin/api/v1/mfds/declarations/${declarationId}/matching/release`,
+    method: 'POST',
+  },
+  normalizationStatus: {
+    endpoint: (declarationId: number) =>
+      `/admin/api/v1/mfds/declarations/${declarationId}/normalization-status`,
+    method: 'PATCH',
   },
   rcnoLinks: {
     endpoint: '/admin/api/v1/mfds/rcno-links',
@@ -65,6 +95,30 @@ export interface MfdsDeclarationListItem {
 export interface MfdsDeclarationListMeta extends ApiMeta {
   nextCursor: number | null;
   hasNext: boolean;
+}
+
+export interface MfdsDeclarationImporterLinkRequest {
+  importerId: number;
+}
+
+export interface MfdsDeclarationImporterLinkResult {
+  code: string;
+  message: string;
+  targetId: number;
+  responseAt: string;
+}
+
+export interface MfdsDeclarationStatusUpdateRequest {
+  normalizationStatus: MfdsNormalizationStatus;
+  reviewedBy?: string;
+  reviewNote?: string;
+}
+
+export interface MfdsDeclarationStatusUpdateResult {
+  code: string;
+  message: string;
+  targetId: number;
+  responseAt: string;
 }
 
 export interface MfdsMatchCandidate {
@@ -160,6 +214,29 @@ export interface MfdsMatchingCandidates {
   alcoholCandidates: MfdsAlcoholCandidateItem[];
   distilleryCandidates: MfdsReferenceCandidateItem[];
   regionCandidates: MfdsReferenceCandidateItem[];
+}
+
+export interface MfdsMatchingRunResponse {
+  declarationId: number;
+  matchingVersion: string | null;
+  matchedAt: string | null;
+  alcoholCandidates: MfdsAlcoholCandidateItem[];
+  distilleryCandidates: MfdsReferenceCandidateItem[];
+  regionCandidates: MfdsReferenceCandidateItem[];
+}
+
+export interface MfdsMatchingConfirmRequest {
+  alcoholId: number;
+}
+
+export interface MfdsMatchingConfirmResponse {
+  declarationId: number;
+  selectedAlcoholId: number | null;
+  alcoholMatchDecision: string | null;
+  selectedDistilleryId: number | null;
+  distilleryMatchSource: string | null;
+  selectedRegionId: number | null;
+  regionMatchSource: string | null;
 }
 
 export interface MfdsRcnoLinkItem {

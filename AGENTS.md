@@ -70,6 +70,7 @@ curl -fsSL https://bottle-note.github.io/workspace/openapi.admin.json \
 - `src/components/ui`의 shadcn 생성 파일은 직접 수정하지 않는다.
 - 새 barrel 파일을 만들지 말고 필요한 모듈을 직접 import한다.
 - 사용자에게 보이는 어드민 문구와 toast는 주변 화면에 다른 기준이 없는 한 한국어로 작성한다.
+- 섹션 제목이나 인접한 상태 UI만으로 충분히 알 수 있는 정보는 카드·행 안에서 반복하지 않는다. 단, 여러 대상을 구분하거나 다음 행동을 판단하는 데 필요한 문맥은 유지한다.
 
 ## 5. 테스트 방식
 

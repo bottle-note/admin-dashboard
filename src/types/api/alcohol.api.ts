@@ -149,10 +149,10 @@ export interface AlcoholApiTypes {
       regionId?: number;
       /** 증류소 ID 필터 */
       distilleryId?: number;
-      /** 다음 페이지 조회용 커서 */
-      cursor?: number;
+      /** 페이지 번호 (0부터 시작) */
+      page?: number;
       /** 페이지 크기 (기본값: 20, 최대: 100) */
-      pageSize?: number;
+      size?: number;
     };
     /** 응답 아이템 */
     response: {

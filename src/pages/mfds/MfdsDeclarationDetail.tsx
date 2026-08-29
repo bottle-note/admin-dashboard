@@ -1,10 +1,21 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { ClipboardCheck } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Sheet,
   SheetContent,
@@ -21,14 +32,83 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useMfdsDeclarationDetail, useMfdsMatchingCandidates } from '@/hooks/useMfdsDeclarations';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  useMfdsDeclarationDetail,
+  useMfdsMatchingCandidates,
+  useMfdsNormalizationStatusUpdate,
+} from '@/hooks/useMfdsDeclarations';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth';
+import type { MfdsNormalizationStatus } from '@/types/api';
 import {
   MFDS_ALCOHOL_MATCH_STATUS_MAP,
   MFDS_MATCH_DECISION_MAP,
   MFDS_UNKNOWN_RELATION_CODE,
 } from './mfds-alcohol-match-status';
 import { MFDS_NORMALIZATION_STATUS_MAP } from './mfds-normalization-status';
+import { MfdsImporterLinkingSheet } from './MfdsImporterLinkingSheet';
+import { MfdsWhiskyMatchingSheet } from './MfdsWhiskyMatchingSheet';
+
+interface ReviewOption {
+  status: MfdsNormalizationStatus;
+  label: string;
+  description: string;
+  noteRequired: boolean;
+}
+
+const REVIEW_OPTIONS_BY_STATUS: Partial<Record<MfdsNormalizationStatus, ReviewOption[]>> = {
+  REVIEW_REQUIRED: [
+    {
+      status: 'NORMALIZED',
+      label: '문제 없음',
+      description: '현재 정규화 결과를 검토 완료로 처리합니다.',
+      noteRequired: false,
+    },
+    {
+      status: 'PARTIAL',
+      label: '일부 정보 확인 불가',
+      description: '일부 정규화 값은 확인할 수 없음을 기록합니다.',
+      noteRequired: true,
+    },
+  ],
+  UNPARSED: [
+    {
+      status: 'NORMALIZED',
+      label: '문제 없음',
+      description: '현재 정규화 결과를 검토 완료로 처리합니다.',
+      noteRequired: false,
+    },
+    {
+      status: 'PARTIAL',
+      label: '일부 정보 확인 불가',
+      description: '일부 정규화 값은 확인할 수 없음을 기록합니다.',
+      noteRequired: true,
+    },
+  ],
+  PARTIAL: [
+    {
+      status: 'NORMALIZED',
+      label: '문제 없음',
+      description: '현재 정규화 결과를 검토 완료로 처리합니다.',
+      noteRequired: false,
+    },
+    {
+      status: 'REVIEW_REQUIRED',
+      label: '추가 검토 필요',
+      description: '추가 확인이 필요한 이유를 기록합니다.',
+      noteRequired: true,
+    },
+  ],
+  NORMALIZED: [
+    {
+      status: 'REVIEW_REQUIRED',
+      label: '추가 검토 필요',
+      description: '다시 확인이 필요한 이유를 기록합니다.',
+      noteRequired: true,
+    },
+  ],
+};
 
 const REVIEW_STATUS_LABELS: Record<string, string> = {
   PENDING: '검토 대기',
@@ -101,11 +181,18 @@ function RelationCodeBadge({ value }: { value: string | null | undefined }) {
 export function MfdsDeclarationDetailPage() {
   const navigate = useNavigate();
   const { declarationId: declarationIdParam } = useParams<{ declarationId: string }>();
+  const [isWhiskyMatchingOpen, setIsWhiskyMatchingOpen] = useState(false);
+  const [isImporterLinkingOpen, setIsImporterLinkingOpen] = useState(false);
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [selectedReviewStatus, setSelectedReviewStatus] = useState<MfdsNormalizationStatus>();
+  const [reviewNote, setReviewNote] = useState('');
   const parsedId = Number(declarationIdParam);
   const declarationId = Number.isInteger(parsedId) && parsedId > 0 ? parsedId : undefined;
 
   const detailQuery = useMfdsDeclarationDetail(declarationId);
   const candidatesQuery = useMfdsMatchingCandidates(declarationId);
+  const updateNormalizationStatus = useMfdsNormalizationStatusUpdate(declarationId);
+  const reviewerEmail = useAuthStore((state) => state.user?.email);
 
   if (!declarationId) {
     return (
@@ -152,14 +239,16 @@ export function MfdsDeclarationDetailPage() {
   const normalizationStatus = MFDS_NORMALIZATION_STATUS_MAP[detail.normalizationStatus];
   const reviewStatusLabel = REVIEW_STATUS_LABELS[detail.reviewStatus] ?? detail.reviewStatus;
   const hasReviewRecord = Boolean(detail.reviewedBy || detail.reviewedAt || detail.reviewNote);
+  const reviewOptions = REVIEW_OPTIONS_BY_STATUS[detail.normalizationStatus] ?? [];
+  const selectedReviewOption = reviewOptions.find((option) => option.status === selectedReviewStatus);
   const showStatusDetails =
-    detail.normalizationStatus !== 'NORMALIZED' &&
-    Boolean(
-      detail.normalizationReasons.length > 0 ||
-      detail.unparsedFragments.length > 0 ||
-      hasReviewRecord ||
-      (detail.reviewStatus && detail.reviewStatus !== 'NOT_REQUIRED')
-    );
+    hasReviewRecord ||
+    (detail.normalizationStatus !== 'NORMALIZED' &&
+      Boolean(
+        detail.normalizationReasons.length > 0 ||
+        detail.unparsedFragments.length > 0 ||
+        (detail.reviewStatus && detail.reviewStatus !== 'NOT_REQUIRED')
+      ));
   const selectedAlcohol = candidates?.alcoholCandidates.find(
     (candidate) => candidate.alcoholId === detail.selectedAlcoholId
   );
@@ -169,6 +258,28 @@ export function MfdsDeclarationDetailPage() {
   const selectedRegion = candidates?.regionCandidates.find(
     (candidate) => candidate.id === detail.selectedRegionId
   );
+
+  const openReviewDialog = () => {
+    const defaultOption = reviewOptions[0];
+    if (!defaultOption) return;
+
+    setSelectedReviewStatus(defaultOption.status);
+    setReviewNote('');
+    setIsReviewDialogOpen(true);
+  };
+
+  const saveReviewResult = () => {
+    if (!selectedReviewOption) return;
+
+    updateNormalizationStatus.mutate(
+      {
+        normalizationStatus: selectedReviewOption.status,
+        reviewedBy: reviewerEmail,
+        reviewNote: reviewNote.trim() || undefined,
+      },
+      { onSuccess: () => setIsReviewDialogOpen(false) }
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -185,6 +296,14 @@ export function MfdsDeclarationDetailPage() {
         }
         onBack={() => navigate('/mfds/declarations')}
         action={{ mode: 'readonly' }}
+        actions={
+          reviewOptions.length > 0 ? (
+            <Button type="button" onClick={openReviewDialog}>
+              <ClipboardCheck className="mr-2 h-4 w-4" />
+              검토
+            </Button>
+          ) : undefined
+        }
       />
 
       <Card>
@@ -207,18 +326,23 @@ export function MfdsDeclarationDetailPage() {
           aria-label="데이터 처리 상태"
           className={cn('rounded-lg border px-4 py-3', normalizationStatus.panelClassName)}
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {detail.reviewStatus && detail.reviewStatus !== 'NOT_REQUIRED' && (
-              <Badge variant="outline" className="bg-background/80">
-                {reviewStatusLabel}
-              </Badge>
-            )}
-            {detail.normalizedAt && (
+          {detail.normalizedAt && (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {detail.reviewStatus && detail.reviewStatus !== 'NOT_REQUIRED' && (
+                <Badge variant="outline" className="bg-background/80">
+                  {reviewStatusLabel}
+                </Badge>
+              )}
               <span className="text-sm text-muted-foreground">
                 정규화 시각 {formatDateTime(detail.normalizedAt)}
               </span>
-            )}
-          </div>
+            </div>
+          )}
+          {!detail.normalizedAt && detail.reviewStatus && detail.reviewStatus !== 'NOT_REQUIRED' && (
+            <Badge variant="outline" className="bg-background/80">
+              {reviewStatusLabel}
+            </Badge>
+          )}
 
           <div className="border-current/10 mt-4 grid gap-5 border-t pt-4 md:grid-cols-2">
             {detail.normalizationReasons.length > 0 && (
@@ -260,6 +384,81 @@ export function MfdsDeclarationDetailPage() {
           </div>
         </section>
       )}
+
+      <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>신고 데이터 검토</DialogTitle>
+            <DialogDescription>이번 단계에서는 검토 결과와 메모만 기록합니다.</DialogDescription>
+          </DialogHeader>
+
+          <dl className="grid gap-3 rounded-lg border bg-muted/30 p-4 sm:grid-cols-3">
+            <DetailField label="검토 대상">
+              {detail.skuDisplayNameKo ?? detail.baseProductNameKo ?? '신고 데이터'}
+            </DetailField>
+            <DetailField label="RCNO">{detail.rcno}</DetailField>
+            <DetailField label="현재 상태">{normalizationStatus.label}</DetailField>
+          </dl>
+
+          <div className="space-y-3">
+            <Label>검토 결과</Label>
+            <RadioGroup
+              value={selectedReviewStatus}
+              onValueChange={(value) => setSelectedReviewStatus(value as MfdsNormalizationStatus)}
+            >
+              {reviewOptions.map((option) => (
+                <Label
+                  key={option.status}
+                  htmlFor={`review-status-${option.status}`}
+                  className={cn(
+                    'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors',
+                    selectedReviewStatus === option.status && 'border-primary bg-primary/5'
+                  )}
+                >
+                  <RadioGroupItem id={`review-status-${option.status}`} value={option.status} />
+                  <span className="space-y-1">
+                    <span className="block font-medium">{option.label}</span>
+                    <span className="block text-sm font-normal text-muted-foreground">
+                      {option.description}
+                    </span>
+                  </span>
+                </Label>
+              ))}
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="review-note">
+              검토 메모{selectedReviewOption?.noteRequired ? ' (필수)' : ' (선택)'}
+            </Label>
+            <Textarea
+              id="review-note"
+              value={reviewNote}
+              onChange={(event) => setReviewNote(event.target.value)}
+              placeholder={
+                selectedReviewOption?.noteRequired
+                  ? '확인하지 못한 정보 또는 추가 검토 사유를 입력해주세요.'
+                  : '검토 내용을 남길 수 있습니다.'
+              }
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReviewDialogOpen(false)}>
+              취소
+            </Button>
+            <Button
+              onClick={saveReviewResult}
+              disabled={
+                updateNormalizationStatus.isPending ||
+                (selectedReviewOption?.noteRequired && !reviewNote.trim())
+              }
+            >
+              {updateNormalizationStatus.isPending ? '저장 중...' : '검토 결과 저장'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">정규화 결과</h2>
@@ -384,18 +583,14 @@ export function MfdsDeclarationDetailPage() {
                 <TableHead>현재 연결</TableHead>
                 <TableHead>상태</TableHead>
                 <TableHead>처리 시각</TableHead>
+                <TableHead className="w-[96px]">관리</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
                 <TableCell>
                   {detail.importer ? (
-                    <Link
-                      className="font-medium text-primary underline underline-offset-4"
-                      to={`/mfds/importers/${detail.importer.id}`}
-                    >
-                      {detail.importer.businessName}
-                    </Link>
+                    <span className="font-medium">{detail.importer.businessName}</span>
                   ) : (
                     '-'
                   )}
@@ -404,11 +599,25 @@ export function MfdsDeclarationDetailPage() {
                   <ConnectionStatusBadge connected={Boolean(detail.importer)} />
                 </TableCell>
                 <TableCell>{formatDateTime(detail.importerLinkedAt)}</TableCell>
+                <TableCell>
+                  <Button variant="outline" size="sm" onClick={() => setIsImporterLinkingOpen(true)}>
+                    연결 관리
+                  </Button>
+                </TableCell>
               </TableRow>
             </TableBody>
           </Table>
         </div>
       </section>
+
+      <MfdsImporterLinkingSheet
+        declarationId={detail.id}
+        declarationName={detail.skuDisplayNameKo ?? detail.baseProductNameKo ?? '신고 데이터 검토'}
+        rcno={detail.rcno}
+        importer={detail.importer}
+        open={isImporterLinkingOpen}
+        onOpenChange={setIsImporterLinkingOpen}
+      />
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">연관 데이터 연결</h2>
@@ -457,103 +666,9 @@ export function MfdsDeclarationDetailPage() {
                 </TableCell>
                 <TableCell>{formatDateTime(detail.matchedAt)}</TableCell>
                 <TableCell>
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        보기
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent className="overflow-y-auto sm:max-w-lg">
-                      <SheetHeader>
-                        <SheetTitle>보틀노트 위스키 연결 상세</SheetTitle>
-                        <SheetDescription className="sr-only">
-                          연결된 위스키와 저장된 연결 후보를 확인합니다.
-                        </SheetDescription>
-                      </SheetHeader>
-                      <div className="mt-6 space-y-8">
-                        <section className="space-y-3">
-                          <h3 className="font-semibold">현재 연결</h3>
-                          {detail.selectedAlcoholId ? (
-                            <div className="flex items-center gap-4 rounded-lg border p-4">
-                              {selectedAlcohol?.imageUrl && (
-                                <img
-                                  src={selectedAlcohol.imageUrl}
-                                  alt=""
-                                  className="h-16 w-16 rounded-md object-cover"
-                                />
-                              )}
-                              <div>
-                                <Link
-                                  className="font-medium text-primary hover:underline"
-                                  to={`/whisky/${detail.selectedAlcoholId}`}
-                                >
-                                  {selectedAlcohol?.korName ??
-                                    selectedAlcohol?.engName ??
-                                    `ID ${detail.selectedAlcoholId}`}
-                                </Link>
-                                <div className="mt-2">
-                                  <RelationCodeBadge value={detail.alcoholMatchDecision} />
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">연결된 위스키 없음</p>
-                          )}
-                        </section>
-                        <section className="space-y-3">
-                          <h3 className="font-semibold">연결 후보</h3>
-                          {candidatesQuery.isLoading ? (
-                            <p className="text-sm text-muted-foreground">
-                              저장된 연결 후보를 불러오는 중입니다.
-                            </p>
-                          ) : candidatesQuery.isError ? (
-                            <div className="space-y-3">
-                              <p className="text-sm text-muted-foreground">
-                                저장된 연결 후보를 불러오지 못했습니다.
-                              </p>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => candidatesQuery.refetch()}
-                              >
-                                다시 시도
-                              </Button>
-                            </div>
-                          ) : candidates?.alcoholCandidates.length ? (
-                            candidates.alcoholCandidates.map((candidate) => (
-                              <Link
-                                key={candidate.alcoholId}
-                                className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
-                                to={`/whisky/${candidate.alcoholId}`}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                {candidate.imageUrl && (
-                                  <img
-                                    src={candidate.imageUrl}
-                                    alt=""
-                                    className="h-14 w-14 rounded-md object-cover"
-                                  />
-                                )}
-                                <div>
-                                  <p className="font-medium">
-                                    {candidate.korName ??
-                                      candidate.engName ??
-                                      `ID ${candidate.alcoholId}`}
-                                  </p>
-                                  <p className="mt-1 text-sm text-muted-foreground">
-                                    점수 {candidate.score.toFixed(3)}
-                                  </p>
-                                </div>
-                              </Link>
-                            ))
-                          ) : (
-                            <EmptyCandidates />
-                          )}
-                        </section>
-                      </div>
-                    </SheetContent>
-                  </Sheet>
+                  <Button variant="outline" size="sm" onClick={() => setIsWhiskyMatchingOpen(true)}>
+                    연결 관리
+                  </Button>
                 </TableCell>
               </TableRow>
 
@@ -762,6 +877,15 @@ export function MfdsDeclarationDetailPage() {
           </Table>
         </div>
       </section>
+
+      <MfdsWhiskyMatchingSheet
+        declarationId={detail.id}
+        declarationName={detail.skuDisplayNameKo ?? detail.baseProductNameKo ?? '신고 데이터 검토'}
+        rcno={detail.rcno}
+        selectedAlcoholId={detail.selectedAlcoholId}
+        open={isWhiskyMatchingOpen}
+        onOpenChange={setIsWhiskyMatchingOpen}
+      />
     </div>
   );
 }
