@@ -4,14 +4,24 @@ on:
   release:
     types:
       - published
+  workflow_call:
+    inputs:
+      source_sha:
+        description: Fixed main source SHA to deploy
+        required: true
+        type: string
+      release_key:
+        description: Release key in YYYY-MM-DD/N format
+        required: true
+        type: string
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: deploy-dashboard-production-${{ github.event.release.tag_name }}
-  cancel-in-progress: true
+  group: deploy-dashboard-production-${{ github.event.release.tag_name || inputs.release_key }}
+  cancel-in-progress: false
 
 env:
   IMAGE_NAME: bottlenote-admin-dashboard
@@ -23,79 +33,114 @@ jobs:
     timeout-minutes: 5
     outputs:
       release-tag: ${{ steps.release.outputs.release-tag }}
-      version: ${{ steps.release.outputs.version }}
+      release-key: ${{ steps.release.outputs.release-key }}
       image-tag: ${{ steps.release.outputs.image-tag }}
-      tag-sha: ${{ steps.release.outputs.tag-sha }}
+      source-sha: ${{ steps.release.outputs.source-sha }}
+      deployment-source: ${{ steps.release.outputs.deployment-source }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - name: validate published dashboard release
+      - name: validate dashboard release
         id: release
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          SOURCE_SHA_INPUT: ${{ inputs.source_sha }}
+          RELEASE_KEY_INPUT: ${{ inputs.release_key }}
           GITHUB_EVENT_PATH: ${{ github.event_path }}
         run: |
           set -euo pipefail
-          [[ -n "$RELEASE_TAG" ]] || { echo "::error::release tag is required"; exit 1; }
-          [[ "$RELEASE_TAG" =~ ^dashboard/v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::dashboard release tag required, got: $RELEASE_TAG"; exit 1; }
-
-          version="${RELEASE_TAG#dashboard/v}"
-          image_tag="dashboard_${version}"
-
           git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
-          git fetch --tags origin
-          git rev-parse -q --verify "refs/tags/${RELEASE_TAG}" >/dev/null || { echo "::error::release tag not found: $RELEASE_TAG"; exit 1; }
-          tag_sha="$(git rev-list -n 1 "$RELEASE_TAG")"
-          git merge-base --is-ancestor "$tag_sha" origin/main || { echo "::error::tag commit is not contained in origin/main: $tag_sha"; exit 1; }
 
-          python3 - <<'PY'
+          if [[ "$GITHUB_EVENT_NAME" == "release" ]]; then
+            [[ "$RELEASE_TAG" =~ ^dashboard/v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+              echo "::error::dashboard release tag required, got: $RELEASE_TAG"
+              exit 1
+            }
+            version="${RELEASE_TAG#dashboard/v}"
+            release_key="$version"
+            image_tag="dashboard_${version}"
+            deployment_source="github-release"
+
+            git fetch --tags origin
+            git rev-parse -q --verify "refs/tags/${RELEASE_TAG}" >/dev/null || {
+              echo "::error::release tag not found: $RELEASE_TAG"
+              exit 1
+            }
+            source_sha="$(git rev-list -n 1 "$RELEASE_TAG")"
+            git merge-base --is-ancestor "$source_sha" origin/main || {
+              echo "::error::tag commit is not contained in origin/main: $source_sha"
+              exit 1
+            }
+
+            RELEASE_TAG="$RELEASE_TAG" GITHUB_EVENT_PATH="$GITHUB_EVENT_PATH" python3 - <<'PY'
           import json
           import os
           import sys
 
-          event_path = os.environ['GITHUB_EVENT_PATH']
-          release_tag = os.environ['RELEASE_TAG']
-          with open(event_path, encoding='utf-8') as event_file:
-              event = json.load(event_file)
-          release = event.get('release') or {}
-
-          if release.get('tag_name') != release_tag:
-              print(f"::error::release payload tag mismatch: {release.get('tag_name')} != {release_tag}", file=sys.stderr)
+          with open(os.environ['GITHUB_EVENT_PATH'], encoding='utf-8') as event_file:
+              release = json.load(event_file).get('release') or {}
+          if release.get('tag_name') != os.environ['RELEASE_TAG']:
+              print('::error::release payload tag mismatch', file=sys.stderr)
               sys.exit(1)
-          if release.get('draft'):
-              print('::error::release must be published before production deploy', file=sys.stderr)
+          if release.get('draft') or release.get('prerelease'):
+              print('::error::release must be a published production release', file=sys.stderr)
               sys.exit(1)
-          if release.get('prerelease'):
-              print('::error::production release must not be prerelease', file=sys.stderr)
-              sys.exit(1)
-          body = (release.get('body') or '').strip()
-          if len(body) < 80:
+          if len((release.get('body') or '').strip()) < 80:
               print('::error::release changelog is empty or too short', file=sys.stderr)
               sys.exit(1)
-          print(f"release_id={release.get('id')} body_length={len(body)}")
           PY
+          else
+            [[ "$SOURCE_SHA_INPUT" =~ ^[0-9a-f]{40}$ ]] || {
+              echo "::error::source_sha must be a full commit SHA"
+              exit 1
+            }
+            [[ "$RELEASE_KEY_INPUT" =~ ^([0-9]{4}-[0-9]{2}-[0-9]{2})/([1-9][0-9]*)$ ]] || {
+              echo "::error::release_key must use YYYY-MM-DD/N format"
+              exit 1
+            }
+            release_date="${BASH_REMATCH[1]}"
+            sequence="${BASH_REMATCH[2]}"
+            normalized_date="$(date -u -d "$release_date" +%F)" || {
+              echo "::error::release_key contains an invalid calendar date"
+              exit 1
+            }
+            [[ "$normalized_date" == "$release_date" ]] || {
+              echo "::error::release_key contains an invalid calendar date"
+              exit 1
+            }
+
+            source_sha="$SOURCE_SHA_INPUT"
+            release_key="$RELEASE_KEY_INPUT"
+            image_version="${release_date//-/.}.${sequence}"
+            image_tag="dashboard_${image_version}"
+            deployment_source="release-pr"
+            RELEASE_TAG=""
+
+            git cat-file -e "${source_sha}^{commit}"
+            git merge-base --is-ancestor "$source_sha" origin/main || {
+              echo "::error::source_sha is not contained in origin/main: $source_sha"
+              exit 1
+            }
+          fi
 
           {
             echo "release-tag=$RELEASE_TAG"
-            echo "version=$version"
+            echo "release-key=$release_key"
             echo "image-tag=$image_tag"
-            echo "tag-sha=$tag_sha"
+            echo "source-sha=$source_sha"
+            echo "deployment-source=$deployment_source"
           } >> "$GITHUB_OUTPUT"
 
           {
-            echo "## Dashboard Production Release Gate"
-            echo "- Release tag: \`${RELEASE_TAG}\`"
-            echo "- Version: \`${version}\`"
+            echo "## Dashboard production release gate"
+            echo "- Release key: \`${release_key}\`"
+            echo "- Source: \`${deployment_source}\`"
             echo "- Image tag: \`${image_tag}\`"
-            echo "- Tag commit: \`${tag_sha}\`"
-            echo "- Main ancestry: \`passed\`"
-            echo "- Release metadata/changelog: \`passed\`"
+            echo "- Source SHA: \`${source_sha}\`"
           } >> "$GITHUB_STEP_SUMMARY"
-
-          echo "[dashboard-release-gate] passed release_tag=$RELEASE_TAG version=$version image_tag=$image_tag tag_sha=$tag_sha"
 
   build-dashboard-image:
     name: build and push dashboard image
@@ -104,10 +149,10 @@ jobs:
     outputs:
       image-digest: ${{ steps.build.outputs.image-digest }}
     steps:
-      - name: checkout release tag with submodules
+      - name: checkout release source with submodules
         uses: actions/checkout@v7
         with:
-          ref: ${{ needs.release-gate.outputs.release-tag }}
+          ref: ${{ needs.release-gate.outputs.source-sha }}
           submodules: true
           token: ${{ secrets.GIT_ACCESS_TOKEN }}
 
@@ -120,6 +165,7 @@ jobs:
           registry-password: ${{ secrets.REGISTRY_PASSWORD }}
           image-name: ${{ env.IMAGE_NAME }}
           image-tag: ${{ needs.release-gate.outputs.image-tag }}
+          additional-tags: ${{ needs.release-gate.outputs.deployment-source == 'release-pr' && 'dashboard_latest_production' || '' }}
           dockerfile: Dockerfile
           context: .
           platforms: linux/arm64
@@ -136,62 +182,60 @@ jobs:
           cosign-key-path: 'git.environment-variables/storage/docker-registry/cosign.key'
           cosign-password: ${{ secrets.COSIGN_PASSWORD }}
 
-  update-production:
-    name: update dashboard production image
+  handoff-to-image-updater:
+    name: hand off dashboard image to image updater
+    if: needs.release-gate.outputs.deployment-source == 'release-pr'
     needs:
       - release-gate
       - build-dashboard-image
     runs-on: ubuntu-latest
     steps:
-      - name: checkout repository with submodules
+      - name: summarize image updater handoff
+        run: |
+          {
+            echo "## Dashboard image updater handoff"
+            echo "- Channel: \`dashboard_latest_production\`"
+            echo "- Digest: \`${{ needs.build-dashboard-image.outputs.image-digest }}\`"
+            echo "- GitOps update: \`Argo CD Image Updater\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  update-production:
+    name: update dashboard production image
+    if: github.event_name == 'release'
+    needs:
+      - release-gate
+      - build-dashboard-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code with submodules
         uses: actions/checkout@v7
         with:
-          ref: ${{ needs.release-gate.outputs.release-tag }}
           submodules: true
           token: ${{ secrets.GIT_ACCESS_TOKEN }}
 
       - name: setup kustomize
         uses: imranismail/setup-kustomize@v3
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: update production image tag
+        env:
+          REGISTRY: ${{ secrets.REGISTRY_ADDRESS }}
+          IMAGE_TAG: ${{ needs.release-gate.outputs.image-tag }}
         run: |
-          set -euo pipefail
-          IMAGE_TAG="${{ needs.release-gate.outputs.image-tag }}"
-          REGISTRY="${{ secrets.REGISTRY_ADDRESS }}"
-
           cd git.environment-variables
           git checkout main
-
           cd deploy/overlays/production
-          kustomize edit set image \
-            bottlenote-admin-dashboard=${REGISTRY}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}
+          kustomize edit set image "bottlenote-admin-dashboard=${REGISTRY}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
 
       - name: commit and push with retry
         run: |
-          set -euo pipefail
           cd git.environment-variables
-
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
           git add deploy/overlays/production/kustomization.yaml
-
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-
-          git commit -m "chore(dashboard): update production image tag to ${{ needs.release-gate.outputs.image-tag }}
-
-          Updated by GitHub Actions
-          Release: ${{ needs.release-gate.outputs.release-tag }}
-          Image digest: ${{ needs.build-dashboard-image.outputs.image-digest }}
-          Workflow: ${{ github.workflow }}"
-
+          git diff --staged --quiet && exit 0
+          git commit -m "chore(dashboard): update production image tag to ${{ needs.release-gate.outputs.image-tag }}"
           for i in {1..5}; do
-            git pull --rebase origin main && git push origin main && break
-            echo "Push failed, retry $i/5..."
+            git pull --rebase origin main && git push origin main && exit 0
             sleep $((i * 2))
           done
+          exit 1
