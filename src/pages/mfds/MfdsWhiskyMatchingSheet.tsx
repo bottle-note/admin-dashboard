@@ -78,7 +78,7 @@ function WhiskySelectionCard({
   detailHref,
   footerAction,
 }: {
-  label: string;
+  label?: string;
   whisky: PendingWhisky;
   action?: ReactNode;
   detailHref?: string;
@@ -97,8 +97,10 @@ function WhiskySelectionCard({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-muted-foreground">{label}</p>
-          <p className="mt-0.5 truncate font-semibold">{whisky.korName}</p>
+          {label && <p className="text-xs font-medium text-muted-foreground">{label}</p>}
+          <p className={label ? 'mt-0.5 truncate font-semibold' : 'truncate font-semibold'}>
+            {whisky.korName}
+          </p>
           {whisky.engName && (
             <p className="truncate text-sm text-muted-foreground">{whisky.engName}</p>
           )}
@@ -332,7 +334,6 @@ export function MfdsWhiskyMatchingSheet({
                 </div>
               ) : (
                 <WhiskySelectionCard
-                  label="현재 연결된 위스키"
                   whisky={{
                     alcoholId: currentWhiskyQuery.data.alcoholId,
                     korName: currentWhiskyQuery.data.korName,

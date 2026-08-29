@@ -50,7 +50,7 @@ function ImporterCard({
   action,
   footerAction,
 }: {
-  label: string;
+  label?: string;
   importer: MfdsImporterItem;
   action?: ReactNode;
   footerAction?: ReactNode;
@@ -59,8 +59,10 @@ function ImporterCard({
     <div className="rounded-lg border bg-background">
       <div className="flex items-center gap-3 p-3">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-muted-foreground">{label}</p>
-          <p className="mt-0.5 truncate font-semibold">{importer.businessName}</p>
+          {label && <p className="text-xs font-medium text-muted-foreground">{label}</p>}
+          <p className={label ? 'mt-0.5 truncate font-semibold' : 'truncate font-semibold'}>
+            {importer.businessName}
+          </p>
           <p className="mt-1 truncate text-sm text-muted-foreground">
             인허가 {importer.licenseNo} · 업소 코드 {importer.officialBusinessCode}
           </p>
@@ -241,7 +243,6 @@ export function MfdsImporterLinkingSheet({
             {importer ? (
               <>
                 <ImporterCard
-                  label="현재 연결된 수입사"
                   importer={importer}
                   footerAction={
                     <Button
