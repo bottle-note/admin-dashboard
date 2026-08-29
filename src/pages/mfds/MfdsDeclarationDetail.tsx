@@ -1,10 +1,21 @@
 import { useState, type ReactNode } from 'react';
+import { ClipboardCheck } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Sheet,
   SheetContent,
@@ -21,8 +32,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useMfdsDeclarationDetail, useMfdsMatchingCandidates } from '@/hooks/useMfdsDeclarations';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  useMfdsDeclarationDetail,
+  useMfdsMatchingCandidates,
+  useMfdsNormalizationStatusUpdate,
+} from '@/hooks/useMfdsDeclarations';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth';
+import type { MfdsNormalizationStatus } from '@/types/api';
 import {
   MFDS_ALCOHOL_MATCH_STATUS_MAP,
   MFDS_MATCH_DECISION_MAP,
@@ -31,6 +49,66 @@ import {
 import { MFDS_NORMALIZATION_STATUS_MAP } from './mfds-normalization-status';
 import { MfdsImporterLinkingSheet } from './MfdsImporterLinkingSheet';
 import { MfdsWhiskyMatchingSheet } from './MfdsWhiskyMatchingSheet';
+
+interface ReviewOption {
+  status: MfdsNormalizationStatus;
+  label: string;
+  description: string;
+  noteRequired: boolean;
+}
+
+const REVIEW_OPTIONS_BY_STATUS: Partial<Record<MfdsNormalizationStatus, ReviewOption[]>> = {
+  REVIEW_REQUIRED: [
+    {
+      status: 'NORMALIZED',
+      label: '문제 없음',
+      description: '현재 정규화 결과를 검토 완료로 처리합니다.',
+      noteRequired: false,
+    },
+    {
+      status: 'PARTIAL',
+      label: '일부 정보 확인 불가',
+      description: '일부 정규화 값은 확인할 수 없음을 기록합니다.',
+      noteRequired: true,
+    },
+  ],
+  UNPARSED: [
+    {
+      status: 'NORMALIZED',
+      label: '문제 없음',
+      description: '현재 정규화 결과를 검토 완료로 처리합니다.',
+      noteRequired: false,
+    },
+    {
+      status: 'PARTIAL',
+      label: '일부 정보 확인 불가',
+      description: '일부 정규화 값은 확인할 수 없음을 기록합니다.',
+      noteRequired: true,
+    },
+  ],
+  PARTIAL: [
+    {
+      status: 'NORMALIZED',
+      label: '문제 없음',
+      description: '현재 정규화 결과를 검토 완료로 처리합니다.',
+      noteRequired: false,
+    },
+    {
+      status: 'REVIEW_REQUIRED',
+      label: '추가 검토 필요',
+      description: '추가 확인이 필요한 이유를 기록합니다.',
+      noteRequired: true,
+    },
+  ],
+  NORMALIZED: [
+    {
+      status: 'REVIEW_REQUIRED',
+      label: '추가 검토 필요',
+      description: '다시 확인이 필요한 이유를 기록합니다.',
+      noteRequired: true,
+    },
+  ],
+};
 
 const REVIEW_STATUS_LABELS: Record<string, string> = {
   PENDING: '검토 대기',
@@ -105,11 +183,16 @@ export function MfdsDeclarationDetailPage() {
   const { declarationId: declarationIdParam } = useParams<{ declarationId: string }>();
   const [isWhiskyMatchingOpen, setIsWhiskyMatchingOpen] = useState(false);
   const [isImporterLinkingOpen, setIsImporterLinkingOpen] = useState(false);
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [selectedReviewStatus, setSelectedReviewStatus] = useState<MfdsNormalizationStatus>();
+  const [reviewNote, setReviewNote] = useState('');
   const parsedId = Number(declarationIdParam);
   const declarationId = Number.isInteger(parsedId) && parsedId > 0 ? parsedId : undefined;
 
   const detailQuery = useMfdsDeclarationDetail(declarationId);
   const candidatesQuery = useMfdsMatchingCandidates(declarationId);
+  const updateNormalizationStatus = useMfdsNormalizationStatusUpdate(declarationId);
+  const reviewerEmail = useAuthStore((state) => state.user?.email);
 
   if (!declarationId) {
     return (
@@ -156,14 +239,16 @@ export function MfdsDeclarationDetailPage() {
   const normalizationStatus = MFDS_NORMALIZATION_STATUS_MAP[detail.normalizationStatus];
   const reviewStatusLabel = REVIEW_STATUS_LABELS[detail.reviewStatus] ?? detail.reviewStatus;
   const hasReviewRecord = Boolean(detail.reviewedBy || detail.reviewedAt || detail.reviewNote);
+  const reviewOptions = REVIEW_OPTIONS_BY_STATUS[detail.normalizationStatus] ?? [];
+  const selectedReviewOption = reviewOptions.find((option) => option.status === selectedReviewStatus);
   const showStatusDetails =
-    detail.normalizationStatus !== 'NORMALIZED' &&
-    Boolean(
-      detail.normalizationReasons.length > 0 ||
-      detail.unparsedFragments.length > 0 ||
-      hasReviewRecord ||
-      (detail.reviewStatus && detail.reviewStatus !== 'NOT_REQUIRED')
-    );
+    hasReviewRecord ||
+    (detail.normalizationStatus !== 'NORMALIZED' &&
+      Boolean(
+        detail.normalizationReasons.length > 0 ||
+        detail.unparsedFragments.length > 0 ||
+        (detail.reviewStatus && detail.reviewStatus !== 'NOT_REQUIRED')
+      ));
   const selectedAlcohol = candidates?.alcoholCandidates.find(
     (candidate) => candidate.alcoholId === detail.selectedAlcoholId
   );
@@ -173,6 +258,28 @@ export function MfdsDeclarationDetailPage() {
   const selectedRegion = candidates?.regionCandidates.find(
     (candidate) => candidate.id === detail.selectedRegionId
   );
+
+  const openReviewDialog = () => {
+    const defaultOption = reviewOptions[0];
+    if (!defaultOption) return;
+
+    setSelectedReviewStatus(defaultOption.status);
+    setReviewNote('');
+    setIsReviewDialogOpen(true);
+  };
+
+  const saveReviewResult = () => {
+    if (!selectedReviewOption) return;
+
+    updateNormalizationStatus.mutate(
+      {
+        normalizationStatus: selectedReviewOption.status,
+        reviewedBy: reviewerEmail,
+        reviewNote: reviewNote.trim() || undefined,
+      },
+      { onSuccess: () => setIsReviewDialogOpen(false) }
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -189,6 +296,14 @@ export function MfdsDeclarationDetailPage() {
         }
         onBack={() => navigate('/mfds/declarations')}
         action={{ mode: 'readonly' }}
+        actions={
+          reviewOptions.length > 0 ? (
+            <Button type="button" onClick={openReviewDialog}>
+              <ClipboardCheck className="mr-2 h-4 w-4" />
+              검토
+            </Button>
+          ) : undefined
+        }
       />
 
       <Card>
@@ -211,18 +326,23 @@ export function MfdsDeclarationDetailPage() {
           aria-label="데이터 처리 상태"
           className={cn('rounded-lg border px-4 py-3', normalizationStatus.panelClassName)}
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {detail.reviewStatus && detail.reviewStatus !== 'NOT_REQUIRED' && (
-              <Badge variant="outline" className="bg-background/80">
-                {reviewStatusLabel}
-              </Badge>
-            )}
-            {detail.normalizedAt && (
+          {detail.normalizedAt && (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {detail.reviewStatus && detail.reviewStatus !== 'NOT_REQUIRED' && (
+                <Badge variant="outline" className="bg-background/80">
+                  {reviewStatusLabel}
+                </Badge>
+              )}
               <span className="text-sm text-muted-foreground">
                 정규화 시각 {formatDateTime(detail.normalizedAt)}
               </span>
-            )}
-          </div>
+            </div>
+          )}
+          {!detail.normalizedAt && detail.reviewStatus && detail.reviewStatus !== 'NOT_REQUIRED' && (
+            <Badge variant="outline" className="bg-background/80">
+              {reviewStatusLabel}
+            </Badge>
+          )}
 
           <div className="border-current/10 mt-4 grid gap-5 border-t pt-4 md:grid-cols-2">
             {detail.normalizationReasons.length > 0 && (
@@ -264,6 +384,81 @@ export function MfdsDeclarationDetailPage() {
           </div>
         </section>
       )}
+
+      <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>신고 데이터 검토</DialogTitle>
+            <DialogDescription>이번 단계에서는 검토 결과와 메모만 기록합니다.</DialogDescription>
+          </DialogHeader>
+
+          <dl className="grid gap-3 rounded-lg border bg-muted/30 p-4 sm:grid-cols-3">
+            <DetailField label="검토 대상">
+              {detail.skuDisplayNameKo ?? detail.baseProductNameKo ?? '신고 데이터'}
+            </DetailField>
+            <DetailField label="RCNO">{detail.rcno}</DetailField>
+            <DetailField label="현재 상태">{normalizationStatus.label}</DetailField>
+          </dl>
+
+          <div className="space-y-3">
+            <Label>검토 결과</Label>
+            <RadioGroup
+              value={selectedReviewStatus}
+              onValueChange={(value) => setSelectedReviewStatus(value as MfdsNormalizationStatus)}
+            >
+              {reviewOptions.map((option) => (
+                <Label
+                  key={option.status}
+                  htmlFor={`review-status-${option.status}`}
+                  className={cn(
+                    'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors',
+                    selectedReviewStatus === option.status && 'border-primary bg-primary/5'
+                  )}
+                >
+                  <RadioGroupItem id={`review-status-${option.status}`} value={option.status} />
+                  <span className="space-y-1">
+                    <span className="block font-medium">{option.label}</span>
+                    <span className="block text-sm font-normal text-muted-foreground">
+                      {option.description}
+                    </span>
+                  </span>
+                </Label>
+              ))}
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="review-note">
+              검토 메모{selectedReviewOption?.noteRequired ? ' (필수)' : ' (선택)'}
+            </Label>
+            <Textarea
+              id="review-note"
+              value={reviewNote}
+              onChange={(event) => setReviewNote(event.target.value)}
+              placeholder={
+                selectedReviewOption?.noteRequired
+                  ? '확인하지 못한 정보 또는 추가 검토 사유를 입력해주세요.'
+                  : '검토 내용을 남길 수 있습니다.'
+              }
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReviewDialogOpen(false)}>
+              취소
+            </Button>
+            <Button
+              onClick={saveReviewResult}
+              disabled={
+                updateNormalizationStatus.isPending ||
+                (selectedReviewOption?.noteRequired && !reviewNote.trim())
+              }
+            >
+              {updateNormalizationStatus.isPending ? '저장 중...' : '검토 결과 저장'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">정규화 결과</h2>

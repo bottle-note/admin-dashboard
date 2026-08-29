@@ -44,6 +44,11 @@ export const MfdsDeclarationApi = {
       `/admin/api/v1/mfds/declarations/${declarationId}/matching/release`,
     method: 'POST',
   },
+  normalizationStatus: {
+    endpoint: (declarationId: number) =>
+      `/admin/api/v1/mfds/declarations/${declarationId}/normalization-status`,
+    method: 'PATCH',
+  },
   rcnoLinks: {
     endpoint: '/admin/api/v1/mfds/rcno-links',
     method: 'GET',
@@ -97,6 +102,19 @@ export interface MfdsDeclarationImporterLinkRequest {
 }
 
 export interface MfdsDeclarationImporterLinkResult {
+  code: string;
+  message: string;
+  targetId: number;
+  responseAt: string;
+}
+
+export interface MfdsDeclarationStatusUpdateRequest {
+  normalizationStatus: MfdsNormalizationStatus;
+  reviewedBy?: string;
+  reviewNote?: string;
+}
+
+export interface MfdsDeclarationStatusUpdateResult {
   code: string;
   message: string;
   targetId: number;
