@@ -14,6 +14,16 @@ export const MfdsDeclarationApi = {
     endpoint: (declarationId: number) => `/admin/api/v1/mfds/declarations/${declarationId}`,
     method: 'GET',
   },
+  importer: {
+    endpoint: (declarationId: number) =>
+      `/admin/api/v1/mfds/declarations/${declarationId}/importer`,
+    method: 'POST',
+  },
+  importerUnlink: {
+    endpoint: (declarationId: number) =>
+      `/admin/api/v1/mfds/declarations/${declarationId}/importer`,
+    method: 'DELETE',
+  },
   matchingCandidates: {
     endpoint: (declarationId: number) =>
       `/admin/api/v1/mfds/declarations/${declarationId}/matching/candidates`,
@@ -80,6 +90,17 @@ export interface MfdsDeclarationListItem {
 export interface MfdsDeclarationListMeta extends ApiMeta {
   nextCursor: number | null;
   hasNext: boolean;
+}
+
+export interface MfdsDeclarationImporterLinkRequest {
+  importerId: number;
+}
+
+export interface MfdsDeclarationImporterLinkResult {
+  code: string;
+  message: string;
+  targetId: number;
+  responseAt: string;
 }
 
 export interface MfdsMatchCandidate {

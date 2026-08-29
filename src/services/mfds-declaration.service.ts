@@ -10,6 +10,8 @@ import {
   type MfdsDeclarationListMeta,
   type MfdsDeclarationSearchParams,
   type MfdsDeclarationDetail,
+  type MfdsDeclarationImporterLinkRequest,
+  type MfdsDeclarationImporterLinkResult,
   type MfdsMatchingCandidates,
   type MfdsMatchingConfirmRequest,
   type MfdsMatchingConfirmResponse,
@@ -49,6 +51,18 @@ export const mfdsDeclarationService = {
     );
     return response.data;
   },
+  linkImporter: (
+    declarationId: number,
+    data: MfdsDeclarationImporterLinkRequest
+  ): Promise<MfdsDeclarationImporterLinkResult> =>
+    apiClient.post<MfdsDeclarationImporterLinkResult, MfdsDeclarationImporterLinkRequest>(
+      MfdsDeclarationApi.importer.endpoint(declarationId),
+      data
+    ),
+  unlinkImporter: (declarationId: number): Promise<MfdsDeclarationImporterLinkResult> =>
+    apiClient.delete<MfdsDeclarationImporterLinkResult>(
+      MfdsDeclarationApi.importerUnlink.endpoint(declarationId)
+    ),
   matchingCandidates: async (declarationId: number): Promise<MfdsMatchingCandidates> => {
     const response = await apiClient.get<MfdsMatchingCandidates>(
       MfdsDeclarationApi.matchingCandidates.endpoint(declarationId)

@@ -45,8 +45,14 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
     const importerSection = page.locator('section').filter({
       has: page.getByRole('heading', { name: '수입사 연결' }),
     });
-    await expect(importerSection.locator('a[href^="/mfds/importers/"]')).toBeVisible();
-    await expect(importerSection.getByRole('button', { name: '보기' })).toHaveCount(0);
+    await expect(importerSection.locator('a[href^="/mfds/importers/"]')).toHaveCount(0);
+    await importerSection.getByRole('button', { name: '연결 관리' }).click();
+    const importerLinkingSheet = page.getByRole('dialog').filter({
+      has: page.getByRole('heading', { name: /· 수입사 연결/ }),
+    });
+    await expect(importerLinkingSheet).toBeVisible();
+    await expect(importerLinkingSheet.getByText(/RCNO/)).toBeVisible();
+    await importerLinkingSheet.getByRole('button', { name: 'Close' }).click();
 
     const matchingSection = page.locator('section').filter({
       has: page.getByRole('heading', { name: '연관 데이터 연결' }),

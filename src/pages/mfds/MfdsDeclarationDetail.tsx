@@ -29,6 +29,7 @@ import {
   MFDS_UNKNOWN_RELATION_CODE,
 } from './mfds-alcohol-match-status';
 import { MFDS_NORMALIZATION_STATUS_MAP } from './mfds-normalization-status';
+import { MfdsImporterLinkingSheet } from './MfdsImporterLinkingSheet';
 import { MfdsWhiskyMatchingSheet } from './MfdsWhiskyMatchingSheet';
 
 const REVIEW_STATUS_LABELS: Record<string, string> = {
@@ -103,6 +104,7 @@ export function MfdsDeclarationDetailPage() {
   const navigate = useNavigate();
   const { declarationId: declarationIdParam } = useParams<{ declarationId: string }>();
   const [isWhiskyMatchingOpen, setIsWhiskyMatchingOpen] = useState(false);
+  const [isImporterLinkingOpen, setIsImporterLinkingOpen] = useState(false);
   const parsedId = Number(declarationIdParam);
   const declarationId = Number.isInteger(parsedId) && parsedId > 0 ? parsedId : undefined;
 
@@ -386,18 +388,14 @@ export function MfdsDeclarationDetailPage() {
                 <TableHead>현재 연결</TableHead>
                 <TableHead>상태</TableHead>
                 <TableHead>처리 시각</TableHead>
+                <TableHead className="w-[96px]">관리</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
                 <TableCell>
                   {detail.importer ? (
-                    <Link
-                      className="font-medium text-primary underline underline-offset-4"
-                      to={`/mfds/importers/${detail.importer.id}`}
-                    >
-                      {detail.importer.businessName}
-                    </Link>
+                    <span className="font-medium">{detail.importer.businessName}</span>
                   ) : (
                     '-'
                   )}
@@ -406,11 +404,25 @@ export function MfdsDeclarationDetailPage() {
                   <ConnectionStatusBadge connected={Boolean(detail.importer)} />
                 </TableCell>
                 <TableCell>{formatDateTime(detail.importerLinkedAt)}</TableCell>
+                <TableCell>
+                  <Button variant="outline" size="sm" onClick={() => setIsImporterLinkingOpen(true)}>
+                    연결 관리
+                  </Button>
+                </TableCell>
               </TableRow>
             </TableBody>
           </Table>
         </div>
       </section>
+
+      <MfdsImporterLinkingSheet
+        declarationId={detail.id}
+        declarationName={detail.skuDisplayNameKo ?? detail.baseProductNameKo ?? '신고 데이터 검토'}
+        rcno={detail.rcno}
+        importer={detail.importer}
+        open={isImporterLinkingOpen}
+        onOpenChange={setIsImporterLinkingOpen}
+      />
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">연관 데이터 연결</h2>
