@@ -7,7 +7,7 @@ import {
   type InfiniteApiResponse,
 } from './useInfiniteApiQuery';
 import { useApiQuery } from './useApiQuery';
-import { useApiMutation } from './useApiMutation';
+import { useApiMutation, type UseApiMutationOptions } from './useApiMutation';
 import { mfdsImporterKeys, mfdsImporterService } from '@/services/mfds-importer.service';
 import type {
   MfdsImporterCreateRequest,
@@ -92,4 +92,22 @@ export function useMfdsImporterUpdate() {
         ]),
     }
   );
+}
+
+export function useMfdsImporterDelete(
+  options?: Omit<UseApiMutationOptions<MfdsImporterMutationResult, number>, 'successMessage'>
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...restOptions } = options ?? {};
+
+  return useApiMutation<MfdsImporterMutationResult, number>(mfdsImporterService.delete, {
+    successMessage: '수입사를 삭제했습니다.',
+    ...restOptions,
+    onSuccess: (data, importerId, onMutateResult, context) => {
+      queryClient.invalidateQueries({ queryKey: mfdsImporterKeys.lists() });
+      if (onSuccess) {
+        onSuccess(data, importerId, onMutateResult, context);
+      }
+    },
+  });
 }

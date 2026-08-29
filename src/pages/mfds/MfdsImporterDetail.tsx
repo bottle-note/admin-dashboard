@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Save } from 'lucide-react';
+import { Save, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router';
 
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
+import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
 import { FormField } from '@/components/common/FormField';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,6 +30,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import {
   useMfdsImporterCreate,
+  useMfdsImporterDelete,
   useMfdsImporterDetail,
   useMfdsImporterUpdate,
 } from '@/hooks/useMfdsImporters';
@@ -59,7 +61,11 @@ export function MfdsImporterDetailPage() {
   const detailQuery = useMfdsImporterDetail(importerId);
   const createMutation = useMfdsImporterCreate();
   const updateMutation = useMfdsImporterUpdate();
-  const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
+  const deleteMutation = useMfdsImporterDelete({
+    onSuccess: () => navigate('/mfds/importers'),
+  });
+  const [isCreateConfirmOpen, setIsCreateConfirmOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const form = useForm<MfdsImporterFormValues>({
     resolver: zodResolver(mfdsImporterFormSchema),
     defaultValues: mfdsImporterDefaultValues,
@@ -131,32 +137,35 @@ export function MfdsImporterDetailPage() {
   };
 
   const handleSaveClick = async () => {
-    if (!(await form.trigger())) return;
-
-    if (isNewMode) {
-      const data = form.getValues();
-      const requiredFields = ['officialBusinessCode', 'licenseNo', 'sourceListUrl'] as const;
-      const missingField = requiredFields.find((field) => !data[field].trim());
-
-      if (missingField) {
-        const labels: Record<(typeof requiredFields)[number], string> = {
-          officialBusinessCode: '공식 업소 코드는 필수입니다.',
-          licenseNo: '인허가 번호는 필수입니다.',
-          sourceListUrl: '공식 출처 URL은 필수입니다.',
-        };
-        form.setError(missingField, { message: labels[missingField] });
-        return;
-      }
-
-      try {
-        new URL(data.sourceListUrl);
-      } catch {
-        form.setError('sourceListUrl', { message: '올바른 URL을 입력해주세요.' });
-        return;
-      }
+    if (!isNewMode) {
+      form.handleSubmit(handleSubmit)();
+      return;
     }
 
-    setIsSaveConfirmOpen(true);
+    if (!(await form.trigger())) return;
+
+    const data = form.getValues();
+    const requiredFields = ['officialBusinessCode', 'licenseNo', 'sourceListUrl'] as const;
+    const missingField = requiredFields.find((field) => !data[field].trim());
+
+    if (missingField) {
+      const labels: Record<(typeof requiredFields)[number], string> = {
+        officialBusinessCode: '공식 업소 코드는 필수입니다.',
+        licenseNo: '인허가 번호는 필수입니다.',
+        sourceListUrl: '공식 출처 URL은 필수입니다.',
+      };
+      form.setError(missingField, { message: labels[missingField] });
+      return;
+    }
+
+    try {
+      new URL(data.sourceListUrl);
+    } catch {
+      form.setError('sourceListUrl', { message: '올바른 URL을 입력해주세요.' });
+      return;
+    }
+
+    setIsCreateConfirmOpen(true);
   };
 
   if (!isNewMode && !importerId) {
@@ -196,7 +205,7 @@ export function MfdsImporterDetailPage() {
   }
 
   const detail = detailQuery.data;
-  const isPending = createMutation.isPending || updateMutation.isPending;
+  const isPending = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -205,10 +214,22 @@ export function MfdsImporterDetailPage() {
         subtitle={isNewMode ? undefined : `ID: ${importerId}`}
         onBack={() => navigate('/mfds/importers')}
         actions={
-          <Button onClick={handleSaveClick} disabled={isPending}>
-            <Save className="mr-2 h-4 w-4" />
-            {isPending ? '저장 중...' : isNewMode ? '등록' : '저장'}
-          </Button>
+          <>
+            {!isNewMode && detail && (
+              <Button
+                variant="destructive"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                disabled={isPending}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                삭제
+              </Button>
+            )}
+            <Button onClick={handleSaveClick} disabled={isPending}>
+              <Save className="mr-2 h-4 w-4" />
+              {isPending ? '저장 중...' : isNewMode ? '등록' : '저장'}
+            </Button>
+          </>
         }
       />
 
@@ -360,32 +381,43 @@ export function MfdsImporterDetailPage() {
         </Card>
       )}
 
-      <AlertDialog open={isSaveConfirmOpen} onOpenChange={setIsSaveConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {isNewMode
-                ? '등록 후 식약처 공식 정보는 수정할 수 없습니다'
-                : '식약처 공식 정보는 변경되지 않습니다'}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {isNewMode
-                ? '공식 업소 코드, 인허가 번호, 대표자 등 입력한 식약처 공식 정보를 확인해주세요. 등록 후에는 이 화면에서 수정할 수 없습니다.'
-                : '공식 업소 코드, 인허가 번호, 대표자 등은 수입 신고 연결의 기준값입니다. 이번 저장에는 내부 운영 정보만 반영됩니다.'}
-            </AlertDialogDescription>
-            {isNewMode && <p className="text-sm font-medium text-destructive">등록하시겠습니까?</p>}
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={updateMutation.isPending}>취소</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={form.handleSubmit(handleSubmit)}
-              disabled={isPending}
-            >
-              {isPending ? '저장 중...' : '확인'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {isNewMode && (
+        <AlertDialog open={isCreateConfirmOpen} onOpenChange={setIsCreateConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>등록 후 식약처 공식 정보는 수정할 수 없습니다</AlertDialogTitle>
+              <AlertDialogDescription>
+                공식 업소 코드, 인허가 번호, 대표자 등 입력한 식약처 공식 정보를 확인해주세요. 등록 후에는 이 화면에서 수정할 수 없습니다.
+              </AlertDialogDescription>
+              <p className="text-sm font-medium text-destructive">등록하시겠습니까?</p>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={createMutation.isPending}>취소</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  setIsCreateConfirmOpen(false);
+                  form.handleSubmit(handleSubmit)();
+                }}
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? '등록 중...' : '확인'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {!isNewMode && importerId && (
+        <DeleteConfirmDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          onConfirm={() => deleteMutation.mutate(importerId)}
+          title="수입사 삭제"
+          description="정말 이 수입사를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+          warningMessage="연결된 수입 신고 또는 RCNO 연결 근거가 있으면 삭제할 수 없습니다."
+          isPending={deleteMutation.isPending}
+        />
+      )}
     </div>
   );
 }

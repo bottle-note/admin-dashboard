@@ -17,6 +17,10 @@ export const MfdsImporterApi = {
     endpoint: (importerId: number) => `/admin/api/v1/mfds/importers/${importerId}`,
     method: 'PUT',
   },
+  delete: {
+    endpoint: (importerId: number) => `/admin/api/v1/mfds/importers/${importerId}`,
+    method: 'DELETE',
+  },
 } as const;
 
 export type MfdsImporterAdminStatus = 'ACTIVE' | 'INACTIVE';

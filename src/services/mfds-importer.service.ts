@@ -48,4 +48,6 @@ export const mfdsImporterService = {
       MfdsImporterApi.update.endpoint(importerId),
       data
     ),
+  delete: (importerId: number): Promise<MfdsImporterMutationResult> =>
+    apiClient.delete<MfdsImporterMutationResult>(MfdsImporterApi.delete.endpoint(importerId)),
 };
