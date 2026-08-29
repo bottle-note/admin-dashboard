@@ -142,6 +142,12 @@ export const menuConfig: MenuGroup[] = [
             icon: List,
             path: '/mfds/declarations',
           },
+          {
+            id: 'mfds-importer-list',
+            label: '수입사 관리',
+            icon: Factory,
+            path: '/mfds/importers',
+          },
         ],
       },
     ],

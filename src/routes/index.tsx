@@ -30,6 +30,8 @@ import { RegionListPage } from '@/pages/regions/RegionList';
 import { RegionDetailPage } from '@/pages/regions/RegionDetail';
 import { MfdsDeclarationListPage } from '@/pages/mfds/MfdsDeclarationList';
 import { MfdsDeclarationDetailPage } from '@/pages/mfds/MfdsDeclarationDetail';
+import { MfdsImporterListPage } from '@/pages/mfds/MfdsImporterList';
+import { MfdsImporterDetailPage } from '@/pages/mfds/MfdsImporterDetail';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -269,6 +271,30 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
               <MfdsDeclarationDetailPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="mfds/importers"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <MfdsImporterListPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="mfds/importers/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <MfdsImporterDetailPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="mfds/importers/:importerId"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <MfdsImporterDetailPage />
             </RoleProtectedRoute>
           }
         />
