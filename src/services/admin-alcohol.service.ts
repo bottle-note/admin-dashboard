@@ -20,6 +20,7 @@ import {
   type AlcoholUpdateRequest,
   type AlcoholUpdateResponse,
   type CategoryReferenceMap,
+  type AlcoholExcelValidationResult,
 } from '@/types/api';
 
 // ============================================
@@ -138,6 +139,17 @@ export const adminAlcoholService = {
     } catch (error) {
       throw normalizeError(error);
     }
+  },
+
+  validateExcel: (file: File): Promise<AlcoholExcelValidationResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return apiClient.post<AlcoholExcelValidationResult, FormData>(
+      AlcoholApi.excelValidate.endpoint,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
   },
 
   /**

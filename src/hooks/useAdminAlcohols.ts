@@ -24,6 +24,7 @@ import type {
   AlcoholUpdateRequest,
   AlcoholUpdateResponse,
   CategoryReferenceMap,
+  AlcoholExcelValidationResult,
 } from '@/types/api';
 
 /**
@@ -228,6 +229,12 @@ export function useCategoryReferences() {
 
 export function useAlcoholExcelTemplateDownload() {
   return useApiMutation<ArrayBuffer, void>(() => adminAlcoholService.downloadExcelTemplate(), {
+    showErrorToast: false,
+  });
+}
+
+export function useAlcoholExcelValidate() {
+  return useApiMutation<AlcoholExcelValidationResult, File>(adminAlcoholService.validateExcel, {
     showErrorToast: false,
   });
 }

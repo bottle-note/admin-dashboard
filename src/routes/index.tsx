@@ -12,6 +12,7 @@ import { LoginPage } from '@/pages/Login';
 import { DashboardPage } from '@/pages/Dashboard';
 import { WhiskyListPage } from '@/pages/whisky/WhiskyList';
 import { WhiskyDetailPage } from '@/pages/whisky/WhiskyDetail';
+import { WhiskyExcelBulkPage } from '@/pages/whisky/WhiskyExcelBulkPage';
 import { TastingTagListPage } from '@/pages/tasting-tags/TastingTagList';
 import { TastingTagDetailPage } from '@/pages/tasting-tags/TastingTagDetail';
 import { BannerListPage } from '@/pages/banners/BannerList';
@@ -102,6 +103,14 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
               <WhiskyDetailPage key="new" />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="whisky/excel-bulk"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <WhiskyExcelBulkPage />
             </RoleProtectedRoute>
           }
         />

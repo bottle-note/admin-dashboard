@@ -38,6 +38,11 @@ export const AlcoholApi = {
     endpoint: '/admin/api/v1/alcohols/excel/template',
     method: 'GET',
   },
+  /** 알코올 엑셀 검증 */
+  excelValidate: {
+    endpoint: '/admin/api/v1/alcohols/excel/validate',
+    method: 'POST',
+  },
   /** 술 삭제 */
   delete: {
     endpoint: '/admin/api/v1/alcohols/:alcoholId',
@@ -405,6 +410,48 @@ export type AlcoholUpdateRequest = AlcoholApiTypes['update']['request'];
 
 /** 술 수정 응답 데이터 */
 export type AlcoholUpdateResponse = AlcoholApiTypes['update']['response'];
+
+/** 알코올 Excel 행 단위 오류 또는 경고 */
+export interface AlcoholExcelValidationIssue {
+  code: string;
+  field: string | null;
+  message: string;
+}
+
+/** 알코올 Excel 행 단위 검증 결과 */
+export interface AlcoholExcelValidationRow {
+  rowNumber: number;
+  korName?: string | null;
+  engName?: string | null;
+  abv?: string | null;
+  type?: string | null;
+  korCategory?: string | null;
+  engCategory?: string | null;
+  categoryGroup?: string | null;
+  region?: string | null;
+  distillery?: string | null;
+  age?: string | null;
+  cask?: string | null;
+  description?: string | null;
+  volume?: string | null;
+  tastingTags?: string | null;
+  regionId?: number | null;
+  distilleryId?: number | null;
+  tastingTagIds?: number[] | null;
+  candidateAlcoholIds?: number[] | null;
+  valid: boolean;
+  errors: AlcoholExcelValidationIssue[];
+  warnings: AlcoholExcelValidationIssue[];
+}
+
+/** 알코올 Excel 업로드 검증 결과 */
+export interface AlcoholExcelValidationResult {
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  warningRows: number;
+  rows: AlcoholExcelValidationRow[];
+}
 
 // ============================================
 // 카테고리 그룹 라벨
