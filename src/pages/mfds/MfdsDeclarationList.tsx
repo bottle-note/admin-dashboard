@@ -89,6 +89,19 @@ function formatSpecification(volumeMl: number | null, abvPercent: number | null)
   return [volume, abv].filter(Boolean).join(' ') || '-';
 }
 
+function getMatchDecisionBadgeClass(decision: string | null) {
+  if (decision === 'AUTO' || decision === 'AUTO_SELECTED') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  }
+  if (decision === 'NO_MATCH') {
+    return 'border-muted-foreground/20 bg-muted text-muted-foreground';
+  }
+  if (decision === 'CANDIDATE' || decision === 'MANUAL') {
+    return 'border-blue-200 bg-blue-50 text-blue-700';
+  }
+  return 'border-amber-200 bg-amber-50 text-amber-800';
+}
+
 export function MfdsDeclarationListPage() {
   const navigate = useNavigate();
   const [urlParams, setUrlParams] = useSearchParams();
@@ -285,7 +298,7 @@ export function MfdsDeclarationListPage() {
           </Select>
         </div>
         <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">매칭 판정</Label>
+          <Label className="text-xs text-muted-foreground">위스키 매칭 판정</Label>
           <Select
             value={alcoholMatchDecision || ALL}
             onValueChange={(value) =>
@@ -295,8 +308,8 @@ export function MfdsDeclarationListPage() {
               )
             }
           >
-            <SelectTrigger aria-label="매칭 판정" className="w-full sm:w-[180px]">
-              <SelectValue placeholder="매칭 판정" />
+            <SelectTrigger aria-label="위스키 매칭 판정" className="w-full sm:w-[180px]">
+              <SelectValue placeholder="위스키 매칭 판정" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>전체</SelectItem>
@@ -375,19 +388,20 @@ export function MfdsDeclarationListPage() {
               <TableHead>수입사</TableHead>
               <TableHead>정규화</TableHead>
               <TableHead>위스키 연결</TableHead>
+              <TableHead>위스키 매칭 판정</TableHead>
               <TableHead>적재 시각</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-40 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="h-40 text-center text-muted-foreground">
                   수입 신고 데이터를 불러오는 중입니다.
                 </TableCell>
               </TableRow>
             ) : isError ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-40 text-center">
+                <TableCell colSpan={9} className="h-40 text-center">
                   <p className="mb-3 text-muted-foreground">
                     수입 신고 데이터를 불러오지 못했습니다.
                   </p>
@@ -398,7 +412,7 @@ export function MfdsDeclarationListPage() {
               </TableRow>
             ) : data?.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-40 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="h-40 text-center text-muted-foreground">
                   {hasFilters
                     ? '조건에 맞는 신고 데이터가 없습니다.'
                     : '수집된 신고 데이터가 없습니다.'}
@@ -444,6 +458,17 @@ export function MfdsDeclarationListPage() {
                           item.selectedAlcoholId !== null ? 'CONNECTED' : 'UNCONNECTED'
                         ].label
                       }
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={`whitespace-nowrap ${getMatchDecisionBadgeClass(item.alcoholMatchDecision)}`}
+                    >
+                      {item.alcoholMatchDecision
+                        ? (MATCH_DECISION_LABELS[item.alcoholMatchDecision] ??
+                          item.alcoholMatchDecision)
+                        : '판정 없음'}
                     </Badge>
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
