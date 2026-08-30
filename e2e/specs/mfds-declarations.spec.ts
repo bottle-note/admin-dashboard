@@ -1,8 +1,58 @@
 import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+import ExcelJS from 'exceljs';
 
 const LIST_URL = '/mfds/declarations';
 
 test.describe('식약처 수입 신고 데이터 검토', () => {
+  test('현재 필터 결과의 제품명으로 등록 초안 엑셀을 내려받을 수 있다', async ({ page }) => {
+    const listResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/v1/mfds/declarations') &&
+        response.url().includes('alcoholMatched=false') &&
+        response.url().includes('alcoholMatchDecision=NO_MATCH') &&
+        response.request().method() === 'GET'
+    );
+
+    await page.goto(`${LIST_URL}?alcoholMatched=false&alcoholMatchDecision=NO_MATCH&pageSize=100`);
+    expect((await listResponse).ok()).toBe(true);
+
+    await expect(page.getByLabel('위스키 연결')).toHaveText('연결 안 됨');
+    const downloadButton = page.getByRole('button', { name: 'Excel 등록 초안 다운로드' });
+    await expect(downloadButton).toBeEnabled();
+
+    const templateResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/v1/alcohols/excel/template') &&
+        response.request().method() === 'GET'
+    );
+    const downloadPromise = page.waitForEvent('download');
+    await downloadButton.click();
+
+    expect((await templateResponse).ok()).toBe(true);
+    const registrationDraftDialog = page.getByRole('dialog');
+    await expect(
+      registrationDraftDialog.getByText('Excel 등록 초안이 준비되었습니다')
+    ).toBeVisible();
+    await registrationDraftDialog.getByRole('button', { name: '다운로드' }).click();
+
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(
+      /^alcohol-registration-draft-\d{4}-\d{2}-\d{2}\.xlsx$/
+    );
+
+    const filePath = await download.path();
+    expect(filePath).not.toBeNull();
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await readFile(filePath!));
+
+    const dataSheet = workbook.getWorksheet('알코올 데이터');
+    expect(dataSheet).toBeDefined();
+    expect(dataSheet?.getCell('A1').text).toBe('한글 이름');
+    expect(dataSheet?.getCell('B1').text).toBe('영문 이름');
+    expect(dataSheet?.getCell('A3').text || dataSheet?.getCell('B3').text).not.toBe('');
+  });
+
   test('목록에서 상세로 이동해 정규화와 연결 정보를 확인할 수 있다', async ({ page }) => {
     const listResponse = page.waitForResponse(
       (response) =>

@@ -226,6 +226,12 @@ export function useCategoryReferences() {
   );
 }
 
+export function useAlcoholExcelTemplateDownload() {
+  return useApiMutation<ArrayBuffer, void>(() => adminAlcoholService.downloadExcelTemplate(), {
+    showErrorToast: false,
+  });
+}
+
 /**
  * 술 삭제 훅
  * 소프트 삭제로 처리되며, 리뷰/평점이 있는 술은 삭제 불가

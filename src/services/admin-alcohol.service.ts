@@ -2,6 +2,8 @@
  * 어드민 Alcohol API 서비스
  */
 
+import { normalizeError } from '@/lib/api-error';
+import { api } from '@/lib/axios';
 import { apiClient } from '@/lib/api-client';
 import { createQueryKeys } from '@/hooks/useApiQuery';
 import {
@@ -125,6 +127,17 @@ export const adminAlcoholService = {
       AlcoholApi.categoryReference.endpoint
     );
     return response.data;
+  },
+
+  downloadExcelTemplate: async (): Promise<ArrayBuffer> => {
+    try {
+      const response = await api.get<ArrayBuffer>(AlcoholApi.excelTemplate.endpoint, {
+        responseType: 'arraybuffer',
+      });
+      return response.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
   },
 
   /**

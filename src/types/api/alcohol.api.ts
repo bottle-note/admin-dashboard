@@ -33,6 +33,11 @@ export const AlcoholApi = {
     endpoint: '/admin/api/v1/alcohols/categories/reference',
     method: 'GET',
   },
+  /** 알코올 엑셀 템플릿 다운로드 */
+  excelTemplate: {
+    endpoint: '/admin/api/v1/alcohols/excel/template',
+    method: 'GET',
+  },
   /** 술 삭제 */
   delete: {
     endpoint: '/admin/api/v1/alcohols/:alcoholId',
