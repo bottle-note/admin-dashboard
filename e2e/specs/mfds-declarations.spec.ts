@@ -107,13 +107,14 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
     const matchingSection = page.locator('section').filter({
       has: page.getByRole('heading', { name: '연관 데이터 연결' }),
     });
-    const newWhiskyPagePromise = page.waitForEvent('popup');
-    await matchingSection.getByRole('link', { name: '위스키 신규 등록' }).click();
-    const newWhiskyPage = await newWhiskyPagePromise;
-    await expect(newWhiskyPage).toHaveURL(/\/whisky\/new$/);
-
     await matchingSection.getByRole('button', { name: '연결 관리' }).click();
-    await expect(page.getByRole('heading', { name: /보틀노트 위스키 연결/ })).toBeVisible();
+    const whiskyMatchingSheet = page.getByRole('dialog').filter({
+      has: page.getByRole('heading', { name: /보틀노트 위스키 연결/ }),
+    });
+    await expect(whiskyMatchingSheet).toBeVisible();
+    await expect(
+      whiskyMatchingSheet.getByRole('link', { name: '위스키 신규 등록' })
+    ).toHaveAttribute('target', '_blank');
     await expect(page.getByText(/RCNO/)).toBeVisible();
     await expect(page.getByRole('button', { name: '후보 다시 계산' })).toBeVisible();
     const lookupResponse = page.waitForResponse(

@@ -673,14 +673,9 @@ export function MfdsDeclarationDetailPage() {
                       : `후보 ${candidates?.alcoholCandidates.length ?? 0}건`}
                 </TableCell>
                 <TableCell>{formatDateTime(detail.matchedAt)}</TableCell>
-                <TableCell className="space-y-2">
+                <TableCell>
                   <Button variant="outline" size="sm" onClick={() => setIsWhiskyMatchingOpen(true)}>
                     연결 관리
-                  </Button>
-                  <Button asChild variant="outline" size="sm">
-                    <a href="/whisky/new" target="_blank" rel="noreferrer">
-                      위스키 신규 등록
-                    </a>
                   </Button>
                 </TableCell>
               </TableRow>
