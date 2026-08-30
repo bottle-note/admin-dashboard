@@ -15,31 +15,29 @@ interface StatCardProps {
   value: number | string;
   icon: React.ReactNode;
   isLoading?: boolean;
-  href?: string;
+  href: string;
 }
 
 function StatCard({ title, value, icon, isLoading, href }: StatCardProps) {
-  const inner = (
-    <div
-      className={`rounded-lg border bg-card p-6${href ? 'transition-shadow hover:shadow-md' : ''}`}
-    >
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
-        <div className="text-muted-foreground">{icon}</div>
+  return (
+    <Link to={href}>
+      <div className="rounded-lg border bg-card p-6 transition-shadow hover:shadow-md">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
+          <div className="text-muted-foreground">{icon}</div>
+        </div>
+        <p className="mt-2 text-2xl font-bold">
+          {isLoading ? (
+            <span className="text-muted-foreground">...</span>
+          ) : typeof value === 'number' ? (
+            value.toLocaleString()
+          ) : (
+            value
+          )}
+        </p>
       </div>
-      <p className="mt-2 text-2xl font-bold">
-        {isLoading ? (
-          <span className="text-muted-foreground">...</span>
-        ) : typeof value === 'number' ? (
-          value.toLocaleString()
-        ) : (
-          value
-        )}
-      </p>
-    </div>
+    </Link>
   );
-
-  return href ? <Link to={href}>{inner}</Link> : inner;
 }
 
 export function DashboardPage() {
