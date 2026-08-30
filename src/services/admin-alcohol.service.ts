@@ -2,6 +2,8 @@
  * 어드민 Alcohol API 서비스
  */
 
+import { normalizeError } from '@/lib/api-error';
+import { api } from '@/lib/axios';
 import { apiClient } from '@/lib/api-client';
 import { createQueryKeys } from '@/hooks/useApiQuery';
 import {
@@ -18,6 +20,7 @@ import {
   type AlcoholUpdateRequest,
   type AlcoholUpdateResponse,
   type CategoryReferenceMap,
+  type AlcoholExcelValidationResult,
 } from '@/types/api';
 
 // ============================================
@@ -125,6 +128,28 @@ export const adminAlcoholService = {
       AlcoholApi.categoryReference.endpoint
     );
     return response.data;
+  },
+
+  downloadExcelTemplate: async (): Promise<ArrayBuffer> => {
+    try {
+      const response = await api.get<ArrayBuffer>(AlcoholApi.excelTemplate.endpoint, {
+        responseType: 'arraybuffer',
+      });
+      return response.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
+
+  validateExcel: (file: File): Promise<AlcoholExcelValidationResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return apiClient.post<AlcoholExcelValidationResult, FormData>(
+      AlcoholApi.excelValidate.endpoint,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
   },
 
   /**

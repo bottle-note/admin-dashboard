@@ -271,8 +271,7 @@ export function MfdsWhiskyMatchingSheet({
   );
   const { runMatching, confirmMatching, releaseMatching } = useMfdsMatchingActions(declarationId);
   const candidates = candidatesQuery.data?.alcoholCandidates ?? [];
-  const isPending =
-    runMatching.isPending || confirmMatching.isPending || releaseMatching.isPending;
+  const isPending = runMatching.isPending || confirmMatching.isPending || releaseMatching.isPending;
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -459,14 +458,21 @@ export function MfdsWhiskyMatchingSheet({
               <p className="text-sm text-muted-foreground">저장된 연결 후보 없음</p>
             )}
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsSearchDialogOpen(true)}
-              disabled={isPending}
-            >
-              위스키 직접 찾기
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsSearchDialogOpen(true)}
+                disabled={isPending}
+              >
+                위스키 직접 찾기
+              </Button>
+              <Button asChild type="button" variant="outline">
+                <Link to="/whisky/new" target="_blank" rel="noreferrer">
+                  위스키 신규 등록
+                </Link>
+              </Button>
+            </div>
           </section>
         </div>
 
@@ -501,8 +507,8 @@ export function MfdsWhiskyMatchingSheet({
             <AlertDialogHeader>
               <AlertDialogTitle>연결을 해제할까요?</AlertDialogTitle>
               <AlertDialogDescription>
-                확정된 위스키·증류소·지역 연결이 함께 해제됩니다. 저장된 후보와 매칭
-                이력은 유지됩니다.
+                확정된 위스키·증류소·지역 연결이 함께 해제됩니다. 저장된 후보와 매칭 이력은
+                유지됩니다.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

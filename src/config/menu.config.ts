@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   Layers,
   Factory,
+  FileSpreadsheet,
   MapPinned,
   FileSearch,
 } from 'lucide-react';
@@ -63,6 +64,12 @@ export const menuConfig: MenuGroup[] = [
                 label: '위스키 추가',
                 icon: Plus,
                 path: '/whisky/new',
+              },
+              {
+                id: 'whisky-excel-bulk',
+                label: '위스키 Excel 벌크 등록',
+                icon: FileSpreadsheet,
+                path: '/whisky/excel-bulk',
               },
             ],
           },

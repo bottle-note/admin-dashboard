@@ -24,6 +24,7 @@ import type {
   AlcoholUpdateRequest,
   AlcoholUpdateResponse,
   CategoryReferenceMap,
+  AlcoholExcelValidationResult,
 } from '@/types/api';
 
 /**
@@ -224,6 +225,18 @@ export function useCategoryReferences() {
       staleTime: 1000 * 60 * 5, // 5분 (카테고리는 자주 변경되지 않음)
     }
   );
+}
+
+export function useAlcoholExcelTemplateDownload() {
+  return useApiMutation<ArrayBuffer, void>(() => adminAlcoholService.downloadExcelTemplate(), {
+    showErrorToast: false,
+  });
+}
+
+export function useAlcoholExcelValidate() {
+  return useApiMutation<AlcoholExcelValidationResult, File>(adminAlcoholService.validateExcel, {
+    showErrorToast: false,
+  });
 }
 
 /**

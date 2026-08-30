@@ -240,7 +240,9 @@ export function MfdsDeclarationDetailPage() {
   const reviewStatusLabel = REVIEW_STATUS_LABELS[detail.reviewStatus] ?? detail.reviewStatus;
   const hasReviewRecord = Boolean(detail.reviewedBy || detail.reviewedAt || detail.reviewNote);
   const reviewOptions = REVIEW_OPTIONS_BY_STATUS[detail.normalizationStatus] ?? [];
-  const selectedReviewOption = reviewOptions.find((option) => option.status === selectedReviewStatus);
+  const selectedReviewOption = reviewOptions.find(
+    (option) => option.status === selectedReviewStatus
+  );
   const showStatusDetails =
     hasReviewRecord ||
     (detail.normalizationStatus !== 'NORMALIZED' &&
@@ -338,11 +340,13 @@ export function MfdsDeclarationDetailPage() {
               </span>
             </div>
           )}
-          {!detail.normalizedAt && detail.reviewStatus && detail.reviewStatus !== 'NOT_REQUIRED' && (
-            <Badge variant="outline" className="bg-background/80">
-              {reviewStatusLabel}
-            </Badge>
-          )}
+          {!detail.normalizedAt &&
+            detail.reviewStatus &&
+            detail.reviewStatus !== 'NOT_REQUIRED' && (
+              <Badge variant="outline" className="bg-background/80">
+                {reviewStatusLabel}
+              </Badge>
+            )}
 
           <div className="border-current/10 mt-4 grid gap-5 border-t pt-4 md:grid-cols-2">
             {detail.normalizationReasons.length > 0 && (
@@ -600,7 +604,11 @@ export function MfdsDeclarationDetailPage() {
                 </TableCell>
                 <TableCell>{formatDateTime(detail.importerLinkedAt)}</TableCell>
                 <TableCell>
-                  <Button variant="outline" size="sm" onClick={() => setIsImporterLinkingOpen(true)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsImporterLinkingOpen(true)}
+                  >
                     연결 관리
                   </Button>
                 </TableCell>
