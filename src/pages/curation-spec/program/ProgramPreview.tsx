@@ -143,9 +143,16 @@ function ProgramEventInfoCard({
   values: ProgramFormValues;
   entryFeeLabel: string;
 }) {
-  const fullAddress = [values.address, values.detailLocation].filter(Boolean).join(' ');
+  const fullAddress = [values.address, values.detailAddress, values.detailLocation]
+    .filter(Boolean)
+    .join(' ');
   const organizerText = [values.organizer, values.sponsor].filter(Boolean).join(' · ');
-  const mapSearchKeyword = [values.placeName, values.address, values.detailLocation]
+  const mapSearchKeyword = [
+    values.placeName,
+    values.address,
+    values.detailAddress,
+    values.detailLocation,
+  ]
     .filter(Boolean)
     .join(' ');
   const infoItems = [

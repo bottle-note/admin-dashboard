@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 
 import type { AlcoholSectionConfig, CurationSpecSections } from '../curation-sections.type';
 import type {
+  ProgramWhiskyListRequestSpec,
   WhiskyCurationRequestSpec,
   WhiskyTastingEventAlcoholListSchema,
   WhiskyTastingEventPayload,
@@ -26,7 +27,10 @@ export function CurationSpecAlcoholCardListField({
   pairingConfig,
 }: {
   name: string;
-  schema: WhiskyTastingEventAlcoholListSchema | WhiskyCurationRequestSpec;
+  schema:
+    | ProgramWhiskyListRequestSpec
+    | WhiskyTastingEventAlcoholListSchema
+    | WhiskyCurationRequestSpec;
   required: boolean;
   config?: AlcoholSectionConfig;
   pairingConfig?: NonNullable<CurationSpecSections[string]['fields'][string]['pairing']>;
@@ -52,6 +56,14 @@ export function CurationSpecAlcoholCardListField({
     .map((item) => item.alcohol.alcoholId)
     .filter((alcoholId): alcoholId is number => typeof alcoholId === 'number');
   const error = form.getFieldState(name, form.formState).error?.message;
+  const limitText =
+    schema.minItems !== undefined && schema.maxItems !== undefined
+      ? `${schema.minItems}-${schema.maxItems}개까지 등록할 수 있습니다.`
+      : schema.minItems !== undefined
+        ? `${schema.minItems}개 이상 등록할 수 있습니다.`
+        : schema.maxItems !== undefined
+          ? `최대 ${schema.maxItems}개까지 등록할 수 있습니다.`
+          : '필요한 만큼 등록할 수 있습니다.';
 
   const handleAddManualAlcohol = () => {
     alcoholFieldArray.append({
@@ -130,9 +142,7 @@ export function CurationSpecAlcoholCardListField({
     <div className="space-y-4" onDragOver={handleAutoScroll}>
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
-          {schema.maxItems === undefined
-            ? `${schema.minItems}개 이상 등록할 수 있습니다.`
-            : `${schema.minItems}-${schema.maxItems}개까지 등록할 수 있습니다.`}
+          {limitText}
           {required && <span className="ml-1 text-destructive">*</span>}
         </p>
         <Badge variant="secondary">{alcohols.length}</Badge>

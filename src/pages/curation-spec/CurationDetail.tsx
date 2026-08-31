@@ -142,6 +142,7 @@ function CurationDetailContent({
             displayOrder: curation.displayOrder,
             isActive: curation.isActive,
             kakaoPlaceId: payload.data.kakaoPlaceId ?? '',
+            detailAddress: payload.data.detailAddress ?? '',
             detailLocation: payload.data.detailLocation ?? '',
             organizer: payload.data.organizer ?? '',
             sponsor: payload.data.sponsor ?? '',
@@ -150,8 +151,10 @@ function CurationDetailContent({
             officialUrl: payload.data.officialUrl ?? '',
             registrationUrl: payload.data.registrationUrl ?? '',
             programTags: payload.data.programTags ?? [],
-            programs: payload.data.programs.map((program) => ({
+            programs: (payload.data.programs ?? []).map((program) => ({
               ...program,
+              programDate: program.programDate ?? '',
+              startTime: program.startTime ?? '',
               endTime: program.endTime ?? '',
               venue: program.venue ?? '',
               host: program.host ?? '',
