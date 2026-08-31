@@ -66,6 +66,8 @@ test.describe('code별 큐레이션 폼', () => {
     await curationPage.gotoCreate('PROGRAM');
     await expect(page.getByText('행사 기간 및 장소', { exact: true })).toBeVisible();
     await expect(page.getByText('프로그램 및 이벤트', { exact: true })).toBeVisible();
+    await expect(page.getByText('필요한 경우 프로그램을 추가해주세요.')).toBeVisible();
+    await expect(page.getByText('0', { exact: true })).toBeVisible();
 
     await curationPage.fillCommonFields(testName);
     await curationPage.field('eventStartDate').fill('2027-12-20');
@@ -74,12 +76,12 @@ test.describe('code별 큐레이션 폼', () => {
     await expect(curationPage.field('address')).toHaveAttribute('readonly', '');
     await page.locator('label[for="programTags-WHISKY"]').click();
 
+    await page.getByRole('button', { name: '프로그램 추가' }).click();
     await curationPage.field('programs.0.name').fill('E2E 마스터 클래스');
-    await curationPage.field('programs.0.programDate').fill('2027-12-20');
-    await curationPage.field('programs.0.startTime').fill('14:00');
     await curationPage.field('programs.0.endTime').fill('15:00');
     await curationPage.field('programs.0.venue').fill('세미나룸 A');
     await curationPage.field('programs.0.host').fill('E2E 호스트');
+    await expect(page.getByText('최대 10개까지 등록할 수 있습니다.')).toBeVisible();
 
     await curationPage.addManualAlcohol('programs.0.whiskies', 'E2E 프로그램 위스키');
     await expect(curationPage.preview()).toContainText(testName);
