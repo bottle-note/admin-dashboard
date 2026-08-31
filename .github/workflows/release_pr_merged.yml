@@ -1,7 +1,7 @@
 name: release PR deployment
 
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
     branches:
       - 'releases/**'
@@ -181,10 +181,58 @@ jobs:
               exit 1
             }
 
+            successful_runs_file="${RUNNER_TEMP}/dashboard-successful-release-runs.json"
             latest_run_file="${RUNNER_TEMP}/dashboard-latest-successful-release-run.json"
+            jobs_file="${RUNNER_TEMP}/dashboard-release-run-jobs.json"
             closed_prs_file="${RUNNER_TEMP}/dashboard-closed-release-prs.json"
-            gh api -X GET "repos/${REPOSITORY}/actions/workflows/release_pr_merged.yml/runs" \
-              -f event=pull_request -f status=success -f per_page=1 --jq '.workflow_runs[0]' > "$latest_run_file"
+            gh api --paginate --slurp -X GET \
+              "repos/${REPOSITORY}/actions/workflows/release_pr_merged.yml/runs" \
+              -f status=success -f per_page=100 > "$successful_runs_file"
+            selected_run_id=""
+            while read -r candidate_run_id; do
+              gh api --paginate --slurp -X GET \
+                "repos/${REPOSITORY}/actions/runs/${candidate_run_id}/jobs" \
+                -f per_page=100 > "$jobs_file"
+              if JOBS_FILE="$jobs_file" python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          with open(os.environ['JOBS_FILE'], encoding='utf-8') as file:
+              pages = json.load(file)
+          jobs = [job for page in pages for job in (page.get('jobs') or [])]
+          conclusions = {job.get('name'): job.get('conclusion') for job in jobs}
+          required = {
+              'deploy-release-applications / gate dashboard release',
+              'deploy-release-applications / build and push dashboard image',
+              'deploy-release-applications / hand off dashboard image to image updater',
+              'delete-release-branch',
+          }
+          verify_names = {'verify-merged-empty-release-pr', 'verify-merged-release-pr'}
+          verify_succeeded = any(conclusions.get(name) == 'success' for name in verify_names)
+          sys.exit(0 if verify_succeeded and all(conclusions.get(name) == 'success' for name in required) else 1)
+          PY
+              then
+                selected_run_id="$candidate_run_id"
+                break
+              fi
+            done < <(SUCCESSFUL_RUNS_FILE="$successful_runs_file" python3 - <<'PY'
+          import json
+          import os
+
+          with open(os.environ['SUCCESSFUL_RUNS_FILE'], encoding='utf-8') as file:
+              pages = json.load(file)
+          for page in pages:
+              for run in page.get('workflow_runs') or []:
+                  if run.get('event') in {'pull_request', 'pull_request_target'}:
+                      print(run['id'])
+          PY
+            )
+            [[ -n "$selected_run_id" ]] || {
+              echo "::error::no successful dashboard release deployment run was found"
+              exit 1
+            }
+            gh api -X GET "repos/${REPOSITORY}/actions/runs/${selected_run_id}" > "$latest_run_file"
             gh api --paginate --slurp -X GET "repos/${REPOSITORY}/pulls" \
               -f state=closed -f per_page=100 > "$closed_prs_file"
             LATEST_RUN_FILE="$latest_run_file" CLOSED_PRS_FILE="$closed_prs_file" \
