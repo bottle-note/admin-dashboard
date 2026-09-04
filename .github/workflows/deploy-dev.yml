@@ -50,7 +50,7 @@ jobs:
           registry-password: ${{ secrets.REGISTRY_PASSWORD }}
           image-name: ${{ env.IMAGE_NAME }}
           image-tag: ${{ steps.version.outputs.image-tag }}
-          additional-tags: dashboard_latest_development
+          promote-tags: dashboard_latest_development
           dockerfile: Dockerfile
           context: .
           platforms: linux/arm64

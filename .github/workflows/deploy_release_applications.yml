@@ -211,7 +211,7 @@ jobs:
           registry-password: ${{ secrets.REGISTRY_PASSWORD }}
           image-name: ${{ env.IMAGE_NAME }}
           image-tag: ${{ needs.release-gate.outputs.image-tag }}
-          additional-tags: ${{ needs.release-gate.outputs.deployment-source == 'release-pr' && 'dashboard_latest_production' || '' }}
+          promote-tags: ${{ needs.release-gate.outputs.deployment-source == 'release-pr' && 'dashboard_latest_production' || '' }}
           dockerfile: Dockerfile
           context: .
           platforms: linux/arm64
