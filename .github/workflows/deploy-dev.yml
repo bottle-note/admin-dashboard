@@ -50,11 +50,14 @@ jobs:
           registry-password: ${{ secrets.REGISTRY_PASSWORD }}
           image-name: ${{ env.IMAGE_NAME }}
           image-tag: ${{ steps.version.outputs.image-tag }}
-          additional-tags: dashboard_latest_development
+          promote-tags: dashboard_latest_development
+          source-sha: ${{ env.SOURCE_SHA }}
+          source-ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name }}
           dockerfile: Dockerfile
           context: .
           platforms: linux/arm64
           cache-scope: dashboard-dev
+          cache-export: 'true'
           image-title: "BottleNote Admin Dashboard (Development)"
           image-description: "BottleNote Admin Dashboard Frontend"
           image-vendor: "BottleNote"
@@ -65,4 +68,5 @@ jobs:
             age_key=${{ secrets.SOPS_AGE_SECRET_KEY }}
           sign-image: 'true'
           cosign-key-path: 'git.environment-variables/storage/docker-registry/cosign.key'
+          cosign-public-key-path: 'git.environment-variables/storage/docker-registry/cosign.pub'
           cosign-password: ${{ secrets.COSIGN_PASSWORD }}

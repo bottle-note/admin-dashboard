@@ -1,5 +1,6 @@
 name: release PR deployment
 
+# 표준 릴리즈 전용 게이트. 핫픽스는 hotfix_pr_merged.yml 이 hotfixes/** 네임스페이스에서 소유한다.
 on:
   pull_request_target:
     types: [closed]
@@ -18,10 +19,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       release-key: ${{ steps.release.outputs.release-key }}
-      release-type: ${{ steps.release.outputs.release-type }}
       source-sha: ${{ steps.release.outputs.source-sha }}
-      candidate-sha: ${{ steps.release.outputs.candidate-sha }}
-      base-source-sha: ${{ steps.release.outputs.base-source-sha }}
       release-branch: ${{ steps.release.outputs.release-branch }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -45,19 +43,58 @@ jobs:
           set -euo pipefail
 
           [[ "$PR_BASE_REF" =~ ^releases/([0-9]{4}-[0-9]{2}-[0-9]{2})/([1-9][0-9]*)$ ]] || {
-            echo "::error::base ref is not a release ref: $PR_BASE_REF"
+            echo "::error::base ref is not a standard release ref: $PR_BASE_REF"
             exit 1
           }
           release_date="${BASH_REMATCH[1]}"
           sequence="${BASH_REMATCH[2]}"
           release_key="${release_date}/${sequence}"
+
+          # >>> common PR metadata verification (keep byte-identical between release_pr_merged.yml and hotfix_pr_merged.yml)
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]] || {
+            echo "::error::release PR number is invalid: $PR_NUMBER"
+            exit 1
+          }
           [[ "$PR_BASE_SHA" =~ ^[0-9a-f]{40}$ && "$PR_HEAD_SHA" =~ ^[0-9a-f]{40}$ && "$PR_MERGE_SHA" =~ ^[0-9a-f]{40}$ ]] || {
             echo "::error::release PR contains an invalid commit SHA"
             exit 1
           }
 
           pr_json="$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}")"
-          release_values="$(PR_JSON="$pr_json" EXPECTED_KEY="$release_key" python3 - <<'PY'
+          PR_JSON="$pr_json" EXPECTED_NUMBER="$PR_NUMBER" EXPECTED_BASE="$PR_BASE_REF" EXPECTED_HEAD="$PR_HEAD_REF" \
+            EXPECTED_HEAD_SHA="$PR_HEAD_SHA" EXPECTED_BASE_SHA="$PR_BASE_SHA" EXPECTED_MERGE_SHA="$PR_MERGE_SHA" \
+            REPOSITORY="$REPOSITORY" python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          pr = json.loads(os.environ['PR_JSON'])
+          head = pr.get('head') or {}
+          base = pr.get('base') or {}
+          errors = []
+          if (head.get('repo') or {}).get('full_name') != os.environ['REPOSITORY']:
+              errors.append('PR head repository is not this repository')
+          if (base.get('repo') or {}).get('full_name') != os.environ['REPOSITORY']:
+              errors.append('PR base repository is not this repository')
+          if pr.get('number') != int(os.environ['EXPECTED_NUMBER']):
+              errors.append('PR number differs from the event')
+          if not pr.get('merged'):
+              errors.append('PR is not merged')
+          if head.get('ref') != os.environ['EXPECTED_HEAD'] or head.get('sha') != os.environ['EXPECTED_HEAD_SHA']:
+              errors.append('PR head differs from the event')
+          if base.get('ref') != os.environ['EXPECTED_BASE'] or base.get('sha') != os.environ['EXPECTED_BASE_SHA']:
+              errors.append('PR base differs from the event')
+          if pr.get('merge_commit_sha') != os.environ['EXPECTED_MERGE_SHA']:
+              errors.append('PR merge SHA differs from the event')
+
+          if errors:
+              for error in errors:
+                  print(f'::error::{error}', file=sys.stderr)
+              sys.exit(1)
+          PY
+          # <<< common PR metadata verification
+
+          candidate_sha="$(PR_JSON="$pr_json" EXPECTED_KEY="$release_key" python3 - <<'PY'
           import json
           import os
           import re
@@ -75,73 +112,32 @@ jobs:
           candidate_sha = one('release-source-sha', r'[0-9a-f]{40}')
           key = one('release-key', r'[0-9]{4}-[0-9]{2}-[0-9]{2}/[1-9][0-9]*')
           service = one('release-service', r'dashboard')
-          type_values = re.findall(r'<!--\s*release-type:\s*(hotfix)\s*-->', body)
-          base_keys = re.findall(r'<!--\s*release-base-key:\s*([0-9]{4}-[0-9]{2}-[0-9]{2}/[1-9][0-9]*)\s*-->', body)
-          base_shas = re.findall(r'<!--\s*release-base-source-sha:\s*([0-9a-f]{40})\s*-->', body)
-
           if key != os.environ['EXPECTED_KEY'] or service != 'dashboard':
               print('::error::release PR body markers do not match the release target', file=sys.stderr)
               sys.exit(1)
 
-          if type_values:
-              if type_values != ['hotfix'] or len(base_keys) != 1 or len(base_shas) != 1:
-                  print('::error::hotfix release markers are missing or duplicated', file=sys.stderr)
-                  sys.exit(1)
-              release_type = 'hotfix'
-              base_key = base_keys[0]
-              base_source_sha = base_shas[0]
-          else:
-              if base_keys or base_shas:
-                  print('::error::standard release PR must not contain hotfix base markers', file=sys.stderr)
-                  sys.exit(1)
-              release_type = 'standard'
-              base_key = ''
-              base_source_sha = ''
+          # releases/** 는 표준 전용이다. 핫픽스 마커가 보이면 잘못된 네임스페이스로 들어온 PR 이므로 거부한다.
+          hotfix_markers = ('release-type', 'release-base-key', 'release-base-source-sha')
+          if any(re.search(rf'<!--\s*{name}:', body) for name in hotfix_markers):
+              print('::error::standard release PR must not contain hotfix markers', file=sys.stderr)
+              sys.exit(1)
 
           print(candidate_sha)
-          print(release_type)
-          print(base_key)
-          print(base_source_sha)
           PY
           )"
-          mapfile -t release_fields <<< "$release_values"
-          candidate_sha="${release_fields[0]}"
-          release_type="${release_fields[1]}"
-          base_key="${release_fields[2]:-}"
-          base_source_sha="${release_fields[3]:-}"
 
-          PR_JSON="$pr_json" EXPECTED_BASE="$PR_BASE_REF" EXPECTED_HEAD_SHA="$PR_HEAD_SHA" \
-            EXPECTED_BASE_SHA="$PR_BASE_SHA" EXPECTED_MERGE_SHA="$PR_MERGE_SHA" \
-            EXPECTED_RELEASE_TYPE="$release_type" REPOSITORY="$REPOSITORY" python3 - <<'PY'
+          PR_JSON="$pr_json" python3 - <<'PY'
           import json
           import os
           import sys
 
           pr = json.loads(os.environ['PR_JSON'])
           head = pr.get('head') or {}
-          base = pr.get('base') or {}
           errors = []
-          if (head.get('repo') or {}).get('full_name') != os.environ['REPOSITORY']:
-              errors.append('PR head repository is not this repository')
-          if (base.get('repo') or {}).get('full_name') != os.environ['REPOSITORY']:
-              errors.append('PR base repository is not this repository')
-          if head.get('sha') != os.environ['EXPECTED_HEAD_SHA']:
-              errors.append('PR head SHA differs from the event')
-          if base.get('ref') != os.environ['EXPECTED_BASE'] or base.get('sha') != os.environ['EXPECTED_BASE_SHA']:
-              errors.append('PR base differs from the event')
-          if pr.get('merge_commit_sha') != os.environ['EXPECTED_MERGE_SHA']:
-              errors.append('PR merge SHA differs from the event')
-
-          if os.environ['EXPECTED_RELEASE_TYPE'] == 'standard':
-              if head.get('ref') != 'main':
-                  errors.append('standard release PR head must be main')
-              if any(pr.get(field) != 0 for field in ('changed_files', 'additions', 'deletions')):
-                  errors.append('standard release PR must contain no file changes')
-          else:
-              if not (head.get('ref') or '').startswith('hotfix/'):
-                  errors.append('hotfix release PR head must match hotfix/**')
-              if not isinstance(pr.get('changed_files'), int) or pr['changed_files'] < 1:
-                  errors.append('hotfix release PR must contain reviewed file changes')
+          if head.get('ref') != 'main':
+              errors.append('standard release PR head must be main')
+          if any(pr.get(field) != 0 for field in ('changed_files', 'additions', 'deletions')):
+              errors.append('standard release PR must contain no file changes')
 
           if errors:
               for error in errors:
@@ -159,164 +155,34 @@ jobs:
           candidate_tree="$(git show -s --format=%T "$PR_HEAD_SHA")"
           merge_tree="$(git show -s --format=%T "$PR_MERGE_SHA")"
 
-          if [[ "$release_type" == "standard" ]]; then
-            release_parent="$(git rev-parse "${PR_HEAD_SHA}^")"
-            release_subject="$(git show -s --format=%s "$PR_HEAD_SHA")"
-            [[ "$release_parent" == "$PR_BASE_SHA" ]] || {
-              echo "::error::release commit parent does not equal the release base SHA"
-              exit 1
-            }
-            [[ "$release_subject" == "release(dashboard): ${release_key}" ]] || {
-              echo "::error::release commit subject does not match the release key"
-              exit 1
-            }
-            [[ "$candidate_tree" == "$base_tree" && "$merge_tree" == "$candidate_tree" ]] || {
-              echo "::error::standard release PR is not tree-empty"
-              exit 1
-            }
-            source_sha="$candidate_sha"
-          else
-            [[ "$base_source_sha" == "$PR_BASE_SHA" ]] || {
-              echo "::error::release branch does not point to the declared production source"
-              exit 1
-            }
-
-            successful_runs_file="${RUNNER_TEMP}/dashboard-successful-release-runs.json"
-            latest_run_file="${RUNNER_TEMP}/dashboard-latest-successful-release-run.json"
-            jobs_file="${RUNNER_TEMP}/dashboard-release-run-jobs.json"
-            closed_prs_file="${RUNNER_TEMP}/dashboard-closed-release-prs.json"
-            gh api --paginate --slurp -X GET \
-              "repos/${REPOSITORY}/actions/workflows/release_pr_merged.yml/runs" \
-              -f status=success -f per_page=100 > "$successful_runs_file"
-            selected_run_id=""
-            while read -r candidate_run_id; do
-              gh api --paginate --slurp -X GET \
-                "repos/${REPOSITORY}/actions/runs/${candidate_run_id}/jobs" \
-                -f per_page=100 > "$jobs_file"
-              if JOBS_FILE="$jobs_file" python3 - <<'PY'
-          import json
-          import os
-          import sys
-
-          with open(os.environ['JOBS_FILE'], encoding='utf-8') as file:
-              pages = json.load(file)
-          jobs = [job for page in pages for job in (page.get('jobs') or [])]
-          conclusions = {job.get('name'): job.get('conclusion') for job in jobs}
-          required = {
-              'deploy-release-applications / gate dashboard release',
-              'deploy-release-applications / build and push dashboard image',
-              'deploy-release-applications / hand off dashboard image to image updater',
-              'delete-release-branch',
+          release_parent="$(git rev-parse "${PR_HEAD_SHA}^")"
+          release_subject="$(git show -s --format=%s "$PR_HEAD_SHA")"
+          [[ "$release_parent" == "$PR_BASE_SHA" ]] || {
+            echo "::error::release commit parent does not equal the release base SHA"
+            exit 1
           }
-          verify_names = {'verify-merged-empty-release-pr', 'verify-merged-release-pr'}
-          verify_succeeded = any(conclusions.get(name) == 'success' for name in verify_names)
-          sys.exit(0 if verify_succeeded and all(conclusions.get(name) == 'success' for name in required) else 1)
-          PY
-              then
-                selected_run_id="$candidate_run_id"
-                break
-              fi
-            done < <(SUCCESSFUL_RUNS_FILE="$successful_runs_file" python3 - <<'PY'
-          import json
-          import os
-
-          with open(os.environ['SUCCESSFUL_RUNS_FILE'], encoding='utf-8') as file:
-              pages = json.load(file)
-          for page in pages:
-              for run in page.get('workflow_runs') or []:
-                  if run.get('event') in {'pull_request', 'pull_request_target'}:
-                      print(run['id'])
-          PY
-            )
-            [[ -n "$selected_run_id" ]] || {
-              echo "::error::no successful dashboard release deployment run was found"
-              exit 1
-            }
-            gh api -X GET "repos/${REPOSITORY}/actions/runs/${selected_run_id}" > "$latest_run_file"
-            gh api --paginate --slurp -X GET "repos/${REPOSITORY}/pulls" \
-              -f state=closed -f per_page=100 > "$closed_prs_file"
-            LATEST_RUN_FILE="$latest_run_file" CLOSED_PRS_FILE="$closed_prs_file" \
-              EXPECTED_KEY="$base_key" EXPECTED_SOURCE="$base_source_sha" python3 - <<'PY'
-          import datetime as dt
-          import json
-          import os
-          import re
-          import sys
-
-          with open(os.environ['LATEST_RUN_FILE'], encoding='utf-8') as file:
-              run = json.load(file)
-          with open(os.environ['CLOSED_PRS_FILE'], encoding='utf-8') as file:
-              pages = json.load(file)
-          pulls = [pr for page in pages for pr in page]
-          run_time = dt.datetime.fromisoformat(run['created_at'].replace('Z', '+00:00'))
-          candidates = []
-          for pr in pulls:
-              merged_at = pr.get('merged_at')
-              base_ref = ((pr.get('base') or {}).get('ref') or '')
-              head_sha = ((pr.get('head') or {}).get('sha') or '')
-              if not merged_at or not base_ref.startswith('releases/') or head_sha != run.get('head_sha'):
-                  continue
-              merged_time = dt.datetime.fromisoformat(merged_at.replace('Z', '+00:00'))
-              age = (run_time - merged_time).total_seconds()
-              if 0 <= age <= 900:
-                  candidates.append((merged_time, pr))
-          candidates.sort(key=lambda item: item[0], reverse=True)
-          if not candidates:
-              print('::error::latest successful release run cannot be bound to its merged release PR', file=sys.stderr)
-              sys.exit(1)
-
-          pr = candidates[0][1]
-          body = pr.get('body') or ''
-          sources = re.findall(r'<!--\s*release-source-sha:([0-9a-f]{40})\s*-->', body)
-          keys = re.findall(r'<!--\s*release-key:([0-9]{4}-[0-9]{2}-[0-9]{2}/[1-9][0-9]*)\s*-->', body)
-          services = re.findall(r'<!--\s*release-service:(dashboard)\s*-->', body)
-          hotfix_types = re.findall(r'<!--\s*release-type:\s*(hotfix)\s*-->', body)
-          if len(sources) != 1 or len(keys) != 1 or services != ['dashboard']:
-              print('::error::latest successful release PR markers are invalid', file=sys.stderr)
-              sys.exit(1)
-          deployed_source = pr.get('merge_commit_sha') if hotfix_types == ['hotfix'] else sources[0]
-          if keys[0] != os.environ['EXPECTED_KEY'] or deployed_source != os.environ['EXPECTED_SOURCE']:
-              print('::error::hotfix base is not the latest successful release deployment source', file=sys.stderr)
-              sys.exit(1)
-          PY
-
-            successful_candidate_ci="$(gh api "repos/${REPOSITORY}/commits/${PR_HEAD_SHA}/check-runs" \
-              --jq '[.check_runs[] | select(.name == "ci" and .status == "completed" and .conclusion == "success")] | length')"
-            [[ "$successful_candidate_ci" -ge 1 ]] || {
-              echo "::error::hotfix candidate has no successful ci check"
-              exit 1
-            }
-
-            read -r merge_sha first_parent second_parent extra_parent <<< "$(git rev-list --parents -n 1 "$PR_MERGE_SHA")"
-            [[ "$merge_sha" == "$PR_MERGE_SHA" && "$first_parent" == "$PR_BASE_SHA" && \
-               "$second_parent" == "$PR_HEAD_SHA" && -z "${extra_parent:-}" ]] || {
-              echo "::error::hotfix release must use a two-parent merge commit with base and reviewed head"
-              exit 1
-            }
-            expected_merge_tree="$(git merge-tree --write-tree "$PR_BASE_SHA" "$PR_HEAD_SHA")"
-            [[ "$merge_tree" == "$expected_merge_tree" ]] || {
-              echo "::error::hotfix merge tree differs from the deterministic base-plus-candidate merge"
-              exit 1
-            }
-            source_sha="$PR_MERGE_SHA"
-          fi
+          [[ "$release_subject" == "release(dashboard): ${release_key}" ]] || {
+            echo "::error::release commit subject does not match the release key"
+            exit 1
+          }
+          [[ "$candidate_tree" == "$base_tree" && "$merge_tree" == "$candidate_tree" ]] || {
+            echo "::error::standard release PR is not tree-empty"
+            exit 1
+          }
+          source_sha="$candidate_sha"
 
           {
             echo "release-key=${release_key}"
-            echo "release-type=${release_type}"
             echo "source-sha=${source_sha}"
-            echo "candidate-sha=${candidate_sha}"
-            echo "base-source-sha=${base_source_sha}"
             echo "release-branch=${PR_BASE_REF}"
           } >> "$GITHUB_OUTPUT"
 
           {
             echo "## Admin Dashboard release PR verified"
             echo "- Release key: \`${release_key}\`"
-            echo "- Release type: \`${release_type}\`"
+            echo "- Release type: \`standard\`"
             echo "- Candidate SHA: \`${candidate_sha}\`"
             echo "- Deployment SHA: \`${source_sha}\`"
-            [[ -z "$base_key" ]] || echo "- Base release: \`${base_key}\` at \`${base_source_sha}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-release-applications:
@@ -325,9 +191,7 @@ jobs:
     with:
       source_sha: ${{ needs.verify-merged-release-pr.outputs.source-sha }}
       release_key: ${{ needs.verify-merged-release-pr.outputs.release-key }}
-      release_type: ${{ needs.verify-merged-release-pr.outputs.release-type }}
-      candidate_sha: ${{ needs.verify-merged-release-pr.outputs.candidate-sha }}
-      base_source_sha: ${{ needs.verify-merged-release-pr.outputs.base-source-sha }}
+      release_type: standard
     secrets: inherit
 
   delete-release-branch:
@@ -343,6 +207,10 @@ jobs:
           RELEASE_BRANCH: ${{ needs.verify-merged-release-pr.outputs.release-branch }}
         run: |
           set -euo pipefail
+          [[ "$RELEASE_BRANCH" == releases/* ]] || {
+            echo "::error::refusing to delete a non-release branch: ${RELEASE_BRANCH}"
+            exit 1
+          }
           encoded_branch="$(RELEASE_BRANCH="$RELEASE_BRANCH" python3 -c 'import os, urllib.parse; print(urllib.parse.quote(os.environ["RELEASE_BRANCH"], safe=""))')"
           gh api -X DELETE "repos/${REPOSITORY}/git/refs/heads/${encoded_branch}"
           echo "[release-pr] deleted release_branch=${RELEASE_BRANCH}"
