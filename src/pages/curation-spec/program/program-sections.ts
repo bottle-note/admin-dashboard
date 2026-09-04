@@ -32,6 +32,11 @@ export function getProgramSections(requestSpec: ProgramRequestSpec) {
           required: required.includes('address'),
           className: 'md:col-span-2',
         },
+        detailAddress: {
+          schema: fields.detailAddress,
+          required: required.includes('detailAddress'),
+          className: 'md:col-span-2',
+        },
         detailLocation: {
           schema: fields.detailLocation,
           required: required.includes('detailLocation'),
@@ -76,7 +81,7 @@ export function getProgramSections(requestSpec: ProgramRequestSpec) {
       },
     },
     '프로그램 및 이벤트': {
-      subtitle: '행사에 포함된 프로그램(마스터클래스·테이스팅 등)을 추가해주세요. 1개 이상.',
+      subtitle: '필요한 경우 프로그램을 추가해주세요.',
       contentClassName: 'space-y-4',
       fields: {
         programs: {

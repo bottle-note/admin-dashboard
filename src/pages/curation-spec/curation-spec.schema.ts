@@ -220,8 +220,8 @@ const programWhiskyListSchema = z.looseObject({
   ...schemaNodeShape,
   type: z.literal('array'),
   items: alcoholItemSchema,
-  minItems: z.number().default(0),
-  maxItems: z.number(),
+  minItems: z.number().optional(),
+  maxItems: z.number().optional(),
   'x-field-style': z.literal('alcohol-card-list'),
 });
 
@@ -247,8 +247,8 @@ export const programListRequestSpecSchema = z.looseObject({
   ...schemaNodeShape,
   type: z.literal('array'),
   items: programItemRequestSpecSchema,
-  minItems: z.number(),
-  maxItems: z.number(),
+  minItems: z.number().optional(),
+  maxItems: z.number().optional(),
 });
 
 export const programRequestSpecSchema = z.looseObject({
@@ -277,8 +277,8 @@ export const programRequestSpecSchema = z.looseObject({
 const programItemPayloadSchema = z.looseObject({
   name: z.string(),
   type: z.enum(['MASTER_CLASS', 'TASTING', 'SEMINAR', 'BOOTH_EVENT', 'OTHER']),
-  programDate: z.string(),
-  startTime: z.string(),
+  programDate: z.string().optional(),
+  startTime: z.string().optional(),
   endTime: z.string().nullable().optional(),
   venue: z.string().nullable().optional(),
   host: z.string().nullable().optional(),
@@ -302,7 +302,7 @@ export const programPayloadSchema = z.looseObject({
   officialUrl: z.string().nullable().optional(),
   registrationUrl: z.string().nullable().optional(),
   programTags: z.array(z.string()).optional(),
-  programs: z.array(programItemPayloadSchema),
+  programs: z.array(programItemPayloadSchema).optional(),
 });
 
 export const programFormSchema = programPayloadSchema.extend({
@@ -313,6 +313,7 @@ export const programFormSchema = programPayloadSchema.extend({
   exposureEndDate: z.string(),
   displayOrder: z.number(),
   isActive: z.boolean(),
+  programs: z.array(programItemPayloadSchema),
 });
 
 function getArrayDisplayName(spec: { 'x-display-name'?: string }, fallback: string) {
@@ -343,9 +344,16 @@ function addRequiredStringIssues(
   });
 }
 
+type AlcoholListValidationSpec = {
+  minItems?: number;
+  maxItems?: number;
+  'x-display-name'?: string;
+  items: z.infer<typeof alcoholItemSchema>;
+};
+
 function addAlcoholRequiredStringIssues(
   alcohols: WhiskyTastingEventPayload['alcohols'],
-  spec: WhiskyTastingEventAlcoholListSchema,
+  spec: AlcoholListValidationSpec,
   context: z.RefinementCtx,
   pathPrefix: Array<string | number>
 ) {
@@ -368,7 +376,7 @@ function addAlcoholRequiredStringIssues(
 }
 
 function createAlcoholListValidationSchema(
-  spec: WhiskyTastingEventAlcoholListSchema,
+  spec: AlcoholListValidationSpec,
   fallbackDisplayName: string
 ) {
   const displayName = getArrayDisplayName(spec, fallbackDisplayName);
@@ -385,10 +393,23 @@ function createAlcoholListValidationSchema(
     }),
   });
 
-  return z
-    .array(alcoholItemValidationSchema)
-    .min(spec.minItems, `${displayName}는 최소 ${spec.minItems}개 이상 추가해야 합니다.`)
-    .max(spec.maxItems, `${displayName}는 최대 ${spec.maxItems}개까지 추가할 수 있습니다.`);
+  let validationSchema = z.array(alcoholItemValidationSchema);
+
+  if (spec.minItems !== undefined) {
+    validationSchema = validationSchema.min(
+      spec.minItems,
+      `${displayName}는 최소 ${spec.minItems}개 이상 추가해야 합니다.`
+    );
+  }
+
+  if (spec.maxItems !== undefined) {
+    validationSchema = validationSchema.max(
+      spec.maxItems,
+      `${displayName}는 최대 ${spec.maxItems}개까지 추가할 수 있습니다.`
+    );
+  }
+
+  return validationSchema;
 }
 
 export function createWhiskyCurationFormValidationSchema(
@@ -546,16 +567,21 @@ export function createProgramFormValidationSchema(requestSpec: ProgramRequestSpe
       ? whiskyListValidationSchema
       : whiskyListValidationSchema.optional(),
   });
-  const programsValidationSchema = z
-    .array(programItemValidationSchema)
-    .min(
+  let programsValidationSchema = z.array(programItemValidationSchema);
+
+  if (programsSpec.minItems !== undefined) {
+    programsValidationSchema = programsValidationSchema.min(
       programsSpec.minItems,
       `${programsDisplayName}은 최소 ${programsSpec.minItems}개 이상 추가해야 합니다.`
-    )
-    .max(
+    );
+  }
+
+  if (programsSpec.maxItems !== undefined) {
+    programsValidationSchema = programsValidationSchema.max(
       programsSpec.maxItems,
       `${programsDisplayName}은 최대 ${programsSpec.maxItems}개까지 추가할 수 있습니다.`
     );
+  }
 
   return programFormSchema
     .extend({
@@ -612,6 +638,8 @@ export type ProgramRequestSpec = z.infer<typeof programRequestSpecSchema>;
 export type ProgramListRequestSpec = z.infer<typeof programListRequestSpecSchema>;
 
 export type ProgramItemRequestSpec = z.infer<typeof programItemRequestSpecSchema>;
+
+export type ProgramWhiskyListRequestSpec = z.infer<typeof programWhiskyListSchema>;
 
 export type ProgramPayload = z.infer<typeof programPayloadSchema>;
 

@@ -60,6 +60,7 @@ export function ProgramForm({
       placeName,
       kakaoPlaceId,
       address,
+      detailAddress,
       detailLocation,
       organizer,
       sponsor,
@@ -76,19 +77,8 @@ export function ProgramForm({
       eventEndDate,
       placeName,
       address,
-      programs: programs.map((program) => ({
-        name: program.name,
-        type: program.type,
-        programDate: program.programDate,
-        startTime: program.startTime,
-        description: program.description,
-        ...(program.endTime ? { endTime: program.endTime } : {}),
-        ...(program.venue ? { venue: program.venue } : {}),
-        ...(program.host ? { host: program.host } : {}),
-        ...(program.applicationUrl ? { applicationUrl: program.applicationUrl } : {}),
-        ...(program.whiskies?.length ? { whiskies: program.whiskies } : {}),
-      })),
       ...(kakaoPlaceId ? { kakaoPlaceId } : {}),
+      ...(detailAddress ? { detailAddress } : {}),
       ...(detailLocation ? { detailLocation } : {}),
       ...(organizer ? { organizer } : {}),
       ...(sponsor ? { sponsor } : {}),
@@ -97,6 +87,22 @@ export function ProgramForm({
       ...(officialUrl ? { officialUrl } : {}),
       ...(registrationUrl ? { registrationUrl } : {}),
       ...(programTags?.length ? { programTags } : {}),
+      ...(programs.length
+        ? {
+            programs: programs.map((program) => ({
+              name: program.name,
+              type: program.type,
+              description: program.description,
+              ...(program.programDate ? { programDate: program.programDate } : {}),
+              ...(program.startTime ? { startTime: program.startTime } : {}),
+              ...(program.endTime ? { endTime: program.endTime } : {}),
+              ...(program.venue ? { venue: program.venue } : {}),
+              ...(program.host ? { host: program.host } : {}),
+              ...(program.applicationUrl ? { applicationUrl: program.applicationUrl } : {}),
+              ...(program.whiskies?.length ? { whiskies: program.whiskies } : {}),
+            })),
+          }
+        : {}),
     };
 
     const request: CurationV2CreateRequest = {

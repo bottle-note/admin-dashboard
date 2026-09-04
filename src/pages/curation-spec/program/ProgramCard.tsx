@@ -2,10 +2,7 @@ import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 
-import type {
-  ProgramItemRequestSpec,
-  WhiskyTastingEventAlcoholListSchema,
-} from '../curation-spec.schema';
+import type { ProgramItemRequestSpec } from '../curation-spec.schema';
 import { CurationSpecAlcoholCardListField } from '../components/CurationSpecAlcoholCardListField';
 import { CurationSpecField } from '../components/CurationSpecField';
 import type { ProgramSectionConfig } from './program-sections';
@@ -145,7 +142,7 @@ export function ProgramCard({
           </div>
           <CurationSpecAlcoholCardListField
             name={`${name}.whiskies`}
-            schema={fields.whiskies as WhiskyTastingEventAlcoholListSchema}
+            schema={fields.whiskies}
             required={required.includes('whiskies')}
             config={config.fields.whiskies.alcohol}
           />

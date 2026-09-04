@@ -97,6 +97,7 @@ export function CurationCreateEntry() {
           placeName: '',
           kakaoPlaceId: '',
           address: '',
+          detailAddress: '',
           detailLocation: '',
           organizer: '',
           sponsor: '',
@@ -105,20 +106,7 @@ export function CurationCreateEntry() {
           officialUrl: '',
           registrationUrl: '',
           programTags: [],
-          programs: [
-            {
-              name: '',
-              type: 'MASTER_CLASS',
-              programDate: '',
-              startTime: '',
-              endTime: '',
-              venue: '',
-              host: '',
-              description: '',
-              applicationUrl: '',
-              whiskies: [],
-            },
-          ],
+          programs: [],
         }}
         onBack={handleBack}
       />

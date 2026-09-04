@@ -20,10 +20,19 @@ export function ProgramListField({
   config: ProgramSectionConfig;
 }) {
   const form = useFormContext<FieldValues>();
-  const programs = useWatch({ control: form.control, name }) as ProgramFormValues['programs'];
+  const programs =
+    (useWatch({ control: form.control, name }) as ProgramFormValues['programs'] | undefined) ?? [];
   const programFieldArray = useFieldArray({ control: form.control, name });
   const error = form.getFieldState(name, form.formState).error?.message;
-  const isMaxReached = programs.length >= schema.maxItems;
+  const isMaxReached = schema.maxItems !== undefined && programs.length >= schema.maxItems;
+  const limitText =
+    schema.minItems !== undefined && schema.maxItems !== undefined
+      ? `${schema.minItems}-${schema.maxItems}개까지 등록할 수 있습니다.`
+      : schema.minItems !== undefined
+        ? `최소 ${schema.minItems}개 이상 등록해야 합니다.`
+        : schema.maxItems !== undefined
+          ? `최대 ${schema.maxItems}개까지 등록할 수 있습니다.`
+          : '필요한 만큼 등록할 수 있습니다.';
 
   const handleAdd = () => {
     programFieldArray.append({
@@ -44,7 +53,7 @@ export function ProgramListField({
     <div className="min-w-0 space-y-4">
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
-          {schema.minItems}-{schema.maxItems}개까지 등록할 수 있습니다.
+          {limitText}
           {required && <span className="ml-1 text-destructive">*</span>}
         </p>
         <Badge variant="secondary">{programs.length}</Badge>
@@ -63,7 +72,7 @@ export function ProgramListField({
             onRemove={() => programFieldArray.remove(index)}
             onMoveUp={() => programFieldArray.move(index, index - 1)}
             onMoveDown={() => programFieldArray.move(index, index + 1)}
-            canRemove={programs.length > schema.minItems}
+            canRemove={programs.length > (schema.minItems ?? 0)}
             canMoveUp={index > 0}
             canMoveDown={index < programs.length - 1}
           />

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createProgramFormValidationSchema,
   createWhiskyTastingEventFormValidationSchema,
+  programPayloadSchema,
   type ProgramFormValues,
   type ProgramRequestSpec,
   type WhiskyTastingEventFormValues,
@@ -68,14 +69,15 @@ const programValues = {
   exposureEndDate: '',
   displayOrder: 0,
   isActive: true,
-  eventStartDate: '',
-  eventEndDate: '',
-  placeName: '',
-  address: '',
+  eventStartDate: '2027-12-20',
+  eventEndDate: '2027-12-21',
+  placeName: '코엑스',
+  address: '서울 강남구 영동대로 513',
   programs: [],
 } satisfies ProgramFormValues;
 
 const programRequestSpec = {
+  required: ['eventStartDate', 'eventEndDate', 'placeName', 'address'],
   properties: {
     programTags: {
       minItems: 0,
@@ -83,14 +85,17 @@ const programRequestSpec = {
       'x-display-name': '프로그램 태그',
     },
     programs: {
-      minItems: 1,
       maxItems: 2,
       'x-display-name': '프로그램',
       items: {
-        required: ['whiskies'],
+        required: ['name', 'type', 'description'],
         properties: {
+          name: { 'x-display-name': '프로그램명' },
+          type: { 'x-display-name': '프로그램 유형' },
+          programDate: { 'x-display-name': '날짜' },
+          startTime: { 'x-display-name': '시작 시간' },
+          description: { 'x-display-name': '프로그램 설명' },
           whiskies: {
-            minItems: 0,
             maxItems: 1,
             'x-display-name': '시음 위스키',
             items: {
@@ -164,19 +169,28 @@ describe('curation spec form validation', () => {
     ).toBe(true);
   });
 
-  it('PROGRAM과 중첩 위스키 목록에 각각의 서버 배열 제한을 적용한다', () => {
+  it('PROGRAM의 선택 필드는 비워두고 서버가 제공한 배열 상한만 적용한다', () => {
     const schema = createProgramFormValidationSchema(programRequestSpec);
     const program = {
       name: '마스터 클래스',
       type: 'MASTER_CLASS' as const,
-      programDate: '',
-      startTime: '',
-      description: '',
+      description: '프로그램 소개',
       whiskies: [],
     };
 
-    expect(schema.safeParse(programValues).success).toBe(false);
+    expect(schema.safeParse(programValues).success).toBe(true);
+    expect(
+      programPayloadSchema.safeParse({
+        eventStartDate: programValues.eventStartDate,
+        eventEndDate: programValues.eventEndDate,
+        placeName: programValues.placeName,
+        address: programValues.address,
+      }).success
+    ).toBe(true);
     expect(schema.safeParse({ ...programValues, programs: [program] }).success).toBe(true);
+    expect(
+      schema.safeParse({ ...programValues, programs: [program, program, program] }).success
+    ).toBe(false);
     expect(
       schema.safeParse({
         ...programValues,
