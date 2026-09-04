@@ -11,14 +11,26 @@ on:
         description: Positive release sequence number
         required: true
         type: string
+      release_type:
+        description: standard creates releases/<key> from main with a release PR; hotfix creates hotfixes/<key> at the deployed production source
+        required: false
+        default: standard
+        type: choice
+        options:
+          - standard
+          - hotfix
 
 permissions:
   contents: write
   pull-requests: write
+  actions: read
 
 concurrency:
   group: release-pr-${{ inputs.release_date }}-${{ inputs.sequence }}
   cancel-in-progress: false
+
+env:
+  IMAGE_NAME: bottlenote-admin-dashboard
 
 jobs:
   create-release-pr:
@@ -28,6 +40,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RELEASE_DATE: ${{ inputs.release_date }}
       SEQUENCE: ${{ inputs.sequence }}
+      RELEASE_TYPE: ${{ inputs.release_type }}
       REPOSITORY: ${{ github.repository }}
       REPOSITORY_OWNER: ${{ github.repository_owner }}
       DISPATCH_REF: ${{ github.ref }}
@@ -40,8 +53,13 @@ jobs:
           token: ${{ secrets.GIT_ACCESS_TOKEN }}
           persist-credentials: true
 
-      - name: validate inputs and create release PR
+      - name: validate inputs and reserve release key
+        id: reserve
         shell: bash
+        env:
+          REGISTRY_ADDRESS: ${{ secrets.REGISTRY_ADDRESS }}
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
           set -euo pipefail
 
@@ -65,9 +83,72 @@ jobs:
             echo "::error::sequence must be a positive integer"
             exit 1
           }
+          [[ "$RELEASE_TYPE" == "standard" || "$RELEASE_TYPE" == "hotfix" ]] || {
+            echo "::error::release_type must be standard or hotfix"
+            exit 1
+          }
 
           release_key="${RELEASE_DATE}/${SEQUENCE}"
-          release_branch="releases/${release_key}"
+          image_tag="dashboard_${RELEASE_DATE//-/.}.${SEQUENCE}"
+          standard_branch="releases/${release_key}"
+          hotfix_branch="hotfixes/${release_key}"
+
+          url_encode() {
+            python3 -c 'import os, urllib.parse; print(urllib.parse.quote(os.environ["VALUE"], safe=""))'
+          }
+
+          require_missing_remote_ref() {
+            local ref_name="$1"
+            local encoded response
+            encoded="$(VALUE="$ref_name" url_encode)"
+            if response="$(gh api --include "repos/${REPOSITORY}/git/ref/heads/${encoded}" 2>&1)"; then
+              echo "::error::remote ref already exists: ${ref_name}"
+              exit 1
+            fi
+            if [[ "$response" != *" 404 "* ]]; then
+              echo "::error::unable to confirm remote ref is absent: ${ref_name}"
+              exit 1
+            fi
+          }
+
+          # 표준과 핫픽스는 같은 릴리즈 키에서 같은 immutable 이미지 태그를 만든다.
+          # 두 네임스페이스의 브랜치와 레지스트리 태그가 모두 비어 있어야 키를 예약할 수 있다.
+          require_missing_remote_ref "$standard_branch"
+          require_missing_remote_ref "$hotfix_branch"
+
+          image="${REGISTRY_ADDRESS}/${IMAGE_NAME}:${image_tag}"
+          echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY_ADDRESS" \
+            --username "$REGISTRY_USERNAME" --password-stdin
+          manifest_error_log="${RUNNER_TEMP}/manifest-error.log"
+          if docker manifest inspect "$image" >/dev/null 2>"$manifest_error_log"; then
+            echo "::error::image tag already exists for release key ${release_key}: ${image}"
+            exit 1
+          fi
+          if ! grep -Eqi 'manifest unknown|no such manifest|not found' "$manifest_error_log"; then
+            cat "$manifest_error_log" >&2
+            echo "::error::failed to verify whether image tag exists: ${image}"
+            exit 1
+          fi
+
+          release_branch="$standard_branch"
+          [[ "$RELEASE_TYPE" != "hotfix" ]] || release_branch="$hotfix_branch"
+          {
+            echo "release-key=${release_key}"
+            echo "image-tag=${image_tag}"
+            echo "release-branch=${release_branch}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: create standard release PR
+        if: env.RELEASE_TYPE == 'standard'
+        shell: bash
+        env:
+          RELEASE_KEY: ${{ steps.reserve.outputs.release-key }}
+          RELEASE_BRANCH: ${{ steps.reserve.outputs.release-branch }}
+        run: |
+          set -euo pipefail
+
+          release_key="$RELEASE_KEY"
+          release_branch="$RELEASE_BRANCH"
           release_branch_pushed=false
           main_pushed=false
           created_pr_url=""
@@ -104,26 +185,6 @@ jobs:
 
           trap 'handle_partial_failure "$?"' ERR
           trap cleanup_body_file EXIT
-
-          url_encode() {
-            python3 -c 'import os, urllib.parse; print(urllib.parse.quote(os.environ["VALUE"], safe=""))'
-          }
-
-          require_missing_remote_ref() {
-            local ref_name="$1"
-            local encoded response
-            encoded="$(VALUE="$ref_name" url_encode)"
-            if response="$(gh api --include "repos/${REPOSITORY}/git/ref/heads/${encoded}" 2>&1)"; then
-              echo "::error::remote ref already exists: ${ref_name}"
-              exit 1
-            fi
-            if [[ "$response" != *" 404 "* ]]; then
-              echo "::error::unable to confirm remote ref is absent: ${ref_name}"
-              exit 1
-            fi
-          }
-
-          require_missing_remote_ref "$release_branch"
 
           open_pr_count="$(gh api -X GET "repos/${REPOSITORY}/pulls" \
             -f state=open \
@@ -228,4 +289,176 @@ jobs:
             echo "- Base ref: \`${release_branch}\`"
             echo "- Head ref: \`main\`"
             echo "- Post-create validation: \`passed\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # 핫픽스 릴리즈 브랜치는 직전 운영 배포 소스에서만 잘린다. 핫픽스 PR(hotfix/** -> hotfixes/<key>) 자체는
+      # 사람이 만들고, 여기서 출력한 본문 마커를 PR 본문에 그대로 넣는다.
+      - name: create hotfix release branch
+        if: env.RELEASE_TYPE == 'hotfix'
+        shell: bash
+        env:
+          RELEASE_KEY: ${{ steps.reserve.outputs.release-key }}
+          RELEASE_BRANCH: ${{ steps.reserve.outputs.release-branch }}
+        run: |
+          set -euo pipefail
+
+          release_key="$RELEASE_KEY"
+          hotfix_branch="$RELEASE_BRANCH"
+
+          release_runs_file="${RUNNER_TEMP}/dashboard-successful-release-runs.json"
+          hotfix_runs_file="${RUNNER_TEMP}/dashboard-successful-hotfix-runs.json"
+          latest_run_file="${RUNNER_TEMP}/dashboard-latest-successful-release-run.json"
+          jobs_file="${RUNNER_TEMP}/dashboard-release-run-jobs.json"
+          closed_prs_file="${RUNNER_TEMP}/dashboard-closed-release-prs.json"
+          gh api --paginate --slurp -X GET \
+            "repos/${REPOSITORY}/actions/workflows/release_pr_merged.yml/runs" \
+            -f status=success -f per_page=100 > "$release_runs_file"
+          gh api --paginate --slurp -X GET \
+            "repos/${REPOSITORY}/actions/workflows/hotfix_pr_merged.yml/runs" \
+            -f status=success -f per_page=100 > "$hotfix_runs_file"
+          selected_run_id=""
+          while read -r candidate_run_id candidate_verify_job; do
+            gh api --paginate --slurp -X GET \
+              "repos/${REPOSITORY}/actions/runs/${candidate_run_id}/jobs" \
+              -f per_page=100 > "$jobs_file"
+            if JOBS_FILE="$jobs_file" VERIFY_JOB="$candidate_verify_job" python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          with open(os.environ['JOBS_FILE'], encoding='utf-8') as file:
+              pages = json.load(file)
+          jobs = [job for page in pages for job in (page.get('jobs') or [])]
+          conclusions = {job.get('name'): job.get('conclusion') for job in jobs}
+          required = {
+              os.environ['VERIFY_JOB'],
+              'deploy-release-applications / gate dashboard release',
+              'deploy-release-applications / build and push dashboard image',
+              'deploy-release-applications / hand off dashboard image to image updater',
+              'delete-release-branch',
+          }
+          sys.exit(0 if all(conclusions.get(name) == 'success' for name in required) else 1)
+          PY
+            then
+              selected_run_id="$candidate_run_id"
+              break
+            fi
+          done < <(RELEASE_RUNS_FILE="$release_runs_file" HOTFIX_RUNS_FILE="$hotfix_runs_file" python3 - <<'PY'
+          import json
+          import os
+
+          verify_jobs = {
+              '.github/workflows/release_pr_merged.yml': 'verify-merged-release-pr',
+              '.github/workflows/hotfix_pr_merged.yml': 'verify-merged-hotfix-pr',
+          }
+          runs = []
+          for runs_file in (os.environ['RELEASE_RUNS_FILE'], os.environ['HOTFIX_RUNS_FILE']):
+              with open(runs_file, encoding='utf-8') as file:
+                  pages = json.load(file)
+              for page in pages:
+                  for run in page.get('workflow_runs') or []:
+                      if run.get('event') in {'pull_request', 'pull_request_target'} and run.get('path') in verify_jobs:
+                          runs.append(run)
+          runs.sort(key=lambda run: run['created_at'], reverse=True)
+          for run in runs:
+              print(run['id'], verify_jobs[run['path']])
+          PY
+          )
+          [[ -n "$selected_run_id" ]] || {
+            echo "::error::no successful dashboard release deployment run was found"
+            exit 1
+          }
+          gh api -X GET "repos/${REPOSITORY}/actions/runs/${selected_run_id}" > "$latest_run_file"
+          gh api --paginate --slurp -X GET "repos/${REPOSITORY}/pulls" \
+            -f state=closed -f per_page=100 > "$closed_prs_file"
+          base_values="$(LATEST_RUN_FILE="$latest_run_file" CLOSED_PRS_FILE="$closed_prs_file" python3 - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          import re
+          import sys
+
+          with open(os.environ['LATEST_RUN_FILE'], encoding='utf-8') as file:
+              run = json.load(file)
+          with open(os.environ['CLOSED_PRS_FILE'], encoding='utf-8') as file:
+              pages = json.load(file)
+          pulls = [pr for page in pages for pr in page]
+          run_time = dt.datetime.fromisoformat(run['created_at'].replace('Z', '+00:00'))
+          candidates = []
+          for pr in pulls:
+              merged_at = pr.get('merged_at')
+              base_ref = ((pr.get('base') or {}).get('ref') or '')
+              head_sha = ((pr.get('head') or {}).get('sha') or '')
+              if not merged_at or not base_ref.startswith(('releases/', 'hotfixes/')) or head_sha != run.get('head_sha'):
+                  continue
+              merged_time = dt.datetime.fromisoformat(merged_at.replace('Z', '+00:00'))
+              age = (run_time - merged_time).total_seconds()
+              if 0 <= age <= 900:
+                  candidates.append((merged_time, pr))
+          candidates.sort(key=lambda item: item[0], reverse=True)
+          if not candidates:
+              print('::error::latest successful release run cannot be bound to its merged release PR', file=sys.stderr)
+              sys.exit(1)
+
+          pr = candidates[0][1]
+          body = pr.get('body') or ''
+          sources = re.findall(r'<!--\s*release-source-sha:\s*([0-9a-f]{40})\s*-->', body)
+          keys = re.findall(r'<!--\s*release-key:\s*([0-9]{4}-[0-9]{2}-[0-9]{2}/[1-9][0-9]*)\s*-->', body)
+          services = re.findall(r'<!--\s*release-service:\s*(dashboard)\s*-->', body)
+          hotfix_types = re.findall(r'<!--\s*release-type:\s*(hotfix)\s*-->', body)
+          if len(sources) != 1 or len(keys) != 1 or services != ['dashboard']:
+              print('::error::latest successful release PR markers are invalid', file=sys.stderr)
+              sys.exit(1)
+          deployed_source = pr.get('merge_commit_sha') if hotfix_types == ['hotfix'] else sources[0]
+          if not re.fullmatch(r'[0-9a-f]{40}', deployed_source or ''):
+              print('::error::latest successful release deployment source is not a commit SHA', file=sys.stderr)
+              sys.exit(1)
+          print(keys[0])
+          print(deployed_source)
+          print(run['html_url'])
+          print(pr['html_url'])
+          PY
+          )"
+          mapfile -t base_fields <<< "$base_values"
+          base_key="${base_fields[0]}"
+          base_source_sha="${base_fields[1]}"
+          base_run_url="${base_fields[2]}"
+          base_pr_url="${base_fields[3]}"
+          [[ "$base_key" != "$release_key" ]] || {
+            echo "::error::hotfix release key must differ from the deployed base release key: ${base_key}"
+            exit 1
+          }
+
+          git fetch --no-tags origin "$base_source_sha"
+          git cat-file -e "${base_source_sha}^{commit}"
+          # 정보성 경고(대안 A 생성 가드): 운영 소스 스냅샷에 pull_request 트리거가 남아 있어도
+          # hotfixes/** 네임스페이스는 그 스냅샷의 releases/** 필터에 걸리지 않는다.
+          if git show "${base_source_sha}:.github/workflows/release_pr_merged.yml" 2>/dev/null | grep -Eq '^  pull_request:'; then
+            echo "::warning::production source ${base_source_sha} still carries an on.pull_request release workflow snapshot; hotfixes/** is filtered out of it"
+          fi
+
+          git push origin "${base_source_sha}:refs/heads/${hotfix_branch}"
+          git fetch --no-tags origin "+refs/heads/${hotfix_branch}:refs/remotes/origin/${hotfix_branch}"
+          remote_hotfix_sha="$(git rev-parse "origin/${hotfix_branch}")"
+          [[ "$remote_hotfix_sha" == "$base_source_sha" ]] || {
+            echo "::error::hotfix branch ${hotfix_branch} does not point to the deployed production source ${base_source_sha}. Manual cleanup is required."
+            exit 1
+          }
+
+          {
+            echo "## Admin Dashboard hotfix release branch created"
+            echo "- Release key: \`${release_key}\`"
+            echo "- Hotfix base ref: \`${hotfix_branch}\` at \`${base_source_sha}\`"
+            echo "- Base release: \`${base_key}\` (${base_pr_url}, ${base_run_url})"
+            echo "- Next: open a PR from \`hotfix/<name>\` to \`${hotfix_branch}\` and paste the markers below into the PR body"
+            echo "- Replace \`<reviewed-head-sha>\` with the final reviewed PR head SHA before merging"
+            echo
+            echo '```'
+            echo "<!-- release-source-sha:<reviewed-head-sha> -->"
+            echo "<!-- release-key:${release_key} -->"
+            echo "<!-- release-service:dashboard -->"
+            echo "<!-- release-type:hotfix -->"
+            echo "<!-- release-base-key:${base_key} -->"
+            echo "<!-- release-base-source-sha:${base_source_sha} -->"
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
