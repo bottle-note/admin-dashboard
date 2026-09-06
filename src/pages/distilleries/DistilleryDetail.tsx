@@ -4,7 +4,7 @@
  * - 상세 조회 및 수정 (id가 숫자인 경우)
  */
 
-import { useState, useEffect } from 'react';
+import { startTransition, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -82,7 +82,7 @@ export function DistilleryDetailPage() {
   useEffect(() => {
     if (isNewMode) {
       form.reset(distilleryDefaultValues);
-      setImagePreviewUrl(null);
+      startTransition(() => setImagePreviewUrl(null));
     } else if (detailData) {
       form.reset({
         korName: detailData.korName,
@@ -90,7 +90,7 @@ export function DistilleryDetailPage() {
         imageUrl: detailData.imageUrl,
         sortOrder: detailData.sortOrder,
       });
-      setImagePreviewUrl(detailData.imageUrl);
+      startTransition(() => setImagePreviewUrl(detailData.imageUrl));
     }
   }, [detailData, form, isNewMode]);
 

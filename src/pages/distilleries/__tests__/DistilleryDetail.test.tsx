@@ -21,23 +21,24 @@ vi.mock('react-router', async () => {
 describe('DistilleryDetailPage', () => {
   it('증류소 ID로 lookup API를 조회해 소속 위스키 목록을 표시한다', async () => {
     let lookupDistilleryId: string | null = null;
-    let lookupCursor: string | null = null;
+    let lookupPage: string | null = null;
+    let lookupSize: string | null = null;
 
     server.use(
       http.get('/admin/api/v1/alcohols/lookup', ({ request }) => {
         const url = new URL(request.url);
         lookupDistilleryId = url.searchParams.get('distilleryId');
-        lookupCursor = url.searchParams.get('cursor');
+        lookupPage = url.searchParams.get('page');
+        lookupSize = url.searchParams.get('size');
         const items = mockAlcoholLookupItems.filter((item) => item.distilleryId === 1);
 
         return HttpResponse.json(
           wrapApiResponse(items, {
-            pageable: {
-              currentCursor: 0,
-              cursor: items.length,
-              pageSize: 20,
-              hasNext: false,
-            },
+            page: 0,
+            size: 20,
+            totalElements: items.length,
+            totalPages: 1,
+            hasNext: false,
           })
         );
       })
@@ -50,6 +51,7 @@ describe('DistilleryDetailPage', () => {
     expect(await screen.findByText('글렌피딕 12년')).toBeInTheDocument();
     expect(screen.queryByText('맥캘란 18년')).not.toBeInTheDocument();
     expect(lookupDistilleryId).toBe('1');
-    expect(lookupCursor).toBe('0');
+    expect(lookupPage).toBe('0');
+    expect(lookupSize).toBe('20');
   });
 });
