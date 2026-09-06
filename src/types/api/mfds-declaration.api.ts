@@ -80,6 +80,8 @@ export interface MfdsDeclarationListItem {
   rcno: string;
   baseProductNameKo: string | null;
   baseProductNameEn: string | null;
+  skuDisplayNameKo: string | null;
+  skuDisplayNameEn: string | null;
   volumeMl: number | null;
   abvPercent: number | null;
   normalizationStatus: MfdsNormalizationStatus;

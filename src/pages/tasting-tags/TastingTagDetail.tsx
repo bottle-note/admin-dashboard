@@ -5,7 +5,7 @@
  * - 연관 위스키 관리
  */
 
-import { useState, useEffect } from 'react';
+import { startTransition, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -107,9 +107,11 @@ export function TastingTagDetailPage() {
         engName: '',
         description: '',
       });
-      setIconBase64(null);
-      setConnectedWhiskies([]);
-      setInitialAlcoholIds([]);
+      startTransition(() => {
+        setIconBase64(null);
+        setConnectedWhiskies([]);
+        setInitialAlcoholIds([]);
+      });
     } else if (detailData) {
       // 수정 모드: API 데이터로 폼 채움
       const tag = detailData.tag;
@@ -118,15 +120,17 @@ export function TastingTagDetailPage() {
         engName: tag.engName,
         description: tag.description ?? '',
       });
-      setIconBase64(tag.icon);
       const alcohols = detailData.alcohols.map((a) => ({
         alcoholId: a.alcoholId,
         korName: a.korName,
         engName: a.engName,
         imageUrl: a.imageUrl,
       }));
-      setConnectedWhiskies(alcohols);
-      setInitialAlcoholIds(alcohols.map((a) => a.alcoholId));
+      startTransition(() => {
+        setIconBase64(tag.icon);
+        setConnectedWhiskies(alcohols);
+        setInitialAlcoholIds(alcohols.map((a) => a.alcoholId));
+      });
     }
   }, [detailData, form, isNewMode]);
 

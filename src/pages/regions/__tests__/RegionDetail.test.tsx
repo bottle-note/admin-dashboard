@@ -67,23 +67,24 @@ vi.mock('react-router', async () => {
 describe('RegionDetailPage', () => {
   it('지역 ID로 lookup API를 조회해 소속 위스키 목록을 표시한다', async () => {
     let lookupRegionId: string | null = null;
-    let lookupCursor: string | null = null;
+    let lookupPage: string | null = null;
+    let lookupSize: string | null = null;
 
     server.use(
       http.get('/admin/api/v1/alcohols/lookup', ({ request }) => {
         const url = new URL(request.url);
         lookupRegionId = url.searchParams.get('regionId');
-        lookupCursor = url.searchParams.get('cursor');
+        lookupPage = url.searchParams.get('page');
+        lookupSize = url.searchParams.get('size');
         const items = mockAlcoholLookupItems.filter((item) => item.regionId === 1);
 
         return HttpResponse.json(
           wrapApiResponse(items, {
-            pageable: {
-              currentCursor: 0,
-              cursor: items.length,
-              pageSize: 20,
-              hasNext: false,
-            },
+            page: 0,
+            size: 20,
+            totalElements: items.length,
+            totalPages: 1,
+            hasNext: false,
           })
         );
       })
@@ -96,7 +97,8 @@ describe('RegionDetailPage', () => {
     expect(await screen.findByText('글렌피딕 12년')).toBeInTheDocument();
     expect(screen.getByText('맥캘란 18년')).toBeInTheDocument();
     expect(lookupRegionId).toBe('1');
-    expect(lookupCursor).toBe('0');
+    expect(lookupPage).toBe('0');
+    expect(lookupSize).toBe('20');
   });
 
   it('이미지가 있는 지역의 텍스트만 수정해도 기존 imageUrl을 보존해 저장한다', async () => {

@@ -383,7 +383,8 @@ export function MfdsDeclarationListPage() {
             <TableRow>
               <TableHead className="w-[104px]">데이터 ID</TableHead>
               <TableHead>RCNO</TableHead>
-              <TableHead>제품명</TableHead>
+              <TableHead>SKU 한글명</TableHead>
+              <TableHead>SKU 영문명</TableHead>
               <TableHead>규격</TableHead>
               <TableHead>수입사</TableHead>
               <TableHead>정규화</TableHead>
@@ -395,13 +396,13 @@ export function MfdsDeclarationListPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-40 text-center text-muted-foreground">
+                <TableCell colSpan={10} className="h-40 text-center text-muted-foreground">
                   수입 신고 데이터를 불러오는 중입니다.
                 </TableCell>
               </TableRow>
             ) : isError ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-40 text-center">
+                <TableCell colSpan={10} className="h-40 text-center">
                   <p className="mb-3 text-muted-foreground">
                     수입 신고 데이터를 불러오지 못했습니다.
                   </p>
@@ -412,7 +413,7 @@ export function MfdsDeclarationListPage() {
               </TableRow>
             ) : data?.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-40 text-center text-muted-foreground">
+                <TableCell colSpan={10} className="h-40 text-center text-muted-foreground">
                   {hasFilters
                     ? '조건에 맞는 신고 데이터가 없습니다.'
                     : '수집된 신고 데이터가 없습니다.'}
@@ -428,7 +429,10 @@ export function MfdsDeclarationListPage() {
                   <TableCell className="font-mono text-sm">{item.id}</TableCell>
                   <TableCell className="whitespace-nowrap font-mono text-sm">{item.rcno}</TableCell>
                   <TableCell className="min-w-[220px]">
-                    <p className="font-medium">{item.baseProductNameKo ?? '제품명 정보 없음'}</p>
+                    <p className="font-medium">{item.skuDisplayNameKo}</p>
+                  </TableCell>
+                  <TableCell className="min-w-[220px]">
+                    <p>{item.skuDisplayNameEn}</p>
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-sm">
                     {formatSpecification(item.volumeMl, item.abvPercent)}
