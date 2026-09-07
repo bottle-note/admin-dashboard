@@ -17,6 +17,7 @@ import {
   WhiskyBasicInfoCard,
   WhiskyImageCard,
   WhiskyStatsCard,
+  WhiskyPopularityChartCard,
   WhiskyTastingTagCard,
   WhiskyRelatedKeywordsCard,
 } from './components';
@@ -191,6 +192,10 @@ export function WhiskyDetailPage() {
               )}
             </div>
           </div>
+
+          {whiskyData && !isDeleted && (
+            <WhiskyPopularityChartCard alcoholId={whiskyData.alcoholId} />
+          )}
 
           {/* 테이스팅 태그 섹션 */}
           <WhiskyTastingTagCard

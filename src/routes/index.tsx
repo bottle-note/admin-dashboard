@@ -10,6 +10,7 @@ import { RoleProtectedRoute } from './RoleProtectedRoute';
 // Pages
 import { LoginPage } from '@/pages/Login';
 import { DashboardPage } from '@/pages/Dashboard';
+import { VisitorStatisticsPage } from '@/pages/statistics/VisitorStatistics';
 import { WhiskyListPage } from '@/pages/whisky/WhiskyList';
 import { WhiskyDetailPage } from '@/pages/whisky/WhiskyDetail';
 import { WhiskyExcelBulkPage } from '@/pages/whisky/WhiskyExcelBulkPage';
@@ -64,6 +65,14 @@ export function AppRoutes() {
       >
         {/* Dashboard */}
         <Route index element={<DashboardPage />} />
+        <Route
+          path="statistics/visitors"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <VisitorStatisticsPage />
+            </RoleProtectedRoute>
+          }
+        />
         <Route
           path="dashboard/curations"
           element={

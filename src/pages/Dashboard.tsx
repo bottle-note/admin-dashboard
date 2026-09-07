@@ -4,11 +4,18 @@
 
 import { Link } from 'react-router';
 import { Wine, MessageSquare, Tag, Image, BookOpen } from 'lucide-react';
+import { TimeSeriesChart } from '@/components/common/TimeSeriesChart';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAdminAlcoholList } from '@/hooks/useAdminAlcohols';
 import { useHelpList } from '@/hooks/useHelps';
 import { useTastingTagList } from '@/hooks/useTastingTags';
 import { useBannerList } from '@/hooks/useBanners';
 import { useCurationList } from '@/hooks/useCurations';
+import {
+  useActiveVisitorStatistics,
+  useVisitorRetentionStatistics,
+} from '@/hooks/useStatistics';
+import type { TimeSeriesPayload, VisitorStatisticsParams } from '@/types/api';
 
 interface StatCardProps {
   title: string;
@@ -40,6 +47,56 @@ function StatCard({ title, value, icon, isLoading, href }: StatCardProps) {
   );
 }
 
+interface StatisticsCardProps {
+  title: string;
+  payload?: TimeSeriesPayload;
+  seriesKey: string;
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+}
+
+function StatisticsCard({
+  title,
+  payload,
+  seriesKey,
+  isLoading,
+  isError,
+  onRetry,
+}: StatisticsCardProps) {
+  return (
+    <Card className="min-w-0">
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription>최근 7일</CardDescription>
+      </CardHeader>
+      <CardContent className="min-w-0">
+        <TimeSeriesChart
+          payload={payload}
+          seriesKeys={[seriesKey]}
+          isLoading={isLoading}
+          isError={isError}
+          onRetry={onRetry}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function getDashboardStatisticsParams(): VisitorStatisticsParams {
+  const today = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const to = today.toISOString().slice(0, 10);
+  today.setUTCDate(today.getUTCDate() - 6);
+
+  return {
+    from: today.toISOString().slice(0, 10),
+    to,
+    granularity: 'DAY',
+  };
+}
+
+const DASHBOARD_STATISTICS_PARAMS = getDashboardStatisticsParams();
+
 export function DashboardPage() {
   // 통계 데이터 조회 (최소 데이터만 요청)
   const { data: alcoholData, isLoading: isAlcoholLoading } = useAdminAlcoholList({
@@ -58,6 +115,8 @@ export function DashboardPage() {
     size: 1,
     status: 'WAITING',
   });
+  const activeVisitorsQuery = useActiveVisitorStatistics(DASHBOARD_STATISTICS_PARAMS);
+  const retentionQuery = useVisitorRetentionStatistics(DASHBOARD_STATISTICS_PARAMS);
 
   return (
     <div className="space-y-6">
@@ -105,6 +164,41 @@ export function DashboardPage() {
           href="/inquiries"
         />
       </div>
+
+      <section className="space-y-4" aria-labelledby="dashboard-statistics-title">
+        <div>
+          <h2 id="dashboard-statistics-title" className="text-lg font-semibold">
+            방문자 통계
+          </h2>
+          <p className="text-sm text-muted-foreground">한국 시간 기준 최근 7일 추이입니다.</p>
+        </div>
+        <div className="grid min-w-0 gap-4 lg:grid-cols-3">
+          <StatisticsCard
+            title="방문자 DAU"
+            payload={activeVisitorsQuery.data}
+            seriesKey="visitors"
+            isLoading={activeVisitorsQuery.isLoading}
+            isError={activeVisitorsQuery.isError}
+            onRetry={() => void activeVisitorsQuery.refetch()}
+          />
+          <StatisticsCard
+            title="회원 DAU"
+            payload={activeVisitorsQuery.data}
+            seriesKey="members"
+            isLoading={activeVisitorsQuery.isLoading}
+            isError={activeVisitorsQuery.isError}
+            onRetry={() => void activeVisitorsQuery.refetch()}
+          />
+          <StatisticsCard
+            title="재방문율"
+            payload={retentionQuery.data}
+            seriesKey="retentionRate"
+            isLoading={retentionQuery.isLoading}
+            isError={retentionQuery.isError}
+            onRetry={() => void retentionQuery.refetch()}
+          />
+        </div>
+      </section>
     </div>
   );
 }

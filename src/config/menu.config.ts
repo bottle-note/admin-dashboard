@@ -12,6 +12,7 @@ import {
   List,
   Plus,
   LayoutDashboard,
+  ChartLine,
   Layers,
   Factory,
   FileSpreadsheet,
@@ -29,6 +30,19 @@ export const menuConfig: MenuGroup[] = [
         label: '대시보드',
         icon: LayoutDashboard,
         path: '/',
+      },
+      {
+        id: 'statistics',
+        label: '통계',
+        icon: ChartLine,
+        roles: ['ROOT_ADMIN'],
+        children: [
+          {
+            id: 'visitor-statistics',
+            label: '방문자 통계',
+            path: '/statistics/visitors',
+          },
+        ],
       },
       {
         id: 'dashboard-curation',
