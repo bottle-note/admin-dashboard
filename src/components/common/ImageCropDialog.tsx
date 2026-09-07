@@ -17,7 +17,7 @@ import {
   type PreparedImage,
 } from '@/lib/image-preprocessing';
 
-import type { ImageProcessingPolicy } from './PreparedImageField';
+import type { ImageProcessingPolicy } from './image-processing-policy';
 
 interface ImageCropDialogProps {
   file: File | null;
@@ -25,6 +25,7 @@ interface ImageCropDialogProps {
   policy: ImageProcessingPolicy;
   onOpenChange: (open: boolean) => void;
   onPrepared: (preparedImage: PreparedImage) => void;
+  closeOnPrepared?: boolean;
 }
 
 function createInitialCrop(image: HTMLImageElement, aspectRatio: number | null): Crop {
@@ -95,6 +96,7 @@ export function ImageCropDialog({
   policy,
   onOpenChange,
   onPrepared,
+  closeOnPrepared = true,
 }: ImageCropDialogProps) {
   const imageRef = useRef<HTMLImageElement>(null);
   const [sourceUrl, setSourceUrl] = useState<string | null>(null);
@@ -104,6 +106,7 @@ export function ImageCropDialog({
   const [aspectRatio, setAspectRatio] = useState<number | null>(policy.defaultAspectRatio);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const isAspectRatioFixed = policy.aspectRatios.length === 1;
 
   useEffect(() => {
     if (!file || !open) return;
@@ -168,7 +171,7 @@ export function ImageCropDialog({
       });
 
       onPrepared(preparedImage);
-      onOpenChange(false);
+      if (closeOnPrepared) onOpenChange(false);
     } catch (error) {
       setErrorMessage(
         error instanceof ImagePreprocessingError
@@ -190,8 +193,9 @@ export function ImageCropDialog({
         <DialogHeader>
           <DialogTitle>이미지 크롭 및 변환</DialogTitle>
           <DialogDescription>
-            자유 비율 또는 고정 비율을 선택한 뒤, 크롭 영역을 드래그하거나 모서리 핸들로 크기를
-            조절하세요.
+            {isAspectRatioFixed
+              ? `${policy.aspectRatios[0]?.label} 비율에 맞춰 크롭 영역을 조절하세요.`
+              : '자유 비율 또는 고정 비율을 선택한 뒤, 크롭 영역을 드래그하거나 모서리 핸들로 크기를 조절하세요.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -232,21 +236,26 @@ export function ImageCropDialog({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="space-y-2 text-sm font-medium">
-              <span>크롭 비율</span>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                value={aspectRatio === null ? 'free' : String(aspectRatio)}
-                disabled={isProcessing}
-                onChange={(event) => handleAspectRatioChange(event.target.value)}
-              >
-                {policy.aspectRatios.map((option) => (
-                  <option key={option.label} value={option.value === null ? 'free' : option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {!isAspectRatioFixed && (
+              <label className="space-y-2 text-sm font-medium">
+                <span>크롭 비율</span>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  value={aspectRatio === null ? 'free' : String(aspectRatio)}
+                  disabled={isProcessing}
+                  onChange={(event) => handleAspectRatioChange(event.target.value)}
+                >
+                  {policy.aspectRatios.map((option) => (
+                    <option
+                      key={option.label}
+                      value={option.value === null ? 'free' : option.value}
+                    >
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <label className="space-y-2 text-sm font-medium">
               <span>WebP 품질: {quality}%</span>

@@ -12,22 +12,9 @@ import { Button } from '@/components/ui/button';
 import type { PreparedImage } from '@/lib/image-preprocessing';
 
 import { ImageCropDialog } from './ImageCropDialog';
+import type { ImageProcessingPolicy } from './image-processing-policy';
 
-export interface ImageAspectRatioOption {
-  label: string;
-  /** null이면 크롭 영역의 가로·세로 비율을 고정하지 않는다. */
-  value: number | null;
-}
-
-export interface ImageProcessingPolicy {
-  allowedMimeTypes: readonly string[];
-  aspectRatios: readonly ImageAspectRatioOption[];
-  defaultAspectRatio: number | null;
-  defaultQuality: number;
-  maxInputBytes: number;
-  maxOutputBytes: number;
-  maxOutputLongEdge: number;
-}
+export type { ImageProcessingPolicy } from './image-processing-policy';
 
 interface PreparedImageFieldProps {
   /** 서버에 저장된 기존 이미지 URL. local blob URL은 전달하지 않는다. */
@@ -115,7 +102,7 @@ export function PreparedImageField({
       return;
     }
 
-    if (file.size > policy.maxInputBytes) {
+    if (policy.maxInputBytes !== undefined && file.size > policy.maxInputBytes) {
       setSelectionError(`원본 이미지는 ${formatByteSize(policy.maxInputBytes)} 이하여야 합니다.`);
       return;
     }
@@ -277,8 +264,10 @@ export function PreparedImageField({
             이미지를 드래그하거나 클릭하여 선택
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            JPG, PNG, WEBP · 최대 {formatByteSize(policy.maxInputBytes)} · 저장 전 크롭/품질 조절
-            가능
+            JPG, PNG, WEBP
+            {policy.maxInputBytes !== undefined &&
+              ` · 최대 ${formatByteSize(policy.maxInputBytes)}`}
+            {' · 저장 전 크롭/품질 조절 가능'}
           </p>
         </div>
       )}

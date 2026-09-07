@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { MediaUpload } from '@/components/common/MediaUpload';
+import { DEFAULT_IMAGE_PROCESSING_POLICY } from '@/components/common/image-processing-policy';
 import { FormField } from '@/components/common/FormField';
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
 import { RelatedWhiskyLookupCard } from '@/components/common/RelatedWhiskyLookupCard';
@@ -203,6 +204,7 @@ export function DistilleryDetailPage() {
                   mediaUrl={imagePreviewUrl}
                   onMediaChange={handleImageChange}
                   minHeight={150}
+                  imageProcessingPolicy={DEFAULT_IMAGE_PROCESSING_POLICY}
                 />
                 {isImageUploading && (
                   <p className="text-sm text-muted-foreground">파일 업로드 중...</p>

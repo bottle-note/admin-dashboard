@@ -8,6 +8,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { PreparedImage } from '@/lib/image-preprocessing';
+
+import { ImageCropDialog } from './ImageCropDialog';
+import type { ImageProcessingPolicy } from './image-processing-policy';
 
 /** 허용 파일 타입 */
 const DEFAULT_ACCEPT = 'image/*';
@@ -53,6 +57,7 @@ export interface MediaUploadProps {
   description?: string;
   supportText?: string;
   disabled?: boolean;
+  imageProcessingPolicy?: ImageProcessingPolicy;
 }
 
 export function MediaUpload({
@@ -65,11 +70,22 @@ export function MediaUpload({
   description = '이미지를 드래그하거나 클릭하여 업로드',
   supportText = 'PNG, JPG, WEBP 지원',
   disabled = false,
+  imageProcessingPolicy,
 }: MediaUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedMediaType, setSelectedMediaType] = useState<'IMAGE' | 'VIDEO' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const blobUrlRef = useRef<string | null>(null);
+  const [cropTargetFile, setCropTargetFile] = useState<File | null>(null);
+  const inputAccept = imageProcessingPolicy
+    ? [
+        ...imageProcessingPolicy.allowedMimeTypes,
+        ...accept
+          .split(',')
+          .map((pattern) => pattern.trim())
+          .filter((pattern) => !pattern.startsWith('image/')),
+      ].join(',')
+    : accept;
   const isVideo = mediaUrl?.startsWith('blob:')
     ? selectedMediaType === 'VIDEO'
     : mediaType === 'VIDEO';
@@ -87,6 +103,19 @@ export function MediaUpload({
     }
   }, [mediaUrl]);
 
+  const commitFile = useCallback(
+    (file: File) => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+      }
+      setSelectedMediaType(file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE');
+      const url = URL.createObjectURL(file);
+      blobUrlRef.current = url;
+      onMediaChange(file, url);
+    },
+    [onMediaChange]
+  );
+
   const handleFile = useCallback(
     (file: File) => {
       if (disabled) return;
@@ -96,15 +125,19 @@ export function MediaUpload({
         return;
       }
 
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current);
+      if (file.type.startsWith('image/') && imageProcessingPolicy) {
+        if (!imageProcessingPolicy.allowedMimeTypes.includes(file.type)) {
+          onFileRejected?.(file);
+          return;
+        }
+
+        setCropTargetFile(file);
+        return;
       }
-      setSelectedMediaType(file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE');
-      const url = URL.createObjectURL(file);
-      blobUrlRef.current = url;
-      onMediaChange(file, url);
+
+      commitFile(file);
     },
-    [accept, disabled, onFileRejected, onMediaChange]
+    [accept, commitFile, disabled, imageProcessingPolicy, onFileRejected]
   );
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -148,6 +181,14 @@ export function MediaUpload({
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const handleCropDialogOpenChange = (open: boolean) => {
+    if (!open) setCropTargetFile(null);
+  };
+
+  const handlePreparedImage = (preparedImage: PreparedImage) => {
+    commitFile(preparedImage.file);
   };
 
   return (
@@ -202,11 +243,20 @@ export function MediaUpload({
       <input
         ref={fileInputRef}
         type="file"
-        accept={accept}
+        accept={inputAccept}
         disabled={disabled}
         className="hidden"
         onChange={handleFileSelect}
       />
+      {imageProcessingPolicy && (
+        <ImageCropDialog
+          file={cropTargetFile}
+          open={cropTargetFile !== null}
+          policy={imageProcessingPolicy}
+          onOpenChange={handleCropDialogOpenChange}
+          onPrepared={handlePreparedImage}
+        />
+      )}
     </div>
   );
 }

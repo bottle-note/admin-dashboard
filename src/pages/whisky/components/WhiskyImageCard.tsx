@@ -6,6 +6,7 @@
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MediaUpload } from '@/components/common/MediaUpload';
+import { DEFAULT_IMAGE_PROCESSING_POLICY } from '@/components/common/image-processing-policy';
 
 /**
  * WhiskyImageCard 컴포넌트의 props
@@ -48,6 +49,7 @@ export function WhiskyImageCard({
           mediaUrl={imageUrl}
           onMediaChange={disabled ? () => {} : onImageChange}
           disabled={disabled}
+          imageProcessingPolicy={DEFAULT_IMAGE_PROCESSING_POLICY}
         />
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
       </CardContent>

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MediaUpload } from '@/components/common/MediaUpload';
+import { BANNER_IMAGE_PROCESSING_POLICY } from '@/components/common/image-processing-policy';
 import { useToast } from '@/hooks/useToast';
 import type { MediaType } from '@/types/api';
 
@@ -51,6 +52,7 @@ export function BannerMediaCard({
           supportText="이미지(PNG, JPG, WEBP) 또는 동영상(MP4) 지원"
           minHeight={200}
           disabled={isProcessing}
+          imageProcessingPolicy={BANNER_IMAGE_PROCESSING_POLICY}
         />
         <p className="text-sm text-muted-foreground">
           권장 사이즈: 936x454px (2x 기준, 비율 약 2:1)

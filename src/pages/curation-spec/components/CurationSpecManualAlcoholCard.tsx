@@ -1,11 +1,14 @@
-import { useRef, type ChangeEvent, type DragEvent } from 'react';
+import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { useFormContext, useWatch, type FieldValues } from 'react-hook-form';
 import { Loader2, Upload } from 'lucide-react';
 
 import { FormField } from '@/components/common/FormField';
+import { ImageCropDialog } from '@/components/common/ImageCropDialog';
+import { DEFAULT_IMAGE_PROCESSING_POLICY } from '@/components/common/image-processing-policy';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { S3UploadPath, useFileUpload } from '@/hooks/useFileUpload';
+import type { PreparedImage } from '@/lib/image-preprocessing';
 import type { JsonSchemaNode } from '@/types/api';
 
 import type { AlcoholSectionConfig, CurationSpecSections } from '../curation-sections.type';
@@ -146,16 +149,21 @@ function AlcoholImageField({
 }) {
   const form = useFormContext<FieldValues>();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [cropTargetFile, setCropTargetFile] = useState<File | null>(null);
   const { upload, isUploading, error } = useFileUpload({
     rootPath: S3UploadPath.CURATION,
   });
 
-  const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelection = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
 
-    const imageUrl = await upload(file);
+    setCropTargetFile(file);
+  };
+
+  const handlePreparedImage = async (preparedImage: PreparedImage) => {
+    const imageUrl = await upload(preparedImage.file);
     if (!imageUrl) return;
 
     form.setValue(name, imageUrl, {
@@ -177,7 +185,7 @@ function AlcoholImageField({
           type="file"
           accept="image/png,image/jpeg,image/webp"
           className="hidden"
-          onChange={(event) => void handleImageUpload(event)}
+          onChange={handleImageSelection}
           disabled={isUploading}
         />
         <Button
@@ -195,6 +203,15 @@ function AlcoholImageField({
         </Button>
         <span className="text-xs text-muted-foreground">PNG, JPG, WEBP 지원</span>
       </div>
+      <ImageCropDialog
+        file={cropTargetFile}
+        open={cropTargetFile !== null}
+        policy={DEFAULT_IMAGE_PROCESSING_POLICY}
+        onOpenChange={(open) => {
+          if (!open) setCropTargetFile(null);
+        }}
+        onPrepared={(preparedImage) => void handlePreparedImage(preparedImage)}
+      />
     </FormField>
   );
 }
