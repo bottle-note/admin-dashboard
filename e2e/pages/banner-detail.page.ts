@@ -161,6 +161,11 @@ export class BannerDetailPage extends BasePage {
   async uploadTestImage() {
     const testImagePath = path.resolve(__dirname, '../fixtures/test-image.png');
     await this.mediaFileInput().setInputFiles(testImagePath);
+    await this.page.getByRole('dialog', { name: '이미지 크롭 및 변환' }).waitFor({
+      state: 'visible',
+      timeout: 10000,
+    });
+    await this.page.getByRole('button', { name: '크롭 적용' }).click();
     await this.uploadedMedia().waitFor({ state: 'visible', timeout: 10000 });
   }
 

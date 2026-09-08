@@ -3,7 +3,10 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { GripVertical, Upload, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { ImageCropDialog } from '@/components/common/ImageCropDialog';
+import { CURATION_IMAGE_PROCESSING_POLICY } from '@/components/common/image-processing-policy';
 import { S3UploadPath, useFileUpload } from '@/hooks/useFileUpload';
+import type { PreparedImage } from '@/lib/image-preprocessing';
 
 const MAX_IMAGE_COUNT = 3;
 const IMAGE_UPLOAD_ACCEPT = 'image/png,image/jpeg,image/webp';
@@ -26,6 +29,8 @@ export function CurationImageUploadField({ onUploadingChange }: CurationImageUpl
   const [isImageUploadDragging, setIsImageUploadDragging] = useState(false);
   const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
   const [dragOverImageIndex, setDragOverImageIndex] = useState<number | null>(null);
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
+  const [preparedFiles, setPreparedFiles] = useState<File[]>([]);
   const watchedImageUrls = useWatch({
     control: form.control,
     name: 'imageUrls',
@@ -41,8 +46,8 @@ export function CurationImageUploadField({ onUploadingChange }: CurationImageUpl
   }, [imageUrls]);
 
   useEffect(() => {
-    onUploadingChange?.(isImageUploading);
-  }, [isImageUploading, onUploadingChange]);
+    onUploadingChange?.(isImageUploading || cropQueue.length > 0);
+  }, [cropQueue.length, isImageUploading, onUploadingChange]);
 
   useEffect(() => {
     const localImageUrls = localImageUrlsRef.current;
@@ -71,17 +76,7 @@ export function CurationImageUploadField({ onUploadingChange }: CurationImageUpl
     localImageUrlsRef.current.delete(url);
   };
 
-  const handleImageFiles = async (fileList: FileList | File[]) => {
-    if (isImageUploading) return;
-
-    const remainingCount = MAX_IMAGE_COUNT - imageUrlsRef.current.length;
-    if (remainingCount <= 0) return;
-
-    const files = Array.from(fileList)
-      .filter((file) => SUPPORTED_IMAGE_TYPES.has(file.type))
-      .slice(0, remainingCount);
-    if (files.length === 0) return;
-
+  const uploadPreparedImages = async (files: File[]) => {
     const previewUrls = files.map((file) => {
       const url = URL.createObjectURL(file);
       localImageUrlsRef.current.add(url);
@@ -105,6 +100,21 @@ export function CurationImageUploadField({ onUploadingChange }: CurationImageUpl
       })
     );
     previewUrls.forEach(revokeLocalImageUrl);
+  };
+
+  const handleImageFiles = (fileList: FileList | File[]) => {
+    if (isImageUploading || cropQueue.length > 0) return;
+
+    const remainingCount = MAX_IMAGE_COUNT - imageUrlsRef.current.length;
+    if (remainingCount <= 0) return;
+
+    const files = Array.from(fileList)
+      .filter((file) => SUPPORTED_IMAGE_TYPES.has(file.type))
+      .slice(0, remainingCount);
+    if (files.length === 0) return;
+
+    setPreparedFiles([]);
+    setCropQueue(files);
   };
 
   const handleImageInputChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -176,22 +186,45 @@ export function CurationImageUploadField({ onUploadingChange }: CurationImageUpl
     setDragOverImageIndex(null);
   };
 
+  const handlePreparedImage = (preparedImage: PreparedImage) => {
+    const nextPreparedFiles = [...preparedFiles, preparedImage.file];
+
+    if (cropQueue.length === 1) {
+      setCropQueue([]);
+      setPreparedFiles([]);
+      void uploadPreparedImages(nextPreparedFiles);
+      return;
+    }
+
+    setPreparedFiles(nextPreparedFiles);
+    setCropQueue((current) => current.slice(1));
+  };
+
+  const handleCropDialogOpenChange = (open: boolean) => {
+    if (open) return;
+
+    setCropQueue([]);
+    setPreparedFiles([]);
+  };
+
+  const isCropping = cropQueue.length > 0;
+
   return (
     <div className="space-y-4">
       <div
         role="button"
-        tabIndex={imageUrls.length >= MAX_IMAGE_COUNT || isImageUploading ? -1 : 0}
+        tabIndex={imageUrls.length >= MAX_IMAGE_COUNT || isImageUploading || isCropping ? -1 : 0}
         aria-label="큐레이션 이미지 업로드"
-        aria-disabled={imageUrls.length >= MAX_IMAGE_COUNT || isImageUploading}
+        aria-disabled={imageUrls.length >= MAX_IMAGE_COUNT || isImageUploading || isCropping}
         className={`flex min-h-44 flex-col items-center justify-center rounded-lg border-2 border-dashed text-center transition-colors ${
-          imageUrls.length >= MAX_IMAGE_COUNT || isImageUploading
+          imageUrls.length >= MAX_IMAGE_COUNT || isImageUploading || isCropping
             ? 'cursor-not-allowed border-muted-foreground/20 bg-muted/30'
             : isImageUploadDragging
               ? 'cursor-pointer border-primary bg-primary/5'
               : 'cursor-pointer border-muted-foreground/25 hover:border-primary/50'
         }`}
         onClick={() => {
-          if (imageUrls.length < MAX_IMAGE_COUNT && !isImageUploading) {
+          if (imageUrls.length < MAX_IMAGE_COUNT && !isImageUploading && !isCropping) {
             imageUploadInputRef.current?.click();
           }
         }}
@@ -199,7 +232,8 @@ export function CurationImageUploadField({ onUploadingChange }: CurationImageUpl
           if (
             (event.key === 'Enter' || event.key === ' ') &&
             imageUrls.length < MAX_IMAGE_COUNT &&
-            !isImageUploading
+            !isImageUploading &&
+            !isCropping
           ) {
             event.preventDefault();
             imageUploadInputRef.current?.click();
@@ -207,7 +241,7 @@ export function CurationImageUploadField({ onUploadingChange }: CurationImageUpl
         }}
         onDragOver={(event) => {
           event.preventDefault();
-          if (imageUrls.length < MAX_IMAGE_COUNT && !isImageUploading) {
+          if (imageUrls.length < MAX_IMAGE_COUNT && !isImageUploading && !isCropping) {
             setIsImageUploadDragging(true);
           }
         }}
@@ -234,6 +268,7 @@ export function CurationImageUploadField({ onUploadingChange }: CurationImageUpl
         className="hidden"
         aria-label="큐레이션 이미지 파일 선택"
         onChange={handleImageInputChange}
+        disabled={isImageUploading || isCropping}
       />
 
       {imageUrls.length > 0 && (
@@ -293,7 +328,21 @@ export function CurationImageUploadField({ onUploadingChange }: CurationImageUpl
       {form.formState.errors.imageUrls?.message && (
         <p className="text-sm text-destructive">{form.formState.errors.imageUrls.message}</p>
       )}
-      {isImageUploading && <p className="text-sm text-muted-foreground">이미지 업로드 중...</p>}
+      {(isImageUploading || isCropping) && (
+        <p className="text-sm text-muted-foreground">
+          {isCropping
+            ? `이미지 크롭 중... (${preparedFiles.length + 1}/${preparedFiles.length + cropQueue.length})`
+            : '이미지 업로드 중...'}
+        </p>
+      )}
+      <ImageCropDialog
+        file={cropQueue[0] ?? null}
+        open={isCropping}
+        policy={CURATION_IMAGE_PROCESSING_POLICY}
+        onOpenChange={handleCropDialogOpenChange}
+        onPrepared={handlePreparedImage}
+        closeOnPrepared={false}
+      />
     </div>
   );
 }

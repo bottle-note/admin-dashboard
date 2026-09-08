@@ -3,17 +3,18 @@ import { useFieldArray, useFormContext, useWatch, type FieldValues } from 'react
 import { ArrowDown, ArrowUp, Loader2, Plus, Upload, X } from 'lucide-react';
 
 import { FormField } from '@/components/common/FormField';
+import { ImageCropDialog } from '@/components/common/ImageCropDialog';
+import { DEFAULT_IMAGE_PROCESSING_POLICY } from '@/components/common/image-processing-policy';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import type { PreparedImage } from '@/lib/image-preprocessing';
 
 import type { CurationSpecSections } from '../curation-sections.type';
 import type { WhiskyCurationPairingListSchema } from '../curation-spec.schema';
 
-type PairingSectionConfig = NonNullable<
-  CurationSpecSections[string]['fields'][string]['pairing']
->;
+type PairingSectionConfig = NonNullable<CurationSpecSections[string]['fields'][string]['pairing']>;
 
 export function PairingFields({
   name,
@@ -62,9 +63,7 @@ export function PairingFields({
         type="button"
         variant="secondary"
         className="h-12 w-full rounded-[10px] font-semibold"
-        onClick={() =>
-          fieldArray.append({ itemName: '', pairingNote: '', itemImageUrl: '' })
-        }
+        onClick={() => fieldArray.append({ itemName: '', pairingNote: '', itemImageUrl: '' })}
         disabled={!canAdd}
       >
         <Plus className="h-4 w-4" />
@@ -101,6 +100,7 @@ function PairingItem({
 }) {
   const form = useFormContext<FieldValues>();
   const [isUploading, setIsUploading] = useState(false);
+  const [cropTargetFile, setCropTargetFile] = useState<File | null>(null);
   const fields = schema.items.properties;
   const imageSchema = fields.itemImageUrl;
   const { upload, error: uploadError } = useFileUpload({
@@ -116,14 +116,18 @@ function PairingItem({
   const pairingNotePath = `${name}.pairingNote`;
   const itemImagePath = `${name}.itemImageUrl`;
 
-  const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelection = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
 
+    setCropTargetFile(file);
+  };
+
+  const handlePreparedImage = async (preparedImage: PreparedImage) => {
     setIsUploading(true);
     try {
-      const imageUrl = await upload(file);
+      const imageUrl = await upload(preparedImage.file);
       if (imageUrl) {
         form.setValue(itemImagePath, imageUrl, {
           shouldDirty: true,
@@ -191,7 +195,7 @@ function PairingItem({
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 className="hidden"
-                onChange={(event) => void handleImageUpload(event)}
+                onChange={handleImageSelection}
                 disabled={isUploading}
               />
               {value?.itemImageUrl ? (
@@ -214,7 +218,9 @@ function PairingItem({
             <Input
               aria-label={itemNameLabel}
               maxLength={fields.itemName.maxLength}
-              placeholder={config.fields.itemName?.placeholder ?? (fields.itemName.example as string)}
+              placeholder={
+                config.fields.itemName?.placeholder ?? (fields.itemName.example as string)
+              }
               {...form.register(itemNamePath)}
             />
           </FormField>
@@ -235,6 +241,15 @@ function PairingItem({
           </FormField>
         </div>
       </div>
+      <ImageCropDialog
+        file={cropTargetFile}
+        open={cropTargetFile !== null}
+        policy={DEFAULT_IMAGE_PROCESSING_POLICY}
+        onOpenChange={(open) => {
+          if (!open) setCropTargetFile(null);
+        }}
+        onPrepared={(preparedImage) => void handlePreparedImage(preparedImage)}
+      />
     </div>
   );
 }
