@@ -6,9 +6,9 @@
 
 import { useMemo } from 'react';
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
-  Line,
-  LineChart,
   Legend,
   ReferenceLine,
   ResponsiveContainer,
@@ -24,6 +24,7 @@ interface TimeSeriesChartProps {
   payload?: TimeSeriesPayload | null;
   /** 렌더링할 series key 하위 집합 */
   seriesKeys?: string[];
+  stacked?: boolean;
   isLoading?: boolean;
   isError?: boolean;
   errorMessage?: string;
@@ -38,11 +39,12 @@ interface FlattenedPoint {
   [key: string]: string | number | boolean | null;
 }
 
-const SERIES_COLORS = ['#2563eb', '#ea580c', '#16a34a', '#9333ea', '#0891b2', '#dc2626'];
+const SERIES_COLORS = ['#ff9e20', '#215e61', '#1d2128'];
 
 export function TimeSeriesChart({
   payload,
   seriesKeys,
+  stacked = false,
   isLoading = false,
   isError = false,
   errorMessage,
@@ -84,34 +86,48 @@ export function TimeSeriesChart({
   }, [payload]);
 
   const valueDomain = useMemo((): [number, number] => {
-    const numericValues = chartData.flatMap((row: FlattenedPoint) =>
-      selectedSeries
-        .map((series) => row[series.key])
-        .filter(
-          (rawValue): rawValue is number =>
-            rawValue !== null && typeof rawValue === 'number' && Number.isFinite(rawValue)
-        )
-    );
+    const numericValues = stacked
+      ? chartData
+          .map((row) => {
+            const values = selectedSeries.map((series) => row[series.key]);
+
+            return values.every(
+              (value): value is number => typeof value === 'number' && Number.isFinite(value)
+            )
+              ? values.reduce((sum, value) => sum + value, 0)
+              : null;
+          })
+          .filter((value): value is number => value !== null)
+      : chartData.flatMap((row: FlattenedPoint) =>
+          selectedSeries
+            .map((series) => row[series.key])
+            .filter(
+              (rawValue): rawValue is number =>
+                rawValue !== null && typeof rawValue === 'number' && Number.isFinite(rawValue)
+            )
+        );
 
     if (numericValues.length === 0) {
       return [0, 1];
     }
 
-    const minValue = Math.min(...numericValues);
     const maxValue = Math.max(...numericValues);
-    const span = maxValue - minValue;
 
-    if (minValue === 0 && maxValue === 0) {
+    if (maxValue === 0) {
       return [0, 1];
     }
 
-    if (span === 0) {
-      return [minValue - 1, maxValue + 1];
+    return [0, maxValue * 1.1];
+  }, [chartData, selectedSeries, stacked]);
+
+  const dailyTickLabels = useMemo(() => {
+    if (payload?.granularity !== 'DAY') {
+      return undefined;
     }
 
-    const pad = span * 0.1;
-    return [minValue - pad, maxValue + pad];
-  }, [chartData, selectedSeries]);
+    return getDailyTickLabels(chartData);
+  }, [chartData, payload?.granularity]);
+  const hasDenseDailyTicks = (dailyTickLabels?.length ?? 0) > 7;
 
   if (isLoading) {
     return (
@@ -148,11 +164,26 @@ export function TimeSeriesChart({
     <div className={`min-w-0 ${className}`}>
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 12, right: 12, left: 12, bottom: 4 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="bucketLabel" interval={0} />
+          <AreaChart
+            data={chartData}
+            margin={{ top: 12, right: 40, left: 12, bottom: hasDenseDailyTicks ? 12 : 4 }}
+          >
+            <CartesianGrid stroke="#f4f2f2" strokeDasharray="3 3" />
+            <XAxis
+              dataKey="bucketLabel"
+              interval={0}
+              ticks={dailyTickLabels}
+              padding={{ left: 8, right: 32 }}
+              angle={hasDenseDailyTicks ? -35 : 0}
+              textAnchor={hasDenseDailyTicks ? 'end' : 'middle'}
+              height={hasDenseDailyTicks ? 56 : undefined}
+              tick={{ fill: '#64748b', fontSize: 11 }}
+              tickMargin={8}
+            />
             <YAxis
               domain={valueDomain}
+              tick={{ fill: '#64748b', fontSize: 11 }}
+              tickMargin={8}
               tickFormatter={(value: string | number) =>
                 formatAxisTick(Number(value), selectedSeries)
               }
@@ -167,28 +198,62 @@ export function TimeSeriesChart({
                 <ReferenceLine
                   key={point.bucketAt}
                   x={point.bucketLabel}
-                  stroke="#f59e0b"
+                  stroke="#ff9e20"
                   strokeDasharray="4 4"
                 />
               ))}
             {selectedSeries.map((series, index) => (
-              <Line
+              <Area
                 key={series.key}
                 type="monotone"
                 dataKey={series.key}
                 name={series.label}
                 stroke={SERIES_COLORS[index % SERIES_COLORS.length]}
                 strokeWidth={2}
+                fill={SERIES_COLORS[index % SERIES_COLORS.length]}
+                fillOpacity={1}
+                stackId={stacked ? 'series' : undefined}
                 connectNulls={false}
                 dot={false}
-                activeDot={false}
+                activeDot={{ r: 4, fill: '#f4f2f2', strokeWidth: 2 }}
               />
             ))}
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </div>
     </div>
   );
+}
+
+function getDailyTickLabels(chartData: FlattenedPoint[]): string[] {
+  const maximumTickCount = 8;
+
+  if (chartData.length <= maximumTickCount) {
+    return chartData.map((point) => point.bucketLabel);
+  }
+
+  const firstPoint = chartData[0];
+  const lastPoint = chartData[chartData.length - 1];
+  if (!firstPoint || !lastPoint) {
+    return [];
+  }
+
+  const interval = Math.ceil((chartData.length - 1) / (maximumTickCount - 1));
+  const tickLabels = [firstPoint.bucketLabel];
+
+  for (let index = interval; index < chartData.length - 1; index += interval) {
+    const point = chartData[index];
+    if (point) {
+      tickLabels.push(point.bucketLabel);
+    }
+  }
+
+  const lastLabel = lastPoint.bucketLabel;
+  if (tickLabels[tickLabels.length - 1] !== lastLabel) {
+    tickLabels.push(lastLabel);
+  }
+
+  return tickLabels;
 }
 
 function formatAxisTick(

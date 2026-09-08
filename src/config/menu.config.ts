@@ -9,6 +9,7 @@ import {
   MessageSquare,
   FileText,
   Users,
+  UsersRound,
   List,
   Plus,
   LayoutDashboard,
@@ -40,6 +41,7 @@ export const menuConfig: MenuGroup[] = [
           {
             id: 'visitor-statistics',
             label: '방문자 통계',
+            icon: UsersRound,
             path: '/statistics/visitors',
           },
         ],

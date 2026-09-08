@@ -15,6 +15,7 @@ import {
   useActiveVisitorStatistics,
   useVisitorRetentionStatistics,
 } from '@/hooks/useStatistics';
+import { createVisitorComposition } from '@/pages/statistics/visitor-composition';
 import type { TimeSeriesPayload, VisitorStatisticsParams } from '@/types/api';
 
 interface StatCardProps {
@@ -50,7 +51,8 @@ function StatCard({ title, value, icon, isLoading, href }: StatCardProps) {
 interface StatisticsCardProps {
   title: string;
   payload?: TimeSeriesPayload;
-  seriesKey: string;
+  seriesKeys: string[];
+  stacked?: boolean;
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
@@ -59,7 +61,8 @@ interface StatisticsCardProps {
 function StatisticsCard({
   title,
   payload,
-  seriesKey,
+  seriesKeys,
+  stacked,
   isLoading,
   isError,
   onRetry,
@@ -73,7 +76,8 @@ function StatisticsCard({
       <CardContent className="min-w-0">
         <TimeSeriesChart
           payload={payload}
-          seriesKeys={[seriesKey]}
+          seriesKeys={seriesKeys}
+          stacked={stacked}
           isLoading={isLoading}
           isError={isError}
           onRetry={onRetry}
@@ -117,6 +121,7 @@ export function DashboardPage() {
   });
   const activeVisitorsQuery = useActiveVisitorStatistics(DASHBOARD_STATISTICS_PARAMS);
   const retentionQuery = useVisitorRetentionStatistics(DASHBOARD_STATISTICS_PARAMS);
+  const visitorComposition = createVisitorComposition(activeVisitorsQuery.data);
 
   return (
     <div className="space-y-6">
@@ -172,19 +177,12 @@ export function DashboardPage() {
           </h2>
           <p className="text-sm text-muted-foreground">한국 시간 기준 최근 7일 추이입니다.</p>
         </div>
-        <div className="grid min-w-0 gap-4 lg:grid-cols-3">
+        <div className="space-y-4">
           <StatisticsCard
             title="방문자 DAU"
-            payload={activeVisitorsQuery.data}
-            seriesKey="visitors"
-            isLoading={activeVisitorsQuery.isLoading}
-            isError={activeVisitorsQuery.isError}
-            onRetry={() => void activeVisitorsQuery.refetch()}
-          />
-          <StatisticsCard
-            title="회원 DAU"
-            payload={activeVisitorsQuery.data}
-            seriesKey="members"
+            payload={visitorComposition}
+            seriesKeys={['members', 'guestVisitors']}
+            stacked
             isLoading={activeVisitorsQuery.isLoading}
             isError={activeVisitorsQuery.isError}
             onRetry={() => void activeVisitorsQuery.refetch()}
@@ -192,7 +190,7 @@ export function DashboardPage() {
           <StatisticsCard
             title="재방문율"
             payload={retentionQuery.data}
-            seriesKey="retentionRate"
+            seriesKeys={['retentionRate']}
             isLoading={retentionQuery.isLoading}
             isError={retentionQuery.isError}
             onRetry={() => void retentionQuery.refetch()}

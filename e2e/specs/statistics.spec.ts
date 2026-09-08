@@ -26,7 +26,6 @@ test.describe('통계 시계열', () => {
     ).toBe(7);
 
     await expect(page.getByText('방문자 DAU', { exact: true }).first()).toBeVisible();
-    await expect(page.getByText('회원 DAU', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('재방문율', { exact: true }).first()).toBeVisible();
     expect(
       await page.evaluate(
@@ -35,7 +34,7 @@ test.describe('통계 시계열', () => {
     ).toBe(true);
   });
 
-  test('방문자 통계는 조회 버튼을 누를 때만 조건을 적용한다', async ({ page }) => {
+  test('방문자 통계는 직접 조회와 빠른 기간을 각각 올바른 버킷으로 적용한다', async ({ page }) => {
     const visitorRequests: string[] = [];
     page.on('request', (request) => {
       if (request.url().includes('/statistics/visitors/')) {
@@ -58,7 +57,8 @@ test.describe('통계 시계열', () => {
 
     const beforeChange = visitorRequests.length;
     await page.getByRole('combobox', { name: '집계 단위' }).click();
-    await page.getByRole('option', { name: '주간' }).click();
+    await page.getByRole('option', { name: '주별' }).click();
+    await expect(page.getByRole('button', { name: '주 범위 선택' })).toBeVisible();
     await page.waitForTimeout(300);
     expect(visitorRequests).toHaveLength(beforeChange);
 
@@ -79,7 +79,85 @@ test.describe('통계 시계열', () => {
     expect(retention.status()).toBe(200);
     await expect(page).toHaveURL(/granularity=WEEK/);
     await expect(page.getByText('방문자 WAU', { exact: true }).first()).toBeVisible();
-    await expect(page.getByText('회원 WAU', { exact: true }).first()).toBeVisible();
+
+    await page.getByRole('combobox', { name: '집계 단위' }).click();
+    await page.getByRole('option', { name: '월별' }).click();
+    await expect(page.getByLabel('시작 월')).toBeVisible();
+    await expect(page.getByLabel('종료 월')).toBeVisible();
+
+    const monthlyActive = page.waitForResponse(
+      (response) =>
+        response.url().includes('/statistics/visitors/active') &&
+        new URL(response.url()).searchParams.get('granularity') === 'MONTH'
+    );
+    const monthlyRetention = page.waitForResponse(
+      (response) =>
+        response.url().includes('/statistics/visitors/retention') &&
+        new URL(response.url()).searchParams.get('granularity') === 'MONTH'
+    );
+    await page.getByRole('button', { name: '조회', exact: true }).click();
+    await Promise.all([monthlyActive, monthlyRetention]);
+    await expect(page).toHaveURL(/granularity=MONTH/);
+    await expect(page.getByText('방문자 MAU', { exact: true }).first()).toBeVisible();
+
+    const quickActive = page.waitForResponse(
+      (response) =>
+        response.url().includes('/statistics/visitors/active') &&
+        new URL(response.url()).searchParams.get('granularity') === 'WEEK' &&
+        inclusiveDays(
+          new URL(response.url()).searchParams.get('from')!,
+          new URL(response.url()).searchParams.get('to')!
+        ) === 30
+    );
+    const quickRetention = page.waitForResponse(
+      (response) =>
+        response.url().includes('/statistics/visitors/retention') &&
+        new URL(response.url()).searchParams.get('granularity') === 'WEEK' &&
+        inclusiveDays(
+          new URL(response.url()).searchParams.get('from')!,
+          new URL(response.url()).searchParams.get('to')!
+        ) === 30
+    );
+    await page.getByRole('button', { name: '최근 30일', exact: true }).click();
+    await Promise.all([quickActive, quickRetention]);
+    await expect(page).toHaveURL(/granularity=WEEK/);
+    await expect(page).toHaveURL(/preset=30/);
+    await expect(page.getByRole('button', { name: '최근 30일', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await expect(page.getByText('방문자 WAU', { exact: true }).first()).toBeVisible();
+
+    await page.getByRole('combobox', { name: '집계 단위' }).click();
+    await page.getByRole('option', { name: '월별' }).click();
+    await expect(page.getByRole('button', { name: '최근 30일', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+
+    const longRangeActive = page.waitForResponse(
+      (response) =>
+        response.url().includes('/statistics/visitors/active') &&
+        new URL(response.url()).searchParams.get('granularity') === 'MONTH' &&
+        inclusiveDays(
+          new URL(response.url()).searchParams.get('from')!,
+          new URL(response.url()).searchParams.get('to')!
+        ) === 90
+    );
+    const longRangeRetention = page.waitForResponse(
+      (response) =>
+        response.url().includes('/statistics/visitors/retention') &&
+        new URL(response.url()).searchParams.get('granularity') === 'MONTH' &&
+        inclusiveDays(
+          new URL(response.url()).searchParams.get('from')!,
+          new URL(response.url()).searchParams.get('to')!
+        ) === 90
+    );
+    await page.getByRole('button', { name: '최근 90일', exact: true }).click();
+    await Promise.all([longRangeActive, longRangeRetention]);
+    await expect(page).toHaveURL(/granularity=MONTH/);
+    await expect(page).toHaveURL(/preset=90/);
+    await expect(page.getByText('방문자 MAU', { exact: true }).first()).toBeVisible();
   });
 
   test('위스키 인기도 통계는 상세 패널을 펼칠 때 처음 조회한다', async ({ page }) => {
