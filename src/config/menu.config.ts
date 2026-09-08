@@ -44,6 +44,12 @@ export const menuConfig: MenuGroup[] = [
             icon: UsersRound,
             path: '/statistics/visitors',
           },
+          {
+            id: 'alcohol-statistics',
+            label: '주류 통계',
+            icon: Wine,
+            path: '/statistics/alcohols',
+          },
         ],
       },
       {

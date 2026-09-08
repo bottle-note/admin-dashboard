@@ -239,4 +239,82 @@ test.describe('통계 시계열', () => {
     expect(popularityByMonth.status()).toBe(200);
     expect(observationByMonth.status()).toBe(200);
   });
+
+  test('주류 통계는 검색으로 선택한 주류의 차트를 세로로 조회한다', async ({ page }) => {
+    const alcoholStatisticsRequests: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('/statistics/alcohols/')) {
+        alcoholStatisticsRequests.push(request.url());
+      }
+    });
+
+    await page.goto('/statistics/alcohols');
+    await expect(page.getByText('조회할 주류를 선택하면 통계 차트가 표시됩니다.')).toBeVisible();
+    await page.waitForTimeout(300);
+    expect(alcoholStatisticsRequests).toHaveLength(0);
+
+    const lookupResponse = page.waitForResponse((response) =>
+      response.url().includes('/alcohols/lookup')
+    );
+    await page.getByRole('combobox', { name: '주류 검색' }).fill('글렌');
+    expect((await lookupResponse).status()).toBe(200);
+
+    const searchResults = page.getByTestId('alcohol-statistics-search-dropdown').getByRole('button');
+    if ((await searchResults.count()) === 0) {
+      test.skip();
+      return;
+    }
+
+    const popularityResponse = page.waitForResponse((response) =>
+      response.url().includes('/statistics/alcohols/') && response.url().includes('/popularity')
+    );
+    const observationResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/statistics/alcohols/') &&
+        response.url().includes('/observations/INTEREST')
+    );
+    await searchResults.first().click();
+    const [popularity, observation] = await Promise.all([popularityResponse, observationResponse]);
+
+    expect(popularity.status()).toBe(200);
+    expect(observation.status()).toBe(200);
+    await expect(page).toHaveURL(/alcoholId=\d+/);
+    await expect(page.getByText('인기도 점수', { exact: true })).toBeVisible();
+    await expect(page.getByText('인기도 원본 수치', { exact: true })).toBeVisible();
+    await expect(page.getByText('관찰 지표', { exact: true })).toBeVisible();
+
+    const ratingResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/statistics/alcohols/') &&
+        response.url().includes('/observations/RATING')
+    );
+    await page.getByRole('combobox', { name: '관찰 기준' }).click();
+    await page.getByRole('option', { name: '평점' }).click();
+    expect((await ratingResponse).status()).toBe(200);
+    await expect(page).toHaveURL(/axis=RATING/);
+
+    const monthlyPopularity = page.waitForResponse(
+      (response) =>
+        response.url().includes('/statistics/alcohols/') &&
+        response.url().includes('/popularity') &&
+        new URL(response.url()).searchParams.get('granularity') === 'MONTH'
+    );
+    const monthlyObservation = page.waitForResponse(
+      (response) =>
+        response.url().includes('/statistics/alcohols/') &&
+        response.url().includes('/observations/RATING') &&
+        new URL(response.url()).searchParams.get('granularity') === 'MONTH'
+    );
+    await page.getByRole('combobox', { name: '주류 통계 집계 단위' }).click();
+    await page.getByRole('option', { name: '월간' }).click();
+    await page.getByRole('button', { name: '조회', exact: true }).click();
+    expect((await monthlyPopularity).status()).toBe(200);
+    expect((await monthlyObservation).status()).toBe(200);
+    await expect(page).toHaveURL(/granularity=MONTH/);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth
+      )
+    ).toBe(true);
+  });
 });
