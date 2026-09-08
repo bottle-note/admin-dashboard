@@ -9,9 +9,11 @@ import {
   MessageSquare,
   FileText,
   Users,
+  UsersRound,
   List,
   Plus,
   LayoutDashboard,
+  ChartLine,
   Layers,
   Factory,
   FileSpreadsheet,
@@ -29,6 +31,20 @@ export const menuConfig: MenuGroup[] = [
         label: '대시보드',
         icon: LayoutDashboard,
         path: '/',
+      },
+      {
+        id: 'statistics',
+        label: '통계',
+        icon: ChartLine,
+        roles: ['ROOT_ADMIN'],
+        children: [
+          {
+            id: 'visitor-statistics',
+            label: '방문자 통계',
+            icon: UsersRound,
+            path: '/statistics/visitors',
+          },
+        ],
       },
       {
         id: 'dashboard-curation',
