@@ -150,7 +150,7 @@ export function TimeSeriesChart({
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 12, right: 12, left: 12, bottom: 4 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="bucketLabel" />
+            <XAxis dataKey="bucketLabel" interval={0} />
             <YAxis
               domain={valueDomain}
               tickFormatter={(value: string | number) =>
