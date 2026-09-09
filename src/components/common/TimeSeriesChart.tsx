@@ -222,7 +222,7 @@ export function TimeSeriesChart({
                 stroke={SERIES_COLORS[index % SERIES_COLORS.length]}
                 strokeWidth={2}
                 fill={SERIES_COLORS[index % SERIES_COLORS.length]}
-                fillOpacity={0.18}
+                fillOpacity={1}
                 stackId={stacked ? 'series' : undefined}
                 connectNulls={false}
                 dot={false}
