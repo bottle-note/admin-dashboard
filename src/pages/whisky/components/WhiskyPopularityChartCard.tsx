@@ -276,6 +276,7 @@ export function WhiskyPopularityChartCard({ alcoholId }: WhiskyPopularityChartCa
                 <TimeSeriesChart
                   payload={popularityQuery.data}
                   seriesKeys={popularityScoreKeys}
+                  chartType="line"
                   isLoading={popularityQuery.isLoading}
                   isError={popularityQuery.isError}
                   errorMessage={
@@ -299,6 +300,7 @@ export function WhiskyPopularityChartCard({ alcoholId }: WhiskyPopularityChartCa
                 <TimeSeriesChart
                   payload={popularityQuery.data}
                   seriesKeys={popularityCountKeys}
+                  chartType="line"
                   isLoading={popularityQuery.isLoading}
                   isError={popularityQuery.isError}
                   errorMessage={
@@ -341,6 +343,7 @@ export function WhiskyPopularityChartCard({ alcoholId }: WhiskyPopularityChartCa
               <TimeSeriesChart
                 payload={observationQuery.data}
                 seriesKeys={observationKeys}
+                chartType="line"
                 isLoading={observationQuery.isLoading}
                 isError={observationQuery.isError}
                 errorMessage={

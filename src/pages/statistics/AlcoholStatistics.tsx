@@ -133,6 +133,7 @@ function ChartCard({
         <TimeSeriesChart
           payload={payload}
           seriesKeys={seriesKeys}
+          chartType="line"
           isLoading={isLoading}
           isError={isError}
           errorMessage={errorMessage}
@@ -381,6 +382,7 @@ export function AlcoholStatisticsPage() {
                 <TimeSeriesChart
                   payload={observationQuery.data}
                   seriesKeys={observationKeys}
+                  chartType="line"
                   isLoading={observationQuery.isLoading}
                   isError={observationQuery.isError}
                   errorMessage={

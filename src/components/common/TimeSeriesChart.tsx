@@ -7,9 +7,10 @@
 import { useMemo } from 'react';
 import {
   Area,
-  AreaChart,
   CartesianGrid,
+  ComposedChart,
   Legend,
+  Line,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -25,6 +26,7 @@ interface TimeSeriesChartProps {
   /** 렌더링할 series key 하위 집합 */
   seriesKeys?: string[];
   stacked?: boolean;
+  chartType?: 'area' | 'line';
   isLoading?: boolean;
   isError?: boolean;
   errorMessage?: string;
@@ -56,6 +58,7 @@ export function TimeSeriesChart({
   payload,
   seriesKeys,
   stacked = false,
+  chartType = 'area',
   isLoading = false,
   isError = false,
   errorMessage,
@@ -132,7 +135,7 @@ export function TimeSeriesChart({
   }, [chartData, selectedSeries, stacked]);
 
   const renderedSeries = useMemo(() => {
-    if (stacked) {
+    if (stacked || chartType === 'line') {
       return selectedSeries;
     }
 
@@ -142,7 +145,7 @@ export function TimeSeriesChart({
 
       return rightMaximum - leftMaximum;
     });
-  }, [chartData, selectedSeries, stacked]);
+  }, [chartData, chartType, selectedSeries, stacked]);
 
   const dailyTickLabels = useMemo(() => {
     if (payload?.granularity !== 'DAY') {
@@ -188,7 +191,7 @@ export function TimeSeriesChart({
     <div className={`min-w-0 ${className}`}>
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
+          <ComposedChart
             data={chartData}
             margin={{ top: 12, right: 40, left: 12, bottom: hasDenseDailyTicks ? 12 : 4 }}
           >
@@ -230,7 +233,19 @@ export function TimeSeriesChart({
               const seriesIndex = selectedSeries.findIndex((item) => item.key === series.key);
               const color = SERIES_COLORS[seriesIndex % SERIES_COLORS.length];
 
-              return (
+              return chartType === 'line' ? (
+                <Line
+                  key={series.key}
+                  type="monotone"
+                  dataKey={series.key}
+                  name={series.label}
+                  stroke={color}
+                  strokeWidth={2}
+                  connectNulls={false}
+                  dot={false}
+                  activeDot={{ r: 4, fill: '#f4f2f2', strokeWidth: 2 }}
+                />
+              ) : (
                 <Area
                   key={series.key}
                   type="monotone"
@@ -247,7 +262,7 @@ export function TimeSeriesChart({
                 />
               );
             })}
-          </AreaChart>
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </div>
