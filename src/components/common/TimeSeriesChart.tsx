@@ -131,6 +131,19 @@ export function TimeSeriesChart({
     return [0, maxValue * 1.1];
   }, [chartData, selectedSeries, stacked]);
 
+  const renderedSeries = useMemo(() => {
+    if (stacked) {
+      return selectedSeries;
+    }
+
+    return [...selectedSeries].sort((left, right) => {
+      const leftMaximum = getSeriesMaximum(chartData, left.key);
+      const rightMaximum = getSeriesMaximum(chartData, right.key);
+
+      return rightMaximum - leftMaximum;
+    });
+  }, [chartData, selectedSeries, stacked]);
+
   const dailyTickLabels = useMemo(() => {
     if (payload?.granularity !== 'DAY') {
       return undefined;
@@ -213,27 +226,39 @@ export function TimeSeriesChart({
                   strokeDasharray="4 4"
                 />
               ))}
-            {selectedSeries.map((series, index) => (
-              <Area
-                key={series.key}
-                type="monotone"
-                dataKey={series.key}
-                name={series.label}
-                stroke={SERIES_COLORS[index % SERIES_COLORS.length]}
-                strokeWidth={2}
-                fill={SERIES_COLORS[index % SERIES_COLORS.length]}
-                fillOpacity={1}
-                stackId={stacked ? 'series' : undefined}
-                connectNulls={false}
-                dot={false}
-                activeDot={{ r: 4, fill: '#f4f2f2', strokeWidth: 2 }}
-              />
-            ))}
+            {renderedSeries.map((series) => {
+              const seriesIndex = selectedSeries.findIndex((item) => item.key === series.key);
+              const color = SERIES_COLORS[seriesIndex % SERIES_COLORS.length];
+
+              return (
+                <Area
+                  key={series.key}
+                  type="monotone"
+                  dataKey={series.key}
+                  name={series.label}
+                  stroke={color}
+                  strokeWidth={2}
+                  fill={color}
+                  fillOpacity={1}
+                  stackId={stacked ? 'series' : undefined}
+                  connectNulls={false}
+                  dot={false}
+                  activeDot={{ r: 4, fill: '#f4f2f2', strokeWidth: 2 }}
+                />
+              );
+            })}
           </AreaChart>
         </ResponsiveContainer>
       </div>
     </div>
   );
+}
+
+function getSeriesMaximum(chartData: FlattenedPoint[], seriesKey: string) {
+  return chartData.reduce((maximum, point) => {
+    const value = point[seriesKey];
+    return typeof value === 'number' && Number.isFinite(value) ? Math.max(maximum, value) : maximum;
+  }, Number.NEGATIVE_INFINITY);
 }
 
 function getDailyTickLabels(chartData: FlattenedPoint[]): string[] {
