@@ -253,6 +253,9 @@ test.describe('통계 시계열', () => {
     await page.waitForTimeout(300);
     expect(alcoholStatisticsRequests).toHaveLength(0);
 
+    await page.getByRole('combobox', { name: '주류 검색' }).focus();
+    await expect(page.getByText('한 글자 이상 입력하면 검색 결과가 표시됩니다.')).toBeVisible();
+
     const lookupResponse = page.waitForResponse((response) =>
       response.url().includes('/alcohols/lookup')
     );

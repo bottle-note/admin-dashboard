@@ -1,8 +1,7 @@
-import { useMemo, useState, type FormEvent } from 'react';
-import { Search, X } from 'lucide-react';
+import { useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router';
 
-import { LookupSearchSelect } from '@/components/common/LookupSearchSelect';
+import { AlcoholSearchSelect } from '@/components/common/AlcoholSearchSelect';
 import { TimeSeriesChart } from '@/components/common/TimeSeriesChart';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,18 +14,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  flattenAdminAlcoholLookupPages,
   useAdminAlcoholDetail,
-  useAdminAlcoholLookupInfinite,
 } from '@/hooks/useAdminAlcohols';
 import {
   useAlcoholObservationStatistics,
   useAlcoholPopularityStatistics,
 } from '@/hooks/useStatistics';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { getErrorMessage } from '@/lib/api-error';
 import type {
-  AlcoholLookupItem,
   AlcoholStatisticsGranularity,
   AlcoholStatisticsParams,
   StatisticsObservationAxis,
@@ -235,68 +230,6 @@ function StatisticsFilters({ initialParams, onApply }: StatisticsFiltersProps) {
   );
 }
 
-interface AlcoholSearchProps {
-  onSelect: (alcohol: AlcoholLookupItem) => void;
-}
-
-function AlcoholSearch({ onSelect }: AlcoholSearchProps) {
-  const [keyword, setKeyword] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
-  const debouncedKeyword = useDebouncedValue(keyword.trim(), 300);
-  const canSearch = debouncedKeyword.length >= 1;
-  const query = useAdminAlcoholLookupInfinite(
-    canSearch ? { keyword: debouncedKeyword, size: 10 } : undefined,
-    { enabled: canSearch }
-  );
-  const items = useMemo(() => flattenAdminAlcoholLookupPages(query.data), [query.data]);
-
-  return (
-    <LookupSearchSelect
-      value={keyword}
-      onValueChange={setKeyword}
-      open={isOpen}
-      onOpenChange={setIsOpen}
-      items={items}
-      getItemKey={(item) => item.alcoholId}
-      getItemAriaLabel={(item) => `${item.korName} 주류 선택`}
-      renderItem={(item) => (
-        <>
-          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted">
-            {item.imageUrl ? (
-              <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No</div>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-medium">{item.korName}</p>
-            <p className="truncate text-sm text-muted-foreground">{item.engName}</p>
-          </div>
-        </>
-      )}
-      onSelect={onSelect}
-      placeholder="주류 이름으로 검색..."
-      ariaLabel="주류 검색"
-      minimumSearchLength={1}
-      leftElement={<Search className="h-4 w-4 text-muted-foreground" />}
-      rightElement={
-        keyword ? (
-          <button type="button" aria-label="주류 검색어 지우기" onClick={() => setKeyword('')}>
-            <X className="h-4 w-4 text-muted-foreground" />
-          </button>
-        ) : undefined
-      }
-      isLoading={query.isLoading}
-      isError={query.isError}
-      onRetry={() => void query.refetch()}
-      isFetchingNextPage={query.isFetchingNextPage}
-      hasNextPage={query.hasNextPage}
-      onLoadMore={query.fetchNextPage}
-      dropdownTestId="alcohol-statistics-search-dropdown"
-    />
-  );
-}
-
 export function AlcoholStatisticsPage() {
   const [urlParams, setUrlParams] = useSearchParams();
   const defaults = getDefaultStatisticsParams();
@@ -337,9 +270,9 @@ export function AlcoholStatisticsPage() {
     setUrlParams(nextParams);
   };
 
-  const selectAlcohol = (alcohol: AlcoholLookupItem) => {
+  const selectAlcohol = (alcoholId: number) => {
     updateUrlParams({
-      alcoholId: String(alcohol.alcoholId),
+      alcoholId: String(alcoholId),
       from: defaults.from,
       to: defaults.to,
       granularity: defaults.granularity,
@@ -360,7 +293,7 @@ export function AlcoholStatisticsPage() {
           <CardDescription>이름을 입력해 조회할 주류를 선택하세요.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <AlcoholSearch onSelect={selectAlcohol} />
+          <AlcoholSearchSelect onSelect={(alcohol) => selectAlcohol(alcohol.alcoholId)} />
           {alcoholQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">선택한 주류 정보를 불러오는 중입니다.</p>
           ) : null}
