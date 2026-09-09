@@ -4,8 +4,42 @@ import ExcelJS from 'exceljs';
 
 const LIST_URL = '/mfds/declarations';
 
+interface DeclarationDraftSource {
+  baseProductNameKo: string | null;
+  baseProductNameEn: string | null;
+  skuDisplayNameKo: string | null;
+  skuDisplayNameEn: string | null;
+  volumeMl: number | null;
+  abvPercent: number | null;
+}
+
+function normalizeText(value: string | null) {
+  return value?.trim() ?? '';
+}
+
+function getExpectedDraftRows(items: DeclarationDraftSource[]) {
+  const uniqueRows = new Map<
+    string,
+    { korName: string; engName: string; abvPercent: number | null; volumeMl: number | null }
+  >();
+
+  items.forEach((item) => {
+    const korName = normalizeText(item.skuDisplayNameKo) || normalizeText(item.baseProductNameKo);
+    const engName = normalizeText(item.skuDisplayNameEn) || normalizeText(item.baseProductNameEn);
+    if (!korName && !engName) return;
+
+    const row = { korName, engName, abvPercent: item.abvPercent, volumeMl: item.volumeMl };
+    const key = JSON.stringify([korName, engName, item.abvPercent, item.volumeMl]);
+    if (!uniqueRows.has(key)) uniqueRows.set(key, row);
+  });
+
+  return [...uniqueRows.values()];
+}
+
 test.describe('식약처 수입 신고 데이터 검토', () => {
-  test('현재 필터 결과의 제품명으로 등록 초안 엑셀을 내려받을 수 있다', async ({ page }) => {
+  test('현재 필터 결과에서 등록 가능한 값을 채운 초안 엑셀을 내려받을 수 있다', async ({
+    page,
+  }) => {
     const listResponse = page.waitForResponse(
       (response) =>
         response.url().includes('/v1/mfds/declarations') &&
@@ -15,7 +49,12 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
     );
 
     await page.goto(`${LIST_URL}?alcoholMatched=false&alcoholMatchDecision=NO_MATCH&pageSize=100`);
-    expect((await listResponse).ok()).toBe(true);
+    const declarationsResponse = await listResponse;
+    expect(declarationsResponse.ok()).toBe(true);
+    const declarationsBody = (await declarationsResponse.json()) as {
+      data: DeclarationDraftSource[];
+    };
+    const expectedRows = getExpectedDraftRows(declarationsBody.data);
 
     await expect(page.getByLabel('위스키 연결')).toHaveText('연결 안 됨');
     const downloadButton = page.getByRole('button', { name: 'Excel 등록 초안 다운로드' });
@@ -50,7 +89,18 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
     expect(dataSheet).toBeDefined();
     expect(dataSheet?.getCell('A1').text).toBe('한글 이름');
     expect(dataSheet?.getCell('B1').text).toBe('영문 이름');
-    expect(dataSheet?.getCell('A3').text || dataSheet?.getCell('B3').text).not.toBe('');
+    expect(dataSheet?.getCell('C1').text).toBe('도수');
+    expect(dataSheet?.getCell('D1').text).toBe('주류 종류');
+    expect(dataSheet?.getCell('L1').text).toBe('용량');
+
+    expectedRows.forEach((expected, index) => {
+      const row = dataSheet!.getRow(index + 3);
+      expect(row.getCell(1).text).toBe(expected.korName);
+      expect(row.getCell(2).text).toBe(expected.engName);
+      expect(row.getCell(3).value).toBe(expected.abvPercent);
+      expect(row.getCell(4).text).toBe('');
+      expect(row.getCell(12).value).toBe(expected.volumeMl);
+    });
   });
 
   test('목록에서 상세로 이동해 정규화와 연결 정보를 확인할 수 있다', async ({ page }) => {
@@ -115,7 +165,7 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
     await expect(
       whiskyMatchingSheet.getByRole('link', { name: '위스키 신규 등록' })
     ).toHaveAttribute('target', '_blank');
-    await expect(page.getByText(/RCNO/)).toBeVisible();
+    await expect(whiskyMatchingSheet.getByText(/RCNO/)).toBeVisible();
     await expect(page.getByRole('button', { name: '후보 다시 계산' })).toBeVisible();
     const lookupResponse = page.waitForResponse(
       (response) =>

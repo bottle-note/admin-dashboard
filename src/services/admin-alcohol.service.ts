@@ -21,6 +21,9 @@ import {
   type AlcoholUpdateResponse,
   type CategoryReferenceMap,
   type AlcoholExcelValidationResult,
+  type AlcoholBulkRequest,
+  type AlcoholBulkValidationResult,
+  type AlcoholBulkCreateResult,
 } from '@/types/api';
 
 // ============================================
@@ -149,6 +152,28 @@ export const adminAlcoholService = {
       AlcoholApi.excelValidate.endpoint,
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+  },
+
+  /**
+   * 알코올 JSON 목록 검증
+   * 저장하지 않고 행별 오류·경고와 정규화 결과를 반환한다.
+   */
+  validateBulk: (data: AlcoholBulkRequest): Promise<AlcoholBulkValidationResult> => {
+    return apiClient.post<AlcoholBulkValidationResult, AlcoholBulkRequest>(
+      AlcoholApi.bulkValidate.endpoint,
+      data
+    );
+  },
+
+  /**
+   * 알코올 목록 일괄 등록
+   * 서버에서 전체 행을 다시 검증하며, 한 행이라도 실패하면 전혀 저장하지 않는다.
+   */
+  createBulk: (data: AlcoholBulkRequest): Promise<AlcoholBulkCreateResult> => {
+    return apiClient.post<AlcoholBulkCreateResult, AlcoholBulkRequest>(
+      AlcoholApi.bulkCreate.endpoint,
+      data
     );
   },
 

@@ -1,6 +1,23 @@
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
-import { AlertCircle, CheckCircle2, Download, FileSpreadsheet, Upload } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  FolderOpen,
+  Upload,
+} from 'lucide-react';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,11 +29,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useAlcoholExcelTemplateDownload, useAlcoholExcelValidate } from '@/hooks/useAdminAlcohols';
+import {
+  useAlcoholBulkCreate,
+  useAlcoholExcelTemplateDownload,
+  useAlcoholExcelValidate,
+} from '@/hooks/useAdminAlcohols';
 import { useToast } from '@/hooks/useToast';
-import { getErrorMessage } from '@/lib/api-error';
+import { getErrorMessage, isApiError } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
-import type { AlcoholExcelValidationResult, AlcoholExcelValidationRow } from '@/types/api';
+import type {
+  AlcoholBulkValidationResult,
+  AlcoholExcelValidationResult,
+  AlcoholExcelValidationRow,
+} from '@/types/api';
 
 type IssueFilter = 'ALL' | 'ERROR' | 'WARNING';
 
@@ -35,6 +60,46 @@ function hasIssues(row: AlcoholExcelValidationRow) {
   return row.errors.length > 0 || row.warnings.length > 0;
 }
 
+function isBulkValidationResult(value: unknown): value is AlcoholBulkValidationResult {
+  if (!value || typeof value !== 'object') return false;
+
+  const result = value as Partial<AlcoholBulkValidationResult>;
+  return (
+    typeof result.totalRows === 'number' &&
+    typeof result.validRows === 'number' &&
+    typeof result.invalidRows === 'number' &&
+    typeof result.warningRows === 'number' &&
+    Array.isArray(result.rows)
+  );
+}
+
+function mergeBulkValidationResult(
+  excelResult: AlcoholExcelValidationResult,
+  bulkResult: AlcoholBulkValidationResult
+): AlcoholExcelValidationResult {
+  const bulkRows = new Map(bulkResult.rows.map((row) => [row.clientRowId, row]));
+
+  return {
+    totalRows: bulkResult.totalRows,
+    validRows: bulkResult.validRows,
+    invalidRows: bulkResult.invalidRows,
+    warningRows: bulkResult.warningRows,
+    rows: excelResult.rows.map((row) => {
+      const bulkRow = bulkRows.get(row.clientRowId);
+      if (!bulkRow) return row;
+
+      return {
+        ...row,
+        valid: bulkRow.valid,
+        normalized: bulkRow.normalized,
+        errors: bulkRow.errors,
+        warnings: bulkRow.warnings,
+        candidateAlcoholIds: bulkRow.candidateAlcoholIds,
+      };
+    }),
+  };
+}
+
 export function WhiskyExcelBulkPage() {
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,8 +108,11 @@ export function WhiskyExcelBulkPage() {
   const [validationResult, setValidationResult] = useState<AlcoholExcelValidationResult | null>(
     null
   );
+  const [createdRows, setCreatedRows] = useState<number | null>(null);
+  const [isUploadConfirmOpen, setIsUploadConfirmOpen] = useState(false);
   const downloadTemplate = useAlcoholExcelTemplateDownload();
   const validateExcel = useAlcoholExcelValidate();
+  const createBulk = useAlcoholBulkCreate();
 
   const issueRows = (validationResult?.rows ?? []).filter((row) => {
     if (issueFilter === 'ERROR') return row.errors.length > 0;
@@ -52,6 +120,14 @@ export function WhiskyExcelBulkPage() {
     return hasIssues(row);
   });
   const issueRowCount = validationResult?.rows.filter(hasIssues).length ?? 0;
+  const normalizedRows =
+    validationResult?.rows.flatMap((row) => (row.normalized ? [row.normalized] : [])) ?? [];
+  const canUpload =
+    validationResult !== null &&
+    validationResult.totalRows > 0 &&
+    validationResult.invalidRows === 0 &&
+    normalizedRows.length === validationResult.totalRows &&
+    createdRows === null;
 
   const selectFile = (nextFile: File | undefined) => {
     if (!nextFile) return;
@@ -63,7 +139,10 @@ export function WhiskyExcelBulkPage() {
 
     setFile(nextFile);
     setValidationResult(null);
+    setCreatedRows(null);
+    setIsUploadConfirmOpen(false);
     setIssueFilter('ALL');
+    createBulk.reset();
   };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -97,8 +176,33 @@ export function WhiskyExcelBulkPage() {
     if (!file) return;
 
     try {
+      setCreatedRows(null);
       setValidationResult(await validateExcel.mutateAsync(file));
     } catch (error) {
+      showToast({ type: 'error', message: getErrorMessage(error) });
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!validationResult || !canUpload) return;
+
+    setIsUploadConfirmOpen(false);
+
+    try {
+      const result = await createBulk.mutateAsync({ rows: normalizedRows });
+      setCreatedRows(result.createdRows);
+      showToast({ type: 'success', message: `위스키 ${result.createdRows}건을 등록했습니다.` });
+    } catch (error) {
+      if (isApiError(error) && isBulkValidationResult(error.details)) {
+        setValidationResult(mergeBulkValidationResult(validationResult, error.details));
+        setIssueFilter('ALL');
+        showToast({
+          type: 'error',
+          message: '업로드 직전 재검증에서 오류가 발견되었습니다. 내용을 확인해주세요.',
+        });
+        return;
+      }
+
       showToast({ type: 'error', message: getErrorMessage(error) });
     }
   };
@@ -160,14 +264,24 @@ export function WhiskyExcelBulkPage() {
               </div>
             )}
             <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-              <Upload />
+              <FolderOpen />
               {file ? '다른 파일 선택' : '파일 선택'}
             </Button>
           </div>
-          <div className="flex justify-end">
-            <Button onClick={handleValidate} disabled={!file || validateExcel.isPending}>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              onClick={handleValidate}
+              disabled={!file || validateExcel.isPending || createBulk.isPending}
+            >
               <FileSpreadsheet />
               {validateExcel.isPending ? '검증 중...' : '검증하기'}
+            </Button>
+            <Button
+              onClick={() => setIsUploadConfirmOpen(true)}
+              disabled={!canUpload || validateExcel.isPending || createBulk.isPending}
+            >
+              <Upload />
+              {createBulk.isPending ? '업로드 중...' : '업로드하기'}
             </Button>
           </div>
         </CardContent>
@@ -178,7 +292,7 @@ export function WhiskyExcelBulkPage() {
           <CardHeader>
             <CardTitle>검증 결과</CardTitle>
             <CardDescription>
-              오류와 경고가 있는 행을 확인하고 파일을 수정해 다시 검증하세요.
+              오류와 경고를 확인한 뒤, 오류가 없으면 위스키를 업로드할 수 있습니다.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -195,6 +309,13 @@ export function WhiskyExcelBulkPage() {
                 </div>
               ))}
             </div>
+
+            {createdRows !== null && (
+              <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                <CheckCircle2 className="h-4 w-4" />
+                위스키 {createdRows}건을 등록했습니다.
+              </div>
+            )}
 
             {validationResult.totalRows === 0 ? (
               <div className="flex items-center gap-2 rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
@@ -285,14 +406,38 @@ export function WhiskyExcelBulkPage() {
                 )}
               </>
             ) : (
-              <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                <CheckCircle2 className="h-4 w-4" />
-                오류나 경고가 없는 파일입니다. 검증만 완료되었으며 아직 등록되지는 않았습니다.
-              </div>
+              createdRows === null && (
+                <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                  <CheckCircle2 className="h-4 w-4" />
+                  오류나 경고가 없는 파일입니다. 검증만 완료되었으며 아직 등록되지는 않았습니다.
+                </div>
+              )
             )}
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={isUploadConfirmOpen} onOpenChange={setIsUploadConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              위스키 {validationResult?.totalRows ?? 0}건을 등록할까요?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {validationResult?.warningRows
+                ? `경고가 있는 행이 ${validationResult.warningRows}건 포함되어 있습니다. `
+                : ''}
+              업로드를 반복하면 같은 위스키가 중복 등록될 수 있습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={createBulk.isPending}>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleUpload} disabled={createBulk.isPending}>
+              {createBulk.isPending ? '업로드 중...' : '업로드'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
