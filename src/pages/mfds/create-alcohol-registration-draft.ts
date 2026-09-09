@@ -8,23 +8,30 @@ function normalizeName(value: string | null) {
   return value?.trim() ?? '';
 }
 
-function getUniqueDeclarations(items: MfdsDeclarationListItem[]) {
-  const uniqueItems = new Map<string, { korName: string; engName: string }>();
+function getUniqueDraftRows(items: MfdsDeclarationListItem[]) {
+  const uniqueRows = new Map<
+    string,
+    { korName: string; engName: string; abvPercent: number | null; volumeMl: number | null }
+  >();
 
   items.forEach((item) => {
-    const korName = normalizeName(item.baseProductNameKo);
-    const engName = normalizeName(item.baseProductNameEn);
+    const korName = normalizeName(item.skuDisplayNameKo) || normalizeName(item.baseProductNameKo);
+    const engName = normalizeName(item.skuDisplayNameEn) || normalizeName(item.baseProductNameEn);
     if (!korName && !engName) return;
 
-    const key = `${korName}\u0000${engName}`;
-    if (!uniqueItems.has(key)) uniqueItems.set(key, { korName, engName });
+    const abvPercent = item.abvPercent ?? null;
+    const volumeMl = item.volumeMl ?? null;
+    const key = JSON.stringify([korName, engName, abvPercent, volumeMl]);
+    if (!uniqueRows.has(key)) {
+      uniqueRows.set(key, { korName, engName, abvPercent, volumeMl });
+    }
   });
 
-  return [...uniqueItems.values()];
+  return [...uniqueRows.values()];
 }
 
-export function getAlcoholRegistrationDraftNameCount(items: MfdsDeclarationListItem[]) {
-  return getUniqueDeclarations(items).length;
+export function getAlcoholRegistrationDraftRowCount(items: MfdsDeclarationListItem[]) {
+  return getUniqueDraftRows(items).length;
 }
 
 export async function createAlcoholRegistrationDraft(
@@ -38,16 +45,18 @@ export async function createAlcoholRegistrationDraft(
   const dataSheet = workbook.getWorksheet(DATA_SHEET_NAME);
   if (!dataSheet) throw new Error('알코올 데이터 시트를 찾을 수 없습니다.');
 
-  const declarations = getUniqueDeclarations(items);
-  declarations.forEach(({ korName, engName }, index) => {
+  const draftRows = getUniqueDraftRows(items);
+  draftRows.forEach(({ korName, engName, abvPercent, volumeMl }, index) => {
     const row = dataSheet.getRow(DATA_START_ROW + index);
     row.getCell(1).value = korName;
     row.getCell(2).value = engName;
+    if (abvPercent !== null) row.getCell(3).value = abvPercent;
+    if (volumeMl !== null) row.getCell(12).value = volumeMl;
   });
 
   const buffer = await workbook.xlsx.writeBuffer();
   return {
     blob: new Blob([buffer], { type: EXCEL_MIME_TYPE }),
-    declarationCount: declarations.length,
+    declarationCount: draftRows.length,
   };
 }

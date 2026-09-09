@@ -60,20 +60,20 @@ export const ERROR_MESSAGES: Record<string, string> = {
 export class ApiError extends Error {
   public readonly code: number;
   public readonly errors: ApiErrorItem[];
+  public readonly details?: unknown;
   public readonly isApiError = true as const;
 
-  constructor(response: ApiResponse<unknown>) {
+  constructor(response: ApiResponse<unknown>, details?: unknown) {
     // 첫 번째 에러 메시지 사용 또는 폴백
     const firstError = response.errors[0];
     const message =
-      firstError?.message ||
-      ERROR_MESSAGES[firstError?.code ?? ''] ||
-      ERROR_MESSAGES.UNKNOWN_ERROR;
+      firstError?.message || ERROR_MESSAGES[firstError?.code ?? ''] || ERROR_MESSAGES.UNKNOWN_ERROR;
 
     super(message);
     this.name = 'ApiError';
     this.code = response.code;
     this.errors = response.errors;
+    this.details = details;
 
     // V8 엔진에서 스택 트레이스 유지
     if (Error.captureStackTrace) {
@@ -125,6 +125,18 @@ export function normalizeError(error: unknown): ApiError | Error {
       const responseData = error.response.data as ApiResponse<unknown>;
       if (responseData.errors && Array.isArray(responseData.errors)) {
         return new ApiError(responseData);
+      }
+      if (responseData.errors && typeof responseData.errors === 'object') {
+        return new ApiError(
+          {
+            success: false,
+            code: responseData.code ?? error.response.status,
+            data: null,
+            errors: [{ code: 'VALIDATION_ERROR' }],
+            meta: responseData.meta,
+          },
+          responseData.errors
+        );
       }
     }
 

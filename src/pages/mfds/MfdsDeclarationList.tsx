@@ -215,7 +215,7 @@ export function MfdsDeclarationListPage() {
 
     showToast({
       type: 'success',
-      message: `등록 초안에 제품명 ${declarationCount.toLocaleString()}건을 담았습니다.`,
+      message: `등록 초안에 제품 ${declarationCount.toLocaleString()}건을 담았습니다.`,
     });
     setPreparedRegistrationDraft(null);
   };
@@ -333,8 +333,8 @@ export function MfdsDeclarationListPage() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs leading-relaxed">
-                현재 조회 중인 수입원장의 위스키 이름에서 중복을 제외해, 벌크 등록용 Excel 파일로
-                다운로드합니다.
+                현재 조회 중인 수입원장에서 SKU 이름과 도수, 용량 중 확인된 값만 담아 벌크
+                등록용 Excel 파일로 다운로드합니다.
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -363,9 +363,9 @@ export function MfdsDeclarationListPage() {
           <DialogHeader>
             <DialogTitle>Excel 등록 초안이 준비되었습니다</DialogTitle>
             <DialogDescription>
-              전체 {preparedRegistrationDraft?.totalCount.toLocaleString()}개 신고 데이터 중 중복된
-              이름을 제거해 {preparedRegistrationDraft?.declarationCount.toLocaleString()}개 이름을
-              담았습니다.
+              전체 {preparedRegistrationDraft?.totalCount.toLocaleString()}개 신고 데이터 중 이름,
+              도수, 용량이 같은 항목을 합쳐{' '}
+              {preparedRegistrationDraft?.declarationCount.toLocaleString()}개 제품을 담았습니다.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

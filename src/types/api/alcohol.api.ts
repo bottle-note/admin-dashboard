@@ -43,6 +43,16 @@ export const AlcoholApi = {
     endpoint: '/admin/api/v1/alcohols/excel/validate',
     method: 'POST',
   },
+  /** 알코올 JSON 목록 검증 */
+  bulkValidate: {
+    endpoint: '/admin/api/v1/alcohols/bulk/validate',
+    method: 'POST',
+  },
+  /** 알코올 목록 일괄 등록 */
+  bulkCreate: {
+    endpoint: '/admin/api/v1/alcohols/bulk',
+    method: 'POST',
+  },
   /** 술 삭제 */
   delete: {
     endpoint: '/admin/api/v1/alcohols/:alcoholId',
@@ -421,6 +431,7 @@ export interface AlcoholExcelValidationIssue {
 /** 알코올 Excel 행 단위 검증 결과 */
 export interface AlcoholExcelValidationRow {
   rowNumber: number;
+  clientRowId: string;
   korName?: string | null;
   engName?: string | null;
   abv?: string | null;
@@ -442,6 +453,7 @@ export interface AlcoholExcelValidationRow {
   valid: boolean;
   errors: AlcoholExcelValidationIssue[];
   warnings: AlcoholExcelValidationIssue[];
+  normalized: AlcoholBulkRowRequest | null;
 }
 
 /** 알코올 Excel 업로드 검증 결과 */
@@ -451,6 +463,60 @@ export interface AlcoholExcelValidationResult {
   invalidRows: number;
   warningRows: number;
   rows: AlcoholExcelValidationRow[];
+}
+
+/** 알코올 벌크 검증·등록 요청 행 */
+export interface AlcoholBulkRowRequest {
+  clientRowId: string;
+  korName: string;
+  engName: string;
+  abv: string;
+  type: string;
+  korCategory: string;
+  engCategory: string;
+  categoryGroup?: string | null;
+  regionId: number;
+  distilleryId: number;
+  age?: string | null;
+  cask?: string | null;
+  description?: string | null;
+  volume: string;
+  tastingTagIds?: number[] | null;
+  imageUrl?: string | null;
+}
+
+/** 알코올 벌크 검증·등록 요청 */
+export interface AlcoholBulkRequest {
+  rows: AlcoholBulkRowRequest[];
+}
+
+/** 알코올 벌크 행 단위 검증 결과 */
+export interface AlcoholBulkValidationRow {
+  clientRowId: string | null;
+  valid: boolean;
+  normalized: AlcoholBulkRowRequest | null;
+  errors: AlcoholExcelValidationIssue[];
+  warnings: AlcoholExcelValidationIssue[];
+  candidateAlcoholIds: number[];
+}
+
+/** 알코올 JSON 벌크 검증 결과 */
+export interface AlcoholBulkValidationResult {
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  warningRows: number;
+  rows: AlcoholBulkValidationRow[];
+}
+
+/** 알코올 벌크 등록 결과 */
+export interface AlcoholBulkCreateResult {
+  createdRows: number;
+  rows: Array<{
+    clientRowId: string;
+    alcoholId: number;
+  }>;
+  validation: AlcoholBulkValidationResult;
 }
 
 // ============================================

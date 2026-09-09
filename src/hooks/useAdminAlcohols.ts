@@ -25,6 +25,9 @@ import type {
   AlcoholUpdateResponse,
   CategoryReferenceMap,
   AlcoholExcelValidationResult,
+  AlcoholBulkRequest,
+  AlcoholBulkValidationResult,
+  AlcoholBulkCreateResult,
 } from '@/types/api';
 
 /**
@@ -237,6 +240,45 @@ export function useAlcoholExcelValidate() {
   return useApiMutation<AlcoholExcelValidationResult, File>(adminAlcoholService.validateExcel, {
     showErrorToast: false,
   });
+}
+
+export function useAlcoholBulkValidate(
+  options?: UseApiMutationOptions<AlcoholBulkValidationResult, AlcoholBulkRequest>
+) {
+  return useApiMutation<AlcoholBulkValidationResult, AlcoholBulkRequest>(
+    adminAlcoholService.validateBulk,
+    {
+      showErrorToast: false,
+      ...options,
+    }
+  );
+}
+
+export function useAlcoholBulkCreate(
+  options?: UseApiMutationOptions<AlcoholBulkCreateResult, AlcoholBulkRequest>
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...restOptions } = options ?? {};
+
+  return useApiMutation<AlcoholBulkCreateResult, AlcoholBulkRequest>(
+    adminAlcoholService.createBulk,
+    {
+      showErrorToast: false,
+      ...restOptions,
+      onSuccess: (data, variables, context) => {
+        queryClient.invalidateQueries({ queryKey: adminAlcoholKeys.lists() });
+        if (onSuccess) {
+          (
+            onSuccess as (
+              data: AlcoholBulkCreateResult,
+              variables: AlcoholBulkRequest,
+              context: unknown
+            ) => void
+          )(data, variables, context);
+        }
+      },
+    }
+  );
 }
 
 /**
