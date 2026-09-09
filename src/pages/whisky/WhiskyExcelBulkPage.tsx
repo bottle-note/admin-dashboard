@@ -296,10 +296,9 @@ export function WhiskyExcelBulkPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-3">
               {[
                 ['전체 행', validationResult.totalRows, 'text-foreground'],
-                ['오류 없는 행', validationResult.validRows, 'text-emerald-700'],
                 ['오류 행', validationResult.invalidRows, 'text-destructive'],
                 ['경고 포함 행', validationResult.warningRows, 'text-amber-700'],
               ].map(([label, value, className]) => (

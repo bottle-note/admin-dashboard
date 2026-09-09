@@ -101,6 +101,7 @@ test.describe('위스키 Excel 벌크 등록', () => {
 
     expect((await validationResponse).ok()).toBe(true);
     await expect(page.getByText('검증 결과')).toBeVisible();
+    await expect(page.getByText('오류 없는 행')).toHaveCount(0);
     await expect(page.getByText('입력된 데이터 행이 없습니다.')).toBeVisible();
   });
 
