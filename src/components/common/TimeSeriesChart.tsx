@@ -39,7 +39,18 @@ interface FlattenedPoint {
   [key: string]: string | number | boolean | null;
 }
 
-const SERIES_COLORS = ['#ff9e20', '#215e61', '#1d2128'];
+const SERIES_COLORS = [
+  '#ff9e20',
+  '#215e61',
+  '#6c5ce7',
+  '#d64f67',
+  '#3b8b45',
+  '#2e7ebc',
+  '#a65628',
+  '#7b4f9e',
+  '#bd6b00',
+  '#5f6b72',
+];
 
 export function TimeSeriesChart({
   payload,
@@ -211,7 +222,7 @@ export function TimeSeriesChart({
                 stroke={SERIES_COLORS[index % SERIES_COLORS.length]}
                 strokeWidth={2}
                 fill={SERIES_COLORS[index % SERIES_COLORS.length]}
-                fillOpacity={1}
+                fillOpacity={0.18}
                 stackId={stacked ? 'series' : undefined}
                 connectNulls={false}
                 dot={false}
