@@ -32,6 +32,8 @@ interface TimeSeriesChartProps {
   errorMessage?: string;
   onRetry?: () => void;
   className?: string;
+  /** 비교 차트처럼 시리즈별 색상을 고정해야 할 때 사용한다. */
+  seriesColors?: Record<string, string | undefined>;
 }
 
 interface FlattenedPoint {
@@ -64,6 +66,7 @@ export function TimeSeriesChart({
   errorMessage,
   onRetry,
   className = '',
+  seriesColors,
 }: TimeSeriesChartProps) {
   const selectedSeries = useMemo(() => {
     if (!payload) {
@@ -126,12 +129,18 @@ export function TimeSeriesChart({
     }
 
     const maxValue = Math.max(...numericValues);
+    const minValue = Math.min(...numericValues);
 
-    if (maxValue === 0) {
+    if (maxValue === 0 && minValue === 0) {
       return [0, 1];
     }
 
-    return [0, maxValue * 1.1];
+    if (minValue >= 0) {
+      return [0, maxValue * 1.1];
+    }
+
+    const padding = Math.max((maxValue - minValue) * 0.1, 1);
+    return [minValue - padding, Math.max(0, maxValue + padding)];
   }, [chartData, selectedSeries, stacked]);
 
   const renderedSeries = useMemo(() => {
@@ -177,7 +186,12 @@ export function TimeSeriesChart({
     );
   }
 
-  if (!payload || payload.series.length === 0 || payload.points.length === 0 || selectedSeries.length === 0) {
+  if (
+    !payload ||
+    payload.series.length === 0 ||
+    payload.points.length === 0 ||
+    selectedSeries.length === 0
+  ) {
     return (
       <div className={`min-w-0 ${className}`}>
         <div className="flex h-64 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
@@ -198,7 +212,8 @@ export function TimeSeriesChart({
             <CartesianGrid stroke="#f4f2f2" strokeDasharray="3 3" />
             <XAxis
               dataKey="bucketLabel"
-              interval={0}
+              interval={dailyTickLabels ? 0 : 'preserveStartEnd'}
+              minTickGap={16}
               ticks={dailyTickLabels}
               padding={{ left: 8, right: 32 }}
               angle={hasDenseDailyTicks ? -35 : 0}
@@ -215,9 +230,7 @@ export function TimeSeriesChart({
                 formatAxisTick(Number(value), selectedSeries)
               }
             />
-            <Tooltip
-              content={(props) => <SeriesTooltip {...props} series={selectedSeries} />}
-            />
+            <Tooltip content={(props) => <SeriesTooltip {...props} series={selectedSeries} />} />
             <Legend />
             {chartData
               .filter((point: FlattenedPoint) => point.partial)
@@ -231,7 +244,8 @@ export function TimeSeriesChart({
               ))}
             {renderedSeries.map((series) => {
               const seriesIndex = selectedSeries.findIndex((item) => item.key === series.key);
-              const color = SERIES_COLORS[seriesIndex % SERIES_COLORS.length];
+              const color =
+                seriesColors?.[series.key] ?? SERIES_COLORS[seriesIndex % SERIES_COLORS.length];
 
               return chartType === 'line' ? (
                 <Line
@@ -320,7 +334,9 @@ function formatAxisTick(
   return formatSeriesValue(value, preferredUnit);
 }
 
-function getPreferredUnit(series: Array<{ unit: TimeSeriesDescriptor['unit'] }>): TimeSeriesDescriptor['unit'] {
+function getPreferredUnit(
+  series: Array<{ unit: TimeSeriesDescriptor['unit'] }>
+): TimeSeriesDescriptor['unit'] {
   if (series.some((item) => item.unit === 'PERCENT')) {
     return 'PERCENT';
   }
