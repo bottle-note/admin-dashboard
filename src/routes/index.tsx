@@ -11,6 +11,7 @@ import { RoleProtectedRoute } from './RoleProtectedRoute';
 import { LoginPage } from '@/pages/Login';
 import { DashboardPage } from '@/pages/Dashboard';
 import { VisitorStatisticsPage } from '@/pages/statistics/VisitorStatistics';
+import { AlcoholStatisticsPage } from '@/pages/statistics/AlcoholStatistics';
 import { WhiskyListPage } from '@/pages/whisky/WhiskyList';
 import { WhiskyDetailPage } from '@/pages/whisky/WhiskyDetail';
 import { WhiskyExcelBulkPage } from '@/pages/whisky/WhiskyExcelBulkPage';
@@ -70,6 +71,14 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
               <VisitorStatisticsPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="statistics/alcohols"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <AlcoholStatisticsPage />
             </RoleProtectedRoute>
           }
         />

@@ -7,9 +7,10 @@
 import { useMemo } from 'react';
 import {
   Area,
-  AreaChart,
   CartesianGrid,
+  ComposedChart,
   Legend,
+  Line,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -25,11 +26,14 @@ interface TimeSeriesChartProps {
   /** 렌더링할 series key 하위 집합 */
   seriesKeys?: string[];
   stacked?: boolean;
+  chartType?: 'area' | 'line';
   isLoading?: boolean;
   isError?: boolean;
   errorMessage?: string;
   onRetry?: () => void;
   className?: string;
+  /** 비교 차트처럼 시리즈별 색상을 고정해야 할 때 사용한다. */
+  seriesColors?: Record<string, string | undefined>;
 }
 
 interface FlattenedPoint {
@@ -39,17 +43,30 @@ interface FlattenedPoint {
   [key: string]: string | number | boolean | null;
 }
 
-const SERIES_COLORS = ['#ff9e20', '#215e61', '#1d2128'];
+const SERIES_COLORS = [
+  '#ff9e20',
+  '#215e61',
+  '#6c5ce7',
+  '#d64f67',
+  '#3b8b45',
+  '#2e7ebc',
+  '#a65628',
+  '#7b4f9e',
+  '#bd6b00',
+  '#5f6b72',
+];
 
 export function TimeSeriesChart({
   payload,
   seriesKeys,
   stacked = false,
+  chartType = 'area',
   isLoading = false,
   isError = false,
   errorMessage,
   onRetry,
   className = '',
+  seriesColors,
 }: TimeSeriesChartProps) {
   const selectedSeries = useMemo(() => {
     if (!payload) {
@@ -112,13 +129,32 @@ export function TimeSeriesChart({
     }
 
     const maxValue = Math.max(...numericValues);
+    const minValue = Math.min(...numericValues);
 
-    if (maxValue === 0) {
+    if (maxValue === 0 && minValue === 0) {
       return [0, 1];
     }
 
-    return [0, maxValue * 1.1];
+    if (minValue >= 0) {
+      return [0, maxValue * 1.1];
+    }
+
+    const padding = Math.max((maxValue - minValue) * 0.1, 1);
+    return [minValue - padding, Math.max(0, maxValue + padding)];
   }, [chartData, selectedSeries, stacked]);
+
+  const renderedSeries = useMemo(() => {
+    if (stacked || chartType === 'line') {
+      return selectedSeries;
+    }
+
+    return [...selectedSeries].sort((left, right) => {
+      const leftMaximum = getSeriesMaximum(chartData, left.key);
+      const rightMaximum = getSeriesMaximum(chartData, right.key);
+
+      return rightMaximum - leftMaximum;
+    });
+  }, [chartData, chartType, selectedSeries, stacked]);
 
   const dailyTickLabels = useMemo(() => {
     if (payload?.granularity !== 'DAY') {
@@ -150,7 +186,12 @@ export function TimeSeriesChart({
     );
   }
 
-  if (!payload || payload.series.length === 0 || payload.points.length === 0 || selectedSeries.length === 0) {
+  if (
+    !payload ||
+    payload.series.length === 0 ||
+    payload.points.length === 0 ||
+    selectedSeries.length === 0
+  ) {
     return (
       <div className={`min-w-0 ${className}`}>
         <div className="flex h-64 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
@@ -164,14 +205,15 @@ export function TimeSeriesChart({
     <div className={`min-w-0 ${className}`}>
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
+          <ComposedChart
             data={chartData}
             margin={{ top: 12, right: 40, left: 12, bottom: hasDenseDailyTicks ? 12 : 4 }}
           >
             <CartesianGrid stroke="#f4f2f2" strokeDasharray="3 3" />
             <XAxis
               dataKey="bucketLabel"
-              interval={0}
+              interval={dailyTickLabels ? 0 : 'preserveStartEnd'}
+              minTickGap={16}
               ticks={dailyTickLabels}
               padding={{ left: 8, right: 32 }}
               angle={hasDenseDailyTicks ? -35 : 0}
@@ -188,9 +230,7 @@ export function TimeSeriesChart({
                 formatAxisTick(Number(value), selectedSeries)
               }
             />
-            <Tooltip
-              content={(props) => <SeriesTooltip {...props} series={selectedSeries} />}
-            />
+            <Tooltip content={(props) => <SeriesTooltip {...props} series={selectedSeries} />} />
             <Legend />
             {chartData
               .filter((point: FlattenedPoint) => point.partial)
@@ -202,27 +242,52 @@ export function TimeSeriesChart({
                   strokeDasharray="4 4"
                 />
               ))}
-            {selectedSeries.map((series, index) => (
-              <Area
-                key={series.key}
-                type="monotone"
-                dataKey={series.key}
-                name={series.label}
-                stroke={SERIES_COLORS[index % SERIES_COLORS.length]}
-                strokeWidth={2}
-                fill={SERIES_COLORS[index % SERIES_COLORS.length]}
-                fillOpacity={1}
-                stackId={stacked ? 'series' : undefined}
-                connectNulls={false}
-                dot={false}
-                activeDot={{ r: 4, fill: '#f4f2f2', strokeWidth: 2 }}
-              />
-            ))}
-          </AreaChart>
+            {renderedSeries.map((series) => {
+              const seriesIndex = selectedSeries.findIndex((item) => item.key === series.key);
+              const color =
+                seriesColors?.[series.key] ?? SERIES_COLORS[seriesIndex % SERIES_COLORS.length];
+
+              return chartType === 'line' ? (
+                <Line
+                  key={series.key}
+                  type="monotone"
+                  dataKey={series.key}
+                  name={series.label}
+                  stroke={color}
+                  strokeWidth={2}
+                  connectNulls={false}
+                  dot={false}
+                  activeDot={{ r: 4, fill: '#f4f2f2', strokeWidth: 2 }}
+                />
+              ) : (
+                <Area
+                  key={series.key}
+                  type="monotone"
+                  dataKey={series.key}
+                  name={series.label}
+                  stroke={color}
+                  strokeWidth={2}
+                  fill={color}
+                  fillOpacity={1}
+                  stackId={stacked ? 'series' : undefined}
+                  connectNulls={false}
+                  dot={false}
+                  activeDot={{ r: 4, fill: '#f4f2f2', strokeWidth: 2 }}
+                />
+              );
+            })}
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </div>
   );
+}
+
+function getSeriesMaximum(chartData: FlattenedPoint[], seriesKey: string) {
+  return chartData.reduce((maximum, point) => {
+    const value = point[seriesKey];
+    return typeof value === 'number' && Number.isFinite(value) ? Math.max(maximum, value) : maximum;
+  }, Number.NEGATIVE_INFINITY);
 }
 
 function getDailyTickLabels(chartData: FlattenedPoint[]): string[] {
@@ -269,7 +334,9 @@ function formatAxisTick(
   return formatSeriesValue(value, preferredUnit);
 }
 
-function getPreferredUnit(series: Array<{ unit: TimeSeriesDescriptor['unit'] }>): TimeSeriesDescriptor['unit'] {
+function getPreferredUnit(
+  series: Array<{ unit: TimeSeriesDescriptor['unit'] }>
+): TimeSeriesDescriptor['unit'] {
   if (series.some((item) => item.unit === 'PERCENT')) {
     return 'PERCENT';
   }

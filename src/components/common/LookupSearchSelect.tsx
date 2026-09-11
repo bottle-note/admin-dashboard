@@ -45,6 +45,8 @@ export interface LookupSearchSelectProps<TItem> {
   hasNextPage?: boolean;
   onLoadMore?: () => Promise<unknown> | void;
   emptyMessage?: string;
+  idleMessage?: string;
+  showOnFocus?: boolean;
   onInputKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
   dropdownTestId?: string;
 }
@@ -74,6 +76,8 @@ export function LookupSearchSelect<TItem>({
   hasNextPage = false,
   onLoadMore,
   emptyMessage = '검색 결과가 없습니다',
+  idleMessage,
+  showOnFocus = false,
   onInputKeyDown,
   dropdownTestId,
 }: LookupSearchSelectProps<TItem>) {
@@ -83,7 +87,8 @@ export function LookupSearchSelect<TItem>({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const canShowDropdown = open && !disabled && value.trim().length >= minimumSearchLength;
+  const hasSearchTerm = value.trim().length >= minimumSearchLength;
+  const canShowDropdown = open && !disabled && (hasSearchTerm || showOnFocus);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -179,7 +184,9 @@ export function LookupSearchSelect<TItem>({
               )}
             </div>
           ) : items.length === 0 && !hasNextPage && !isFetchingNextPage ? (
-            <div className="py-6 text-center text-sm text-muted-foreground">{emptyMessage}</div>
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              {!hasSearchTerm && idleMessage ? idleMessage : emptyMessage}
+            </div>
           ) : (
             <div
               ref={scrollContainerRef}
