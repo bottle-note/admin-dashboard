@@ -195,3 +195,17 @@ pnpm test:e2e:headed # 브라우저 표시
 - 테스트 패턴: `src/hooks/__tests__/useTastingTags.test.ts` 참조
 - E2E 패턴: `e2e/specs/tasting-tags.spec.ts` 참조
 - Page Object 패턴: `e2e/pages/tasting-tag-list.page.ts` 참조
+
+## 배포
+
+배포는 GitHub Actions로만 한다. 로컬에서 이미지 빌드·푸시·매니페스트 수정을 직접 하지 않는다.
+
+| 대상 | 경로 |
+|---|---|
+| 운영 | `release_pr_create.yml` → `release_pr_merged.yml` → `deploy_release_applications.yml` |
+| 운영 핫픽스 | `release_pr_create.yml` (`release_type: hotfix`) → `hotfix_pr_merged.yml` → 동일 배포 워크플로 |
+| 개발 | `deploy-dev.yml` (ci 성공 시 자동) |
+
+**`releases/**`, `hotfixes/**` 브랜치를 수동으로 만들지 않는다.** `release_pr_create.yml`만 만든다. 릴리즈 브랜치는 그 시점 소스의 `.github/workflows` 사본을 그대로 들고 오므로, 손으로 만들면 낡은 워크플로 스냅샷이 운영 경로에 다시 들어온다 (2026-08-31 사고 원인). 핫픽스가 `hotfixes/**` 네임스페이스를 쓰는 이유도 과거 스냅샷의 `branches: ['releases/**']` 필터에 걸리지 않게 하기 위함이다.
+
+이미지 공개는 `immutable 태그 push → cosign 서명 → 검증 → 채널 태그 승격 → 재검증` 순서를 강제하며, 승격 이전 어느 단계가 실패해도 `dashboard_latest_production`은 이전 digest를 유지한다. 상세 계약은 `k8s-platform`의 `docs/BottleNote 배포 운영 가이드.md` 5.3절이다.

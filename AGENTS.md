@@ -86,3 +86,17 @@ curl -fsSL https://bottle-note.github.io/workspace/openapi.admin.json \
 - 레이아웃, 간격, 너비, 줄바꿈, 색상, 문구, 노출 상태, 상호작용처럼 사용자가 보거나 조작하는 UI를 변경했다면 실제 브라우저 화면에서 변경 결과를 확인한다. 관련 화면을 직접 열어 정렬, 겹침, 잘림, 불필요한 줄바꿈과 가로·세로 넘침이 없는지 검증한다.
 - `lint`, `build`, E2E 통과만으로 UI 화면 검증을 대신하지 않는다. 화면 검증을 실행할 수 없는 환경이라면 그 사실과 사용자가 확인해야 할 항목을 완료 보고에 명시한다.
 - 코드 변경 후 `pnpm lint`와 `pnpm build`를 실행하고, 관련 도메인의 Playwright spec을 우선 실행한다. 환경이나 계정 문제로 E2E를 실행하지 못하면 그 사실과 필요한 수동 확인 항목을 명시한다.
+
+## 배포
+
+배포는 GitHub Actions로만 한다. 로컬에서 이미지 빌드·푸시·매니페스트 수정을 직접 하지 않는다.
+
+| 대상 | 경로 |
+|---|---|
+| 운영 | `release_pr_create.yml` → `release_pr_merged.yml` → `deploy_release_applications.yml` |
+| 운영 핫픽스 | `release_pr_create.yml` (`release_type: hotfix`) → `hotfix_pr_merged.yml` → 동일 배포 워크플로 |
+| 개발 | `deploy-dev.yml` (ci 성공 시 자동) |
+
+**`releases/**`, `hotfixes/**` 브랜치를 수동으로 만들지 않는다.** `release_pr_create.yml`만 만든다. 릴리즈 브랜치는 그 시점 소스의 `.github/workflows` 사본을 그대로 들고 오므로, 손으로 만들면 낡은 워크플로 스냅샷이 운영 경로에 다시 들어온다 (2026-08-31 사고 원인). 핫픽스가 `hotfixes/**` 네임스페이스를 쓰는 이유도 과거 스냅샷의 `branches: ['releases/**']` 필터에 걸리지 않게 하기 위함이다.
+
+이미지 공개는 `immutable 태그 push → cosign 서명 → 검증 → 채널 태그 승격 → 재검증` 순서를 강제하며, 승격 이전 어느 단계가 실패해도 `dashboard_latest_production`은 이전 digest를 유지한다. 상세 계약은 `k8s-platform`의 `docs/BottleNote 배포 운영 가이드.md` 5.3절이다.
