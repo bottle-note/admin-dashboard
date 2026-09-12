@@ -2,6 +2,26 @@ import { test, expect } from '@playwright/test';
 import { WhiskyListPage } from '../pages/whisky-list.page';
 import { WhiskyDetailPage } from '../pages/whisky-detail.page';
 
+test('위스키 등록 도수는 % 없는 문자열과 범위를 검증한다', async ({ page }) => {
+  const detailPage = new WhiskyDetailPage(page);
+  await detailPage.gotoNew();
+  const abvError = page.getByText('도수는 % 없이 0~100 사이의 값이나 범위로 입력하세요', { exact: false });
+
+  await expect(detailPage.abvInput()).toHaveAttribute('type', 'text');
+  // 다른 필수 항목은 비워 두어 실제 등록 없이 도수 검증만 확인한다.
+  for (const value of ['', '50%', '101', '100.01', '40.123', '50~', 'abc']) {
+    await detailPage.abvInput().fill(value);
+    await detailPage.clickSave();
+    await expect(abvError).toBeVisible();
+  }
+  for (const value of ['0', '40', '50~60', '50.25~60.75', '100.00']) {
+    await detailPage.abvInput().fill(value);
+    await detailPage.clickSave();
+    await expect(abvError).toBeHidden();
+    await expect(detailPage.abvInput()).toHaveValue(value);
+  }
+});
+
 /**
  * 위스키 E2E 테스트
  *

@@ -58,7 +58,7 @@ export class WhiskyDetailPage extends BasePage {
     this.page.locator('button[role="combobox"]').filter({ hasText: /증류소 선택/ });
 
   /** 도수 입력 */
-  readonly abvInput = () => this.page.getByPlaceholder('예: 40');
+  readonly abvInput = () => this.page.getByPlaceholder('예: 40 또는 50~60 (% 제외)');
 
   /** 숙성년도 입력 */
   readonly ageInput = () => this.page.getByPlaceholder('예: 12');

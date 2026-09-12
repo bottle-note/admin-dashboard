@@ -15,7 +15,12 @@ export const whiskyFormSchema = z.object({
   }),
   regionId: z.number().min(1, '지역은 필수입니다'),
   distilleryId: z.number().min(0, '증류소 ID는 0 이상이어야 합니다'),
-  abv: z.number().min(0, '도수는 0 이상이어야 합니다').max(100, '도수는 100 이하여야 합니다'),
+  abv: z
+    .string()
+    .regex(
+      /^(?:100(?:\.0{1,2})?|(?:\d{1,2})(?:\.\d{1,2})?)(?:~(?:100(?:\.0{1,2})?|(?:\d{1,2})(?:\.\d{1,2})?))?$/,
+      '도수는 % 없이 0~100 사이의 값이나 범위로 입력하세요 (소수점 최대 2자리, 예: 40, 50~60)'
+    ),
   age: z.string(),
   cask: z.string(),
   volume: z.string().min(1, '용량은 필수입니다'),
