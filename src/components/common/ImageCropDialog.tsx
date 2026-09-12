@@ -17,6 +17,8 @@ import {
   type PreparedImage,
 } from '@/lib/image-preprocessing';
 
+import { ImageCropCoordinates } from './ImageCropCoordinates';
+
 import type { ImageProcessingPolicy } from './image-processing-policy';
 
 interface ImageCropDialogProps {
@@ -26,18 +28,30 @@ interface ImageCropDialogProps {
   onOpenChange: (open: boolean) => void;
   onPrepared: (preparedImage: PreparedImage) => void;
   closeOnPrepared?: boolean;
+  applyLabel?: string;
+  initialCropPercent?: number;
 }
 
-function createInitialCrop(image: HTMLImageElement, aspectRatio: number | null): Crop {
+function createInitialCrop(
+  image: HTMLImageElement,
+  aspectRatio: number | null,
+  percent: number
+): Crop {
   if (aspectRatio === null) {
-    return { unit: '%', x: 5, y: 5, width: 90, height: 90 };
+    return {
+      unit: '%',
+      x: (100 - percent) / 2,
+      y: (100 - percent) / 2,
+      width: percent,
+      height: percent,
+    };
   }
 
   const width = image.width || image.naturalWidth;
   const height = image.height || image.naturalHeight;
 
   return centerCrop(
-    makeAspectCrop({ unit: '%', width: 90 }, aspectRatio, width, height),
+    makeAspectCrop({ unit: '%', width: percent }, aspectRatio, width, height),
     width,
     height
   );
@@ -97,6 +111,8 @@ export function ImageCropDialog({
   onOpenChange,
   onPrepared,
   closeOnPrepared = true,
+  applyLabel = '크롭 적용',
+  initialCropPercent = 90,
 }: ImageCropDialogProps) {
   const imageRef = useRef<HTMLImageElement>(null);
   const [sourceUrl, setSourceUrl] = useState<string | null>(null);
@@ -122,12 +138,26 @@ export function ImageCropDialog({
     return () => URL.revokeObjectURL(nextSourceUrl);
   }, [file, open, policy.defaultAspectRatio, policy.defaultQuality]);
 
-  const handleCropComplete = (nextCrop: PixelCrop) => {
+  const handleCropComplete = (nextCrop: PixelCrop, percentCrop?: Crop) => {
     setCropPixels(nextCrop);
+    if (percentCrop) {
+      setCrop(percentCrop);
+      return;
+    }
+    const image = imageRef.current;
+    if (image?.width && image.height) {
+      setCrop({
+        unit: '%',
+        x: (nextCrop.x / image.width) * 100,
+        y: (nextCrop.y / image.height) * 100,
+        width: (nextCrop.width / image.width) * 100,
+        height: (nextCrop.height / image.height) * 100,
+      });
+    }
   };
 
   const handleImageLoad = (event: React.SyntheticEvent<HTMLImageElement>) => {
-    const initialCrop = createInitialCrop(event.currentTarget, aspectRatio);
+    const initialCrop = createInitialCrop(event.currentTarget, aspectRatio, initialCropPercent);
     setCrop(initialCrop);
     setCropPixels(toPixelCrop(initialCrop, event.currentTarget));
   };
@@ -138,7 +168,7 @@ export function ImageCropDialog({
     setCropPixels(null);
 
     if (imageRef.current) {
-      const initialCrop = createInitialCrop(imageRef.current, nextAspectRatio);
+      const initialCrop = createInitialCrop(imageRef.current, nextAspectRatio, initialCropPercent);
       setCrop(initialCrop);
       setCropPixels(toPixelCrop(initialCrop, imageRef.current));
     }
@@ -151,7 +181,7 @@ export function ImageCropDialog({
       return;
     }
 
-    const sourceCrop = toSourceCrop(cropPixels, image);
+    const sourceCrop = toSourceCrop(crop ? toPixelCrop(crop, image) : cropPixels, image);
     if (!sourceCrop) {
       setErrorMessage('크롭 영역이 이미지 범위를 벗어났습니다. 영역을 다시 조절해주세요.');
       return;
@@ -184,11 +214,18 @@ export function ImageCropDialog({
   };
 
   const sourceCrop =
-    cropPixels && imageRef.current ? toSourceCrop(cropPixels, imageRef.current) : null;
+    crop && imageRef.current
+      ? toSourceCrop(toPixelCrop(crop, imageRef.current), imageRef.current)
+      : null;
   const cropSizeLabel = sourceCrop ? `크롭 ${sourceCrop.width} × ${sourceCrop.height}px` : null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!isProcessing) onOpenChange(nextOpen);
+      }}
+    >
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>이미지 크롭 및 변환</DialogTitle>
@@ -275,7 +312,34 @@ export function ImageCropDialog({
             </label>
           </div>
 
-          {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
+          {sourceCrop && imageRef.current && (
+            <ImageCropCoordinates
+              crop={sourceCrop}
+              imageWidth={imageRef.current.naturalWidth}
+              imageHeight={imageRef.current.naturalHeight}
+              aspectRatio={aspectRatio}
+              disabled={isProcessing}
+              onApply={(coordinates) => {
+                const image = imageRef.current;
+                if (!image) return;
+                const nextCrop: Crop = {
+                  unit: '%',
+                  x: (coordinates.x / image.naturalWidth) * 100,
+                  y: (coordinates.y / image.naturalHeight) * 100,
+                  width: (coordinates.width / image.naturalWidth) * 100,
+                  height: (coordinates.height / image.naturalHeight) * 100,
+                };
+                setCrop(nextCrop);
+                setCropPixels(toPixelCrop(nextCrop, image));
+                setErrorMessage(null);
+              }}
+            />
+          )}
+          {errorMessage && (
+            <p role="alert" className="text-sm text-destructive">
+              {errorMessage}
+            </p>
+          )}
         </div>
 
         <DialogFooter>
@@ -292,7 +356,7 @@ export function ImageCropDialog({
             disabled={isProcessing || !cropPixels}
             onClick={() => void handleApply()}
           >
-            {isProcessing ? '변환 중...' : '크롭 적용'}
+            {isProcessing ? '변환 중...' : applyLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

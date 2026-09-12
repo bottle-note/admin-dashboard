@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Upload, X } from 'lucide-react';
+import { Plus, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { PreparedImage } from '@/lib/image-preprocessing';
 
@@ -52,12 +52,16 @@ export interface MediaUploadProps {
   mediaType?: 'IMAGE' | 'VIDEO';
   onMediaChange: (file: File | null, previewUrl: string | null) => void;
   minHeight?: number;
+  variant?: 'default' | 'compact';
+  label?: string;
   accept?: string;
   onFileRejected?: (file: File) => void;
   description?: string;
   supportText?: string;
   disabled?: boolean;
   imageProcessingPolicy?: ImageProcessingPolicy;
+  /** 현재 mediaUrl에 해당하는 파일을 제공하면 compact에서 다시 크롭할 수 있다. */
+  loadImageFile?: () => Promise<File>;
 }
 
 export function MediaUpload({
@@ -65,18 +69,50 @@ export function MediaUpload({
   mediaType = 'IMAGE',
   onMediaChange,
   minHeight = 200,
+  variant = 'default',
+  label = '이미지',
   accept = DEFAULT_ACCEPT,
   onFileRejected,
   description = '이미지를 드래그하거나 클릭하여 업로드',
   supportText = 'PNG, JPG, WEBP 지원',
   disabled = false,
   imageProcessingPolicy,
+  loadImageFile,
 }: MediaUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedMediaType, setSelectedMediaType] = useState<'IMAGE' | 'VIDEO' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const blobUrlRef = useRef<string | null>(null);
   const [cropTargetFile, setCropTargetFile] = useState<File | null>(null);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const editRequest = useRef(0);
+  const canEdit = !!mediaUrl && mediaType === 'IMAGE' && !!imageProcessingPolicy && !!loadImageFile;
+  useEffect(
+    () => () => {
+      editRequest.current += 1;
+    },
+    [mediaUrl, disabled]
+  );
+
+  const handleEdit = async () => {
+    if (disabled || isLoadingEdit || !canEdit || !loadImageFile || !imageProcessingPolicy) return;
+    const request = ++editRequest.current;
+    setIsLoadingEdit(true);
+    setEditError(null);
+    try {
+      const file = await loadImageFile();
+      if (request !== editRequest.current) return;
+      if (!imageProcessingPolicy.allowedMimeTypes.includes(file.type))
+        throw new Error('JPG, PNG, WEBP 이미지만 수정할 수 있습니다. 파일을 교체해주세요.');
+      setCropTargetFile(file);
+    } catch {
+      if (request === editRequest.current)
+        setEditError('이미지를 불러오지 못했습니다. 다시 시도하거나 파일을 교체해주세요.');
+    } finally {
+      setIsLoadingEdit(false);
+    }
+  };
   const inputAccept = imageProcessingPolicy
     ? [
         ...imageProcessingPolicy.allowedMimeTypes,
@@ -118,7 +154,8 @@ export function MediaUpload({
 
   const handleFile = useCallback(
     (file: File) => {
-      if (disabled) return;
+      if (disabled || isLoadingEdit) return;
+      setEditError(null);
 
       if (!isFileTypeAllowed(file.type, accept)) {
         onFileRejected?.(file);
@@ -137,7 +174,7 @@ export function MediaUpload({
 
       commitFile(file);
     },
-    [accept, commitFile, disabled, imageProcessingPolicy, onFileRejected]
+    [accept, commitFile, disabled, isLoadingEdit, imageProcessingPolicy, onFileRejected]
   );
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -164,6 +201,7 @@ export function MediaUpload({
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (file) {
       handleFile(file);
     }
@@ -177,6 +215,7 @@ export function MediaUpload({
       blobUrlRef.current = null;
     }
     setSelectedMediaType(null);
+    setEditError(null);
     onMediaChange(null, null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -193,7 +232,64 @@ export function MediaUpload({
 
   return (
     <div className="space-y-4">
-      {mediaUrl ? (
+      {variant === 'compact' ? (
+        <div
+          className="flex items-center gap-2"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <button
+            type="button"
+            aria-label={`${label} 미리보기 · ${canEdit ? '수정' : mediaUrl ? '교체' : '추가'}`}
+            disabled={disabled || isLoadingEdit}
+            onClick={() => (canEdit ? void handleEdit() : fileInputRef.current?.click())}
+            className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border disabled:opacity-50 ${mediaUrl ? '' : 'border-dashed'} ${isDragging ? 'border-primary bg-primary/5' : ''}`}
+          >
+            {mediaUrl ? (
+              <img src={mediaUrl} alt={label} className="h-full w-full object-contain" />
+            ) : (
+              <Plus className="h-5 w-5 text-muted-foreground" />
+            )}
+          </button>
+          <div className="flex flex-wrap gap-1">
+            {canEdit && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={disabled || isLoadingEdit}
+                aria-label={`${label} 수정`}
+                onClick={() => void handleEdit()}
+              >
+                {isLoadingEdit ? '불러오는 중...' : '수정'}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={disabled || isLoadingEdit}
+              aria-label={`${label} ${mediaUrl ? '교체' : '추가'}`}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {mediaUrl ? '교체' : '추가'}
+            </Button>
+            {mediaUrl && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={disabled || isLoadingEdit}
+                aria-label={`${label} 제거`}
+                onClick={handleRemove}
+              >
+                제거
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : mediaUrl ? (
         <div className="relative">
           {isVideo ? (
             <video
@@ -213,6 +309,7 @@ export function MediaUpload({
             size="icon"
             className="absolute right-2 top-2 h-8 w-8"
             disabled={disabled}
+            aria-label={`${label} 제거`}
             onClick={handleRemove}
           >
             <X className="h-4 w-4" />
@@ -240,11 +337,17 @@ export function MediaUpload({
           <p className="mt-1 text-xs text-muted-foreground">{supportText}</p>
         </div>
       )}
+      {variant === 'compact' && editError && (
+        <p role="alert" className="max-w-64 text-xs text-destructive">
+          {editError}
+        </p>
+      )}
       <input
         ref={fileInputRef}
         type="file"
+        aria-label={`${label} 파일 선택`}
         accept={inputAccept}
-        disabled={disabled}
+        disabled={disabled || isLoadingEdit}
         className="hidden"
         onChange={handleFileSelect}
       />
@@ -255,6 +358,8 @@ export function MediaUpload({
           policy={imageProcessingPolicy}
           onOpenChange={handleCropDialogOpenChange}
           onPrepared={handlePreparedImage}
+          applyLabel={variant === 'compact' && loadImageFile ? '이미지 저장' : undefined}
+          initialCropPercent={variant === 'compact' && loadImageFile ? 100 : undefined}
         />
       )}
     </div>

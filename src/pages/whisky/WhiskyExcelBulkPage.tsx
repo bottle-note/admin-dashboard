@@ -1,3 +1,8 @@
+import { useSearchParams } from 'react-router';
+import { MediaUpload } from '@/components/common/MediaUpload';
+import { DEFAULT_IMAGE_PROCESSING_POLICY } from '@/components/common/image-processing-policy';
+import { useBulkAlcoholImages } from '@/hooks/useBulkAlcoholImages';
+import { BulkImageDialog } from './BulkImageDialog';
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import {
   AlertCircle,
@@ -43,7 +48,7 @@ import type {
   AlcoholExcelValidationRow,
 } from '@/types/api';
 
-type IssueFilter = 'ALL' | 'ERROR' | 'WARNING';
+type IssueFilter = 'ALL' | 'ERROR' | 'WARNING' | 'NO_IMAGE';
 
 const XLSX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
@@ -54,10 +59,6 @@ function formatFileSize(bytes: number) {
 
 function getWhiskyName(row: AlcoholExcelValidationRow) {
   return [row.korName, row.engName].filter(Boolean).join(' / ') || '-';
-}
-
-function hasIssues(row: AlcoholExcelValidationRow) {
-  return row.errors.length > 0 || row.warnings.length > 0;
 }
 
 function isBulkValidationResult(value: unknown): value is AlcoholBulkValidationResult {
@@ -104,7 +105,27 @@ export function WhiskyExcelBulkPage() {
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [issueFilter, setIssueFilter] = useState<IssueFilter>('ALL');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterParam = searchParams.get('issue');
+  const issueFilter: IssueFilter =
+    filterParam === 'ERROR' || filterParam === 'WARNING' || filterParam === 'NO_IMAGE'
+      ? filterParam
+      : 'ALL';
+  const setIssueFilter = (value: IssueFilter) =>
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (value === 'ALL') next.delete('issue');
+        else next.set('issue', value);
+        return next;
+      },
+      { replace: true }
+    );
+  const uploads = useBulkAlcoholImages();
+  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [isWorkInfoOpen, setIsWorkInfoOpen] = useState(false);
+  const [resetAction, setResetAction] = useState<'select' | 'validate' | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [validationResult, setValidationResult] = useState<AlcoholExcelValidationResult | null>(
     null
   );
@@ -117,19 +138,65 @@ export function WhiskyExcelBulkPage() {
   const issueRows = (validationResult?.rows ?? []).filter((row) => {
     if (issueFilter === 'ERROR') return row.errors.length > 0;
     if (issueFilter === 'WARNING') return row.warnings.length > 0;
-    return hasIssues(row);
+    if (issueFilter === 'NO_IMAGE') return !uploads.images[row.clientRowId]?.url;
+    return true;
   });
-  const issueRowCount = validationResult?.rows.filter(hasIssues).length ?? 0;
+  const imageCount = Object.values(uploads.images).filter((image) => image.url).length;
+  const hasImageErrors = Object.values(uploads.images).some((image) => image.error);
+  const busy = uploads.isUploading || validateExcel.isPending || createBulk.isPending;
   const normalizedRows =
-    validationResult?.rows.flatMap((row) => (row.normalized ? [row.normalized] : [])) ?? [];
-  const canUpload =
-    validationResult !== null &&
-    validationResult.totalRows > 0 &&
-    validationResult.invalidRows === 0 &&
-    normalizedRows.length === validationResult.totalRows &&
-    createdRows === null;
+    validationResult?.rows.flatMap((row) =>
+      row.normalized
+        ? [{ ...row.normalized, imageUrl: uploads.images[row.clientRowId]?.url ?? null }]
+        : []
+    ) ?? [];
+  const uploadBlockedReason =
+    createdRows !== null
+      ? '등록이 완료되었습니다. 같은 작업을 다시 전송할 수 없습니다.'
+      : createBulk.isPending
+        ? '등록 결과를 기다리고 있습니다.'
+        : validateExcel.isPending
+          ? '엑셀 검증을 기다리고 있습니다.'
+          : uploads.isUploading
+            ? '이미지 업로드가 끝난 뒤 전송할 수 있습니다.'
+            : !validationResult || validationResult.totalRows === 0
+              ? '등록할 엑셀 데이터를 검증해주세요.'
+              : validationResult.invalidRows > 0 ||
+                  normalizedRows.length !== validationResult.totalRows
+                ? '엑셀 오류를 수정하고 다시 검증해주세요.'
+                : hasImageErrors
+                  ? '실패한 이미지를 재시도하거나 첨부를 취소하세요.'
+                  : null;
+  const canUpload = uploadBlockedReason === null;
+  const workState = {
+    fileName: file?.name ?? null,
+    operation: 'CREATE',
+    canSubmit: canUpload,
+    blockedReason: uploadBlockedReason,
+    createdRows,
+    rows: (validationResult?.rows ?? []).map((row) => {
+      const image = uploads.images[row.clientRowId];
+      return {
+        clientRowId: row.clientRowId,
+        rowNumber: row.rowNumber,
+        name: getWhiskyName(row),
+        errors: row.errors,
+        warnings: row.warnings,
+        imageStatus: image?.uploading
+          ? 'UPLOADING'
+          : image?.error
+            ? 'ERROR'
+            : image?.url
+              ? 'READY'
+              : 'EMPTY',
+        imageUrl: image?.url ?? null,
+        imageError: image?.error ?? null,
+      };
+    }),
+  };
 
-  const selectFile = (nextFile: File | undefined) => {
+  const selectFile = (nextFile: File | undefined, confirmed = false) => {
+    if (busy) return;
     if (!nextFile) return;
 
     if (!nextFile.name.toLowerCase().endsWith('.xlsx')) {
@@ -137,6 +204,13 @@ export function WhiskyExcelBulkPage() {
       return;
     }
 
+    if (!confirmed && Object.values(uploads.images).some((image) => image.url || image.file)) {
+      setPendingFile(nextFile);
+      setResetAction('select');
+      return;
+    }
+    uploads.reset();
+    setIsImageDialogOpen(false);
     setFile(nextFile);
     setValidationResult(null);
     setCreatedRows(null);
@@ -172,12 +246,26 @@ export function WhiskyExcelBulkPage() {
     }
   };
 
-  const handleValidate = async () => {
-    if (!file) return;
+  const handleValidate = async (confirmed = false) => {
+    if (!file || busy) return;
+    if (!confirmed && Object.values(uploads.images).some((image) => image.url || image.file)) {
+      setResetAction('validate');
+      return;
+    }
+    uploads.reset();
+    setValidationResult(null);
 
     try {
       setCreatedRows(null);
-      setValidationResult(await validateExcel.mutateAsync(file));
+      const result = await validateExcel.mutateAsync(file);
+      uploads.reset(
+        Object.fromEntries(
+          result.rows
+            .filter((row) => row.normalized?.imageUrl)
+            .map((row) => [row.clientRowId, { url: row.normalized!.imageUrl ?? null }])
+        )
+      );
+      setValidationResult(result);
     } catch (error) {
       showToast({ type: 'error', message: getErrorMessage(error) });
     }
@@ -211,10 +299,37 @@ export function WhiskyExcelBulkPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">위스키 Excel 벌크 등록</h1>
+        <ol aria-label="벌크 등록 단계" className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          {['양식 다운로드', '엑셀 업로드', '검증 및 이미지 추가', '최종 전송'].map(
+            (label, index) => {
+              const active = createdRows !== null ? 3 : validationResult ? 2 : file ? 1 : 0;
+              return (
+                <li
+                  key={label}
+                  aria-current={index === active ? 'step' : undefined}
+                  className={cn(
+                    'flex items-center gap-2',
+                    index === active ? 'font-medium text-primary' : 'text-muted-foreground'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'flex h-7 w-7 items-center justify-center rounded-full',
+                      index === active ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                    )}
+                  >
+                    {index + 1}
+                  </span>
+                  {label}
+                </li>
+              );
+            }
+          )}
+        </ol>
       </div>
 
       <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0">
+        <CardHeader className="flex-row flex-wrap items-center justify-between gap-4 space-y-0">
           <div className="space-y-1.5">
             <CardTitle>1. 양식 다운로드</CardTitle>
             <CardDescription>
@@ -230,7 +345,7 @@ export function WhiskyExcelBulkPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>2. 파일 업로드 및 검증</CardTitle>
+          <CardTitle>2. 엑셀 업로드</CardTitle>
           <CardDescription>
             작성한 .xlsx 파일을 올리면 저장 없이 행별 오류와 경고를 확인합니다.
           </CardDescription>
@@ -242,18 +357,27 @@ export function WhiskyExcelBulkPage() {
             aria-label="검증할 Excel 파일 선택"
             accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             className="hidden"
+            disabled={busy}
             onChange={handleFileChange}
           />
           <div
-            className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-6 py-8 text-center"
+            className={cn(
+              'flex items-center gap-3 rounded-lg border px-4',
+              validationResult
+                ? 'flex-wrap py-3'
+                : 'min-h-40 flex-col justify-center border-dashed py-8 text-center'
+            )}
             onDragOver={(event) => event.preventDefault()}
             onDrop={handleDrop}
           >
             <FileSpreadsheet className="h-8 w-8 text-muted-foreground" />
             {file ? (
-              <div className="space-y-1">
-                <p className="font-medium">{file.name}</p>
-                <p className="text-sm text-muted-foreground">{formatFileSize(file.size)}</p>
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="break-all font-medium">{file.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {formatFileSize(file.size)}
+                  {validationResult ? ' · 검증 완료' : ''}
+                </p>
               </div>
             ) : (
               <div className="space-y-1">
@@ -263,134 +387,226 @@ export function WhiskyExcelBulkPage() {
                 </p>
               </div>
             )}
-            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => fileInputRef.current?.click()}
+            >
               <FolderOpen />
               {file ? '다른 파일 선택' : '파일 선택'}
             </Button>
           </div>
           <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              onClick={handleValidate}
-              disabled={!file || validateExcel.isPending || createBulk.isPending}
-            >
+            <Button onClick={() => void handleValidate()} disabled={!file || busy}>
               <FileSpreadsheet />
               {validateExcel.isPending ? '검증 중...' : '검증하기'}
-            </Button>
-            <Button
-              onClick={() => setIsUploadConfirmOpen(true)}
-              disabled={!canUpload || validateExcel.isPending || createBulk.isPending}
-            >
-              <Upload />
-              {createBulk.isPending ? '업로드 중...' : '업로드하기'}
             </Button>
           </div>
         </CardContent>
       </Card>
 
       {validationResult && (
-        <Card>
-          <CardHeader>
-            <CardTitle>검증 결과</CardTitle>
-            <CardDescription>
-              오류와 경고를 확인한 뒤, 오류가 없으면 위스키를 업로드할 수 있습니다.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-3 sm:grid-cols-3">
-              {[
-                ['전체 행', validationResult.totalRows, 'text-foreground'],
-                ['오류 행', validationResult.invalidRows, 'text-destructive'],
-                ['경고 포함 행', validationResult.warningRows, 'text-amber-700'],
-              ].map(([label, value, className]) => (
-                <div key={label} className="rounded-lg border px-4 py-3">
-                  <p className="text-sm text-muted-foreground">{label}</p>
-                  <p className={cn('mt-1 text-2xl font-semibold', className)}>{value}</p>
+        <>
+          <Card>
+            <CardHeader className="gap-3">
+              <CardTitle>3. 검증 및 이미지 추가</CardTitle>
+              <CardDescription>
+                검증 결과를 확인하고 이미지를 첨부하세요. 아직 등록되지는 않았습니다.
+              </CardDescription>
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                <span>전체 {validationResult.totalRows}건</span>
+                <span className="text-destructive">오류 {validationResult.invalidRows}건</span>
+                <span className="text-amber-700">경고 {validationResult.warningRows}건</span>
+                <span>이미지 {imageCount}건</span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {createdRows !== null && (
+                <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+                  <CheckCircle2 className="h-4 w-4" />
+                  위스키 {createdRows}건을 등록했습니다.
                 </div>
-              ))}
-            </div>
-
-            {createdRows !== null && (
-              <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                <CheckCircle2 className="h-4 w-4" />
-                위스키 {createdRows}건을 등록했습니다.
-              </div>
-            )}
-
-            {validationResult.totalRows === 0 ? (
-              <div className="flex items-center gap-2 rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
-                <AlertCircle className="h-4 w-4" />
-                입력된 데이터 행이 없습니다. 양식의 3행부터 내용을 작성해 다시 검증하세요.
-              </div>
-            ) : issueRowCount > 0 ? (
-              <>
-                <div className="flex flex-wrap gap-2">
-                  {(
-                    [
-                      ['ALL', `전체 (${issueRowCount})`],
-                      ['ERROR', `오류 (${validationResult.invalidRows})`],
-                      ['WARNING', `경고 (${validationResult.warningRows})`],
-                    ] as const
-                  ).map(([value, label]) => (
+              )}
+              {validationResult.totalRows === 0 ? (
+                <p className="rounded-lg bg-muted p-4 text-sm">
+                  입력된 데이터 행이 없습니다. 양식의 3행부터 내용을 작성해 다시 검증하세요.
+                </p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap gap-2">
+                      {(
+                        [
+                          ['ALL', `전체 (${validationResult.totalRows})`],
+                          ['ERROR', `오류 (${validationResult.invalidRows})`],
+                          ['WARNING', `경고 (${validationResult.warningRows})`],
+                          [
+                            'NO_IMAGE',
+                            `이미지 미첨부 (${validationResult.totalRows - imageCount})`,
+                          ],
+                        ] as const
+                      ).map(([value, label]) => (
+                        <Button
+                          key={value}
+                          type="button"
+                          size="sm"
+                          variant={issueFilter === value ? 'default' : 'outline'}
+                          onClick={() => setIssueFilter(value)}
+                        >
+                          {label}
+                        </Button>
+                      ))}
+                    </div>
                     <Button
-                      key={value}
                       type="button"
-                      size="sm"
-                      variant={issueFilter === value ? 'default' : 'outline'}
-                      onClick={() => setIssueFilter(value)}
+                      disabled={busy || createdRows !== null}
+                      onClick={() => setIsImageDialogOpen(true)}
                     >
-                      {label}
+                      <Upload />
+                      여러 이미지 추가
                     </Button>
-                  ))}
-                </div>
-                {issueRows.length ? (
-                  <div className="overflow-x-auto rounded-lg border">
+                  </div>
+                  <div className="overflow-hidden rounded-lg border [&>div]:max-h-[36rem]">
                     <Table>
-                      <TableHeader>
+                      <TableHeader className="sticky top-0 z-10 bg-background">
                         <TableRow>
-                          <TableHead className="w-20 whitespace-nowrap">행</TableHead>
-                          <TableHead className="min-w-52">위스키 이름</TableHead>
-                          <TableHead className="w-24 whitespace-nowrap">상태</TableHead>
-                          <TableHead>확인 사항</TableHead>
+                          <TableHead className="w-16 whitespace-nowrap">행</TableHead>
+                          <TableHead className="min-w-52">위스키명</TableHead>
+                          <TableHead className="min-w-52">상태 / 확인 사항</TableHead>
+                          <TableHead className="min-w-56">이미지</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
+                        {issueRows.length === 0 && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={4}
+                              className="py-8 text-center text-muted-foreground"
+                            >
+                              선택한 상태에 해당하는 행이 없습니다.
+                            </TableCell>
+                          </TableRow>
+                        )}
                         {issueRows.map((row) => {
-                          const issues = [
-                            ...row.errors.map((issue) => ({ issue, type: '오류' })),
-                            ...row.warnings.map((issue) => ({ issue, type: '경고' })),
-                          ];
-
+                          const image = uploads.images[row.clientRowId];
                           return (
-                            <TableRow key={row.rowNumber}>
+                            <TableRow
+                              key={row.clientRowId}
+                              data-client-row-id={row.clientRowId}
+                              data-row-number={row.rowNumber}
+                              aria-busy={Boolean(image?.uploading)}
+                            >
                               <TableCell className="font-mono">{row.rowNumber}</TableCell>
-                              <TableCell>{getWhiskyName(row)}</TableCell>
-                              <TableCell>
+                              <TableCell className="max-w-72 break-words">
+                                {getWhiskyName(row)}
+                              </TableCell>
+                              <TableCell className="max-w-96 space-y-2">
                                 <span
                                   className={cn(
-                                    'whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium',
-                                    row.errors.length > 0
+                                    'inline-flex rounded px-2 py-1 text-xs font-medium',
+                                    row.errors.length
                                       ? 'bg-destructive/10 text-destructive'
-                                      : 'bg-amber-100 text-amber-800'
+                                      : row.warnings.length
+                                        ? 'bg-amber-100 text-amber-800'
+                                        : 'bg-emerald-50 text-emerald-800'
                                   )}
                                 >
-                                  {row.errors.length > 0 ? '오류' : '경고'}
+                                  {row.errors.length
+                                    ? '오류'
+                                    : row.warnings.length
+                                      ? '경고'
+                                      : '정상'}
                                 </span>
-                              </TableCell>
-                              <TableCell className="space-y-2">
-                                {issues.map(({ issue, type }, index) => (
-                                  <p key={`${issue.code}-${index}`} className="text-sm">
-                                    <span
-                                      className={cn(
-                                        'mr-2 font-medium',
-                                        type === '오류' ? 'text-destructive' : 'text-amber-800'
-                                      )}
-                                    >
-                                      {type}
-                                      {issue.field ? ` · ${issue.field}` : ''}
-                                    </span>
+                                {[...row.errors, ...row.warnings].map((issue, index) => (
+                                  <p key={`${issue.code}-${index}`} className="break-words text-sm">
+                                    {issue.field && (
+                                      <span className="mr-1 text-muted-foreground">
+                                        {issue.field} ·
+                                      </span>
+                                    )}
                                     {issue.message}
                                   </p>
                                 ))}
+                              </TableCell>
+                              <TableCell>
+                                <MediaUpload
+                                  loadImageFile={() => uploads.getImageFile(row.clientRowId)}
+                                  variant="compact"
+                                  label={`${row.rowNumber}행 ${row.korName || row.engName || '위스키'} 이미지`}
+                                  mediaUrl={image?.url ?? null}
+                                  disabled={busy || createdRows !== null || !row.normalized}
+                                  imageProcessingPolicy={DEFAULT_IMAGE_PROCESSING_POLICY}
+                                  onFileRejected={() =>
+                                    showToast({
+                                      type: 'error',
+                                      message: 'JPG, PNG, WEBP 이미지만 사용할 수 있습니다.',
+                                    })
+                                  }
+                                  onMediaChange={(file) => {
+                                    if (file)
+                                      void uploads.upload([
+                                        { clientRowId: row.clientRowId, file, prepared: true },
+                                      ]);
+                                    else uploads.remove(row.clientRowId);
+                                  }}
+                                />
+                                {image?.url && !image.uploading && !image.error && (
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    이미지 첨부 완료
+                                  </p>
+                                )}
+                                {image?.uploading && (
+                                  <p role="status" className="mt-2 text-xs text-muted-foreground">
+                                    이미지 업로드 중...
+                                  </p>
+                                )}
+                                {image?.error && (
+                                  <div className="mt-2 max-w-64 space-y-1">
+                                    <p
+                                      role="alert"
+                                      className="break-words text-xs text-destructive"
+                                    >
+                                      {image.error}
+                                    </p>
+                                    <div className="flex gap-1">
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        disabled={busy}
+                                        aria-label={`${row.rowNumber}행 이미지 업로드 재시도`}
+                                        onClick={() => {
+                                          if (image.file)
+                                            void uploads.upload([
+                                              {
+                                                clientRowId: row.clientRowId,
+                                                file: image.file,
+                                                prepared: image.prepared,
+                                              },
+                                            ]);
+                                        }}
+                                      >
+                                        재시도
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        disabled={busy}
+                                        aria-label={`${row.rowNumber}행 이미지 첨부 취소`}
+                                        onClick={() => uploads.dismissError(row.clientRowId)}
+                                      >
+                                        첨부 취소
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                                {!row.normalized && (
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    엑셀 오류를 수정한 뒤 첨부하세요.
+                                  </p>
+                                )}
                               </TableCell>
                             </TableRow>
                           );
@@ -398,23 +614,122 @@ export function WhiskyExcelBulkPage() {
                       </TableBody>
                     </Table>
                   </div>
-                ) : (
-                  <div className="rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
-                    선택한 상태에 해당하는 행이 없습니다.
-                  </div>
-                )}
-              </>
-            ) : (
-              createdRows === null && (
-                <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                  <CheckCircle2 className="h-4 w-4" />
-                  오류나 경고가 없는 파일입니다. 검증만 완료되었으며 아직 등록되지는 않았습니다.
-                </div>
-              )
+                  <p className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    이미지는 선택 항목입니다. 첨부하지 않은 행도 등록할 수 있습니다.
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex-row flex-wrap items-center justify-between gap-4 space-y-0">
+              <div className="space-y-2">
+                <CardTitle>4. 최종 전송</CardTitle>
+                <CardDescription>
+                  등록 {validationResult.totalRows}건 · 이미지 첨부 {imageCount}건 · 경고{' '}
+                  {validationResult.warningRows}건
+                </CardDescription>
+                <p id="bulk-submit-status" role="status" className="text-sm text-muted-foreground">
+                  {uploadBlockedReason ?? '전송할 준비가 되었습니다.'}
+                </p>
+              </div>
+              <Button
+                onClick={() => setIsUploadConfirmOpen(true)}
+                disabled={!canUpload}
+                aria-describedby="bulk-submit-status"
+              >
+                <Upload />
+                {createBulk.isPending ? '전송 중...' : '최종 전송'}
+              </Button>
+            </CardHeader>
+          </Card>
+          <details
+            className="rounded-lg border p-4"
+            onToggle={(event) => setIsWorkInfoOpen(event.currentTarget.open)}
+          >
+            <summary className="cursor-pointer text-sm font-medium">작업 정보</summary>
+            {isWorkInfoOpen && (
+              <div className="mt-3 space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  현재 검증 결과와 이미지 연결 상태입니다. 필터에 가려진 행도 포함합니다.
+                </p>
+                <textarea
+                  aria-label="현재 벌크 등록 작업 정보 JSON"
+                  readOnly
+                  value={JSON.stringify(workState, null, 2)}
+                  className="h-48 w-full rounded-md border bg-muted p-3 font-mono text-xs"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(JSON.stringify(workState, null, 2));
+                      showToast({ type: 'success', message: '작업 정보를 복사했습니다.' });
+                    } catch {
+                      showToast({
+                        type: 'error',
+                        message: '복사하지 못했습니다. 작업 정보에서 직접 복사해주세요.',
+                      });
+                    }
+                  }}
+                >
+                  작업 정보 복사
+                </Button>
+                <a
+                  href="/agent-guides/whisky-excel-bulk.md"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ml-3 text-sm underline"
+                >
+                  작업 가이드
+                </a>
+              </div>
             )}
-          </CardContent>
-        </Card>
+          </details>
+          {isImageDialogOpen && (
+            <BulkImageDialog
+              rows={validationResult.rows}
+              uploads={uploads}
+              onClose={() => setIsImageDialogOpen(false)}
+            />
+          )}
+        </>
       )}
+      <AlertDialog
+        open={resetAction !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResetAction(null);
+            setPendingFile(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>이미지 연결을 초기화할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              엑셀을 변경하거나 다시 검증하면 현재 첨부한 이미지 연결이 초기화됩니다. 새 검증
+              결과에서 이미지를 다시 첨부해야 합니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (resetAction === 'select' && pendingFile) selectFile(pendingFile, true);
+                if (resetAction === 'validate') void handleValidate(true);
+                setResetAction(null);
+                setPendingFile(null);
+              }}
+            >
+              초기화하고 계속
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={isUploadConfirmOpen} onOpenChange={setIsUploadConfirmOpen}>
         <AlertDialogContent>
@@ -423,6 +738,7 @@ export function WhiskyExcelBulkPage() {
               위스키 {validationResult?.totalRows ?? 0}건을 등록할까요?
             </AlertDialogTitle>
             <AlertDialogDescription>
+              이미지 {imageCount}건이 첨부됩니다.{' '}
               {validationResult?.warningRows
                 ? `경고가 있는 행이 ${validationResult.warningRows}건 포함되어 있습니다. `
                 : ''}
@@ -432,7 +748,7 @@ export function WhiskyExcelBulkPage() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={createBulk.isPending}>취소</AlertDialogCancel>
             <AlertDialogAction onClick={handleUpload} disabled={createBulk.isPending}>
-              {createBulk.isPending ? '업로드 중...' : '업로드'}
+              {createBulk.isPending ? '전송 중...' : '등록'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
