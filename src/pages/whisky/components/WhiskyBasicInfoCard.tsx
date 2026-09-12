@@ -181,12 +181,7 @@ export function WhiskyBasicInfoCard({
         {/* 도수 / 숙성년도 */}
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="도수 (ABV %)" required error={errors.abv?.message}>
-            <Input
-              type="number"
-              step="0.1"
-              {...register('abv', { valueAsNumber: true })}
-              placeholder="예: 40"
-            />
+            <Input type="text" {...register('abv')} placeholder="예: 40 또는 50~60 (% 제외)" />
           </FormField>
           <FormField label="숙성년도" error={errors.age?.message}>
             <Input {...register('age')} placeholder="예: 12" />
