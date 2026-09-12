@@ -8,6 +8,16 @@ import { S3Api, type PresignUrlParams, type PresignUrlResponse } from '@/types/a
 // ============================================
 
 export const s3Service = {
+  /** 이미 업로드된 이미지를 크롭할 때 사용한다. 관리자 인증 헤더를 CDN에 보내지 않는다. */
+  downloadImage: async (viewUrl: string): Promise<File> => {
+    const response = await fetch(viewUrl, { credentials: 'omit' });
+    if (!response.ok)
+      throw new Error('이미지를 불러오지 못했습니다. 다시 시도하거나 파일을 교체해주세요.');
+    const blob = await response.blob();
+    if (!blob.type.startsWith('image/'))
+      throw new Error('이미지 형식을 확인하지 못했습니다. 파일을 교체해주세요.');
+    return new File([blob], 'image', { type: blob.type });
+  },
   /**
    * Presigned URL 발급
    * @param params - rootPath: 업로드 경로, uploadSize: URL 개수
