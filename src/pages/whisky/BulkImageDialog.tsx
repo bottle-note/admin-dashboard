@@ -55,25 +55,26 @@ export function BulkImageDialog({
       files.filter((item) => !item.done && item.file.name.normalize('NFC') === filename).length > 1;
     const image = target ? uploads.images[target.row.clientRowId] : undefined;
     const supported = DEFAULT_IMAGE_PROCESSING_POLICY.allowedMimeTypes.includes(entry.file.type);
-    const status = entry.done
-      ? '업로드 완료'
-      : !supported
-        ? '지원하지 않는 형식'
-        : candidates.length > 1
-          ? '엑셀 파일명 중복'
-          : !target
-            ? '일치하는 행 없음'
-            : duplicate
-              ? '파일 중복'
-              : !target.row.normalized
-                ? '엑셀 오류'
-                : image?.uploading
-                  ? '업로드 중...'
-                  : image?.error
-                    ? '업로드 실패'
-                    : image?.url && !entry.replace
-                      ? '교체 선택 필요'
-                      : '매칭 완료';
+    let status = '매칭 완료';
+    if (entry.done) {
+      status = '업로드 완료';
+    } else if (!supported) {
+      status = '지원하지 않는 형식';
+    } else if (candidates.length > 1) {
+      status = '엑셀 파일명 중복';
+    } else if (!target) {
+      status = '일치하는 행 없음';
+    } else if (duplicate) {
+      status = '파일 중복';
+    } else if (!target.row.normalized) {
+      status = '엑셀 오류';
+    } else if (image?.uploading) {
+      status = '업로드 중...';
+    } else if (image?.error) {
+      status = '업로드 실패';
+    } else if (image?.url && !entry.replace) {
+      status = '교체 선택 필요';
+    }
     const eligible =
       !entry.done &&
       supported &&
