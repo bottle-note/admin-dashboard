@@ -20,7 +20,6 @@ import {
   useActiveVisitorStatistics,
   useVisitorRetentionStatistics,
 } from '@/hooks/useStatistics';
-import { createVisitorComposition } from './visitor-composition';
 import { WeekRangePicker } from './WeekRangePicker';
 import type {
   TimeSeriesPayload,
@@ -158,7 +157,6 @@ interface StatisticsCardProps {
   description: string;
   payload?: TimeSeriesPayload;
   seriesKeys: string[];
-  stacked?: boolean;
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
@@ -169,7 +167,6 @@ function StatisticsCard({
   description,
   payload,
   seriesKeys,
-  stacked,
   isLoading,
   isError,
   onRetry,
@@ -184,7 +181,7 @@ function StatisticsCard({
         <TimeSeriesChart
           payload={payload}
           seriesKeys={seriesKeys}
-          stacked={stacked}
+          chartType="line"
           isLoading={isLoading}
           isError={isError}
           onRetry={onRetry}
@@ -404,7 +401,6 @@ export function VisitorStatisticsPage() {
   };
   const activeVisitorsQuery = useActiveVisitorStatistics(queryParams);
   const retentionQuery = useVisitorRetentionStatistics(queryParams);
-  const visitorComposition = createVisitorComposition(activeVisitorsQuery.data);
   const activeLabel =
     appliedGranularity === 'DAY' ? 'DAU' : appliedGranularity === 'WEEK' ? 'WAU' : 'MAU';
   const rangeDescription = `${appliedFrom} ~ ${appliedTo}`;
@@ -439,9 +435,8 @@ export function VisitorStatisticsPage() {
         <StatisticsCard
           title={`방문자 ${activeLabel}`}
           description={rangeDescription}
-          payload={visitorComposition}
-          seriesKeys={['members', 'guestVisitors']}
-          stacked
+          payload={activeVisitorsQuery.data}
+          seriesKeys={['visitors', 'members']}
           isLoading={activeVisitorsQuery.isLoading}
           isError={activeVisitorsQuery.isError}
           onRetry={() => void activeVisitorsQuery.refetch()}

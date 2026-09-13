@@ -1,13 +1,16 @@
+import { Info } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useSearchParams } from 'react-router';
 import { z } from 'zod';
-import { AlcoholSearchSelect } from '@/components/common/AlcoholSearchSelect';
+import { AlcoholStatisticsSearch } from './AlcoholStatisticsSearch';
+import { AlcoholStatisticsSummary } from './AlcoholStatisticsSummary';
 import { TimeSeriesChart } from '@/components/common/TimeSeriesChart';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Select,
   SelectContent,
@@ -51,7 +54,7 @@ const metricDefinitionLabels: Record<Group, Array<{ key: string; label: string }
     { key: 'engagementScore', label: '참여도 점수' },
     { key: 'interestValue', label: '상세 조회 수' },
     { key: 'ratingValue', label: '누적 평점 수' },
-    { key: 'pickValue', label: 'PICK 수' },
+    { key: 'pickValue', label: '찜 수' },
     { key: 'engagementValue', label: '참여 합계' },
   ],
   INTEREST: [
@@ -59,22 +62,22 @@ const metricDefinitionLabels: Record<Group, Array<{ key: string; label: string }
     { key: 'cumulativeViewCount', label: '누적 조회 수' },
   ],
   RATING: [
-    { key: 'deltaRatingCount', label: '평점 수 증감' },
-    { key: 'deltaRatingSum', label: '평점 합 증감' },
+    { key: 'deltaRatingCount', label: '평점 수 순증감' },
+    { key: 'deltaRatingSum', label: '평점 합 순증감' },
     { key: 'ratingCount', label: '누적 평점 수' },
     { key: 'ratingSum', label: '누적 평점 합' },
     { key: 'averageRating', label: '평균 평점' },
   ],
   PICK: [
-    { key: 'deltaPickCount', label: 'PICK 증감' },
-    { key: 'pickCount', label: 'PICK 수' },
-    { key: 'unpickCount', label: 'UNPICK 수' },
+    { key: 'deltaPickCount', label: '찜 순증감' },
+    { key: 'pickCount', label: '찜 수' },
+    { key: 'unpickCount', label: '찜 해제 상태 수' },
   ],
   ENGAGEMENT: [
-    { key: 'deltaReviewCount', label: '리뷰 증감' },
-    { key: 'deltaLikeCount', label: '좋아요 증감' },
-    { key: 'deltaDislikeCount', label: '싫어요 증감' },
-    { key: 'deltaReplyCount', label: '댓글 증감' },
+    { key: 'deltaReviewCount', label: '리뷰 순증감' },
+    { key: 'deltaLikeCount', label: '좋아요 순증감' },
+    { key: 'deltaDislikeCount', label: '싫어요 순증감' },
+    { key: 'deltaReplyCount', label: '댓글 순증감' },
     { key: 'reviewCount', label: '리뷰 수' },
     { key: 'likeCount', label: '좋아요 수' },
     { key: 'dislikeCount', label: '싫어요 수' },
@@ -86,7 +89,7 @@ type MetricDefinition = {
   label: string;
   unit: TimeSeriesDescriptor['unit'];
   section: string;
-  description: string;
+  help?: string;
 };
 const colors = [
   '#ff9e20',
@@ -128,21 +131,15 @@ function metricDefinition(group: Group, item: { key: string; label: string }): M
           : group === 'RATING' && item.key === 'ratingCount'
             ? '누적 평점 수'
             : item.key.startsWith('delta')
-              ? '기간 증감'
+              ? '기간 순증감'
               : item.key === 'viewCount'
                 ? '기간 조회 수'
                 : '누적·현재값';
-  const description =
-    item.key === 'averageRating'
-      ? '평점 합을 평점 수로 나눈 값입니다. 평점이 없으면 표시하지 않습니다.'
-      : item.key.startsWith('delta')
-        ? '해당 집계 구간의 순증감이며 감소하면 음수로 표시합니다.'
-        : item.key === 'unpickCount'
-          ? '집계 시점에 찜 해제 상태인 수입니다. 기간 내 해제 횟수가 아닙니다.'
-          : item.key === 'viewCount' || item.key === 'interestValue'
-            ? '해당 집계 구간에 발생한 상세 조회 수입니다.'
-            : `${item.label}의 시간별 변화입니다.`;
-  return { ...item, unit, section, description };
+  const help =
+    item.key === 'unpickCount'
+      ? '집계 시점의 찜 해제 상태 수이며, 기간 내 해제 횟수와 다릅니다.'
+      : undefined;
+  return { ...item, unit, section, help };
 }
 const metricDefinitions: Record<Group, MetricDefinition[]> = Object.fromEntries(
   Object.entries(metricDefinitionLabels).map(([group, items]) => [
@@ -272,34 +269,54 @@ function FilterCard({
 }
 function ChartCard({
   title,
-  description,
+  help,
   payload,
   seriesKeys,
   loading,
   error,
   retry,
   seriesColors,
+  chartType = 'line',
 }: {
   title: string;
-  description: string;
+  help?: string;
   payload?: TimeSeriesPayload;
   seriesKeys: string[];
   loading: boolean;
   error: unknown;
   retry: () => void;
   seriesColors?: Record<string, string | undefined>;
+  chartType?: 'line' | 'bar';
 }) {
   return (
     <Card className="min-w-0">
       <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-base">{title}</CardTitle>
+          {help && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    aria-label={`${title} 도움말`}
+                  >
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-64">{help}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="min-w-0">
         <TimeSeriesChart
           payload={payload}
           seriesKeys={seriesKeys}
-          chartType="line"
+          chartType={chartType}
           isLoading={loading}
           isError={Boolean(error)}
           errorMessage={error ? getErrorMessage(error) : undefined}
@@ -341,9 +358,29 @@ function IndividualCharts({
         <ChartCard
           key={key}
           title={`${groupLabel(group)} · ${key.split(':')[0]}`}
-          description={series.map((item) => item.description).join(' ')}
-          payload={query.data}
+          help={series.find((item) => item.help)?.help}
+          payload={
+            query.data && {
+              ...query.data,
+              series: query.data.series.map((item) => ({
+                ...item,
+                label:
+                  metricDefinitions[group].find((metric) => metric.key === item.key)?.label ??
+                  item.label,
+              })),
+            }
+          }
           seriesKeys={series.map((item) => item.key)}
+          chartType={
+            series.every(
+              (item) =>
+                item.key.startsWith('delta') ||
+                item.key === 'viewCount' ||
+                item.key === 'interestValue'
+            )
+              ? 'bar'
+              : 'line'
+          }
           loading={query.isLoading}
           error={query.error}
           retry={() => void query.refetch()}
@@ -452,7 +489,7 @@ function CompareChart({
     <div className="space-y-3">
       <ChartCard
         title={`${groupLabel(group)} · ${definition?.label ?? descriptor?.label ?? '지표'} 비교`}
-        description={`${definition?.description ?? ''} 같은 집계 구간의 주류별 값을 비교하며, 데이터가 없는 구간은 선을 연결하지 않습니다.`}
+        help={definition?.help}
         payload={payload}
         seriesKeys={selectedIds.map((id) => `alcohol-${id}`)}
         loading={queries.some((query) => query.isLoading)}
@@ -485,7 +522,7 @@ export function AlcoholStatisticsPage() {
   const mode = url.get('mode') === 'compare' ? 'compare' : 'individual';
   const group = groups.some((item) => item.value === url.get('group'))
     ? (url.get('group') as Group)
-    : 'POPULARITY';
+    : 'INTEREST';
   const candidate = {
     from: url.get('from') ?? fallback.from,
     to: url.get('to') ?? fallback.to,
@@ -530,166 +567,194 @@ export function AlcoholStatisticsPage() {
       next.set('metric', metric);
     }
     if (next.toString() !== url.toString()) setUrl(next, { replace: true });
-  }, [
-    group,
-    individualId,
-    metric,
-    mode,
-    params.from,
-    params.granularity,
-    params.to,
-    setUrl,
-    url,
-  ]);
+  }, [group, individualId, metric, mode, params.from, params.granularity, params.to, setUrl, url]);
   const selected = mode === 'compare' ? compareIds : individualId ? [individualId] : [];
   return (
     <div className="min-w-0 space-y-6">
       <div>
         <h1 className="text-2xl font-bold">주류 통계</h1>
-        <p className="text-muted-foreground">
-          개별 지표를 분석하거나 최대 세 주류의 같은 지표를 비교합니다.
-        </p>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">조회 방식과 주류 선택</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2" role="tablist" aria-label="주류 통계 조회 방식">
-            {[
-              ['individual', '개별 분석'],
-              ['compare', '주류 비교'],
-            ].map(([value, label]) => (
-              <Button
-                key={value}
-                type="button"
-                variant={mode === value ? 'default' : 'outline'}
-                role="tab"
-                aria-selected={mode === value}
-                onClick={() =>
-                  update(
-                    value === 'compare'
-                      ? {
-                          mode: value,
-                          ids: compareIds.length
-                            ? compareIds.join(',')
-                            : individualId
-                              ? String(individualId)
-                              : undefined,
-                          metric: undefined,
-                        }
-                      : { mode: value, metric: undefined }
-                  )
-                }
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
-          <AlcoholSearchSelect
-            onSelect={(alcohol) =>
-              mode === 'individual'
-                ? update({ alcoholId: String(alcohol.alcoholId) })
-                : !compareIds.includes(alcohol.alcoholId) && compareIds.length < 3
-                  ? update({ ids: [...compareIds, alcohol.alcoholId].join(',') })
-                  : undefined
-            }
-            excludeIds={selected}
-            disabled={mode === 'compare' && compareIds.length >= 3}
-            dropdownTestId="alcohol-statistics-search-dropdown"
-          />
-          {mode === 'individual' && individualDetail.data ? (
-            <div className="rounded-md bg-muted/50 px-4 py-3">
-              <p className="font-medium">{individualDetail.data.korName}</p>
-              <p className="text-sm text-muted-foreground">
-                {individualDetail.data.engName} · {individualDetail.data.korCategory}
-              </p>
-            </div>
-          ) : null}
-          {mode === 'compare' && compareIds.length ? (
-            <div className="flex flex-wrap gap-2">
-              {compareIds.map((id, index) => (
-                <Button
-                  key={id}
-                  size="sm"
-                  variant="secondary"
-                  onClick={() =>
-                    update({
-                      ids: compareIds.filter((value) => value !== id).join(',') || undefined,
-                    })
-                  }
-                >
-                  {details[index]?.data?.korName ?? `주류 ${id}`} ×
-                </Button>
-              ))}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
-      {selected.length ? (
-        <>
-          <FilterCard
-            params={params}
-            onApply={(next) =>
-              update({ from: next.from, to: next.to, granularity: next.granularity })
-            }
-          />
-          <Card>
-            <CardHeader className="gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <CardTitle className="text-base">지표 그룹</CardTitle>
-                <CardDescription>
-                  {mode === 'individual'
-                    ? '지표의 의미와 단위에 따라 차트를 나누어 표시합니다.'
-                    : '비교할 단일 지표를 선택하세요.'}
-                </CardDescription>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Select
-                  value={group}
-                  onValueChange={(value) => update({ group: value, metric: undefined })}
-                >
-                  <SelectTrigger aria-label="통계 지표 그룹" className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {mode === 'compare' ? (
-                  <Select value={metric} onValueChange={(value) => update({ metric: value })}>
-                    <SelectTrigger aria-label="비교 지표" className="w-44">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {metricSeries.map((item) => (
-                        <SelectItem key={item.key} value={item.key}>
-                          {item.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : null}
+      <FilterCard
+        params={params}
+        onApply={(next) => update({ from: next.from, to: next.to, granularity: next.granularity })}
+      />
+      <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+        <AlcoholStatisticsSearch
+          keyword={url.get('keyword') ?? ''}
+          onKeywordChange={(keyword) => {
+            const next = new URLSearchParams(url);
+            if (keyword) next.set('keyword', keyword);
+            else next.delete('keyword');
+            setUrl(next, { replace: true });
+          }}
+          selectedIds={selected}
+          disabled={mode === 'compare' && compareIds.length >= 3}
+          onSelect={(alcohol) =>
+            mode === 'individual'
+              ? update({ alcoholId: String(alcohol.alcoholId) })
+              : !compareIds.includes(alcohol.alcoholId) && compareIds.length < 3
+                ? update({ ids: [...compareIds, alcohol.alcoholId].join(',') })
+                : undefined
+          }
+        />
+        <div className="min-w-0 space-y-4">
+          <Card className="min-w-0">
+            <CardHeader>
+              <div className="flex flex-wrap gap-2" role="tablist" aria-label="주류 통계 조회 방식">
+                {(
+                  [
+                    ['individual', '개별 분석'],
+                    ['compare', '주류 비교'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    variant={mode === value ? 'default' : 'outline'}
+                    role="tab"
+                    aria-selected={mode === value}
+                    onClick={() =>
+                      update(
+                        value === 'compare'
+                          ? {
+                              mode: value,
+                              ids: compareIds.length
+                                ? compareIds.join(',')
+                                : individualId
+                                  ? String(individualId)
+                                  : undefined,
+                              metric: undefined,
+                            }
+                          : {
+                              mode: value,
+                              alcoholId: individualId
+                                ? String(individualId)
+                                : compareIds[0]
+                                  ? String(compareIds[0])
+                                  : undefined,
+                              metric: undefined,
+                            }
+                      )
+                    }
+                  >
+                    {label}
+                  </Button>
+                ))}
               </div>
             </CardHeader>
+            <CardContent className="min-w-0 space-y-6">
+              {mode === 'individual' && individualId ? (
+                <>
+                  {individualDetail.isLoading ? (
+                    <p className="text-sm text-muted-foreground">주류 정보를 불러오는 중...</p>
+                  ) : individualDetail.isError ? (
+                    <div role="alert" className="space-y-2 text-sm">
+                      <p>주류 정보를 불러오지 못했습니다.</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void individualDetail.refetch()}
+                      >
+                        다시 시도
+                      </Button>
+                    </div>
+                  ) : individualDetail.data ? (
+                    <div className="flex min-w-0 items-center gap-4">
+                      {individualDetail.data.imageUrl && (
+                        <img
+                          src={individualDetail.data.imageUrl}
+                          alt=""
+                          className="h-16 w-12 shrink-0 rounded-md object-contain"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <h2 className="break-words text-lg font-semibold">
+                          {individualDetail.data.korName}
+                        </h2>
+                        <p className="break-words text-sm text-muted-foreground">
+                          {individualDetail.data.engName}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {individualDetail.data.korCategory}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+                  <AlcoholStatisticsSummary id={individualId} params={params} />
+                </>
+              ) : mode === 'compare' && compareIds.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {compareIds.map((id, index) => (
+                    <Button
+                      key={id}
+                      size="sm"
+                      variant="secondary"
+                      className="h-auto whitespace-normal text-left"
+                      onClick={() =>
+                        update({
+                          ids: compareIds.filter((value) => value !== id).join(',') || undefined,
+                        })
+                      }
+                    >
+                      {details[index]?.data?.korName ?? `주류 ${id}`} ×
+                    </Button>
+                  ))}
+                </div>
+              ) : (
+                <p className="py-6 text-sm text-muted-foreground">
+                  조회할 주류를 선택하면 통계 차트가 표시됩니다.
+                </p>
+              )}
+              {selected.length > 0 && (
+                <div className="flex flex-wrap items-end justify-between gap-4 border-t pt-4">
+                  <div className="flex flex-wrap gap-2" role="tablist" aria-label="통계 지표 그룹">
+                    {groups.map((item) => (
+                      <Button
+                        key={item.value}
+                        size="sm"
+                        variant={group === item.value ? 'default' : 'outline'}
+                        role="tab"
+                        aria-selected={group === item.value}
+                        onClick={() => update({ group: item.value, metric: undefined })}
+                      >
+                        {item.label}
+                      </Button>
+                    ))}
+                  </div>
+                  {mode === 'compare' && (
+                    <label className="grid gap-2 text-sm font-medium">
+                      비교 지표
+                      <Select value={metric} onValueChange={(value) => update({ metric: value })}>
+                        <SelectTrigger aria-label="비교 지표" className="w-44">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {metricSeries.map((item) => (
+                            <SelectItem key={item.key} value={item.key}>
+                              {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </label>
+                  )}
+                </div>
+              )}
+            </CardContent>
           </Card>
-          {mode === 'individual' && individualId ? (
-            <IndividualCharts id={individualId} group={group} params={params} />
-          ) : (
-            <CompareChart selectedIds={compareIds} group={group} metric={metric} params={params} />
-          )}
-        </>
-      ) : (
-        <Card>
-          <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            조회할 주류를 선택하면 통계 차트가 표시됩니다.
-          </CardContent>
-        </Card>
-      )}
+          {selected.length > 0 &&
+            (mode === 'individual' && individualId ? (
+              <IndividualCharts id={individualId} group={group} params={params} />
+            ) : (
+              <CompareChart
+                selectedIds={compareIds}
+                group={group}
+                metric={metric}
+                params={params}
+              />
+            ))}
+        </div>
+      </div>
     </div>
   );
 }

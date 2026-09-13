@@ -7,6 +7,7 @@
 import { useMemo } from 'react';
 import {
   Area,
+  Bar,
   CartesianGrid,
   ComposedChart,
   Legend,
@@ -26,7 +27,7 @@ interface TimeSeriesChartProps {
   /** 렌더링할 series key 하위 집합 */
   seriesKeys?: string[];
   stacked?: boolean;
-  chartType?: 'area' | 'line';
+  chartType?: 'area' | 'line' | 'bar';
   isLoading?: boolean;
   isError?: boolean;
   errorMessage?: string;
@@ -144,7 +145,7 @@ export function TimeSeriesChart({
   }, [chartData, selectedSeries, stacked]);
 
   const renderedSeries = useMemo(() => {
-    if (stacked || chartType === 'line') {
+    if (stacked || chartType !== 'area') {
       return selectedSeries;
     }
 
@@ -212,7 +213,7 @@ export function TimeSeriesChart({
             <CartesianGrid stroke="#f4f2f2" strokeDasharray="3 3" />
             <XAxis
               dataKey="bucketLabel"
-              interval={dailyTickLabels ? 0 : 'preserveStartEnd'}
+              interval={dailyTickLabels && chartType === 'area' ? 0 : 'preserveStartEnd'}
               minTickGap={16}
               ticks={dailyTickLabels}
               padding={{ left: 8, right: 32 }}
@@ -247,7 +248,9 @@ export function TimeSeriesChart({
               const color =
                 seriesColors?.[series.key] ?? SERIES_COLORS[seriesIndex % SERIES_COLORS.length];
 
-              return chartType === 'line' ? (
+              return chartType === 'bar' ? (
+                <Bar key={series.key} dataKey={series.key} name={series.label} fill={color} maxBarSize={48} />
+              ) : chartType === 'line' ? (
                 <Line
                   key={series.key}
                   type="monotone"
