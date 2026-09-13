@@ -221,6 +221,7 @@ test('행별 이미지 교체와 파일명 매칭 결과를 최종 전송에 반
       '',
       '700',
       '',
+      `원본 이미지 ${index + 1}.png`,
     ];
   }
   await page.getByLabel('검증할 Excel 파일 선택').setInputFiles({
@@ -313,44 +314,23 @@ test('행별 이미지 교체와 파일명 매칭 결과를 최종 전송에 반
 
   await page.getByRole('button', { name: '여러 이미지 추가', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByText('003_이미지_검증_1', { exact: true })).toBeVisible();
-  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-  const firstCopy = dialog.getByRole('button', {
-    name: '3행 이미지 검증 1 파일명 복사',
-    exact: true,
-  });
-  const secondCopy = dialog.getByRole('button', {
-    name: '4행 이미지 검증 2 파일명 복사',
-    exact: true,
-  });
-  await firstCopy.click();
-  await expect(firstCopy).toHaveText('완료');
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('003_이미지_검증_1');
-  await secondCopy.click();
-  await expect(secondCopy).toHaveText('완료');
-  await expect(firstCopy).toHaveText('복사');
-  await expect(page.getByText('파일명을 복사했습니다.', { exact: true })).toHaveCount(0);
-  const mappingDownload = page.waitForEvent('download');
-  await dialog.getByRole('button', { name: '파일명 목록 다운로드' }).click();
-  const mappingFile = await mappingDownload;
-  expect(mappingFile.suggestedFilename()).toBe('whisky-image-filenames.csv');
-  const { readFile } = await import('node:fs/promises');
-  expect(await readFile((await mappingFile.path())!, 'utf8')).toContain(
-    '"3","이미지 검증 1","003_이미지_검증_1"'
-  );
+  await expect(dialog.getByText('원본 이미지 1.png', { exact: true })).toBeVisible();
+  await expect(
+    dialog.getByRole('button', { name: /파일명 복사|파일명 목록 다운로드/ })
+  ).toHaveCount(0);
   await page.screenshot({
     path: testInfo.outputPath('image-matching.png'),
     animations: 'disabled',
   });
   await dialog.getByLabel('매칭할 이미지 파일 선택').setInputFiles([
-    { name: '003_이미지_검증_1.png', mimeType: 'image/png', buffer: imageBytes },
-    { name: '004_이미지_검증_2.png', mimeType: 'image/png', buffer: imageBytes },
-    { name: '004_이미지_검증_2.jpg', mimeType: 'image/jpeg', buffer: imageBytes },
+    { name: '원본 이미지 1.png', mimeType: 'image/png', buffer: imageBytes },
+    { name: '원본 이미지 2.png', mimeType: 'image/png', buffer: imageBytes },
+    { name: '원본 이미지 2.png', mimeType: 'image/png', buffer: imageBytes },
     { name: 'unmatched.png', mimeType: 'image/png', buffer: imageBytes },
   ]);
   await expect(dialog.getByText(/파일 중복/)).toHaveCount(2);
-  await expect(dialog.getByText(/연결 대상 없음 · 대상 없음/)).toBeVisible();
-  await dialog.getByLabel('004_이미지_검증_2.jpg 목록에서 제외').click();
+  await expect(dialog.getByText('일치하는 행 없음', { exact: true })).toBeVisible();
+  await dialog.getByLabel('선택 3번 원본 이미지 2.png 목록에서 제외', { exact: true }).click();
   await expect(dialog.getByRole('button', { name: '매칭된 이미지 1개 업로드' })).toBeEnabled();
   await dialog.getByRole('checkbox', { name: '기존 이미지 교체' }).check();
   await page.setViewportSize({ width: 480, height: 900 });
@@ -427,7 +407,7 @@ test('행별 이미지 교체와 파일명 매칭 결과를 최종 전송에 반
   const guidePage = await page.context().newPage();
   await guidePage.goto('/agent-guides/whisky-excel-bulk.md');
   expect(await guidePage.evaluate(() => document.characterSet)).toBe('UTF-8');
-  await expect(guidePage.locator('body')).toContainText('003_글렌피딕_12년.jpg');
+  await expect(guidePage.locator('body')).toContainText('글렌피딕12.jpg');
   await guidePage.screenshot({ path: testInfo.outputPath('guide-utf8.png') });
   await guidePage.close();
   expect(await (await page.request.get('/llms.txt')).text()).toContain(

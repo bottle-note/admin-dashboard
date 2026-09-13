@@ -189,6 +189,7 @@ export function WhiskyExcelBulkPage() {
             : image?.url
               ? 'READY'
               : 'EMPTY',
+        imageFileName: row.imageFileName ?? null,
         imageUrl: image?.url ?? null,
         imageError: image?.error ?? null,
       };

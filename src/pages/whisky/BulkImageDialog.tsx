@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Copy, Upload, X } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -38,10 +38,6 @@ export function BulkImageDialog({
   uploads: ReturnType<typeof useBulkAlcoholImages>;
   onClose: () => void;
 }) {
-  const [copyState, setCopyState] = useState<{
-    clientRowId: string;
-    status: 'copied' | 'error';
-  } | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<{ id: number; file: File; replace: boolean; done: boolean }[]>(
     []
@@ -49,42 +45,36 @@ export function BulkImageDialog({
   const nextId = useRef(0);
   const targets = rows.map((row) => ({
     row,
-    filename: `${String(row.rowNumber).padStart(3, '0')}_${(row.korName || row.engName || '위스키')
-      .normalize('NFC')
-      .replace(/[<>:"/\\|?*]/g, '_')
-      .split('')
-      .map((character) => (character.charCodeAt(0) < 32 ? '_' : character))
-      .join('')
-      .replace(/\s+/g, '_')
-      .slice(0, 80)
-      .replace(/[. ]+$/, '')}`,
+    filename: row.imageFileName?.normalize('NFC') || null,
   }));
   const matches = files.map((entry) => {
-    const basename = entry.file.name.replace(/\.[^.]+$/, '').normalize('NFC');
-    const target = targets.find((item) => item.filename === basename);
+    const filename = entry.file.name.normalize('NFC');
+    const candidates = targets.filter((item) => item.filename === filename);
+    const target = candidates.length === 1 ? candidates[0] : undefined;
     const duplicate =
-      files.filter(
-        (item) => !item.done && item.file.name.replace(/\.[^.]+$/, '').normalize('NFC') === basename
-      ).length > 1;
+      files.filter((item) => !item.done && item.file.name.normalize('NFC') === filename).length > 1;
     const image = target ? uploads.images[target.row.clientRowId] : undefined;
     const supported = DEFAULT_IMAGE_PROCESSING_POLICY.allowedMimeTypes.includes(entry.file.type);
-    const status = entry.done
-      ? '업로드 완료'
-      : !supported
-        ? '지원하지 않는 형식'
-        : !target
-          ? '대상 없음'
-          : duplicate
-            ? '파일 중복 · 하나만 남겨주세요'
-            : !target.row.normalized
-              ? '엑셀 오류 수정 필요'
-              : image?.uploading
-                ? '업로드 중...'
-                : image?.error
-                  ? '업로드 실패'
-                  : image?.url && !entry.replace
-                    ? '교체 선택 필요'
-                    : '매칭 완료';
+    let status = '매칭 완료';
+    if (entry.done) {
+      status = '업로드 완료';
+    } else if (!supported) {
+      status = '지원하지 않는 형식';
+    } else if (candidates.length > 1) {
+      status = '엑셀 파일명 중복';
+    } else if (!target) {
+      status = '일치하는 행 없음';
+    } else if (duplicate) {
+      status = '파일 중복';
+    } else if (!target.row.normalized) {
+      status = '엑셀 오류';
+    } else if (image?.uploading) {
+      status = '업로드 중...';
+    } else if (image?.error) {
+      status = '업로드 실패';
+    } else if (image?.url && !entry.replace) {
+      status = '교체 선택 필요';
+    }
     const eligible =
       !entry.done &&
       supported &&
@@ -124,102 +114,12 @@ export function BulkImageDialog({
         <DialogHeader>
           <DialogTitle>여러 이미지 추가</DialogTitle>
           <DialogDescription>
-            파일명으로 위스키를 연결하고 매칭 결과를 확인한 뒤 업로드하세요.
+            Excel의 이미지 파일명과 일치하는 파일을 연결합니다. (확장자 포함)
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6">
           <section className="space-y-3">
-            <h3 className="font-semibold">1. 파일명 준비</h3>
-            <p className="text-sm text-muted-foreground">
-              아래 이름을 복사해 파일명을 변경하세요. 확장자는 유지하세요.
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const csvRows = [
-                  ['행 번호', '위스키명', '파일명 (확장자 제외)'],
-                  ...targets.map(({ row, filename }) => [
-                    String(row.rowNumber),
-                    row.korName || row.engName || '위스키',
-                    filename,
-                  ]),
-                ];
-                const csv =
-                  '\uFEFF' +
-                  csvRows
-                    .map((cells) =>
-                      cells
-                        .map((cell) => {
-                          const safeCell = /^[\s]*[=+@-]/.test(cell) ? "'" + cell : cell;
-                          return '"' + safeCell.replace(/"/g, '""') + '"';
-                        })
-                        .join(',')
-                    )
-                    .join('\r\n');
-                const url = URL.createObjectURL(
-                  new Blob([csv], { type: 'text/csv;charset=utf-8' })
-                );
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = 'whisky-image-filenames.csv';
-                link.click();
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-              }}
-            >
-              파일명 목록 다운로드
-            </Button>
-            <div className="rounded-md border">
-              {targets.map(({ row, filename }) => (
-                <div
-                  key={row.clientRowId}
-                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] items-center gap-3 border-b p-3 last:border-0"
-                >
-                  <span className="break-words text-sm">{row.korName || row.engName}</span>
-                  <code className="break-all rounded bg-muted px-2 py-1 text-xs">{filename}</code>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    aria-label={`${row.rowNumber}행 ${row.korName || row.engName} 파일명 복사`}
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(filename);
-                        setCopyState({ clientRowId: row.clientRowId, status: 'copied' });
-                      } catch {
-                        setCopyState({ clientRowId: row.clientRowId, status: 'error' });
-                      }
-                    }}
-                  >
-                    {copyState?.clientRowId === row.clientRowId && copyState.status === 'copied' ? (
-                      <>
-                        <Check className="h-3 w-3 text-emerald-600" aria-hidden="true" />
-                        <span role="status">완료</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3 w-3" aria-hidden="true" />
-                        복사
-                      </>
-                    )}
-                  </Button>
-                  {copyState?.clientRowId === row.clientRowId && copyState.status === 'error' && (
-                    <p role="alert" className="col-span-3 text-xs text-destructive">
-                      복사하지 못했습니다. 표시된 파일명을 직접 복사하세요.
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-            {targets[0] && (
-              <p className="break-all text-xs text-muted-foreground">
-                예: {targets[0].filename}.jpg
-              </p>
-            )}
-          </section>
-          <section className="space-y-3">
-            <h3 className="font-semibold">2. 이미지 선택</h3>
+            <h3 className="font-semibold">1. 이미지 선택</h3>
             <button
               type="button"
               disabled={uploads.isUploading}
@@ -233,9 +133,7 @@ export function BulkImageDialog({
             >
               <Upload className="h-6 w-6 text-muted-foreground" />
               이미지를 드래그하거나 파일 선택
-              <span className="text-xs text-muted-foreground">
-                JPG · PNG · WEBP / 여러 파일 선택 가능
-              </span>
+              <span className="text-xs text-muted-foreground">JPG · PNG · WEBP</span>
             </button>
             <input
               ref={input}
@@ -252,12 +150,31 @@ export function BulkImageDialog({
             />
           </section>
           <section className="space-y-3">
-            <h3 className="font-semibold">3. 매칭 결과 확인</h3>
-            {matches.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                이미지를 선택하면 연결 대상이 표시됩니다.
-              </p>
-            ) : (
+            <h3 className="font-semibold">2. 매칭 결과 확인</h3>
+            <div className="divide-y rounded-md border">
+              {targets.map(({ row, filename }) => (
+                <div key={row.clientRowId} className="space-y-1 p-3 text-sm">
+                  <p className="break-words">
+                    {row.rowNumber}행 · {row.korName || row.engName}
+                  </p>
+                  <p className="break-all text-xs text-muted-foreground">
+                    {row.imageFileName || '파일명 미입력'}
+                  </p>
+                  {filename && (
+                    <p className="text-xs text-muted-foreground">
+                      {targets.filter((item) => item.filename === filename).length > 1
+                        ? '엑셀 파일명 중복'
+                        : uploads.images[row.clientRowId]?.url
+                          ? '첨부 완료'
+                          : files.some((item) => item.file.name.normalize('NFC') === filename)
+                            ? '선택 완료'
+                            : '파일 미선택'}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+            {matches.length > 0 && (
               <div className="space-y-2">
                 {matches.map((item) => (
                   <div key={item.id} className="flex items-center gap-3 rounded-md border p-3">
@@ -267,7 +184,8 @@ export function BulkImageDialog({
                     <div className="min-w-0 flex-1 space-y-1">
                       <p className="break-all text-sm">{item.file.name}</p>
                       <p className="break-words text-xs text-muted-foreground">
-                        {item.target?.row.korName || item.target?.row.engName || '연결 대상 없음'} ·{' '}
+                        {item.target &&
+                          `${item.target.row.korName || item.target.row.engName || `${item.target.row.rowNumber}행`} · `}
                         {item.status}
                       </p>
                       {item.image?.error && !item.done && (
@@ -318,8 +236,7 @@ export function BulkImageDialog({
               </p>
             )}
             <p className="text-xs text-muted-foreground">
-              대상이 없거나 중복된 파일은 업로드하지 않습니다. 실패한 파일만 다시 업로드할 수
-              있습니다.
+              일치하는 행이 없는 파일과 중복 파일은 제외됩니다.
             </p>
           </section>
         </div>
