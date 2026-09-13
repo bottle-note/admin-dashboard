@@ -446,6 +446,8 @@ export interface AlcoholExcelValidationRow {
   description?: string | null;
   volume?: string | null;
   tastingTags?: string | null;
+  /** Excel 원문 이미지 파일명(확장자 포함). 빈 값은 null. */
+  imageFileName?: string | null;
   regionId?: number | null;
   distilleryId?: number | null;
   tastingTagIds?: number[] | null;
