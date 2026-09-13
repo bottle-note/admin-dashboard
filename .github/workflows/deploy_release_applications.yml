@@ -241,6 +241,7 @@ jobs:
           image-authors: "BottleNote Team"
           build-args: |
             ENV_FILE=git.environment-variables/application.vite/prod.sops.env
+            ADMIN_API_UPSTREAM=http://admin-api
           build-secrets: |
             age_key=${{ secrets.SOPS_AGE_SECRET_KEY }}
           sign-image: 'true'

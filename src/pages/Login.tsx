@@ -22,7 +22,6 @@ export function LoginPage() {
     setIsLoading(true);
 
     try {
-      console.log(import.meta.env.VITE_API_BASE_URL, 'VITE_API_BASE_URL');
       const { accessToken, refreshToken } = await authService.login({
         email,
         password,

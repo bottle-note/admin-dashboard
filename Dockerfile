@@ -31,9 +31,10 @@ RUN --mount=type=secret,id=age_key,env=SOPS_AGE_KEY \
 
 RUN pnpm build
 
-# nginx 설정 생성
-RUN export $(grep -v '^#' .env | xargs) && \
-    export API_BASE_URL="${VITE_API_BASE_URL}" && \
+# 배포용 내부 API 주소는 Nginx에만 주입한다. VITE_API_BASE_URL은 로컬 Vite proxy용이다.
+ARG ADMIN_API_UPSTREAM
+RUN test -n "${ADMIN_API_UPSTREAM}" && \
+    export API_BASE_URL="${ADMIN_API_UPSTREAM}" && \
     envsubst '${API_BASE_URL}' < nginx.conf.template > nginx.conf
 
 FROM nginx:alpine AS runner
