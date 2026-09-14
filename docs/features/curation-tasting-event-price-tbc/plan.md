@@ -8,7 +8,6 @@ payload·수정 복원·Admin 앱 미리보기에서 무료와 가격 미정을 
 
 ## Inputs
 
-- Spec: `docs/features/curation-tasting-event-price-tbc/spec.md`
 - Design: `docs/features/curation-tasting-event-price-tbc/design.md`
 - API source:
   - 2026-08-01 개발 API `WHISKY_TASTING_EVENT` spec v3.

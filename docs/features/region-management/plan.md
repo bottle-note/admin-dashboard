@@ -6,7 +6,6 @@ Add region management under the whisky/tasting tag admin section. The implementa
 
 ## Inputs
 
-- Spec: `docs/features/region-management/spec.md`
 - Design: `docs/features/region-management/design.md`
 - API source:
   - Dev API behavior from `https://admin-api.development.bottle-note.com`
