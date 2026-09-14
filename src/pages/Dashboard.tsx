@@ -15,7 +15,6 @@ import {
   useActiveVisitorStatistics,
   useVisitorRetentionStatistics,
 } from '@/hooks/useStatistics';
-import { createVisitorComposition } from '@/pages/statistics/visitor-composition';
 import type { TimeSeriesPayload, VisitorStatisticsParams } from '@/types/api';
 
 interface StatCardProps {
@@ -52,7 +51,6 @@ interface StatisticsCardProps {
   title: string;
   payload?: TimeSeriesPayload;
   seriesKeys: string[];
-  stacked?: boolean;
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
@@ -62,7 +60,6 @@ function StatisticsCard({
   title,
   payload,
   seriesKeys,
-  stacked,
   isLoading,
   isError,
   onRetry,
@@ -77,7 +74,7 @@ function StatisticsCard({
         <TimeSeriesChart
           payload={payload}
           seriesKeys={seriesKeys}
-          stacked={stacked}
+          chartType="line"
           isLoading={isLoading}
           isError={isError}
           onRetry={onRetry}
@@ -121,7 +118,6 @@ export function DashboardPage() {
   });
   const activeVisitorsQuery = useActiveVisitorStatistics(DASHBOARD_STATISTICS_PARAMS);
   const retentionQuery = useVisitorRetentionStatistics(DASHBOARD_STATISTICS_PARAMS);
-  const visitorComposition = createVisitorComposition(activeVisitorsQuery.data);
 
   return (
     <div className="space-y-6">
@@ -180,9 +176,8 @@ export function DashboardPage() {
         <div className="space-y-4">
           <StatisticsCard
             title="방문자 DAU"
-            payload={visitorComposition}
-            seriesKeys={['members', 'guestVisitors']}
-            stacked
+            payload={activeVisitorsQuery.data}
+            seriesKeys={['visitors', 'members']}
             isLoading={activeVisitorsQuery.isLoading}
             isError={activeVisitorsQuery.isError}
             onRetry={() => void activeVisitorsQuery.refetch()}

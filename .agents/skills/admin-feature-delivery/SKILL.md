@@ -49,7 +49,7 @@ Give the user:
 
 Stop and wait for the user to confirm the understanding.
 
-## Phase 2: Screen Decision and Specification
+## Phase 2: Screen Decision
 
 Turn the approved domain model into operator workflows and screens.
 
@@ -57,7 +57,6 @@ Turn the approved domain model into operator workflows and screens.
 - Map every screen and operation to required API fields and permissions.
 - Define navigation, routes, search, filters, pagination, state changes, dangerous actions, loading, empty, error, long text, and missing-value behavior.
 - Separate the current delivery from later product or mutation work.
-- Create or update `docs/features/<feature>/spec.md`. Read [the spec template](references/spec-template.md) before writing a new spec.
 - Break implementation into vertical delivery slices that include data access, UI, and focused E2E rather than horizontal layer-only tickets.
 
 ### Review Gate 2
@@ -67,7 +66,6 @@ Give the user:
 - screen and route list;
 - screen-to-API/function mapping;
 - scope, follow-ups, and open decisions;
-- clickable specification file;
 - proposed implementation slices.
 
 Stop and wait for scope approval.
@@ -80,7 +78,7 @@ Build the smallest real request path needed by the approved screens before imple
 - Add services with the exact paths and query serialization.
 - Add TanStack Query hooks and stable, domain-specific query keys.
 - Confirm the request against the dev API through the safest available authenticated environment.
-- Record actual response shape, pagination metadata, state values, and contract mismatches in the feature spec.
+- Report actual response shape, pagination metadata, state values, and contract mismatches to the user.
 - If authentication or representative data is unavailable, stop with the precise blocker and the exact response samples or access needed. Do not replace real verification with mock data.
 
 ### Review Gate 3
@@ -98,7 +96,7 @@ Stop and wait for approval of the data foundation.
 
 Implement the approved screens directly on the real request layer.
 
-- Add role-protected routes and menu entries according to the specification.
+- Add role-protected routes and menu entries according to the approved screen decisions.
 - Follow the closest existing list/detail patterns before creating a new pattern.
 - Keep search, filters, cursor or page state in URL parameters.
 - Render real query states: initial loading, refreshing or loading more, empty, filtered-empty, error with retry, missing optional data, and partial data.
@@ -122,7 +120,6 @@ Stop and wait for UI approval.
 - Add focused Playwright coverage for the changed operator flows. Prefer real integration; use minimal interception only for otherwise unreachable state branches.
 - Run the related Playwright spec, `pnpm lint`, and `pnpm build`.
 - Perform authenticated manual verification when the environment permits it.
-- Update the feature spec when implementation resolved an open question or deliberately changed the agreed behavior.
 - Report the result, visible behavior, checks completed, checks blocked, and follow-up work.
 
 Do not commit, push, create tickets, or deploy unless the user explicitly asks.

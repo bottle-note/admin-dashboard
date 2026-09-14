@@ -18,26 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  useAlcoholObservationStatistics,
-  useAlcoholPopularityStatistics,
-} from '@/hooks/useStatistics';
+import { useAlcoholPopularityStatistics } from '@/hooks/useStatistics';
 import { getErrorMessage } from '@/lib/api-error';
 import type {
   AlcoholStatisticsGranularity,
   AlcoholStatisticsParams,
-  StatisticsObservationAxis,
 } from '@/types/api';
-
-const OBSERVATION_AXIS_OPTIONS: Array<{
-  value: StatisticsObservationAxis;
-  label: string;
-}> = [
-  { value: 'INTEREST', label: '관심' },
-  { value: 'RATING', label: '평점' },
-  { value: 'PICK', label: '찜' },
-  { value: 'ENGAGEMENT', label: '참여' },
-];
 
 const GRANULARITY_OPTIONS: Array<{
   value: AlcoholStatisticsGranularity;
@@ -130,7 +116,6 @@ export interface WhiskyPopularityChartCardProps {
 
 export function WhiskyPopularityChartCard({ alcoholId }: WhiskyPopularityChartCardProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [observationAxis, setObservationAxis] = useState<StatisticsObservationAxis>('INTEREST');
   const [statisticsParams, setStatisticsParams] =
     useState<AlcoholStatisticsParams>(getDefaultStatisticsParams);
   const [draftStatisticsParams, setDraftStatisticsParams] =
@@ -143,22 +128,10 @@ export function WhiskyPopularityChartCard({ alcoholId }: WhiskyPopularityChartCa
   const popularityQuery = useAlcoholPopularityStatistics(validAlcoholId, statisticsParams, {
     enabled: isQueryEnabled,
   });
-  const observationQuery = useAlcoholObservationStatistics(
-    validAlcoholId,
-    observationAxis,
-    statisticsParams,
-    { enabled: isQueryEnabled }
-  );
-
   const popularityScoreKeys =
     popularityQuery.data?.series
       .filter((series) => series.unit === 'SCORE')
       .map((series) => series.key) ?? [];
-  const popularityCountKeys =
-    popularityQuery.data?.series
-      .filter((series) => series.unit === 'COUNT')
-      .map((series) => series.key) ?? [];
-  const observationKeys = observationQuery.data?.series.map((series) => series.key) ?? [];
   const granularityLabel =
     GRANULARITY_OPTIONS.find((option) => option.value === statisticsParams.granularity)?.label ??
     statisticsParams.granularity;
@@ -263,93 +236,27 @@ export function WhiskyPopularityChartCard({ alcoholId }: WhiskyPopularityChartCa
               )}
             </form>
 
-            <div className="grid min-w-0 gap-8 xl:grid-cols-2">
-              <section className="min-w-0 space-y-3" aria-labelledby="popularity-score-title">
-                <div>
-                  <h3 id="popularity-score-title" className="font-semibold">
-                    인기도 점수
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    서버에서 계산된 인기도 점수입니다.
-                  </p>
-                </div>
-                <TimeSeriesChart
-                  payload={popularityQuery.data}
-                  seriesKeys={popularityScoreKeys}
-                  chartType="line"
-                  isLoading={popularityQuery.isLoading}
-                  isError={popularityQuery.isError}
-                  errorMessage={
-                    popularityQuery.isError
-                      ? getErrorMessage(popularityQuery.error)
-                      : undefined
-                  }
-                  onRetry={() => void popularityQuery.refetch()}
-                />
-              </section>
-
-              <section className="min-w-0 space-y-3" aria-labelledby="popularity-count-title">
-                <div>
-                  <h3 id="popularity-count-title" className="font-semibold">
-                    인기도 원본 수치
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    점수 계산에 사용된 건수 지표입니다.
-                  </p>
-                </div>
-                <TimeSeriesChart
-                  payload={popularityQuery.data}
-                  seriesKeys={popularityCountKeys}
-                  chartType="line"
-                  isLoading={popularityQuery.isLoading}
-                  isError={popularityQuery.isError}
-                  errorMessage={
-                    popularityQuery.isError
-                      ? getErrorMessage(popularityQuery.error)
-                      : undefined
-                  }
-                  onRetry={() => void popularityQuery.refetch()}
-                />
-              </section>
-            </div>
-
-            <section className="min-w-0 space-y-3" aria-labelledby="observation-title">
-              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-                <div>
-                  <h3 id="observation-title" className="font-semibold">
-                    관찰 지표
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    선택한 기준의 실제 발생 추이입니다.
-                  </p>
-                </div>
-                <Select
-                  value={observationAxis}
-                  onValueChange={(value) => setObservationAxis(value as StatisticsObservationAxis)}
-                >
-                  <SelectTrigger aria-label="관찰 기준" className="w-full sm:w-[160px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OBSERVATION_AXIS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <section className="min-w-0 space-y-3" aria-labelledby="popularity-score-title">
+              <div>
+                <h3 id="popularity-score-title" className="font-semibold">
+                  인기도 점수
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  서버에서 계산된 인기도 점수입니다.
+                </p>
               </div>
-
               <TimeSeriesChart
-                payload={observationQuery.data}
-                seriesKeys={observationKeys}
+                payload={popularityQuery.data}
+                seriesKeys={popularityScoreKeys}
                 chartType="line"
-                isLoading={observationQuery.isLoading}
-                isError={observationQuery.isError}
+                isLoading={popularityQuery.isLoading}
+                isError={popularityQuery.isError}
                 errorMessage={
-                  observationQuery.isError ? getErrorMessage(observationQuery.error) : undefined
+                  popularityQuery.isError
+                    ? getErrorMessage(popularityQuery.error)
+                    : undefined
                 }
-                onRetry={() => void observationQuery.refetch()}
+                onRetry={() => void popularityQuery.refetch()}
               />
             </section>
           </CardContent>

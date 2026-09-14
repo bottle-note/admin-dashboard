@@ -7,6 +7,7 @@
 import { useMemo } from 'react';
 import {
   Area,
+  Bar,
   CartesianGrid,
   ComposedChart,
   Legend,
@@ -26,7 +27,7 @@ interface TimeSeriesChartProps {
   /** 렌더링할 series key 하위 집합 */
   seriesKeys?: string[];
   stacked?: boolean;
-  chartType?: 'area' | 'line';
+  chartType?: 'area' | 'line' | 'bar';
   isLoading?: boolean;
   isError?: boolean;
   errorMessage?: string;
@@ -34,6 +35,8 @@ interface TimeSeriesChartProps {
   className?: string;
   /** 비교 차트처럼 시리즈별 색상을 고정해야 할 때 사용한다. */
   seriesColors?: Record<string, string | undefined>;
+  seriesStrokeWidths?: Record<string, number | undefined>;
+  yAxisDomain?: [number, number];
 }
 
 interface FlattenedPoint {
@@ -67,6 +70,8 @@ export function TimeSeriesChart({
   onRetry,
   className = '',
   seriesColors,
+  seriesStrokeWidths,
+  yAxisDomain,
 }: TimeSeriesChartProps) {
   const selectedSeries = useMemo(() => {
     if (!payload) {
@@ -144,7 +149,7 @@ export function TimeSeriesChart({
   }, [chartData, selectedSeries, stacked]);
 
   const renderedSeries = useMemo(() => {
-    if (stacked || chartType === 'line') {
+    if (stacked || chartType !== 'area') {
       return selectedSeries;
     }
 
@@ -212,7 +217,7 @@ export function TimeSeriesChart({
             <CartesianGrid stroke="#f4f2f2" strokeDasharray="3 3" />
             <XAxis
               dataKey="bucketLabel"
-              interval={dailyTickLabels ? 0 : 'preserveStartEnd'}
+              interval={dailyTickLabels && chartType === 'area' ? 0 : 'preserveStartEnd'}
               minTickGap={16}
               ticks={dailyTickLabels}
               padding={{ left: 8, right: 32 }}
@@ -223,7 +228,7 @@ export function TimeSeriesChart({
               tickMargin={8}
             />
             <YAxis
-              domain={valueDomain}
+              domain={yAxisDomain ?? valueDomain}
               tick={{ fill: '#64748b', fontSize: 11 }}
               tickMargin={8}
               tickFormatter={(value: string | number) =>
@@ -247,14 +252,22 @@ export function TimeSeriesChart({
               const color =
                 seriesColors?.[series.key] ?? SERIES_COLORS[seriesIndex % SERIES_COLORS.length];
 
-              return chartType === 'line' ? (
+              return chartType === 'bar' ? (
+                <Bar
+                  key={series.key}
+                  dataKey={series.key}
+                  name={series.label}
+                  fill={color}
+                  maxBarSize={48}
+                />
+              ) : chartType === 'line' ? (
                 <Line
                   key={series.key}
                   type="monotone"
                   dataKey={series.key}
                   name={series.label}
                   stroke={color}
-                  strokeWidth={2}
+                  strokeWidth={seriesStrokeWidths?.[series.key] ?? 2}
                   connectNulls={false}
                   dot={false}
                   activeDot={{ r: 4, fill: '#f4f2f2', strokeWidth: 2 }}

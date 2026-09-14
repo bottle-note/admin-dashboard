@@ -14,7 +14,6 @@ spec-query ownership from them.
 
 ## Inputs
 
-- Spec: `docs/features/curation-program-schema-form/spec.md`
 - Design: `docs/features/curation-program-schema-form/design.md`
 - API source:
   - Published admin API docs for curation spec list/detail and curation
@@ -174,7 +173,7 @@ spec-query ownership from them.
 - Specialized form components may remain as renderer strategies, but all
   runtime create navigation and page-level state must be owned by
   `CurationCreatePage`.
-- The dynamic engine supports the schema vocabulary listed in the feature spec,
+- The dynamic engine supports the schema vocabulary implemented by the current form engine,
   not arbitrary JSON Schema.
 - Do not add static `PROGRAM` payload TypeScript interfaces that duplicate
   `requestSpec`; form state remains a recursive record/array shape.
