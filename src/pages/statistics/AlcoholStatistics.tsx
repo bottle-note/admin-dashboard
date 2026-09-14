@@ -1,16 +1,15 @@
-import { Info } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useSearchParams } from 'react-router';
 import { z } from 'zod';
 import { AlcoholStatisticsSearch } from './AlcoholStatisticsSearch';
-import { AlcoholStatisticsSummary } from './AlcoholStatisticsSummary';
+import { WeekRangePicker } from './WeekRangePicker';
 import { TimeSeriesChart } from '@/components/common/TimeSeriesChart';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Select,
   SelectContent,
@@ -34,9 +33,17 @@ import type {
 
 const granularities: Array<{ value: AlcoholStatisticsGranularity; label: string }> = [
   { value: 'HOUR', label: '시간별' },
-  { value: 'WEEK', label: '주간' },
-  { value: 'MONTH', label: '월간' },
+  { value: 'WEEK', label: '주별' },
+  { value: 'MONTH', label: '월별' },
 ];
+const quickRanges = [
+  { days: 7, granularity: 'HOUR' },
+  { days: 30, granularity: 'WEEK' },
+  { days: 90, granularity: 'MONTH' },
+] as const satisfies ReadonlyArray<{
+  days: number;
+  granularity: AlcoholStatisticsGranularity;
+}>;
 const groups: Array<{ value: 'POPULARITY' | StatisticsObservationAxis; label: string }> = [
   { value: 'POPULARITY', label: '인기도' },
   { value: 'INTEREST', label: '조회' },
@@ -52,10 +59,6 @@ const metricDefinitionLabels: Record<Group, Array<{ key: string; label: string }
     { key: 'ratingScore', label: '평가도 점수' },
     { key: 'pickScore', label: '선호도 점수' },
     { key: 'engagementScore', label: '참여도 점수' },
-    { key: 'interestValue', label: '상세 조회 수' },
-    { key: 'ratingValue', label: '누적 평점 수' },
-    { key: 'pickValue', label: '찜 수' },
-    { key: 'engagementValue', label: '참여 합계' },
   ],
   INTEREST: [
     { key: 'viewCount', label: '상세 조회 수' },
@@ -63,15 +66,12 @@ const metricDefinitionLabels: Record<Group, Array<{ key: string; label: string }
   ],
   RATING: [
     { key: 'deltaRatingCount', label: '평점 수 순증감' },
-    { key: 'deltaRatingSum', label: '평점 합 순증감' },
     { key: 'ratingCount', label: '누적 평점 수' },
-    { key: 'ratingSum', label: '누적 평점 합' },
     { key: 'averageRating', label: '평균 평점' },
   ],
   PICK: [
     { key: 'deltaPickCount', label: '찜 순증감' },
     { key: 'pickCount', label: '찜 수' },
-    { key: 'unpickCount', label: '찜 해제 상태 수' },
   ],
   ENGAGEMENT: [
     { key: 'deltaReviewCount', label: '리뷰 순증감' },
@@ -88,8 +88,6 @@ type MetricDefinition = {
   key: string;
   label: string;
   unit: TimeSeriesDescriptor['unit'];
-  section: string;
-  help?: string;
 };
 const colors = [
   '#ff9e20',
@@ -104,6 +102,44 @@ const colors = [
   '#5f6b72',
 ];
 const compareColorAssignments = new Map<number, string>();
+const popularityColors: Record<string, string> = {
+  popularityScore: '#ff9e20',
+  interestScore: '#215e61',
+  ratingScore: '#6c5ce7',
+  pickScore: '#d64f67',
+  engagementScore: '#3b8b45',
+};
+const observationColors: Record<string, string> = {
+  viewCount: '#ff9e20',
+  averageRating: '#ff9e20',
+  deltaRatingCount: '#6c5ce7',
+  pickCount: '#ff9e20',
+  deltaPickCount: '#d64f67',
+  deltaReviewCount: '#ff9e20',
+  deltaLikeCount: '#3b8b45',
+  deltaDislikeCount: '#d64f67',
+  deltaReplyCount: '#2e7ebc',
+};
+const observationChartOptions: Record<
+  StatisticsObservationAxis,
+  Array<{ key: string; label: string; chartType: 'line' | 'bar' }>
+> = {
+  INTEREST: [{ key: 'viewCount', label: '기간 조회 수', chartType: 'bar' }],
+  RATING: [
+    { key: 'averageRating', label: '평균 평점', chartType: 'line' },
+    { key: 'deltaRatingCount', label: '평점 수 순증감', chartType: 'bar' },
+  ],
+  PICK: [
+    { key: 'pickCount', label: '찜 수', chartType: 'line' },
+    { key: 'deltaPickCount', label: '찜 순증감', chartType: 'bar' },
+  ],
+  ENGAGEMENT: [
+    { key: 'deltaReviewCount', label: '리뷰', chartType: 'bar' },
+    { key: 'deltaLikeCount', label: '좋아요', chartType: 'bar' },
+    { key: 'deltaDislikeCount', label: '싫어요', chartType: 'bar' },
+    { key: 'deltaReplyCount', label: '댓글', chartType: 'bar' },
+  ],
+};
 const filterSchema = z.object({
   from: z.string(),
   to: z.string(),
@@ -111,40 +147,18 @@ const filterSchema = z.object({
 });
 type FilterValues = z.infer<typeof filterSchema>;
 
-function metricDefinition(group: Group, item: { key: string; label: string }): MetricDefinition {
+function metricDefinition(item: { key: string; label: string }): MetricDefinition {
   const unit = item.key.includes('Score')
     ? 'SCORE'
-    : item.key.includes('Sum') || item.key === 'averageRating'
+    : item.key === 'averageRating'
       ? 'DECIMAL'
       : 'COUNT';
-  const section =
-    group === 'POPULARITY'
-      ? unit === 'SCORE'
-        ? '점수'
-        : item.key === 'interestValue'
-          ? '기간 조회 수'
-          : '현재값'
-      : group === 'RATING' && item.key === 'averageRating'
-        ? '평균 평점'
-        : group === 'RATING' && item.key === 'ratingSum'
-          ? '누적 평점 합'
-          : group === 'RATING' && item.key === 'ratingCount'
-            ? '누적 평점 수'
-            : item.key.startsWith('delta')
-              ? '기간 순증감'
-              : item.key === 'viewCount'
-                ? '기간 조회 수'
-                : '누적·현재값';
-  const help =
-    item.key === 'unpickCount'
-      ? '집계 시점의 찜 해제 상태 수이며, 기간 내 해제 횟수와 다릅니다.'
-      : undefined;
-  return { ...item, unit, section, help };
+  return { ...item, unit };
 }
 const metricDefinitions: Record<Group, MetricDefinition[]> = Object.fromEntries(
   Object.entries(metricDefinitionLabels).map(([group, items]) => [
     group,
-    items.map((item) => metricDefinition(group as Group, item)),
+    items.map((item) => metricDefinition(item)),
   ])
 ) as Record<Group, MetricDefinition[]>;
 
@@ -154,6 +168,12 @@ function defaultParams(): AlcoholStatisticsParams {
   const d = new Date(`${to}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() - 29);
   return { from: d.toISOString().slice(0, 10), to, granularity: 'WEEK' };
+}
+function quickRange(days: number) {
+  const to = kstToday();
+  const date = new Date(`${to}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - (days - 1));
+  return { from: date.toISOString().slice(0, 10), to };
 }
 function isExactDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -177,6 +197,51 @@ function validate(params: AlcoholStatisticsParams) {
     ? `${params.granularity === 'HOUR' ? '시간별' : '주·월간'} 조회 기간은 최대 ${max}일까지 선택할 수 있습니다.`
     : null;
 }
+function pickerValue(granularity: AlcoholStatisticsGranularity, date: string) {
+  return granularity === 'MONTH' ? date.slice(0, 7) : date;
+}
+function weekStart(timestamp: number) {
+  const day = new Date(timestamp).getUTCDay() || 7;
+  return timestamp - (day - 1) * 86_400_000;
+}
+function monthStart(value: string) {
+  const match = /^(\d{4})-(\d{2})/.exec(value);
+  if (!match) return Number.NaN;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return Number.NaN;
+  return Date.UTC(year, month - 1, 1);
+}
+function selectedRange(
+  granularity: AlcoholStatisticsGranularity,
+  from: string,
+  to: string
+): { from: string; to: string; granularity: AlcoholStatisticsGranularity; error: string | null } {
+  if (granularity === 'HOUR') {
+    const params = { from, to, granularity };
+    return { ...params, error: validate(params) };
+  }
+
+  const fromTime =
+    granularity === 'WEEK' ? weekStart(Date.parse(`${from}T00:00:00Z`)) : monthStart(from);
+  const toStart =
+    granularity === 'WEEK' ? weekStart(Date.parse(`${to}T00:00:00Z`)) : monthStart(to);
+  if (Number.isNaN(fromTime) || Number.isNaN(toStart)) {
+    return { from: '', to: '', granularity, error: '조회 기간을 모두 입력해주세요.' };
+  }
+
+  const rangeEnd =
+    granularity === 'WEEK'
+      ? toStart + 6 * 86_400_000
+      : Date.UTC(new Date(toStart).getUTCFullYear(), new Date(toStart).getUTCMonth() + 1, 0);
+  const today = Date.parse(`${kstToday()}T00:00:00Z`);
+  const params = {
+    from: new Date(fromTime).toISOString().slice(0, 10),
+    to: new Date(Math.min(rangeEnd, today)).toISOString().slice(0, 10),
+    granularity,
+  };
+  return { ...params, error: validate(params) };
+}
 function parseIds(value: string | null) {
   return [
     ...new Set(
@@ -192,59 +257,143 @@ const groupLabel = (value: Group) =>
 
 function FilterCard({
   params,
+  quickRangeDays,
   onApply,
 }: {
   params: AlcoholStatisticsParams;
-  onApply: (params: AlcoholStatisticsParams) => void;
+  quickRangeDays?: number;
+  onApply: (params: AlcoholStatisticsParams, quickRangeDays?: number) => void;
 }) {
   const form = useForm<FilterValues>({
     resolver: zodResolver(filterSchema),
-    defaultValues: params,
+    defaultValues: {
+      from: pickerValue(params.granularity, params.from),
+      to: pickerValue(params.granularity, params.to),
+      granularity: params.granularity,
+    },
   });
-  const { from, to, granularity } = params;
-  useEffect(() => form.reset({ from, to, granularity }), [form, from, to, granularity]);
+  const [selectedQuickRangeDays, setSelectedQuickRangeDays] = useState(quickRangeDays);
   const selectedGranularity = useWatch({ control: form.control, name: 'granularity' });
+  const draftFrom = useWatch({ control: form.control, name: 'from' });
+  const draftTo = useWatch({ control: form.control, name: 'to' });
+  const pickerLabels =
+    selectedGranularity === 'MONTH'
+      ? { from: '시작 월', to: '종료 월', type: 'month' as const }
+      : { from: '시작일', to: '종료일', type: 'date' as const };
+  const maxPickerValue = pickerValue(selectedGranularity, kstToday());
+
+  const changeGranularity = (granularity: AlcoholStatisticsGranularity) => {
+    const current = selectedRange(selectedGranularity, draftFrom, draftTo);
+    const range = current.error ? params : current;
+    const normalized =
+      granularity === 'WEEK'
+        ? selectedRange(granularity, range.from, range.to)
+        : { ...range, granularity };
+    form.setValue('granularity', granularity);
+    form.setValue('from', pickerValue(granularity, normalized.from));
+    form.setValue('to', pickerValue(granularity, normalized.to));
+    setSelectedQuickRangeDays(undefined);
+    form.clearErrors();
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">조회 조건</CardTitle>
+        <CardDescription>
+          시간별은 최대 31일, 주별·월별은 최대 366일까지 조회할 수 있습니다.
+        </CardDescription>
       </CardHeader>
       <CardContent>
+        <div className="mb-5 space-y-2">
+          <p className="text-sm font-medium">빠른 기간</p>
+          <div className="flex flex-wrap gap-2">
+            {quickRanges.map((range) => (
+              <Button
+                key={range.days}
+                type="button"
+                size="sm"
+                variant={selectedQuickRangeDays === range.days ? 'default' : 'outline'}
+                aria-pressed={selectedQuickRangeDays === range.days}
+                onClick={() => {
+                  setSelectedQuickRangeDays(range.days);
+                  onApply(
+                    { ...quickRange(range.days), granularity: range.granularity },
+                    range.days
+                  );
+                }}
+              >
+                최근 {range.days}일
+              </Button>
+            ))}
+          </div>
+        </div>
         <form
-          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px_auto] xl:items-end"
+          className="flex flex-col gap-4 lg:flex-row lg:items-end"
           onSubmit={form.handleSubmit((value) => {
-            const error = validate(value);
-            if (error) return form.setError('to', { message: error });
-            onApply(value);
+            if (selectedQuickRangeDays) {
+              onApply(params, selectedQuickRangeDays);
+              return;
+            }
+            const range = selectedRange(value.granularity, value.from, value.to);
+            if (range.error) return form.setError('to', { message: range.error });
+            onApply(range);
           })}
         >
-          <label className="grid gap-2 text-sm font-medium">
-            시작일
-            <Input
-              aria-label="주류 통계 시작일"
-              type="date"
-              max={kstToday()}
-              {...form.register('from')}
-            />
-          </label>
-          <label className="grid gap-2 text-sm font-medium">
-            종료일
-            <Input
-              aria-label="주류 통계 종료일"
-              type="date"
-              max={kstToday()}
-              {...form.register('to')}
-            />
-          </label>
+          {selectedGranularity === 'WEEK' ? (
+            <label className="grid gap-2 text-sm font-medium">
+              조회 주
+              <WeekRangePicker
+                from={draftFrom}
+                to={draftTo}
+                max={kstToday()}
+                onChange={(range) => {
+                  form.setValue('from', range.from);
+                  form.setValue('to', range.to);
+                  setSelectedQuickRangeDays(undefined);
+                  form.clearErrors();
+                }}
+              />
+            </label>
+          ) : (
+            <>
+              <label className="grid gap-2 text-sm font-medium">
+                {pickerLabels.from}
+                <Input
+                  aria-label={`주류 통계 ${pickerLabels.from}`}
+                  type={pickerLabels.type}
+                  max={maxPickerValue}
+                  value={draftFrom}
+                  onChange={(event) => {
+                    form.setValue('from', event.target.value);
+                    setSelectedQuickRangeDays(undefined);
+                    form.clearErrors();
+                  }}
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                {pickerLabels.to}
+                <Input
+                  aria-label={`주류 통계 ${pickerLabels.to}`}
+                  type={pickerLabels.type}
+                  max={maxPickerValue}
+                  value={draftTo}
+                  onChange={(event) => {
+                    form.setValue('to', event.target.value);
+                    setSelectedQuickRangeDays(undefined);
+                    form.clearErrors();
+                  }}
+                />
+              </label>
+            </>
+          )}
           <label className="grid gap-2 text-sm font-medium">
             집계 단위
             <Select
               value={selectedGranularity}
-              onValueChange={(value) =>
-                form.setValue('granularity', value as AlcoholStatisticsGranularity)
-              }
+              onValueChange={(value) => changeGranularity(value as AlcoholStatisticsGranularity)}
             >
-              <SelectTrigger aria-label="주류 통계 집계 단위">
+              <SelectTrigger aria-label="주류 통계 집계 단위" className="w-full lg:w-[160px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -257,60 +406,41 @@ function FilterCard({
             </Select>
           </label>
           <Button type="submit">조회</Button>
-          {form.formState.errors.to?.message ? (
-            <p role="alert" className="text-sm text-destructive sm:col-span-2 xl:col-span-4">
-              {form.formState.errors.to.message}
-            </p>
-          ) : null}
         </form>
+        {form.formState.errors.to?.message ? (
+          <p role="alert" className="mt-3 text-sm text-destructive">
+            {form.formState.errors.to.message}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );
 }
 function ChartCard({
   title,
-  help,
   payload,
   seriesKeys,
   loading,
   error,
   retry,
   seriesColors,
+  yAxisDomain,
   chartType = 'line',
 }: {
   title: string;
-  help?: string;
   payload?: TimeSeriesPayload;
   seriesKeys: string[];
   loading: boolean;
   error: unknown;
   retry: () => void;
   seriesColors?: Record<string, string | undefined>;
+  yAxisDomain?: [number, number];
   chartType?: 'line' | 'bar';
 }) {
   return (
     <Card className="min-w-0">
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <CardTitle className="text-base">{title}</CardTitle>
-          {help && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    aria-label={`${title} 도움말`}
-                  >
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-64">{help}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
+        <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent className="min-w-0">
         <TimeSeriesChart
@@ -322,10 +452,60 @@ function ChartCard({
           errorMessage={error ? getErrorMessage(error) : undefined}
           onRetry={retry}
           seriesColors={seriesColors}
+          yAxisDomain={yAxisDomain}
         />
       </CardContent>
     </Card>
   );
+}
+
+const popularityComponents = [
+  { key: 'interestScore', label: '관심도' },
+  { key: 'ratingScore', label: '평가도' },
+  { key: 'pickScore', label: '선호도' },
+  { key: 'engagementScore', label: '참여도' },
+] as const;
+
+function formatPopularityScore(value: number | null | undefined) {
+  return typeof value === 'number'
+    ? `${(value * 100).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}점`
+    : '—';
+}
+
+function formatPopularityDate(
+  value: string,
+  granularity: AlcoholStatisticsGranularity,
+  timezone: string
+) {
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone: timezone || 'Asia/Seoul',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    ...(granularity === 'HOUR' ? { hour: '2-digit' as const, minute: '2-digit' as const } : {}),
+  }).format(new Date(value));
+}
+
+function latestValue(payload: TimeSeriesPayload | undefined, key: string) {
+  return payload?.points[payload.points.length - 1]?.values[key];
+}
+
+function sumValues(payload: TimeSeriesPayload | undefined, key: string) {
+  const values = payload?.points.map((point) => point.values[key]);
+  return values?.length && values.every((value) => typeof value === 'number')
+    ? values.reduce<number>((total, value) => total + (value as number), 0)
+    : null;
+}
+
+function formatObservationValue(
+  value: number | null | undefined,
+  unit: '회' | '개' | '점',
+  signed = false
+) {
+  if (typeof value !== 'number') return '—';
+  return `${signed && value > 0 ? '+' : ''}${value.toLocaleString('ko-KR', {
+    maximumFractionDigits: unit === '점' ? 2 : 0,
+  })}${unit}`;
 }
 
 function IndividualCharts({
@@ -346,47 +526,348 @@ function IndividualCharts({
     group === 'POPULARITY' ? 'INTEREST' : group,
     params
   );
-  const query = group === 'POPULARITY' ? popularity : observations;
-  const cards = new Map<string, MetricDefinition[]>();
-  metricDefinitions[group].forEach((definition) => {
-    const key = `${definition.section}:${definition.unit}`;
-    cards.set(key, [...(cards.get(key) ?? []), definition]);
-  });
-  return (
-    <div className="space-y-4">
-      {[...cards].map(([key, series]) => (
-        <ChartCard
-          key={key}
-          title={`${groupLabel(group)} · ${key.split(':')[0]}`}
-          help={series.find((item) => item.help)?.help}
-          payload={
-            query.data && {
-              ...query.data,
-              series: query.data.series.map((item) => ({
-                ...item,
-                label:
-                  metricDefinitions[group].find((metric) => metric.key === item.key)?.label ??
-                  item.label,
-              })),
-            }
-          }
-          seriesKeys={series.map((item) => item.key)}
-          chartType={
-            series.every(
-              (item) =>
-                item.key.startsWith('delta') ||
-                item.key === 'viewCount' ||
-                item.key === 'interestValue'
+  const [visiblePopularityComponents, setVisiblePopularityComponents] = useState<string[]>([]);
+  const [selectedObservationMetric, setSelectedObservationMetric] = useState('viewCount');
+  const [visibleEngagementMetrics, setVisibleEngagementMetrics] = useState([
+    'deltaReviewCount',
+  ]);
+  if (group === 'POPULARITY') {
+    const scoreDefinitions = metricDefinitions.POPULARITY;
+    const closedPoints =
+      popularity.data?.points.filter(
+        (point) => !point.partial && typeof point.values.popularityScore === 'number'
+      ) ?? [];
+    const latest = closedPoints[closedPoints.length - 1];
+    const previous = closedPoints[closedPoints.length - 2];
+    const latestScore = latest?.values.popularityScore;
+    const previousScore = previous?.values.popularityScore;
+    const change =
+      typeof latestScore === 'number' && typeof previousScore === 'number'
+        ? (latestScore - previousScore) * 100
+        : null;
+    const chartPayload = popularity.data
+      ? {
+          ...popularity.data,
+          series: popularity.data.series
+            .filter((series) =>
+              scoreDefinitions.some((definition) => definition.key === series.key)
             )
-              ? 'bar'
-              : 'line'
-          }
-          loading={query.isLoading}
-          error={query.error}
-          retry={() => void query.refetch()}
-        />
-      ))}
-    </div>
+            .map((series) => ({
+              ...series,
+              label:
+                scoreDefinitions.find((definition) => definition.key === series.key)?.label ??
+                series.label,
+              unit: 'DECIMAL' as const,
+            })),
+          points: popularity.data.points.map((point) => ({
+            ...point,
+            values: Object.fromEntries(
+              scoreDefinitions.map((definition) => {
+                const value = point.values[definition.key];
+                return [definition.key, typeof value === 'number' ? value * 100 : null];
+              })
+            ),
+          })),
+        }
+      : undefined;
+
+    return (
+      <Card className="min-w-0">
+        <CardHeader>
+          <CardTitle className="text-base">인기도 지수</CardTitle>
+        </CardHeader>
+        <CardContent className="min-w-0 space-y-6">
+          {latest ? (
+            <>
+              <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">최근 확정 인기도</p>
+                  <p
+                    className="text-3xl font-semibold tabular-nums"
+                    data-testid="alcohol-popularity-score"
+                  >
+                    {formatPopularityScore(latestScore)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">이전 집계 대비</p>
+                  <p className="text-lg font-semibold tabular-nums">
+                    {change === null
+                      ? '—'
+                      : `${change > 0 ? '+' : ''}${change.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}점`}
+                  </p>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {formatPopularityDate(
+                    latest.bucketAt,
+                    params.granularity,
+                    popularity.data?.timezone ?? 'Asia/Seoul'
+                  )}{' '}
+                  기준
+                </p>
+              </div>
+
+              <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {popularityComponents.map((component) => {
+                  const value = latest.values[component.key];
+                  const score = typeof value === 'number' ? value * 100 : null;
+                  return (
+                    <div key={component.key} className="min-w-0 space-y-2">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <dt className="text-sm text-muted-foreground">{component.label}</dt>
+                        <dd className="font-semibold tabular-nums">
+                          {formatPopularityScore(value)}
+                        </dd>
+                      </div>
+                      <div
+                        role="progressbar"
+                        aria-label={`${component.label} 점수`}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={score ?? undefined}
+                        className="h-2 overflow-hidden rounded-full bg-muted"
+                      >
+                        {score !== null && (
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${Math.max(0, Math.min(100, score))}%`,
+                              backgroundColor: popularityColors[component.key],
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </dl>
+            </>
+          ) : popularity.isLoading ? (
+            <p className="text-sm text-muted-foreground">인기도를 불러오는 중...</p>
+          ) : popularity.isError ? null : (
+            <p className="text-sm text-muted-foreground">확정된 인기도 점수가 없습니다.</p>
+          )}
+
+          <div className="space-y-4 border-t pt-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="font-semibold">인기도 추이</h3>
+              <div className="flex flex-wrap gap-2">
+                <Badge className="px-3 py-1.5">최종 인기도</Badge>
+                {popularityComponents.map((component) => {
+                  const visible = visiblePopularityComponents.includes(component.key);
+                  return (
+                    <Button
+                      key={component.key}
+                      type="button"
+                      size="sm"
+                      variant={visible ? 'secondary' : 'outline'}
+                      aria-pressed={visible}
+                      onClick={() =>
+                        setVisiblePopularityComponents((current) =>
+                          visible
+                            ? current.filter((key) => key !== component.key)
+                            : [...current, component.key]
+                        )
+                      }
+                    >
+                      {component.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+            <TimeSeriesChart
+              payload={chartPayload}
+              seriesKeys={['popularityScore', ...visiblePopularityComponents]}
+              chartType="line"
+              isLoading={popularity.isLoading}
+              isError={popularity.isError}
+              errorMessage={popularity.error ? getErrorMessage(popularity.error) : undefined}
+              onRetry={() => void popularity.refetch()}
+              seriesColors={popularityColors}
+              seriesStrokeWidths={{ popularityScore: 3 }}
+              yAxisDomain={[0, 100]}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const options = observationChartOptions[group];
+  const selectedOption =
+    options.find((option) => option.key === selectedObservationMetric) ?? options[0]!;
+  const seriesKeys =
+    group === 'ENGAGEMENT'
+      ? visibleEngagementMetrics.filter((key) => options.some((option) => option.key === key))
+      : [selectedOption.key];
+  const chartPayload = observations.data
+    ? {
+        ...observations.data,
+        series: observations.data.series.map((series) => ({
+          ...series,
+          label:
+            metricDefinitions[group].find((definition) => definition.key === series.key)?.label ??
+            series.label,
+        })),
+      }
+    : undefined;
+  const summaryItems =
+    group === 'INTEREST'
+      ? [
+          {
+            label: '기간 조회 수',
+            value: formatObservationValue(sumValues(observations.data, 'viewCount'), '회'),
+          },
+          {
+            label: '누적 조회 수',
+            value: formatObservationValue(
+              latestValue(observations.data, 'cumulativeViewCount'),
+              '회'
+            ),
+          },
+        ]
+      : group === 'RATING'
+        ? [
+            {
+              label: '평균 평점',
+              value: formatObservationValue(
+                latestValue(observations.data, 'averageRating'),
+                '점'
+              ),
+            },
+            {
+              label: '누적 평점 수',
+              value: formatObservationValue(latestValue(observations.data, 'ratingCount'), '개'),
+            },
+            {
+              label: '기간 평점 수 순증감',
+              value: formatObservationValue(
+                sumValues(observations.data, 'deltaRatingCount'),
+                '개',
+                true
+              ),
+            },
+          ]
+        : group === 'PICK'
+          ? [
+              {
+                label: '현재 찜 수',
+                value: formatObservationValue(latestValue(observations.data, 'pickCount'), '개'),
+              },
+              {
+                label: '기간 찜 순증감',
+                value: formatObservationValue(
+                  sumValues(observations.data, 'deltaPickCount'),
+                  '개',
+                  true
+                ),
+              },
+            ]
+          : [
+              {
+                label: '리뷰 수',
+                value: formatObservationValue(latestValue(observations.data, 'reviewCount'), '개'),
+              },
+              {
+                label: '좋아요 수',
+                value: formatObservationValue(latestValue(observations.data, 'likeCount'), '개'),
+              },
+              {
+                label: '싫어요 수',
+                value: formatObservationValue(latestValue(observations.data, 'dislikeCount'), '개'),
+              },
+              {
+                label: '댓글 수',
+                value: formatObservationValue(latestValue(observations.data, 'replyCount'), '개'),
+              },
+            ];
+
+  return (
+    <Card className="min-w-0">
+      <CardHeader>
+        <CardTitle className="text-base">{groupLabel(group)} 지표</CardTitle>
+      </CardHeader>
+      <CardContent className="min-w-0 space-y-6">
+        {observations.isLoading ? (
+          <p className="text-sm text-muted-foreground">지표를 불러오는 중...</p>
+        ) : observations.isError ? null : (
+          <dl
+            className={`grid gap-5 ${group === 'ENGAGEMENT' ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'}`}
+            data-testid="alcohol-observation-summary"
+          >
+            {summaryItems.map((item, index) => (
+              <div key={item.label} className="min-w-0 space-y-1">
+                <dt className="text-sm text-muted-foreground">{item.label}</dt>
+                <dd
+                  className={`${index === 0 && group !== 'ENGAGEMENT' ? 'text-3xl' : 'text-xl'} break-words font-semibold tabular-nums`}
+                >
+                  {item.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
+
+        <div className="space-y-4 border-t pt-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="font-semibold">{groupLabel(group)} 추이</h3>
+            <div className="flex flex-wrap gap-2">
+              {group === 'INTEREST' ? (
+                <Badge className="px-3 py-1.5">기간 조회 수</Badge>
+              ) : group === 'ENGAGEMENT' ? (
+                options.map((option) => {
+                  const visible = visibleEngagementMetrics.includes(option.key);
+                  return (
+                    <Button
+                      key={option.key}
+                      type="button"
+                      size="sm"
+                      variant={visible ? 'secondary' : 'outline'}
+                      aria-pressed={visible}
+                      onClick={() =>
+                        setVisibleEngagementMetrics((current) =>
+                          visible
+                            ? current.length === 1
+                              ? current
+                              : current.filter((key) => key !== option.key)
+                            : [...current, option.key]
+                        )
+                      }
+                    >
+                      {option.label}
+                    </Button>
+                  );
+                })
+              ) : (
+                options.map((option) => (
+                  <Button
+                    key={option.key}
+                    type="button"
+                    size="sm"
+                    variant={selectedOption.key === option.key ? 'secondary' : 'outline'}
+                    aria-pressed={selectedOption.key === option.key}
+                    onClick={() => setSelectedObservationMetric(option.key)}
+                  >
+                    {option.label}
+                  </Button>
+                ))
+              )}
+            </div>
+          </div>
+          <TimeSeriesChart
+            payload={chartPayload}
+            seriesKeys={seriesKeys}
+            chartType={group === 'ENGAGEMENT' ? 'bar' : selectedOption.chartType}
+            isLoading={observations.isLoading}
+            isError={observations.isError}
+            errorMessage={observations.error ? getErrorMessage(observations.error) : undefined}
+            onRetry={() => void observations.refetch()}
+            seriesColors={observationColors}
+          />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 function merge(
@@ -470,7 +951,7 @@ function CompareChart({
     const used = new Set(compareColorAssignments.values());
     compareColorAssignments.set(id, colors.find((color) => !used.has(color)) ?? colors[0]!);
   });
-  const payload =
+  const mergedPayload =
     base && descriptor
       ? merge(
           base,
@@ -482,6 +963,22 @@ function CompareChart({
           }))
         )
       : undefined;
+  const payload =
+    mergedPayload && group === 'POPULARITY'
+      ? {
+          ...mergedPayload,
+          series: mergedPayload.series.map((series) => ({ ...series, unit: 'DECIMAL' as const })),
+          points: mergedPayload.points.map((point) => ({
+            ...point,
+            values: Object.fromEntries(
+              Object.entries(point.values).map(([key, value]) => [
+                key,
+                typeof value === 'number' ? value * 100 : null,
+              ])
+            ),
+          })),
+        }
+      : mergedPayload;
   const errors = queries
     .map((query, index) => ({ query, index }))
     .filter(({ query }) => query.isError);
@@ -489,7 +986,6 @@ function CompareChart({
     <div className="space-y-3">
       <ChartCard
         title={`${groupLabel(group)} · ${definition?.label ?? descriptor?.label ?? '지표'} 비교`}
-        help={definition?.help}
         payload={payload}
         seriesKeys={selectedIds.map((id) => `alcohol-${id}`)}
         loading={queries.some((query) => query.isLoading)}
@@ -498,6 +994,7 @@ function CompareChart({
         seriesColors={Object.fromEntries(
           selectedIds.map((id) => [`alcohol-${id}`, compareColorAssignments.get(id)])
         )}
+        yAxisDomain={group === 'POPULARITY' ? [0, 100] : undefined}
       />
       {errors.map(({ query, index }) => (
         <div
@@ -531,6 +1028,16 @@ export function AlcoholStatisticsPage() {
       : fallback.granularity,
   };
   const params = validate(candidate) ? fallback : candidate;
+  const requestedQuickRangeDays = Number(url.get('preset'));
+  const appliedQuickRange = quickRanges.find((range) => {
+    const dates = quickRange(range.days);
+    return (
+      range.days === requestedQuickRangeDays &&
+      range.granularity === params.granularity &&
+      dates.from === params.from &&
+      dates.to === params.to
+    );
+  });
   const individualId = parseIds(url.get('alcoholId'))[0];
   const compareIds = parseIds(url.get('ids'));
   const individualDetail = useAdminAlcoholDetail(individualId);
@@ -558,6 +1065,8 @@ export function AlcoholStatisticsPage() {
     next.set('to', params.to);
     next.set('granularity', params.granularity);
     next.set('group', group);
+    if (appliedQuickRange) next.set('preset', String(appliedQuickRange.days));
+    else next.delete('preset');
     if (mode === 'individual') {
       if (individualId) next.set('alcoholId', String(individualId));
       else next.delete('alcoholId');
@@ -567,7 +1076,18 @@ export function AlcoholStatisticsPage() {
       next.set('metric', metric);
     }
     if (next.toString() !== url.toString()) setUrl(next, { replace: true });
-  }, [group, individualId, metric, mode, params.from, params.granularity, params.to, setUrl, url]);
+  }, [
+    appliedQuickRange,
+    group,
+    individualId,
+    metric,
+    mode,
+    params.from,
+    params.granularity,
+    params.to,
+    setUrl,
+    url,
+  ]);
   const selected = mode === 'compare' ? compareIds : individualId ? [individualId] : [];
   return (
     <div className="min-w-0 space-y-6">
@@ -575,13 +1095,22 @@ export function AlcoholStatisticsPage() {
         <h1 className="text-2xl font-bold">주류 통계</h1>
       </div>
       <FilterCard
+        key={`${params.from}:${params.to}:${params.granularity}:${appliedQuickRange?.days ?? 'custom'}`}
         params={params}
-        onApply={(next) => update({ from: next.from, to: next.to, granularity: next.granularity })}
+        quickRangeDays={appliedQuickRange?.days}
+        onApply={(next, quickRangeDays) =>
+          update({
+            from: next.from,
+            to: next.to,
+            granularity: next.granularity,
+            preset: quickRangeDays ? String(quickRangeDays) : undefined,
+          })
+        }
       />
       <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
         <AlcoholStatisticsSearch
           keyword={url.get('keyword') ?? ''}
-          onKeywordChange={(keyword) => {
+          onSearch={(keyword) => {
             const next = new URLSearchParams(url);
             if (keyword) next.set('keyword', keyword);
             else next.delete('keyword');
@@ -680,7 +1209,6 @@ export function AlcoholStatisticsPage() {
                       </div>
                     </div>
                   ) : null}
-                  <AlcoholStatisticsSummary id={individualId} params={params} />
                 </>
               ) : mode === 'compare' && compareIds.length ? (
                 <div className="flex flex-wrap gap-2">

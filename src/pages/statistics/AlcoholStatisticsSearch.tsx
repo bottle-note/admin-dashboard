@@ -1,34 +1,35 @@
-import { Search, Wine } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, Search, Wine } from 'lucide-react';
+import { LookupSearchSelect } from '@/components/common/LookupSearchSelect';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import {
   flattenAdminAlcoholLookupPages,
   useAdminAlcoholLookupInfinite,
 } from '@/hooks/useAdminAlcohols';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import type { AlcoholLookupItem } from '@/types/api';
 
 export function AlcoholStatisticsSearch({
   keyword,
-  onKeywordChange,
+  onSearch,
   selectedIds,
   onSelect,
   disabled,
 }: {
   keyword: string;
-  onKeywordChange: (keyword: string) => void;
+  onSearch: (keyword: string) => void;
   selectedIds: number[];
   onSelect: (alcohol: AlcoholLookupItem) => void;
   disabled: boolean;
 }) {
-  const search = useDebouncedValue(keyword.trim(), 300);
-  const query = useAdminAlcoholLookupInfinite(
-    { keyword: search, size: 10 },
-    { enabled: search.length > 0 }
-  );
-  const items = flattenAdminAlcoholLookupPages(query.data);
-  const pending = keyword.trim() !== search || query.isLoading;
+  const [input, setInput] = useState(keyword);
+  const [isOpen, setIsOpen] = useState(false);
+  const composing = useRef(false);
+  useEffect(() => {
+    setInput(keyword);
+  }, [keyword]);
+  const search = keyword.trim();
+  const query = useAdminAlcoholLookupInfinite({ keyword: search, size: 10 }, { enabled: isOpen });
+  const items = useMemo(() => flattenAdminAlcoholLookupPages(query.data), [query.data]);
 
   return (
     <Card className="min-w-0 self-start xl:sticky xl:top-0">
@@ -36,93 +37,86 @@ export function AlcoholStatisticsSearch({
         <CardTitle className="text-base">위스키 찾기</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            aria-label="주류 검색"
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (composing.current) return;
+            const next = input.trim();
+            setInput(next);
+            onSearch(next);
+          }}
+        >
+          <LookupSearchSelect
+            value={input}
+            onValueChange={setInput}
+            open={isOpen}
+            onOpenChange={setIsOpen}
+            items={items}
+            getItemKey={(item) => item.alcoholId}
+            getItemAriaLabel={(item) => `${item.korName} 주류 선택`}
+            isItemSelected={(item) => selectedIds.includes(item.alcoholId)}
+            isItemDisabled={(item) => disabled && !selectedIds.includes(item.alcoholId)}
+            renderItem={(item) => {
+              const selected = selectedIds.includes(item.alcoholId);
+              return (
+                <>
+                  <span className="flex h-12 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt="" className="h-full w-full object-contain" />
+                    ) : (
+                      <Wine className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block break-words font-medium">{item.korName}</span>
+                    <span className="block break-words text-xs text-muted-foreground">
+                      {item.engName}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {item.korCategoryName}
+                    </span>
+                  </span>
+                  {selected && <Check className="h-4 w-4 shrink-0" aria-label="선택됨" />}
+                </>
+              );
+            }}
+            onSelect={onSelect}
             placeholder="이름으로 검색..."
-            className="pl-9"
-            value={keyword}
-            onChange={(event) => onKeywordChange(event.target.value)}
+            ariaLabel="주류 검색"
+            minimumSearchLength={0}
+            disabled={false}
+            leftElement={<Search className="h-4 w-4 text-muted-foreground" />}
+            isLoading={query.isLoading}
+            isError={query.isError}
+            onRetry={() => void query.refetch()}
+            isFetchingNextPage={query.isFetchingNextPage}
+            hasNextPage={query.hasNextPage}
+            onLoadMore={query.fetchNextPage}
+            showOnFocus
+            dropdownTestId="alcohol-statistics-search-results"
+            onInputKeyDown={(event) => {
+              if (
+                event.key === 'Enter' &&
+                (composing.current ||
+                  event.nativeEvent.isComposing ||
+                  event.nativeEvent.keyCode === 229)
+              ) {
+                event.preventDefault();
+              }
+            }}
+            onInputCompositionStart={() => {
+              composing.current = true;
+            }}
+            onInputCompositionEnd={() => {
+              composing.current = false;
+            }}
           />
-        </div>
+        </form>
         {disabled && (
           <p className="text-sm text-muted-foreground">
             최대 3개까지 비교할 수 있습니다. 선택한 주류를 제거하면 추가할 수 있습니다.
           </p>
         )}
-        <div aria-live="polite" className="text-sm text-muted-foreground">
-          {!keyword.trim()
-            ? '한 글자 이상 입력하면 검색 결과가 표시됩니다.'
-            : pending
-              ? '검색 중...'
-              : null}
-        </div>
-        {keyword.trim() && !pending ? (
-          <>
-            {query.isError ? (
-              <div role="alert" className="space-y-2 text-sm">
-                <p>검색 결과를 불러오지 못했습니다.</p>
-                <Button variant="outline" size="sm" onClick={() => void query.refetch()}>
-                  다시 시도
-                </Button>
-              </div>
-            ) : items.length === 0 ? (
-              <p className="text-sm text-muted-foreground">검색 결과가 없습니다.</p>
-            ) : (
-              <div
-                data-testid="alcohol-statistics-search-results"
-                className="max-h-80 space-y-1 overflow-y-auto xl:max-h-[calc(100vh-22rem)]"
-              >
-                {items.map((item) => {
-                  const selected = selectedIds.includes(item.alcoholId);
-                  return (
-                    <Button
-                      key={item.alcoholId}
-                      variant={selected ? 'secondary' : 'ghost'}
-                      className="h-auto w-full justify-start gap-3 whitespace-normal px-3 py-3 text-left"
-                      aria-label={`${item.korName} 주류 선택`}
-                      aria-pressed={selected}
-                      disabled={disabled && !selected}
-                      onClick={() => onSelect(item)}
-                    >
-                      <span className="flex h-12 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
-                        {item.imageUrl ? (
-                          <img
-                            src={item.imageUrl}
-                            alt=""
-                            className="h-full w-full object-contain"
-                          />
-                        ) : (
-                          <Wine className="h-5 w-5 text-muted-foreground" />
-                        )}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block break-words font-medium">{item.korName}</span>
-                        <span className="block break-words text-xs font-normal text-muted-foreground">
-                          {item.engName}
-                        </span>
-                        <span className="block text-xs font-normal text-muted-foreground">
-                          {item.korCategoryName}
-                        </span>
-                      </span>
-                    </Button>
-                  );
-                })}
-                {query.hasNextPage && (
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    disabled={query.isFetchingNextPage}
-                    onClick={() => void query.fetchNextPage()}
-                  >
-                    {query.isFetchingNextPage ? '불러오는 중...' : '더 보기'}
-                  </Button>
-                )}
-              </div>
-            )}
-          </>
-        ) : null}
       </CardContent>
     </Card>
   );

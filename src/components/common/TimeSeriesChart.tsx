@@ -35,6 +35,8 @@ interface TimeSeriesChartProps {
   className?: string;
   /** 비교 차트처럼 시리즈별 색상을 고정해야 할 때 사용한다. */
   seriesColors?: Record<string, string | undefined>;
+  seriesStrokeWidths?: Record<string, number | undefined>;
+  yAxisDomain?: [number, number];
 }
 
 interface FlattenedPoint {
@@ -68,6 +70,8 @@ export function TimeSeriesChart({
   onRetry,
   className = '',
   seriesColors,
+  seriesStrokeWidths,
+  yAxisDomain,
 }: TimeSeriesChartProps) {
   const selectedSeries = useMemo(() => {
     if (!payload) {
@@ -224,7 +228,7 @@ export function TimeSeriesChart({
               tickMargin={8}
             />
             <YAxis
-              domain={valueDomain}
+              domain={yAxisDomain ?? valueDomain}
               tick={{ fill: '#64748b', fontSize: 11 }}
               tickMargin={8}
               tickFormatter={(value: string | number) =>
@@ -249,7 +253,13 @@ export function TimeSeriesChart({
                 seriesColors?.[series.key] ?? SERIES_COLORS[seriesIndex % SERIES_COLORS.length];
 
               return chartType === 'bar' ? (
-                <Bar key={series.key} dataKey={series.key} name={series.label} fill={color} maxBarSize={48} />
+                <Bar
+                  key={series.key}
+                  dataKey={series.key}
+                  name={series.label}
+                  fill={color}
+                  maxBarSize={48}
+                />
               ) : chartType === 'line' ? (
                 <Line
                   key={series.key}
@@ -257,7 +267,7 @@ export function TimeSeriesChart({
                   dataKey={series.key}
                   name={series.label}
                   stroke={color}
-                  strokeWidth={2}
+                  strokeWidth={seriesStrokeWidths?.[series.key] ?? 2}
                   connectNulls={false}
                   dot={false}
                   activeDot={{ r: 4, fill: '#f4f2f2', strokeWidth: 2 }}

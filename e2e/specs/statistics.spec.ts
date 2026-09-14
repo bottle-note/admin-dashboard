@@ -31,7 +31,9 @@ test.describe('통계 시계열', () => {
     for (const series of activePayload.series.filter((item: { key: string }) =>
       ['visitors', 'members'].includes(item.key)
     )) {
-      await expect(page.locator('.recharts-legend-item').filter({ hasText: series.label })).toBeVisible();
+      await expect(
+        page.locator('.recharts-legend-item').filter({ hasText: series.label })
+      ).toBeVisible();
     }
     await expect(page.locator('.recharts-area')).toHaveCount(0);
     expect(
@@ -61,7 +63,9 @@ test.describe('통계 시계열', () => {
     for (const series of activePayload.series.filter((item: { key: string }) =>
       ['visitors', 'members'].includes(item.key)
     )) {
-      await expect(page.locator('.recharts-legend-item').filter({ hasText: series.label })).toBeVisible();
+      await expect(
+        page.locator('.recharts-legend-item').filter({ hasText: series.label })
+      ).toBeVisible();
     }
     await expect(page.locator('.recharts-area')).toHaveCount(0);
 
@@ -251,54 +255,172 @@ test.describe('통계 시계열', () => {
 
     await page.goto('/statistics/alcohols');
     await expect(page.getByText('조회할 주류를 선택하면 통계 차트가 표시됩니다.')).toBeVisible();
+    await expect(page.getByRole('button', { name: '최근 7일', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '최근 30일', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '최근 90일', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '주 범위 선택' })).toBeVisible();
     await page.waitForTimeout(300);
     expect(alcoholStatisticsRequests).toHaveLength(0);
 
-    await page.getByRole('textbox', { name: '주류 검색' }).focus();
-    await expect(page.getByText('한 글자 이상 입력하면 검색 결과가 표시됩니다.')).toBeVisible();
+    await page.getByRole('button', { name: '최근 7일', exact: true }).click();
+    await expect(page).toHaveURL(/granularity=HOUR/);
+    await expect(page).toHaveURL(/preset=7/);
+    await expect(page.getByLabel('주류 통계 시작일')).toBeVisible();
+    await page.getByRole('button', { name: '최근 30일', exact: true }).click();
+    await expect(page).toHaveURL(/granularity=WEEK/);
+    await expect(page).toHaveURL(/preset=30/);
+    await expect(page.getByRole('button', { name: '주 범위 선택' })).toBeVisible();
+    expect(alcoholStatisticsRequests).toHaveLength(0);
 
-    const lookupResponse = page.waitForResponse((response) =>
-      response.url().includes('/alcohols/lookup')
+    const initialLookupResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/alcohols/lookup') &&
+        new URL(response.url()).searchParams.get('keyword') === ''
     );
-    await page.getByRole('textbox', { name: '주류 검색' }).fill('글렌');
+    const searchInput = page.getByRole('combobox', { name: '주류 검색' });
+    await searchInput.focus();
+    expect((await initialLookupResponse).status()).toBe(200);
+    await expect(page.getByTestId('alcohol-statistics-search-results')).toBeVisible();
+
+    await searchInput.dispatchEvent('compositionstart');
+    await searchInput.fill('글렌');
+    await searchInput.press('Enter');
+    expect(new URL(page.url()).searchParams.has('keyword')).toBe(false);
+    await searchInput.dispatchEvent('compositionend', { data: '렌' });
+    await expect(searchInput).toHaveValue('글렌');
+    await expect(searchInput).toBeFocused();
+    expect(new URL(page.url()).searchParams.has('keyword')).toBe(false);
+    const lookupResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/alcohols/lookup') &&
+        new URL(response.url()).searchParams.get('keyword') === '글렌'
+    );
+    await searchInput.press('Enter');
     expect((await lookupResponse).status()).toBe(200);
 
     const searchResults = page
       .getByTestId('alcohol-statistics-search-results')
       .getByRole('button', { name: /주류 선택$/ });
-    if ((await searchResults.count()) === 0) {
-      test.skip();
-      return;
-    }
+    await expect(searchResults.first()).toBeVisible();
 
-    const popularityResponse = page.waitForResponse(
+    const interestResponse = page.waitForResponse(
       (response) =>
-        response.url().includes('/statistics/alcohols/') && response.url().includes('/observations/INTEREST')
+        response.url().includes('/statistics/alcohols/') &&
+        response.url().includes('/observations/INTEREST')
     );
-    const ratingResponse = page.waitForResponse((response) => response.url().includes('/observations/RATING'));
-    const pickResponse = page.waitForResponse((response) => response.url().includes('/observations/PICK'));
     await searchResults.first().click();
-    const popularity = await popularityResponse;
+    const interest = await interestResponse;
 
-    expect(popularity.status()).toBe(200);
+    expect(interest.status()).toBe(200);
     await expect(page).toHaveURL(/alcoholId=\d+/);
-    await expect(page.getByText('조회 · 기간 조회 수', { exact: true })).toBeVisible();
-    await expect(page.getByText('조회 · 누적·현재값', { exact: true })).toBeVisible();
+    await expect(page.getByText('조회 지표', { exact: true })).toBeVisible();
     await expect(page.locator('.recharts-bar')).toHaveCount(1);
+    await searchInput.focus();
     await expect(searchResults.first()).toHaveAttribute('aria-pressed', 'true');
     await expect(page).toHaveURL(/keyword=/);
-    const interestData = (await popularity.json()).data;
-    const ratingData = (await (await ratingResponse).json()).data;
-    const pickData = (await (await pickResponse).json()).data;
-    const summary = page.getByTestId('alcohol-statistics-summary');
-    const views = interestData.points.reduce((total: number, point: { values: Record<string, number> }) => total + point.values.viewCount, 0);
-    const picks = pickData.points.reduce((total: number, point: { values: Record<string, number> }) => total + point.values.deltaPickCount, 0);
-    await expect(summary.getByText(`${views.toLocaleString('ko-KR')}회`, { exact: true })).toBeVisible();
-    await expect(summary.getByText(`${picks > 0 ? '+' : ''}${picks.toLocaleString('ko-KR')}개`, { exact: true }).first()).toBeVisible();
-    const lastRating = ratingData.points[ratingData.points.length - 1]?.values.averageRating;
-    if (typeof lastRating === 'number') await expect(summary.getByText(`${lastRating.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}점`, { exact: true })).toBeVisible();
+    const interestData = (await interest.json()).data;
+    const summary = page.getByTestId('alcohol-observation-summary');
+    const views = interestData.points.reduce(
+      (total: number, point: { values: Record<string, number> }) => total + point.values.viewCount,
+      0
+    );
+    await expect(
+      summary
+        .getByText('기간 조회 수', { exact: true })
+        .locator('..')
+        .getByText(`${views.toLocaleString('ko-KR')}회`, { exact: true })
+    ).toBeVisible();
+
+    const popularitySeriesResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/statistics/alcohols/') && response.url().includes('/popularity')
+    );
+    await page.getByRole('tab', { name: '인기도', exact: true }).click();
+    const popularityData = (await (await popularitySeriesResponse).json()).data;
+    await expect(page.getByText('인기도 지수', { exact: true })).toBeVisible();
+    await expect(page.getByText('인기도 · 기간 조회 수', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('인기도 · 현재값', { exact: true })).toHaveCount(0);
+    await expect(page.locator('.recharts-line')).toHaveCount(1);
+    const closedPopularityPoints = popularityData.points.filter(
+      (point: { partial: boolean; values: Record<string, number | null> }) =>
+        !point.partial && typeof point.values.popularityScore === 'number'
+    );
+    const lastClosedPopularity =
+      closedPopularityPoints[closedPopularityPoints.length - 1]?.values.popularityScore;
+    if (typeof lastClosedPopularity === 'number') {
+      await expect(page.getByTestId('alcohol-popularity-score')).toHaveText(
+        `${(lastClosedPopularity * 100).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}점`
+      );
+    }
+    await page.getByRole('button', { name: '관심도', exact: true }).click();
+    await expect(page.getByRole('button', { name: '관심도', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await expect(page.locator('.recharts-line')).toHaveCount(2);
+
+    const ratingResponse = page.waitForResponse((response) =>
+      response.url().includes('/observations/RATING')
+    );
     await page.getByRole('tab', { name: '평가', exact: true }).click();
+    const ratingData = (await (await ratingResponse).json()).data;
     await expect(page).toHaveURL(/group=RATING/);
+    await expect(page.getByText('평가 지표', { exact: true })).toBeVisible();
+    await expect(page.getByText('평점 합', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '평균 평점', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await expect(
+      page.locator('.recharts-legend-item').filter({ hasText: '평균 평점' })
+    ).toBeVisible();
+    const lastRating = ratingData.points[ratingData.points.length - 1]?.values.averageRating;
+    if (typeof lastRating === 'number') {
+      await expect(page.getByTestId('alcohol-observation-summary')).toContainText(
+        `${lastRating.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}점`
+      );
+    }
+    await page.getByRole('button', { name: '평점 수 순증감', exact: true }).click();
+    await expect(page.getByRole('button', { name: '평점 수 순증감', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await expect(
+      page.locator('.recharts-legend-item').filter({ hasText: '평점 수 순증감' })
+    ).toBeVisible();
+
+    const pickResponse = page.waitForResponse((response) =>
+      response.url().includes('/observations/PICK')
+    );
+    await page.getByRole('tab', { name: '찜', exact: true }).click();
+    await pickResponse;
+    await expect(page.getByText('찜 지표', { exact: true })).toBeVisible();
+    await expect(page.getByText('찜 해제 상태 수', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '찜 수', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await page.getByRole('button', { name: '찜 순증감', exact: true }).click();
+    await expect(
+      page.locator('.recharts-legend-item').filter({ hasText: '찜 순증감' })
+    ).toBeVisible();
+
+    const engagementResponse = page.waitForResponse((response) =>
+      response.url().includes('/observations/ENGAGEMENT')
+    );
+    await page.getByRole('tab', { name: '참여', exact: true }).click();
+    await engagementResponse;
+    await expect(page.getByText('참여 지표', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('alcohol-observation-summary')).toContainText('리뷰 수');
+    await expect(page.getByRole('button', { name: '리뷰', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await expect(page.locator('.recharts-legend-item')).toHaveCount(1);
+    await page.getByRole('button', { name: '좋아요', exact: true }).click();
+    await expect(page.locator('.recharts-legend-item')).toHaveCount(2);
+
+    await page.getByRole('tab', { name: '평가', exact: true }).click();
 
     const monthlyObservation = page.waitForResponse(
       (response) =>
@@ -307,7 +429,9 @@ test.describe('통계 시계열', () => {
         new URL(response.url()).searchParams.get('granularity') === 'MONTH'
     );
     await page.getByRole('combobox', { name: '주류 통계 집계 단위' }).click();
-    await page.getByRole('option', { name: '월간' }).click();
+    await page.getByRole('option', { name: '월별' }).click();
+    await expect(page.getByLabel('주류 통계 시작 월')).toBeVisible();
+    await expect(page.getByLabel('주류 통계 종료 월')).toBeVisible();
     await page.getByRole('button', { name: '조회', exact: true }).click();
     expect((await monthlyObservation).status()).toBe(200);
     await expect(page).toHaveURL(/granularity=MONTH/);
@@ -317,20 +441,30 @@ test.describe('통계 시계열', () => {
       .getByTestId('alcohol-statistics-search-results')
       .getByRole('button', { name: /주류 선택$/ });
     for (let count = 2; count <= 3; count += 1) {
-      await page.getByRole('textbox', { name: '주류 검색' }).fill('글렌');
+      await page.getByRole('combobox', { name: '주류 검색' }).fill('글렌');
       await expect(comparisonResults.first()).toBeVisible();
       const compareResponse = page.waitForResponse(
         (response) =>
           response.url().includes('/statistics/alcohols/') &&
           response.url().includes('/observations/RATING')
       );
-      await page.getByTestId('alcohol-statistics-search-results').locator('button[aria-pressed="false"]').first().click();
+      await page
+        .getByTestId('alcohol-statistics-search-results')
+        .locator('button[aria-pressed="false"]')
+        .first()
+        .click();
       expect((await compareResponse).status()).toBe(200);
       await expect
         .poll(() => new URL(page.url()).searchParams.get('ids')?.split(',').length)
         .toBe(count);
     }
-    await expect(page.getByTestId('alcohol-statistics-search-results').locator('button[aria-pressed="false"]').first()).toBeDisabled();
+    await searchInput.click();
+    await expect(
+      page
+        .getByTestId('alcohol-statistics-search-results')
+        .locator('button[aria-pressed="false"]')
+        .first()
+    ).toBeDisabled();
     await page.getByRole('combobox', { name: '비교 지표' }).click();
     await page.getByRole('option', { name: '평균 평점', exact: true }).click();
     await expect(page).toHaveURL(/metric=averageRating/);
@@ -339,6 +473,7 @@ test.describe('통계 시계열', () => {
     await expect(page).toHaveURL(comparisonUrl);
     await expect(page.getByText('평가 · 평균 평점 비교', { exact: true })).toBeVisible();
     await expect(page.locator('.recharts-legend-item')).toHaveCount(3);
+    await expect(page.getByRole('button', { name: /^주류 \d+ ×$/ })).toHaveCount(0);
     const legendColors = () =>
       page
         .locator('.recharts-legend-item')
@@ -354,12 +489,14 @@ test.describe('통계 시계열', () => {
     expect(new Set(Object.values(beforeColors)).size).toBe(3);
     await page.getByRole('button', { name: / ×$/ }).first().click();
     await expect(page.locator('.recharts-legend-item')).toHaveCount(2);
-    await expect(page.getByRole('textbox', { name: '주류 검색' })).toBeEnabled();
+    await expect(page.getByRole('combobox', { name: '주류 검색' })).toBeEnabled();
     const afterColors = await legendColors();
     for (const [name, color] of Object.entries(afterColors)) expect(color).toBe(beforeColors[name]);
     await page.getByRole('tab', { name: '개별 분석' }).click();
     await expect(page).toHaveURL(/alcoholId=\d+/);
-    await expect(page.getByText('평가 · 평균 평점', { exact: true })).toBeVisible();
+    await expect(page.getByText('평가 지표', { exact: true })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByRole('button', { name: '평균 평점', exact: true })).toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= document.documentElement.clientWidth

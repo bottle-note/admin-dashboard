@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type CompositionEventHandler,
   type Key,
   type KeyboardEvent,
   type ReactNode,
@@ -30,6 +31,8 @@ export interface LookupSearchSelectProps<TItem> {
   renderItem: (item: TItem) => ReactNode;
   onSelect: (item: TItem) => void;
   getItemAriaLabel?: (item: TItem) => string;
+  isItemSelected?: (item: TItem) => boolean;
+  isItemDisabled?: (item: TItem) => boolean;
   placeholder?: string;
   ariaLabel?: string;
   minimumSearchLength?: number;
@@ -48,6 +51,8 @@ export interface LookupSearchSelectProps<TItem> {
   idleMessage?: string;
   showOnFocus?: boolean;
   onInputKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
+  onInputCompositionStart?: CompositionEventHandler<HTMLInputElement>;
+  onInputCompositionEnd?: CompositionEventHandler<HTMLInputElement>;
   dropdownTestId?: string;
 }
 
@@ -61,6 +66,8 @@ export function LookupSearchSelect<TItem>({
   renderItem,
   onSelect,
   getItemAriaLabel,
+  isItemSelected,
+  isItemDisabled,
   placeholder = '검색...',
   ariaLabel,
   minimumSearchLength = 0,
@@ -79,6 +86,8 @@ export function LookupSearchSelect<TItem>({
   idleMessage,
   showOnFocus = false,
   onInputKeyDown,
+  onInputCompositionStart,
+  onInputCompositionEnd,
   dropdownTestId,
 }: LookupSearchSelectProps<TItem>) {
   const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
@@ -199,6 +208,8 @@ export function LookupSearchSelect<TItem>({
                     <button
                       type="button"
                       aria-label={getItemAriaLabel?.(item)}
+                      aria-pressed={isItemSelected?.(item)}
+                      disabled={isItemDisabled?.(item)}
                       onClick={() => {
                         onSelect(item);
                         onOpenChange(false);
@@ -206,7 +217,8 @@ export function LookupSearchSelect<TItem>({
                       className={cn(
                         'flex w-full items-center gap-3 px-3 py-2 text-left',
                         'hover:bg-accent hover:text-accent-foreground',
-                        'focus:bg-accent focus:text-accent-foreground focus:outline-none'
+                        'focus:bg-accent focus:text-accent-foreground focus:outline-none',
+                        'disabled:pointer-events-none disabled:opacity-50'
                       )}
                     >
                       {renderItem(item)}
@@ -253,6 +265,8 @@ export function LookupSearchSelect<TItem>({
           onFocus={() => onOpenChange(true)}
           onClick={() => onOpenChange(true)}
           onKeyDown={onInputKeyDown}
+          onCompositionStart={onInputCompositionStart}
+          onCompositionEnd={onInputCompositionEnd}
           placeholder={placeholder}
           disabled={disabled}
           className={cn(leftElement && 'pl-9', rightElement && 'pr-10', inputClassName)}
