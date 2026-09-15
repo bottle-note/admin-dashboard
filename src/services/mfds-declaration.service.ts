@@ -12,8 +12,6 @@ import {
   type MfdsDeclarationDetail,
   type MfdsDeclarationImporterLinkRequest,
   type MfdsDeclarationImporterLinkResult,
-  type MfdsDeclarationStatusUpdateRequest,
-  type MfdsDeclarationStatusUpdateResult,
   type MfdsMatchingCandidates,
   type MfdsMatchingConfirmRequest,
   type MfdsMatchingConfirmResponse,
@@ -72,9 +70,7 @@ export const mfdsDeclarationService = {
     return response.data;
   },
   runMatching: (declarationId: number): Promise<MfdsMatchingRunResponse> =>
-    apiClient.post<MfdsMatchingRunResponse>(
-      MfdsDeclarationApi.matchingRun.endpoint(declarationId)
-    ),
+    apiClient.post<MfdsMatchingRunResponse>(MfdsDeclarationApi.matchingRun.endpoint(declarationId)),
   confirmMatching: (
     declarationId: number,
     data: MfdsMatchingConfirmRequest
@@ -86,14 +82,6 @@ export const mfdsDeclarationService = {
   releaseMatching: (declarationId: number): Promise<MfdsMatchingConfirmResponse> =>
     apiClient.post<MfdsMatchingConfirmResponse>(
       MfdsDeclarationApi.matchingRelease.endpoint(declarationId)
-    ),
-  updateNormalizationStatus: (
-    declarationId: number,
-    data: MfdsDeclarationStatusUpdateRequest
-  ): Promise<MfdsDeclarationStatusUpdateResult> =>
-    apiClient.patch<MfdsDeclarationStatusUpdateResult, MfdsDeclarationStatusUpdateRequest>(
-      MfdsDeclarationApi.normalizationStatus.endpoint(declarationId),
-      data
     ),
   rcnoLinks: async (rcno: string): Promise<MfdsRcnoLinkItem[]> => {
     const response = await apiClient.get<MfdsRcnoLinkItem[]>(

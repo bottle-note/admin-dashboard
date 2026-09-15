@@ -12,7 +12,6 @@ import {
 } from '@/services/mfds-declaration.service';
 import type {
   MfdsDeclarationImporterLinkRequest,
-  MfdsDeclarationStatusUpdateRequest,
   MfdsDeclarationSearchParams,
   MfdsMatchingConfirmRequest,
 } from '@/types/api';
@@ -67,13 +66,10 @@ export function useMfdsMatchingActions(declarationId: number | undefined) {
       }),
     ]);
 
-  const runMatching = useApiMutation(
-    () => mfdsDeclarationService.runMatching(validDeclarationId),
-    {
-      successMessage: '매칭 후보를 다시 계산했습니다.',
-      onSuccess: invalidateDeclaration,
-    }
-  );
+  const runMatching = useApiMutation(() => mfdsDeclarationService.runMatching(validDeclarationId), {
+    successMessage: '매칭 후보를 다시 계산했습니다.',
+    onSuccess: invalidateDeclaration,
+  });
 
   const confirmMatching = useApiMutation(
     (data: MfdsMatchingConfirmRequest) =>
@@ -123,24 +119,4 @@ export function useMfdsImporterLinkActions(declarationId: number | undefined) {
   );
 
   return { linkImporter, unlinkImporter };
-}
-
-export function useMfdsNormalizationStatusUpdate(declarationId: number | undefined) {
-  const queryClient = useQueryClient();
-  const validDeclarationId = declarationId !== undefined && declarationId > 0 ? declarationId : 0;
-
-  return useApiMutation(
-    (data: MfdsDeclarationStatusUpdateRequest) =>
-      mfdsDeclarationService.updateNormalizationStatus(validDeclarationId, data),
-    {
-      successMessage: '검토 결과를 저장했습니다.',
-      onSuccess: () =>
-        Promise.all([
-          queryClient.invalidateQueries({ queryKey: mfdsDeclarationKeys.lists() }),
-          queryClient.invalidateQueries({
-            queryKey: mfdsDeclarationKeys.detail(validDeclarationId),
-          }),
-        ]),
-    }
-  );
 }

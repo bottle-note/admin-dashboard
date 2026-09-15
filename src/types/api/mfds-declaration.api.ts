@@ -44,29 +44,15 @@ export const MfdsDeclarationApi = {
       `/admin/api/v1/mfds/declarations/${declarationId}/matching/release`,
     method: 'POST',
   },
-  normalizationStatus: {
-    endpoint: (declarationId: number) =>
-      `/admin/api/v1/mfds/declarations/${declarationId}/normalization-status`,
-    method: 'PATCH',
-  },
   rcnoLinks: {
     endpoint: '/admin/api/v1/mfds/rcno-links',
     method: 'GET',
   },
 } as const;
 
-export type MfdsNormalizationStatus =
-  | 'PENDING'
-  | 'STALE'
-  | 'NORMALIZED'
-  | 'PARTIAL'
-  | 'REVIEW_REQUIRED'
-  | 'UNPARSED';
-
 export type MfdsImporterLinkSource = 'PAGE_NAME' | 'PAGE_RCNO' | 'MANUAL';
 
 export interface MfdsDeclarationSearchParams {
-  normalizationStatus?: MfdsNormalizationStatus;
   alcoholMatched?: boolean;
   alcoholMatchDecision?: string;
   importerId?: number;
@@ -84,12 +70,16 @@ export interface MfdsDeclarationListItem {
   skuDisplayNameEn: string | null;
   volumeMl: number | null;
   abvPercent: number | null;
-  normalizationStatus: MfdsNormalizationStatus;
+  ageYears: number | null;
+  alcoholCategoryKo: string | null;
+  alcoholCategoryEn: string | null;
   importerId: number | null;
   importerBaseName: string | null;
   importerLinkSource: MfdsImporterLinkSource | null;
   selectedAlcoholId: number | null;
   alcoholMatchDecision: string | null;
+  distilleryLinked: boolean;
+  regionLinked: boolean;
   matchedAt: string | null;
   createdAt: string;
 }
@@ -104,19 +94,6 @@ export interface MfdsDeclarationImporterLinkRequest {
 }
 
 export interface MfdsDeclarationImporterLinkResult {
-  code: string;
-  message: string;
-  targetId: number;
-  responseAt: string;
-}
-
-export interface MfdsDeclarationStatusUpdateRequest {
-  normalizationStatus: MfdsNormalizationStatus;
-  reviewedBy?: string;
-  reviewNote?: string;
-}
-
-export interface MfdsDeclarationStatusUpdateResult {
   code: string;
   message: string;
   targetId: number;
@@ -156,14 +133,6 @@ export interface MfdsDeclarationDetail {
   alcoholCategoryEn: string | null;
   manufactureCountryNameKo: string | null;
   exportCountryNameKo: string | null;
-  normalizationStatus: MfdsNormalizationStatus;
-  normalizationReasons: string[];
-  unparsedFragments: string[];
-  normalizedAt: string | null;
-  reviewStatus: string;
-  reviewedBy: string | null;
-  reviewedAt: string | null;
-  reviewNote: string | null;
   importerLinkSource: MfdsImporterLinkSource | null;
   importerLinkedAt: string | null;
   importer: MfdsImporterItem | null;
