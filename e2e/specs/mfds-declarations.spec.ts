@@ -13,6 +13,17 @@ interface DeclarationDraftSource {
   abvPercent: number | null;
 }
 
+interface DeclarationListItem extends DeclarationDraftSource {
+  id: number;
+  ageYears: number | null;
+  importerBaseName: string | null;
+  selectedAlcoholId: number | null;
+  alcoholMatchDecision: string | null;
+  distilleryLinked: boolean;
+  regionLinked: boolean;
+  createdAt: string;
+}
+
 function normalizeText(value: string | null) {
   return value?.trim() ?? '';
 }
@@ -103,40 +114,92 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
     });
   });
 
-  test('목록에서 상세로 이동해 정규화와 연결 정보를 확인할 수 있다', async ({ page }) => {
+  test('목록에서 제품·스펙·연결 정보를 확인하고 상세로 이동할 수 있다', async ({ page }) => {
     const listResponse = page.waitForResponse(
       (response) =>
         response.url().includes('/v1/mfds/declarations') &&
-        !response.url().includes('/matching/candidates') &&
+        response.url().includes('alcoholMatched=true') &&
         response.request().method() === 'GET'
     );
 
-    await page.goto(`${LIST_URL}?normalizationStatus=NORMALIZED`);
-    expect((await listResponse).ok()).toBe(true);
+    await page.goto(`${LIST_URL}?normalizationStatus=NORMALIZED&alcoholMatched=true`);
+    const declarationsResponse = await listResponse;
+    expect(declarationsResponse.ok()).toBe(true);
+    const declarationsBody = (await declarationsResponse.json()) as {
+      data: DeclarationListItem[];
+    };
+    const firstItem = declarationsBody.data[0]!;
 
     await expect(page.getByRole('heading', { name: '수입 신고 데이터 검토' })).toBeVisible();
+    await expect(page).not.toHaveURL(/normalizationStatus=/);
+    const declarationList = page.getByRole('region', { name: '수입 신고 목록' });
+    await expect(
+      declarationList.getByRole('columnheader', { name: '원장', exact: true })
+    ).toBeVisible();
+    await expect(declarationList.getByRole('columnheader', { name: '원장 영문명' })).toBeVisible();
+    await expect(
+      declarationList.getByRole('columnheader', { name: '정제 제품 한글명' })
+    ).toBeVisible();
+    await expect(
+      declarationList.getByRole('columnheader', { name: '정제 제품 영문명' })
+    ).toBeVisible();
+    await expect(declarationList.getByRole('columnheader', { name: '도수' })).toBeVisible();
+    await expect(declarationList.getByRole('columnheader', { name: '용량' })).toBeVisible();
+    await expect(declarationList.getByRole('columnheader', { name: '숙성연도' })).toBeVisible();
+    await expect(
+      declarationList.getByRole('columnheader', { name: '위스키', exact: true })
+    ).toBeVisible();
+    await expect(declarationList.getByRole('columnheader', { name: '증류소' })).toBeVisible();
+    await expect(declarationList.getByRole('columnheader', { name: '지역' })).toBeVisible();
+    await expect(declarationList.getByRole('columnheader', { name: '데이터 ID' })).toHaveCount(0);
+    await expect(declarationList.getByRole('columnheader', { name: 'RCNO' })).toHaveCount(0);
+    await expect(declarationList.getByRole('columnheader', { name: '규격' })).toHaveCount(0);
+    await expect(declarationList.getByRole('columnheader', { name: '정규화' })).toHaveCount(0);
+    await expect(page.getByLabel('정규화 상태')).toHaveCount(0);
     await expect(page.getByText('수입 신고 데이터를 불러오는 중입니다.')).toBeHidden();
-    const firstDataRow = page
-      .locator('tbody tr')
-      .filter({ has: page.locator('td') })
-      .first();
-    await expect(firstDataRow).not.toContainText('불러오는 중');
-    await expect(firstDataRow).not.toContainText('수집된 신고 데이터가 없습니다');
+    const firstDataRow = declarationList.locator('tbody tr').first();
+    const cells = firstDataRow.locator('td');
+    await expect(cells).toHaveCount(13);
+    await expect(cells.nth(0)).toHaveText(normalizeText(firstItem.skuDisplayNameKo) || '-');
+    await expect(cells.nth(1)).toHaveText(normalizeText(firstItem.skuDisplayNameEn) || '-');
+    await expect(cells.nth(2)).toHaveText(normalizeText(firstItem.baseProductNameKo) || '-');
+    await expect(cells.nth(3)).toHaveText(normalizeText(firstItem.baseProductNameEn) || '-');
+    await expect(cells.nth(4)).toHaveText(
+      firstItem.abvPercent === null ? '-' : `${firstItem.abvPercent}%`
+    );
+    await expect(cells.nth(5)).toHaveText(
+      firstItem.volumeMl === null ? '-' : `${firstItem.volumeMl.toLocaleString()} ml`
+    );
+    await expect(cells.nth(6)).toHaveText(
+      firstItem.ageYears === null ? '-' : `${firstItem.ageYears}년`
+    );
+    const whiskyConnection = cells.nth(8).getByLabel('위스키 연결됨');
+    await expect(whiskyConnection).toBeVisible();
+    await whiskyConnection.hover();
+    await expect(page.getByRole('tooltip')).toHaveText('위스키 연결됨');
+    await expect(
+      cells.nth(9).getByLabel(`증류소 연결${firstItem.distilleryLinked ? '됨' : ' 안 됨'}`)
+    ).toBeVisible();
+    await expect(
+      cells.nth(10).getByLabel(`지역 연결${firstItem.regionLinked ? '됨' : ' 안 됨'}`)
+    ).toBeVisible();
+    await expect(declarationList).not.toContainText('null');
+    await expect(declarationList).not.toContainText('undefined');
 
     await firstDataRow.click();
 
     await expect(page).toHaveURL(/\/mfds\/declarations\/\d+$/);
     const processingRecord = page.getByText('데이터 처리 기록', { exact: true });
-    const normalizationHeading = page.getByRole('heading', { name: '정규화 결과' });
     await expect(processingRecord).toBeVisible();
-    await expect(normalizationHeading).toBeVisible();
-    expect((await processingRecord.boundingBox())?.y).toBeLessThan(
-      (await normalizationHeading.boundingBox())?.y ?? 0
-    );
+    await expect(page.getByRole('heading', { name: '신고 상세 정보' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: '분류' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: '정규화 결과' })).toBeVisible();
-    await expect(page.getByText('규격 정규화 결과', { exact: true })).toHaveCount(0);
-    await expect(page.getByLabel('정규화 상태')).toHaveText('정규화 완료');
+    await expect(page.getByRole('columnheader', { name: '값' })).toBeVisible();
+    await expect(page.getByText('정규화 결과', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('정규화 처리 코드', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('미해석 원문', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('검토 메모', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '검토', exact: true })).toHaveCount(0);
+    await expect(page.getByLabel('정규화 상태')).toHaveCount(0);
     await expect(page.getByLabel('데이터 처리 상태')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: '수입사 연결' })).toBeVisible();
     await expect(page.getByRole('heading', { name: '연관 데이터 연결' })).toBeVisible();
@@ -181,36 +244,24 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
     await expect(whiskyLookupDialog.getByText('위스키 목록', { exact: true })).toBeVisible();
   });
 
-  test('정규화 필터를 URL에 유지한다', async ({ page }) => {
-    await page.goto(LIST_URL);
-    await expect(page.getByRole('heading', { name: '수입 신고 데이터 검토' })).toBeVisible();
+  test('축소 화면에서 목록 안에서만 가로 스크롤할 수 있다', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 900 });
+    await page.goto(`${LIST_URL}?alcoholMatched=false`);
 
-    await page.getByLabel('정규화 상태').click();
-    const filteredResponse = page.waitForResponse((response) =>
-      response.url().includes('normalizationStatus=REVIEW_REQUIRED')
+    const declarationList = page.getByRole('region', { name: '수입 신고 목록' });
+    await expect(declarationList.locator('tbody tr').first()).toBeVisible();
+    const dimensions = await declarationList.locator(':scope > div').evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+
+    expect(dimensions.scrollWidth).toBeGreaterThan(dimensions.clientWidth);
+    await expect(
+      declarationList.locator('tbody tr').first().getByLabel('위스키 연결 안 됨')
+    ).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      768
     );
-    await page.getByRole('option', { name: '검토 필요' }).click();
-
-    expect((await filteredResponse).ok()).toBe(true);
-    await expect(page).toHaveURL(/normalizationStatus=REVIEW_REQUIRED/);
-    await expect(page.locator('tbody')).toContainText('검토 필요');
-
-    await page
-      .locator('tbody tr')
-      .filter({ has: page.locator('td') })
-      .first()
-      .click();
-
-    const statusPanel = page.getByLabel('데이터 처리 상태');
-    const processingRecord = page.getByText('데이터 처리 기록', { exact: true });
-    await expect(page.getByLabel('정규화 상태')).toHaveText('검토 필요');
-    await expect(processingRecord).toBeVisible();
-    await expect(statusPanel).toContainText('검토 대기');
-    expect((await processingRecord.boundingBox())?.y).toBeLessThan(
-      (await statusPanel.boundingBox())?.y ?? 0
-    );
-    await expect(statusPanel.getByText('정규화 처리 코드', { exact: true })).toBeVisible();
-    await expect(statusPanel.locator('li code').first()).toBeVisible();
   });
 
   test('수입사 이름을 검색해 선택한 수입사로 신고를 필터링한다', async ({ page }) => {
