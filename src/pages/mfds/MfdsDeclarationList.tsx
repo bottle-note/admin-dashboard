@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Check, CircleHelp, Download, Search } from 'lucide-react';
+import { Check, CircleHelp, Download, Minus, Search } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router';
 
 import { Pagination } from '@/components/common/Pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -37,7 +38,10 @@ import { useToast } from '@/hooks/useToast';
 import { getErrorMessage } from '@/lib/api-error';
 import { isNonComposingEnterKey } from '@/lib/keyboard';
 import type { MfdsDeclarationSearchParams } from '@/types/api';
-import { createAlcoholRegistrationDraft } from './create-alcohol-registration-draft';
+import {
+  createAlcoholRegistrationDraft,
+  getAlcoholRegistrationDraftRowCount,
+} from './create-alcohol-registration-draft';
 import { ImporterSearchSelect } from './ImporterSearchSelect';
 
 const MATCH_DECISION_LABELS: Record<string, string> = {
@@ -45,6 +49,7 @@ const MATCH_DECISION_LABELS: Record<string, string> = {
   MANUAL: '직접 선택',
   AUTO: '자동 연결',
   AUTO_SELECTED: '자동 선정',
+  INHERITED: '상속 연결',
   NO_MATCH: '후보 없음',
   REVIEW: '검토 필요',
   AMBIGUOUS: '후보 모호',
@@ -64,16 +69,6 @@ function getPositiveNumber(value: string | null, fallback?: number) {
   return Number.isInteger(number) && number > 0 ? number : fallback;
 }
 
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString('ko-KR', {
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
 function displayText(value: string | null) {
   return value?.trim() || '-';
 }
@@ -81,8 +76,11 @@ function displayText(value: string | null) {
 function ConnectionIndicator({ connected, label }: { connected: boolean; label: string }) {
   if (!connected) {
     return (
-      <span aria-label={`${label} 연결 안 됨`} className="text-muted-foreground">
-        -
+      <span
+        aria-label={`${label} 연결 안 됨`}
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-400"
+      >
+        <Minus className="h-3 w-3" aria-hidden="true" />
       </span>
     );
   }
@@ -95,9 +93,13 @@ function ConnectionIndicator({ connected, label }: { connected: boolean; label: 
             role="img"
             tabIndex={0}
             aria-label={`${label} 연결됨`}
-            className="inline-flex text-emerald-600"
+            className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-300 bg-emerald-950 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.35),inset_0_0_6px_rgba(52,211,153,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
           >
-            <Check className="h-4 w-4" aria-hidden="true" />
+            <Check
+              className="h-3 w-3 drop-shadow-[0_0_3px_rgba(110,231,183,0.9)]"
+              strokeWidth={2.5}
+              aria-hidden="true"
+            />
           </span>
         </TooltipTrigger>
         <TooltipContent>{label} 연결됨</TooltipContent>
@@ -106,17 +108,14 @@ function ConnectionIndicator({ connected, label }: { connected: boolean; label: 
   );
 }
 
-function getMatchDecisionBadgeClass(decision: string | null) {
-  if (decision === 'AUTO' || decision === 'AUTO_SELECTED') {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+function getMatchDecisionBadgeClass(decision: string | null, connected: boolean) {
+  if (connected) {
+    return 'border-emerald-700 bg-emerald-700 text-white';
   }
-  if (decision === 'NO_MATCH') {
+  if (!decision || decision === 'NO_MATCH') {
     return 'border-muted-foreground/20 bg-muted text-muted-foreground';
   }
-  if (decision === 'CANDIDATE' || decision === 'MANUAL') {
-    return 'border-blue-200 bg-blue-50 text-blue-700';
-  }
-  return 'border-amber-200 bg-amber-50 text-amber-800';
+  return 'border-amber-400 bg-amber-100 text-amber-950';
 }
 
 export function MfdsDeclarationListPage() {
@@ -134,6 +133,9 @@ export function MfdsDeclarationListPage() {
 
   const [keywordDraft, setKeywordDraft] = useState<string | null>(null);
   const [cursorHistory, setCursorHistory] = useState<Array<number | undefined>>([]);
+  const [includeConnected, setIncludeConnected] = useState(false);
+  const [isDraftDialogOpen, setIsDraftDialogOpen] = useState(false);
+  const [isPreparingDraft, setIsPreparingDraft] = useState(false);
   const [preparedRegistrationDraft, setPreparedRegistrationDraft] =
     useState<PreparedRegistrationDraft | null>(null);
   const keywordInput = keywordDraft ?? keyword;
@@ -158,6 +160,11 @@ export function MfdsDeclarationListPage() {
 
   const { data, isLoading, isFetching, isError, refetch } = useMfdsDeclarationList(searchParams);
   const downloadExcelTemplate = useAlcoholExcelTemplateDownload();
+  const draftItems = (data?.items ?? []).filter(
+    (item) => includeConnected || item.selectedAlcoholId == null
+  );
+  const expectedDraftCount = getAlcoholRegistrationDraftRowCount(draftItems);
+  const excludedConnectedCount = (data?.items.length ?? 0) - draftItems.length;
 
   const hasFilters = Boolean(
     keyword || importerId || alcoholMatched || alcoholMatchDecision || cursor
@@ -207,19 +214,22 @@ export function MfdsDeclarationListPage() {
   };
 
   const handleDownloadRegistrationDraft = async () => {
-    if (!data?.items.length) return;
+    if (!expectedDraftCount || isPreparingDraft) return;
 
+    setIsPreparingDraft(true);
     try {
       const template = await downloadExcelTemplate.mutateAsync();
-      const { blob, declarationCount } = await createAlcoholRegistrationDraft(template, data.items);
+      const { blob, declarationCount } = await createAlcoholRegistrationDraft(template, draftItems);
 
       setPreparedRegistrationDraft({
         blob,
         declarationCount,
-        totalCount: data.items.length,
+        totalCount: draftItems.length,
       });
     } catch (error) {
       showToast({ type: 'error', message: getErrorMessage(error) });
+    } finally {
+      setIsPreparingDraft(false);
     }
   };
 
@@ -241,6 +251,7 @@ export function MfdsDeclarationListPage() {
       message: `등록 초안에 제품 ${declarationCount.toLocaleString()}건을 담았습니다.`,
     });
     setPreparedRegistrationDraft(null);
+    setIsDraftDialogOpen(false);
   };
 
   return (
@@ -339,7 +350,11 @@ export function MfdsDeclarationListPage() {
             </span>
           ) : null}
           <Button
-            onClick={handleDownloadRegistrationDraft}
+            onClick={() => {
+              setPreparedRegistrationDraft(null);
+              setIncludeConnected(false);
+              setIsDraftDialogOpen(true);
+            }}
             disabled={
               isLoading || isError || !data?.items.length || downloadExcelTemplate.isPending
             }
@@ -351,23 +366,86 @@ export function MfdsDeclarationListPage() {
       </div>
 
       <Dialog
-        open={preparedRegistrationDraft !== null}
-        onOpenChange={(open) => !open && setPreparedRegistrationDraft(null)}
+        open={isDraftDialogOpen}
+        onOpenChange={(open) => {
+          if (isPreparingDraft) return;
+          setIsDraftDialogOpen(open);
+          if (!open) setPreparedRegistrationDraft(null);
+        }}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Excel 등록 초안이 준비되었습니다</DialogTitle>
+            <DialogTitle>
+              {preparedRegistrationDraft
+                ? 'Excel 등록 초안이 준비되었습니다'
+                : 'Excel 등록 초안 다운로드'}
+            </DialogTitle>
             <DialogDescription>
-              전체 {preparedRegistrationDraft?.totalCount.toLocaleString()}개 신고 데이터 중 이름,
-              도수, 용량이 같은 항목을 합쳐{' '}
-              {preparedRegistrationDraft?.declarationCount.toLocaleString()}개 제품을 담았습니다.
+              {preparedRegistrationDraft
+                ? `선택한 ${preparedRegistrationDraft.totalCount.toLocaleString()}개 신고에서 이름·도수·용량이 같은 항목을 합쳐 ${preparedRegistrationDraft.declarationCount.toLocaleString()}개 제품을 담았습니다.`
+                : '다운로드 범위를 확인한 뒤 초안을 생성하세요. 전체 검색 결과가 아닌 현재 페이지의 데이터만 포함됩니다.'}
             </DialogDescription>
           </DialogHeader>
+          {!preparedRegistrationDraft && (
+            <div className="space-y-4">
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <Checkbox
+                  checked={includeConnected}
+                  disabled={isPreparingDraft}
+                  onCheckedChange={(checked) => setIncludeConnected(checked === true)}
+                />
+                이미 위스키에 연결된 데이터 포함
+              </label>
+              <div
+                role="status"
+                aria-live="polite"
+                className="rounded-lg border border-primary/20 bg-primary/5 p-4"
+              >
+                <p className="font-semibold">
+                  다운로드 예상 개수: {expectedDraftCount.toLocaleString()}개
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  연결된 데이터 {excludedConnectedCount}건 제외 · 남은 {draftItems.length}건에서
+                  중복과 이름 없는 항목을 제외한 개수입니다.
+                </p>
+              </div>
+              <dl className="space-y-3 rounded-lg border bg-muted/30 p-4 text-sm">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">대상 범위</dt>
+                  <dd>현재 페이지 {data?.items.length ?? 0}건</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">제품명</dt>
+                  <dd>SKU 표시명 우선</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">중복 처리</dt>
+                  <dd>이름·도수·용량이 같으면 합침</dd>
+                </div>
+              </dl>
+            </div>
+          )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPreparedRegistrationDraft(null)}>
+            <Button
+              variant="outline"
+              disabled={isPreparingDraft}
+              onClick={() => {
+                setIsDraftDialogOpen(false);
+                setPreparedRegistrationDraft(null);
+              }}
+            >
               취소
             </Button>
-            <Button onClick={handleDownloadPreparedRegistrationDraft}>다운로드</Button>
+            {preparedRegistrationDraft ? (
+              <Button onClick={handleDownloadPreparedRegistrationDraft}>다운로드</Button>
+            ) : (
+              <Button
+                disabled={isPreparingDraft || expectedDraftCount === 0}
+                onClick={handleDownloadRegistrationDraft}
+              >
+                {isPreparingDraft ? '초안 생성 중...' : '초안 생성'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -378,13 +456,11 @@ export function MfdsDeclarationListPage() {
         tabIndex={0}
         className="overflow-x-auto rounded-lg border"
       >
-        <Table className="min-w-[1600px] [&_td]:px-4 [&_th]:whitespace-nowrap [&_th]:px-4">
+        <Table className="min-w-[1160px] [&_td]:px-4 [&_th]:whitespace-nowrap [&_th]:px-4">
           <TableHeader>
             <TableRow>
-              <TableHead>원장</TableHead>
-              <TableHead>원장 영문명</TableHead>
-              <TableHead>정제 제품 한글명</TableHead>
-              <TableHead>정제 제품 영문명</TableHead>
+              <TableHead>제품명</TableHead>
+              <TableHead>제품명(영문)</TableHead>
               <TableHead>도수</TableHead>
               <TableHead>용량</TableHead>
               <TableHead>숙성연도</TableHead>
@@ -393,19 +469,20 @@ export function MfdsDeclarationListPage() {
               <TableHead className="w-[72px] text-center">증류소</TableHead>
               <TableHead className="w-[72px] text-center">지역</TableHead>
               <TableHead>위스키 매칭 판정</TableHead>
-              <TableHead>적재 시각</TableHead>
+              <TableHead>통관일자</TableHead>
+              <TableHead>수집 시각</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={13} className="h-40 text-center text-muted-foreground">
+                <TableCell colSpan={12} className="h-40 text-center text-muted-foreground">
                   수입 신고 데이터를 불러오는 중입니다.
                 </TableCell>
               </TableRow>
             ) : isError ? (
               <TableRow>
-                <TableCell colSpan={13} className="h-40 text-center">
+                <TableCell colSpan={12} className="h-40 text-center">
                   <p className="mb-3 text-muted-foreground">
                     수입 신고 데이터를 불러오지 못했습니다.
                   </p>
@@ -416,7 +493,7 @@ export function MfdsDeclarationListPage() {
               </TableRow>
             ) : data?.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={13} className="h-40 text-center text-muted-foreground">
+                <TableCell colSpan={12} className="h-40 text-center text-muted-foreground">
                   {hasFilters
                     ? '조건에 맞는 신고 데이터가 없습니다.'
                     : '수집된 신고 데이터가 없습니다.'}
@@ -430,16 +507,14 @@ export function MfdsDeclarationListPage() {
                   onClick={() => navigate(`/mfds/declarations/${item.id}`)}
                 >
                   <TableCell className="min-w-[220px]">
-                    <p className="font-medium">{displayText(item.skuDisplayNameKo)}</p>
+                    <p className="w-[240px] truncate" title={displayText(item.baseProductNameKo)}>
+                      {displayText(item.baseProductNameKo)}
+                    </p>
                   </TableCell>
                   <TableCell className="min-w-[220px]">
-                    <p>{displayText(item.skuDisplayNameEn)}</p>
-                  </TableCell>
-                  <TableCell className="min-w-[220px]">
-                    <p>{displayText(item.baseProductNameKo)}</p>
-                  </TableCell>
-                  <TableCell className="min-w-[220px]">
-                    <p>{displayText(item.baseProductNameEn)}</p>
+                    <p className="w-[240px] truncate" title={displayText(item.baseProductNameEn)}>
+                      {displayText(item.baseProductNameEn)}
+                    </p>
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-sm">
                     {item.abvPercent === null ? '-' : `${item.abvPercent}%`}
@@ -451,7 +526,12 @@ export function MfdsDeclarationListPage() {
                     {item.ageYears === null ? '-' : `${item.ageYears}년`}
                   </TableCell>
                   <TableCell>
-                    <p>{item.importerBaseName ?? '연결된 수입사 없음'}</p>
+                    <p
+                      className="w-[180px] truncate"
+                      title={item.importerBaseName ?? '연결된 수입사 없음'}
+                    >
+                      {item.importerBaseName ?? '연결된 수입사 없음'}
+                    </p>
                   </TableCell>
                   <TableCell className="text-center">
                     <ConnectionIndicator
@@ -468,8 +548,16 @@ export function MfdsDeclarationListPage() {
                   <TableCell>
                     <Badge
                       variant="outline"
-                      className={`whitespace-nowrap ${getMatchDecisionBadgeClass(item.alcoholMatchDecision)}`}
+                      className={`gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-semibold ${getMatchDecisionBadgeClass(item.alcoholMatchDecision, item.selectedAlcoholId !== null)}`}
                     >
+                      {item.selectedAlcoholId !== null ? (
+                        <Check className="h-3 w-3" strokeWidth={2.5} aria-hidden="true" />
+                      ) : (
+                        <span
+                          className="h-1.5 w-1.5 shrink-0 rounded-full bg-current"
+                          aria-hidden="true"
+                        />
+                      )}
                       {item.alcoholMatchDecision
                         ? (MATCH_DECISION_LABELS[item.alcoholMatchDecision] ??
                           item.alcoholMatchDecision)
@@ -477,7 +565,15 @@ export function MfdsDeclarationListPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                    {formatDateTime(item.createdAt)}
+                    {displayText(item.processedDate)}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                    <span
+                      title="현재 목록 API에서 수집 시각을 제공하지 않습니다."
+                      aria-label="수집 시각 미제공"
+                    >
+                      -
+                    </span>
                   </TableCell>
                 </TableRow>
               ))

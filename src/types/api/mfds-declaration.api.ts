@@ -6,6 +6,10 @@ import type { ApiMeta } from './common';
 import type { MfdsImporterItem } from './mfds-importer.api';
 
 export const MfdsDeclarationApi = {
+  sourceItem: {
+    endpoint: (rcno: string) => `/admin/api/v1/mfds/items/${encodeURIComponent(rcno)}`,
+    method: 'GET',
+  },
   list: {
     endpoint: '/admin/api/v1/mfds/declarations',
     method: 'GET',
@@ -64,6 +68,7 @@ export interface MfdsDeclarationSearchParams {
 export interface MfdsDeclarationListItem {
   id: number;
   rcno: string;
+  processedDate: string | null;
   baseProductNameKo: string | null;
   baseProductNameEn: string | null;
   skuDisplayNameKo: string | null;
@@ -106,6 +111,7 @@ export interface MfdsMatchCandidate {
 }
 
 export interface MfdsDeclarationDetail {
+  processedDate: string | null;
   id: number;
   rcno: string;
   baseProductNameKo: string | null;
@@ -218,4 +224,24 @@ export interface MfdsRcnoLinkItem {
   sourceGalleryUrl: string | null;
   sourceObservedAt: string | null;
   createdAt: string;
+}
+
+/** 동일 RCNO의 최신 수집 원장. */
+export interface MfdsItemDetail {
+  id: number;
+  rcno: string;
+  queriedItemCode: string;
+  queriedItemName: string;
+  productDivisionName: string | null;
+  importerName: string | null;
+  productNameKo: string | null;
+  productNameEn: string | null;
+  itemName: string | null;
+  overseasEstablishmentName: string | null;
+  processedDate: string | null;
+  expiryText: string | null;
+  manufactureCountryName: string | null;
+  exportCountryName: string | null;
+  detailHref: string | null;
+  observedAt: string;
 }

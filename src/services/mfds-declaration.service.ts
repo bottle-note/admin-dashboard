@@ -6,6 +6,7 @@ import { createQueryKeys } from '@/hooks/useApiQuery';
 import { apiClient } from '@/lib/api-client';
 import {
   MfdsDeclarationApi,
+  type MfdsItemDetail,
   type MfdsDeclarationListItem,
   type MfdsDeclarationListMeta,
   type MfdsDeclarationSearchParams,
@@ -23,6 +24,7 @@ const mfdsDeclarationBaseKeys = createQueryKeys('mfds-declarations');
 
 export const mfdsDeclarationKeys = {
   ...mfdsDeclarationBaseKeys,
+  sourceItem: (rcno: string) => [...mfdsDeclarationBaseKeys.all, 'source-item', rcno] as const,
   matchingCandidates: (declarationId: number) =>
     [...mfdsDeclarationBaseKeys.detail(declarationId), 'matching-candidates'] as const,
   rcnoLinks: (rcno: string) => [...mfdsDeclarationBaseKeys.all, 'rcno-links', rcno] as const,
@@ -34,6 +36,12 @@ export interface MfdsDeclarationListResponse {
 }
 
 export const mfdsDeclarationService = {
+  sourceItem: async (rcno: string): Promise<MfdsItemDetail> => {
+    const response = await apiClient.get<MfdsItemDetail>(
+      MfdsDeclarationApi.sourceItem.endpoint(rcno)
+    );
+    return response.data;
+  },
   list: async (params?: MfdsDeclarationSearchParams): Promise<MfdsDeclarationListResponse> => {
     const response = await apiClient.get<MfdsDeclarationListItem[], MfdsDeclarationListMeta>(
       MfdsDeclarationApi.list.endpoint,

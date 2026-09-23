@@ -120,3 +120,14 @@ export function useMfdsImporterLinkActions(declarationId: number | undefined) {
 
   return { linkImporter, unlinkImporter };
 }
+
+export function useMfdsSourceItem(rcno: string) {
+  return useApiQuery(
+    mfdsDeclarationKeys.sourceItem(rcno),
+    () => mfdsDeclarationService.sourceItem(rcno),
+    {
+      enabled: Boolean(rcno),
+      showErrorToast: false,
+    }
+  );
+}
