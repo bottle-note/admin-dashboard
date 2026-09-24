@@ -36,6 +36,9 @@ export interface WhiskyBasicInfoCardProps {
   regions: Array<{ id: number; korName: string }>;
   distilleries: Array<{ id: number; korName: string }>;
   disabled?: boolean;
+  fieldHints?: Partial<
+    Record<'categoryGroup' | 'regionId' | 'distilleryId' | 'abv' | 'volume', string>
+  >;
 }
 
 export function WhiskyBasicInfoCard({
@@ -44,13 +47,20 @@ export function WhiskyBasicInfoCard({
   regions,
   distilleries,
   disabled = false,
+  fieldHints = {},
 }: WhiskyBasicInfoCardProps) {
   const { register, watch, setValue, formState } = form;
   const { errors } = formState;
   const { getGroupDefaultCategory } = useCategoryGroupMap();
 
-  const regionOptions = regions.map((region) => ({ value: String(region.id), label: region.korName }));
-  const distilleryOptions = distilleries.map((distillery) => ({ value: String(distillery.id), label: distillery.korName }));
+  const regionOptions = regions.map((region) => ({
+    value: String(region.id),
+    label: region.korName,
+  }));
+  const distilleryOptions = distilleries.map((distillery) => ({
+    value: String(distillery.id),
+    label: distillery.korName,
+  }));
 
   const currentCategoryGroup = watch('categoryGroup');
   const isOtherCategory = currentCategoryGroup === 'OTHER';
@@ -103,7 +113,7 @@ export function WhiskyBasicInfoCard({
         {/* 카테고리 그룹 (1차 선택) */}
         <FormField label="카테고리 그룹" required error={errors.categoryGroup?.message}>
           <Select
-            value={currentCategoryGroup}
+            value={currentCategoryGroup ?? ''}
             onValueChange={(v) => handleCategoryGroupChange(v as AlcoholCategory)}
           >
             <SelectTrigger className="sm:w-[240px]">
@@ -111,10 +121,15 @@ export function WhiskyBasicInfoCard({
             </SelectTrigger>
             <SelectContent>
               {ALCOHOL_CATEGORIES.map((value) => (
-                <SelectItem key={value} value={value}>{CATEGORY_GROUP_LABELS[value]}</SelectItem>
+                <SelectItem key={value} value={value}>
+                  {CATEGORY_GROUP_LABELS[value]}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {fieldHints.categoryGroup && (
+            <p className="text-xs text-muted-foreground">{fieldHints.categoryGroup}</p>
+          )}
         </FormField>
 
         {/* 카테고리: 메인 그룹은 읽기 전용, OTHER는 선택+입력 */}
@@ -165,6 +180,9 @@ export function WhiskyBasicInfoCard({
               searchPlaceholder="지역 검색..."
               emptyMessage="지역을 찾을 수 없습니다."
             />
+            {fieldHints.regionId && (
+              <p className="text-xs text-muted-foreground">{fieldHints.regionId}</p>
+            )}
           </FormField>
           <FormField label="증류소" error={errors.distilleryId?.message}>
             <SearchableSelect
@@ -175,13 +193,16 @@ export function WhiskyBasicInfoCard({
               searchPlaceholder="증류소 검색..."
               emptyMessage="증류소를 찾을 수 없습니다."
             />
+            {fieldHints.distilleryId && (
+              <p className="text-xs text-muted-foreground">{fieldHints.distilleryId}</p>
+            )}
           </FormField>
         </div>
-
         {/* 도수 / 숙성년도 */}
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="도수 (ABV %)" required error={errors.abv?.message}>
             <Input type="text" {...register('abv')} placeholder="예: 40 또는 50~60 (% 제외)" />
+            {fieldHints.abv && <p className="text-xs text-muted-foreground">{fieldHints.abv}</p>}
           </FormField>
           <FormField label="숙성년도" error={errors.age?.message}>
             <Input {...register('age')} placeholder="예: 12" />
@@ -192,6 +213,9 @@ export function WhiskyBasicInfoCard({
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="용량" required error={errors.volume?.message}>
             <Input {...register('volume')} placeholder="예: 700ml" />
+            {fieldHints.volume && (
+              <p className="text-xs text-muted-foreground">{fieldHints.volume}</p>
+            )}
           </FormField>
           <FormField label="캐스크" error={errors.cask?.message}>
             <Input {...register('cask')} placeholder="예: 아메리칸 오크 & 스패니시 셰리" />

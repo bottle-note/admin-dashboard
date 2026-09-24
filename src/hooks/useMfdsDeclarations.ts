@@ -16,10 +16,11 @@ import type {
   MfdsMatchingConfirmRequest,
 } from '@/types/api';
 
-export function useMfdsDeclarationList(params?: MfdsDeclarationSearchParams) {
+export function useMfdsDeclarationList(params?: MfdsDeclarationSearchParams, enabled = true) {
   return useApiQuery<MfdsDeclarationListResponse>(
     mfdsDeclarationKeys.list(params ? { ...params } : undefined),
-    () => mfdsDeclarationService.list(params)
+    () => mfdsDeclarationService.list(params),
+    { enabled }
   );
 }
 
@@ -119,4 +120,15 @@ export function useMfdsImporterLinkActions(declarationId: number | undefined) {
   );
 
   return { linkImporter, unlinkImporter };
+}
+
+export function useMfdsSourceItem(rcno: string) {
+  return useApiQuery(
+    mfdsDeclarationKeys.sourceItem(rcno),
+    () => mfdsDeclarationService.sourceItem(rcno),
+    {
+      enabled: Boolean(rcno),
+      showErrorToast: false,
+    }
+  );
 }

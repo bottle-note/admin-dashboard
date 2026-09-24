@@ -17,17 +17,10 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
+  DialogFooter,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
 import {
   flattenAdminAlcoholLookupPages,
   useAdminAlcoholDetail,
@@ -98,11 +91,16 @@ function WhiskySelectionCard({
         </div>
         <div className="min-w-0 flex-1">
           {label && <p className="text-xs font-medium text-muted-foreground">{label}</p>}
-          <p className={label ? 'mt-0.5 truncate font-semibold' : 'truncate font-semibold'}>
+          <p
+            title={whisky.korName}
+            className={label ? 'mt-0.5 truncate font-semibold' : 'truncate font-semibold'}
+          >
             {whisky.korName}
           </p>
           {whisky.engName && (
-            <p className="truncate text-sm text-muted-foreground">{whisky.engName}</p>
+            <p title={whisky.engName} className="truncate text-sm text-muted-foreground">
+              {whisky.engName}
+            </p>
           )}
         </div>
         {action}
@@ -158,7 +156,7 @@ function WhiskyLookupDialog({
       <DialogContent className="flex max-h-[80vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
         <DialogHeader className="border-b px-6 py-5 pr-12">
           <DialogTitle>연결할 보틀노트 위스키 찾기</DialogTitle>
-          <DialogDescription>선택 후 드로어에서 연결을 확정합니다.</DialogDescription>
+          <DialogDescription>선택 후 연결을 확정합니다.</DialogDescription>
         </DialogHeader>
 
         <div className="border-b px-6 py-4">
@@ -218,7 +216,9 @@ function WhiskyLookupDialog({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{whisky.korName}</p>
-                    <p className="truncate text-sm text-muted-foreground">{whisky.engName}</p>
+                    <p title={whisky.engName} className="truncate text-sm text-muted-foreground">
+                      {whisky.engName}
+                    </p>
                     <p className="mt-1 truncate text-xs text-muted-foreground">
                       {[whisky.korCategoryName, whisky.korDistillery ?? whisky.korRegion]
                         .filter(Boolean)
@@ -270,6 +270,7 @@ export function MfdsWhiskyMatchingSheet({
     open && selectedAlcoholId ? selectedAlcoholId : undefined
   );
   const { runMatching, confirmMatching, releaseMatching } = useMfdsMatchingActions(declarationId);
+  const selectedDetailQuery = useAdminAlcoholDetail(selectedWhisky?.alcoholId);
   const candidates = candidatesQuery.data?.alcoholCandidates ?? [];
   const isPending = runMatching.isPending || confirmMatching.isPending || releaseMatching.isPending;
 
@@ -283,7 +284,7 @@ export function MfdsWhiskyMatchingSheet({
   };
 
   const handleConfirm = () => {
-    if (!selectedWhisky) return;
+    if (!selectedWhisky || selectedWhisky.alcoholId === selectedAlcoholId) return;
 
     confirmMatching.mutate(
       { alcoholId: selectedWhisky.alcoholId },
@@ -301,12 +302,17 @@ export function MfdsWhiskyMatchingSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="flex w-full flex-col p-0 sm:max-w-xl">
-        <SheetHeader className="border-b px-6 py-5 pr-12">
-          <SheetTitle>{declarationName} · 보틀노트 위스키 연결</SheetTitle>
-          <SheetDescription>RCNO {rcno}</SheetDescription>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="border-b px-6 py-5 pr-12">
+          <DialogTitle
+            className="line-clamp-2 [overflow-wrap:anywhere] [word-break:keep-all]"
+            title={`${declarationName} · 보틀노트 위스키 연결`}
+          >
+            {declarationName} · 보틀노트 위스키 연결
+          </DialogTitle>
+          <DialogDescription>RCNO {rcno}</DialogDescription>
+        </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-6 py-5">
           <section className="space-y-3">
@@ -400,7 +406,9 @@ export function MfdsWhiskyMatchingSheet({
                     <div
                       key={candidate.alcoholId}
                       className={`rounded-lg border ${
-                        isSelected ? 'border-primary ring-2 ring-primary/30' : ''
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50/50 shadow-[0_0_12px_rgba(59,130,246,0.12)] ring-2 ring-blue-400/30'
+                          : ''
                       }`}
                     >
                       <button
@@ -425,7 +433,9 @@ export function MfdsWhiskyMatchingSheet({
                           )}
                         </div>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium">{name}</span>
+                          <span title={name} className="block truncate font-medium">
+                            {name}
+                          </span>
                           <span className="mt-1 block text-sm text-muted-foreground">
                             점수 {candidate.score.toFixed(3)}
                           </span>
@@ -433,7 +443,7 @@ export function MfdsWhiskyMatchingSheet({
                         <CheckCircle2
                           className={
                             isSelected
-                              ? 'h-5 w-5 shrink-0 text-primary'
+                              ? 'h-5 w-5 shrink-0 text-blue-600'
                               : 'h-5 w-5 shrink-0 text-muted-foreground'
                           }
                           aria-hidden="true"
@@ -476,7 +486,7 @@ export function MfdsWhiskyMatchingSheet({
           </section>
         </div>
 
-        <SheetFooter className="flex-col gap-3 border-t px-6 py-5 sm:flex-col">
+        <DialogFooter className="flex-col gap-3 border-t px-6 py-5 sm:flex-col">
           {selectedWhisky ? (
             <WhiskySelectionCard
               label="연결할 위스키"
@@ -497,10 +507,53 @@ export function MfdsWhiskyMatchingSheet({
           ) : (
             <p className="text-sm text-muted-foreground">확정할 위스키를 선택하세요.</p>
           )}
-          <Button type="button" onClick={handleConfirm} disabled={!selectedWhisky || isPending}>
+          {selectedWhisky && (
+            <div className="rounded-md bg-muted/50 p-3 text-xs">
+              <p className="font-medium">확정 시 함께 연결되는 정보</p>
+              {selectedDetailQuery.isLoading ? (
+                <p className="mt-2">위스키 정보를 확인하는 중입니다.</p>
+              ) : selectedDetailQuery.isError ? (
+                <p className="mt-2">
+                  연결 미리보기를 불러오지 못했습니다.{' '}
+                  <button className="underline" onClick={() => selectedDetailQuery.refetch()}>
+                    다시 시도
+                  </button>
+                </p>
+              ) : selectedDetailQuery.data ? (
+                <dl className="mt-2 grid gap-2 [overflow-wrap:anywhere] sm:grid-cols-3 [&>div]:min-w-0">
+                  <div>
+                    <dt className="text-muted-foreground">위스키</dt>
+                    <dd>ID {selectedWhisky.alcoholId}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">증류소</dt>
+                    <dd>
+                      {selectedDetailQuery.data.korDistillery ?? '연결 없음'} ·{' '}
+                      {selectedDetailQuery.data.distilleryId ?? '-'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">지역</dt>
+                    <dd>
+                      {selectedDetailQuery.data.korRegion ?? '연결 없음'} ·{' '}
+                      {selectedDetailQuery.data.regionId ?? '-'}
+                    </dd>
+                  </div>
+                </dl>
+              ) : null}
+              <p className="mt-2 text-muted-foreground">확정 전까지 현재 연결은 유지됩니다.</p>
+            </div>
+          )}
+          <Button
+            type="button"
+            onClick={handleConfirm}
+            disabled={
+              !selectedWhisky || selectedWhisky.alcoholId === selectedAlcoholId || isPending
+            }
+          >
             {confirmMatching.isPending ? '확정 중...' : '선택한 연결 확정'}
           </Button>
-        </SheetFooter>
+        </DialogFooter>
 
         <AlertDialog open={isReleaseDialogOpen} onOpenChange={setIsReleaseDialogOpen}>
           <AlertDialogContent>
@@ -524,7 +577,7 @@ export function MfdsWhiskyMatchingSheet({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </SheetContent>
+      </DialogContent>
 
       <WhiskyLookupDialog
         open={isSearchDialogOpen}
@@ -532,6 +585,6 @@ export function MfdsWhiskyMatchingSheet({
         onOpenChange={setIsSearchDialogOpen}
         onSelect={setSelectedWhisky}
       />
-    </Sheet>
+    </Dialog>
   );
 }
