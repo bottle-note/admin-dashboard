@@ -1,9 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { Check, ChevronRight, Info } from 'lucide-react';
+import { Check, Info } from 'lucide-react';
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -13,7 +12,12 @@ import type { MfdsDeclarationDetail } from '@/types/api';
 import { MFDS_MATCH_DECISION_MAP } from './mfds-alcohol-match-status';
 import { MfdsImporterLinkingSheet } from './MfdsImporterLinkingSheet';
 import { MfdsMatchingWorkspace, type MfdsWorkspaceState } from './MfdsMatchingWorkspace';
-import { toCandidateWhisky, type PendingWhisky } from './mfds-pending-whisky';
+import {
+  rankAlcoholCandidates,
+  toCandidateWhisky,
+  type PendingWhisky,
+} from './mfds-pending-whisky';
+import { MfdsMatchingButton } from './MfdsMatchingButton';
 import { MfdsRelatedDeclarations } from './MfdsRelatedDeclarations';
 import { MfdsSourceItem } from './MfdsSourceItem';
 import { MfdsTopCandidates } from './MfdsTopCandidates';
@@ -177,14 +181,12 @@ export function MfdsDeclarationDetailPage() {
           source: 'current',
         }
       : null;
-  const topCandidate = [...(candidatesQuery.data?.alcoholCandidates ?? [])].sort(
-    (a, b) => b.score - a.score
-  )[0];
-  const openRegisterTab = () => {
-    setRegistrationVisited(detail.id);
+  const topCandidate = rankAlcoholCandidates(candidatesQuery.data?.alcoholCandidates ?? [])[0];
+  const selectTab = (item: (typeof DETAIL_TABS)[number]) => {
+    if (item === 'register' || tab === 'register') setRegistrationVisited(detail.id);
     setParams((previous) => {
       const next = new URLSearchParams(previous);
-      next.set('tab', 'register');
+      next.set('tab', item);
       return next;
     });
   };
@@ -217,14 +219,7 @@ export function MfdsDeclarationDetailPage() {
               aria-selected={tab === item}
               tabIndex={tab === item ? 0 : -1}
               className={`shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium ${tab === item ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
-              onClick={() => {
-                if (item === 'register' || tab === 'register') setRegistrationVisited(detail.id);
-                setParams((previous) => {
-                  const next = new URLSearchParams(previous);
-                  next.set('tab', item);
-                  return next;
-                });
-              }}
+              onClick={() => selectTab(item)}
               onKeyDown={(event) => {
                 if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
                   event.preventDefault();
@@ -384,45 +379,15 @@ export function MfdsDeclarationDetailPage() {
                         <p className="font-medium">연결된 위스키가 없습니다.</p>
                         <MfdsTopCandidates
                           declarationId={detail.id}
-                          candidates={candidatesQuery.data?.alcoholCandidates ?? []}
-                          candidatesLoaded={candidatesQuery.isSuccess}
-                          candidatesRefreshing={candidatesQuery.isFetching}
-                          onSelect={(candidate) =>
-                            setWorkspace({
-                              view: 'whisky',
-                              selected: toCandidateWhisky(candidate, 'preview'),
-                            })
-                          }
+                          onSelect={(whisky) => setWorkspace({ view: 'whisky', selected: whisky })}
                         />
                       </>
                     )}
-                    <button
-                      type="button"
-                      aria-label="매칭 관리"
-                      className={cn(
-                        'group flex h-10 w-full animate-neon-breathe items-center gap-2.5 rounded-lg px-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:animate-none',
-                        connected
-                          ? 'bg-emerald-50 text-emerald-950 [--neon:16_185_129] hover:bg-emerald-100'
-                          : 'bg-amber-50 text-amber-950 [--neon:245_158_11] hover:bg-amber-100'
-                      )}
+                    <MfdsMatchingButton
+                      connected={connected}
+                      candidateCount={candidatesQuery.data?.alcoholCandidates.length ?? 0}
                       onClick={() => setWorkspace({ view: 'whisky', selected: null })}
-                    >
-                      <span className="text-sm font-semibold tracking-tight">매칭 관리</span>
-                      <span
-                        className={cn(
-                          'ml-auto flex items-center gap-1 text-xs font-medium',
-                          connected ? 'text-emerald-700' : 'text-amber-700'
-                        )}
-                      >
-                        {candidatesQuery.data?.alcoholCandidates.length
-                          ? `후보 ${candidatesQuery.data.alcoholCandidates.length}건`
-                          : '위스키 검색'}
-                        <ChevronRight
-                          className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
-                          aria-hidden="true"
-                        />
-                      </span>
-                    </button>
+                    />
                     {candidatesQuery.isError && (
                       <p className="text-xs text-muted-foreground">
                         후보를 불러오지 못했습니다. 연결 창에서 재시도할 수 있습니다.
@@ -582,7 +547,7 @@ export function MfdsDeclarationDetailPage() {
         defaultBulkWhisky={
           currentWhisky ?? (topCandidate ? toCandidateWhisky(topCandidate) : undefined)
         }
-        onRegister={openRegisterTab}
+        onRegister={() => selectTab('register')}
         summary={{
           title: detail.skuDisplayNameKo || ko,
           subtitle: detail.skuDisplayNameEn ?? null,
@@ -594,13 +559,10 @@ export function MfdsDeclarationDetailPage() {
             { label: '도수', value: value(detail.abvPercent, '%') },
             { label: '주종', value: value(detail.alcoholCategoryKo) },
           ],
-          links: [
-            {
-              label: '수입사',
-              value: detail.importer?.businessName ?? detail.importerBaseName ?? '연결 안 됨',
-              connected: detail.importer != null,
-            },
-          ],
+          importer: {
+            name: detail.importer?.businessName ?? detail.importerBaseName ?? '연결 안 됨',
+            connected: detail.importer != null,
+          },
         }}
       />
       <MfdsImporterLinkingSheet

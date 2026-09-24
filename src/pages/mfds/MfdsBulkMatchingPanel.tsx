@@ -232,7 +232,8 @@ export function MfdsBulkMatchingPanel({
   }
   return (
     <BulkMatchingTable
-      key={`${alcoholId}-${previewQuery.dataUpdatedAt}`}
+      // 미리보기가 새로 도착하면 선택 상태를 새 데이터 기준으로 초기화한다.
+      key={previewQuery.dataUpdatedAt}
       declarationId={declarationId}
       alcoholId={alcoholId}
       preview={previewQuery.data}

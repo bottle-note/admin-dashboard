@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { MfdsBulkMatchingPanel } from './MfdsBulkMatchingPanel';
 import { PENDING_WHISKY_SOURCE_LABEL, type PendingWhisky } from './mfds-pending-whisky';
 import { MfdsWhiskyLookupPanel, MfdsWhiskyMatchingPanel } from './MfdsWhiskyMatchingPanel';
+import { MfdsWhiskyThumbnail } from './MfdsWhiskyThumbnail';
 
 export type MfdsWorkspaceView = 'whisky' | 'whiskySearch' | 'bulk';
 
@@ -20,7 +21,7 @@ export interface MfdsWorkspaceSummary {
   subtitle: string | null;
   rcno: string;
   facts: { label: string; value: string }[];
-  links: { label: string; value: string; connected: boolean }[];
+  importer: { name: string; connected: boolean };
 }
 
 const VIEW_TEXT: Record<MfdsWorkspaceView, { title: string; description: string }> = {
@@ -147,23 +148,21 @@ export function MfdsMatchingWorkspace({
             ))}
           </dl>
           <dl className="space-y-1.5 border-t pt-3 text-xs">
-            {summary.links.map((link) => (
-              <div key={link.label} className="flex items-start gap-1.5">
-                <span
-                  className={cn(
-                    'mt-0.5 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border',
-                    link.connected
-                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                      : 'border-muted-foreground/30'
-                  )}
-                  aria-hidden="true"
-                >
-                  {link.connected && <Check className="h-2.5 w-2.5" />}
-                </span>
-                <dt className="w-10 shrink-0 text-muted-foreground">{link.label}</dt>
-                <dd className="min-w-0 [overflow-wrap:anywhere]">{link.value}</dd>
-              </div>
-            ))}
+            <div className="flex items-start gap-1.5">
+              <span
+                className={cn(
+                  'mt-0.5 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border',
+                  summary.importer.connected
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                    : 'border-muted-foreground/30'
+                )}
+                aria-hidden="true"
+              >
+                {summary.importer.connected && <Check className="h-2.5 w-2.5" />}
+              </span>
+              <dt className="w-10 shrink-0 text-muted-foreground">수입사</dt>
+              <dd className="min-w-0 [overflow-wrap:anywhere]">{summary.importer.name}</dd>
+            </div>
           </dl>
           <div className="mt-auto space-y-2 border-t pt-3 text-xs">
             <div>
@@ -184,11 +183,7 @@ export function MfdsMatchingWorkspace({
               <p className="text-muted-foreground">선택한 위스키</p>
               {selected ? (
                 <div className="mt-1.5 flex items-start gap-2">
-                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded bg-muted">
-                    {selected.imageUrl && (
-                      <img src={selected.imageUrl} alt="" className="h-full w-full object-cover" />
-                    )}
-                  </div>
+                  <MfdsWhiskyThumbnail imageUrl={selected.imageUrl} />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold leading-snug [overflow-wrap:anywhere]">
                       {selected.korName}

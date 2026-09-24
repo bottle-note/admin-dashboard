@@ -1,4 +1,4 @@
-import type { MfdsAlcoholCandidateItem } from '@/types/api';
+import type { AlcoholLookupItem, MfdsAlcoholCandidateItem } from '@/types/api';
 
 export type PendingWhiskySource = 'candidate' | 'search' | 'preview' | 'current';
 
@@ -17,15 +17,29 @@ export interface PendingWhisky {
   source: PendingWhiskySource;
 }
 
+export function rankAlcoholCandidates(candidates: MfdsAlcoholCandidateItem[]) {
+  return [...candidates].sort((a, b) => b.score - a.score);
+}
+
 export function toCandidateWhisky(
   candidate: MfdsAlcoholCandidateItem,
   source: PendingWhiskySource = 'candidate'
 ): PendingWhisky {
   return {
     alcoholId: candidate.alcoholId,
-    korName: candidate.korName ?? candidate.engName ?? `ID ${candidate.alcoholId}`,
+    korName: candidate.korName ?? candidate.engName ?? `위스키 ${candidate.alcoholId}`,
     engName: candidate.engName ?? '',
     imageUrl: candidate.imageUrl,
     source,
+  };
+}
+
+export function toSearchedWhisky(whisky: AlcoholLookupItem): PendingWhisky {
+  return {
+    alcoholId: whisky.alcoholId,
+    korName: whisky.korName,
+    engName: whisky.engName,
+    imageUrl: whisky.imageUrl,
+    source: 'search',
   };
 }

@@ -20,52 +20,22 @@ import {
 } from '@/hooks/useAdminAlcohols';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useMfdsMatchingActions, useMfdsMatchingCandidates } from '@/hooks/useMfdsDeclarations';
-import type { AlcoholLookupItem } from '@/types/api';
-import { toCandidateWhisky, type PendingWhisky } from './mfds-pending-whisky';
+import { toCandidateWhisky, toSearchedWhisky, type PendingWhisky } from './mfds-pending-whisky';
+import { MfdsWhiskyThumbnail } from './MfdsWhiskyThumbnail';
 
-function toManualWhisky(whisky: AlcoholLookupItem): PendingWhisky {
-  return {
-    alcoholId: whisky.alcoholId,
-    korName: whisky.korName,
-    engName: whisky.engName,
-    imageUrl: whisky.imageUrl,
-    source: 'search',
-  };
-}
-
-function WhiskySelectionCard({
-  label,
+function CurrentWhiskyCard({
   whisky,
-  action,
-  detailHref,
   footerAction,
 }: {
-  label?: string;
-  whisky: Omit<PendingWhisky, 'source'>;
-  action?: ReactNode;
-  detailHref?: string;
-  footerAction?: ReactNode;
+  whisky: { alcoholId: number; korName: string; engName: string; imageUrl: string | null };
+  footerAction: ReactNode;
 }) {
   return (
     <div className="rounded-lg border bg-background">
       <div className="flex items-center gap-2.5 px-3 py-2">
-        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted">
-          {whisky.imageUrl ? (
-            <img src={whisky.imageUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-              No image
-            </div>
-          )}
-        </div>
+        <MfdsWhiskyThumbnail imageUrl={whisky.imageUrl} className="h-10 w-10" />
         <div className="min-w-0 flex-1">
-          {label && <p className="text-xs font-medium text-muted-foreground">{label}</p>}
-          <p
-            title={whisky.korName}
-            className={
-              label ? 'mt-0.5 truncate text-sm font-semibold' : 'truncate text-sm font-semibold'
-            }
-          >
+          <p title={whisky.korName} className="truncate text-sm font-semibold">
             {whisky.korName}
           </p>
           {whisky.engName && (
@@ -74,26 +44,19 @@ function WhiskySelectionCard({
             </p>
           )}
         </div>
-        {action}
       </div>
-      {(detailHref || footerAction) && (
-        <div className="flex items-center justify-between gap-3 border-t px-3 py-1">
-          {detailHref ? (
-            <Link
-              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-              to={detailHref}
-              target="_blank"
-              rel="noreferrer"
-            >
-              상세 보기
-              <ExternalLink className="h-3.5 w-3.5" />
-            </Link>
-          ) : (
-            <span />
-          )}
-          {footerAction}
-        </div>
-      )}
+      <div className="flex items-center justify-between gap-3 border-t px-3 py-1">
+        <Link
+          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+          to={`/whisky/${whisky.alcoholId}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          상세 보기
+          <ExternalLink className="h-3.5 w-3.5" />
+        </Link>
+        {footerAction}
+      </div>
     </div>
   );
 }
@@ -145,18 +108,10 @@ export function MfdsWhiskyLookupPanel({ onSelect }: { onSelect: (whisky: Pending
               <button
                 key={whisky.alcoholId}
                 type="button"
-                onClick={() => onSelect(toManualWhisky(whisky))}
+                onClick={() => onSelect(toSearchedWhisky(whisky))}
                 className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-muted"
               >
-                <div className="h-9 w-9 shrink-0 overflow-hidden rounded-md bg-muted">
-                  {whisky.imageUrl ? (
-                    <img src={whisky.imageUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground">
-                      No image
-                    </div>
-                  )}
-                </div>
+                <MfdsWhiskyThumbnail imageUrl={whisky.imageUrl} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{whisky.korName}</p>
                   <p title={whisky.engName} className="truncate text-xs text-muted-foreground">
@@ -211,10 +166,9 @@ export function MfdsWhiskyMatchingPanel({
   selectedAlcoholId: number | null;
   selectedWhisky: PendingWhisky | null;
   onSelectWhisky: (whisky: PendingWhisky | null) => void;
-  onOpenBulk: (alcoholId: number) => void;
+  onOpenBulk: () => void;
   onDone: () => void;
 }) {
-  const setSelectedWhisky = onSelectWhisky;
   const [isReleaseDialogOpen, setIsReleaseDialogOpen] = useState(false);
   const candidatesQuery = useMfdsMatchingCandidates(declarationId);
   const currentWhiskyQuery = useAdminAlcoholDetail(selectedAlcoholId ?? undefined);
@@ -231,7 +185,7 @@ export function MfdsWhiskyMatchingPanel({
   const handleRelease = () => {
     releaseMatching.mutate(undefined, {
       onSuccess: () => {
-        setSelectedWhisky(null);
+        onSelectWhisky(null);
         setIsReleaseDialogOpen(false);
       },
     });
@@ -263,14 +217,13 @@ export function MfdsWhiskyMatchingPanel({
                 </Button>
               </div>
             ) : (
-              <WhiskySelectionCard
+              <CurrentWhiskyCard
                 whisky={{
                   alcoholId: currentWhiskyQuery.data.alcoholId,
                   korName: currentWhiskyQuery.data.korName,
                   engName: currentWhiskyQuery.data.engName,
                   imageUrl: currentWhiskyQuery.data.imageUrl,
                 }}
-                detailHref={`/whisky/${currentWhiskyQuery.data.alcoholId}`}
                 footerAction={
                   <Button
                     type="button"
@@ -299,7 +252,7 @@ export function MfdsWhiskyMatchingPanel({
               variant="outline"
               size="sm"
               onClick={() => {
-                setSelectedWhisky(null);
+                onSelectWhisky(null);
                 runMatching.mutate();
               }}
               disabled={isPending}
@@ -340,23 +293,11 @@ export function MfdsWhiskyMatchingPanel({
                       type="button"
                       aria-pressed={isSelected}
                       aria-label={`${name} ${isSelected ? '선택 해제' : '선택'}`}
-                      onClick={() => setSelectedWhisky(isSelected ? null : candidateWhisky)}
+                      onClick={() => onSelectWhisky(isSelected ? null : candidateWhisky)}
                       disabled={isPending}
                       className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <div className="h-9 w-9 shrink-0 overflow-hidden rounded-md bg-muted">
-                        {candidateWhisky.imageUrl ? (
-                          <img
-                            src={candidateWhisky.imageUrl}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground">
-                            No image
-                          </div>
-                        )}
-                      </div>
+                      <MfdsWhiskyThumbnail imageUrl={candidateWhisky.imageUrl} />
                       <span className="min-w-0 flex-1">
                         <span title={name} className="block truncate text-sm font-medium">
                           {name}
@@ -407,7 +348,7 @@ export function MfdsWhiskyMatchingPanel({
             variant="outline"
             size="sm"
             disabled={!selectedWhisky || isPending}
-            onClick={() => selectedWhisky && onOpenBulk(selectedWhisky.alcoholId)}
+            onClick={onOpenBulk}
           >
             같은 제품 전체 연결
           </Button>
