@@ -16,10 +16,11 @@ import type {
   MfdsMatchingConfirmRequest,
 } from '@/types/api';
 
-export function useMfdsDeclarationList(params?: MfdsDeclarationSearchParams) {
+export function useMfdsDeclarationList(params?: MfdsDeclarationSearchParams, enabled = true) {
   return useApiQuery<MfdsDeclarationListResponse>(
     mfdsDeclarationKeys.list(params ? { ...params } : undefined),
-    () => mfdsDeclarationService.list(params)
+    () => mfdsDeclarationService.list(params),
+    { enabled }
   );
 }
 
