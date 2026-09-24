@@ -60,10 +60,20 @@ export default {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        // 색은 사용하는 쪽에서 --neon(RGB 채널)으로 정한다.
+        'neon-breathe': {
+          '0%, 100%': {
+            boxShadow: '0 0 0 1px rgb(var(--neon) / 0.75), 0 0 6px rgb(var(--neon) / 0.25)',
+          },
+          '50%': {
+            boxShadow: '0 0 0 1px rgb(var(--neon)), 0 0 16px rgb(var(--neon) / 0.5)',
+          },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'neon-breathe': 'neon-breathe 2.8s ease-in-out infinite',
       },
     },
   },
