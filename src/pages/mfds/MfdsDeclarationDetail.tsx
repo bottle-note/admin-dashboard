@@ -17,6 +17,12 @@ import { MfdsSourceItem } from './MfdsSourceItem';
 import { MfdsWhiskyRegistration } from './MfdsWhiskyRegistration';
 
 const DETAIL_TABS = ['clean', 'source', 'history', 'register'] as const;
+const DETAIL_TAB_LABELS: Record<(typeof DETAIL_TABS)[number], string> = {
+  clean: '정제 정보 · 매칭 관리',
+  source: '원장 정보',
+  history: '관련 내역',
+  register: '위스키 등록',
+};
 
 function value(input: string | number | null | undefined, suffix = '') {
   return input == null || input === '' ? '-' : `${input}${suffix}`;
@@ -93,14 +99,8 @@ export function MfdsDeclarationDetailPage() {
   const id = Number(rawId);
   const declarationId = Number.isInteger(id) && id > 0 ? id : undefined;
   const [params, setParams] = useSearchParams();
-  const tab =
-    params.get('tab') === 'history'
-      ? 'history'
-      : params.get('tab') === 'source'
-        ? 'source'
-        : params.get('tab') === 'register'
-          ? 'register'
-          : 'clean';
+  const requestedTab = params.get('tab');
+  const tab = DETAIL_TABS.find((item) => item === requestedTab) ?? 'clean';
   const [registrationVisited, setRegistrationVisited] = useState<number | undefined>(undefined);
   const [matchingOpen, setMatchingOpen] = useState(false);
   const [importerOpen, setImporterOpen] = useState(false);
@@ -213,13 +213,7 @@ export function MfdsDeclarationDetailPage() {
                 }
               }}
             >
-              {item === 'clean'
-                ? '정제 정보 · 매칭 관리'
-                : item === 'source'
-                  ? '원장 정보'
-                  : item === 'history'
-                    ? '관련 내역'
-                    : '위스키 등록'}
+              {DETAIL_TAB_LABELS[item]}
             </button>
           ))}
         </div>

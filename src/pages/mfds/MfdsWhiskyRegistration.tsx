@@ -28,6 +28,14 @@ type RegistrationSource = Pick<
   | 'selectedDistilleryId'
 >;
 
+function getRegistrationButtonLabel(busy: boolean, uploading: boolean, createdId: number | null) {
+  if (busy && uploading) return '이미지 업로드 중...';
+  if (busy && createdId) return '연결 중...';
+  if (busy) return '등록 중...';
+  if (createdId) return '연결 재시도';
+  return '등록하고 연결';
+}
+
 /** Register first, then match; retain the new ID so a failed match can be retried safely. */
 export function MfdsWhiskyRegistration({
   source,
@@ -232,15 +240,7 @@ export function MfdsWhiskyRegistration({
       )}
       <div className="flex justify-end border-t pt-4">
         <Button disabled={busy || loading || failed} onClick={registerAndMatch}>
-          {busy
-            ? upload.isUploading
-              ? '이미지 업로드 중...'
-              : createdId
-                ? '연결 중...'
-                : '등록 중...'
-            : createdId
-              ? '연결 재시도'
-              : '등록하고 연결'}
+          {getRegistrationButtonLabel(busy, upload.isUploading, createdId)}
         </Button>
       </div>
     </div>
