@@ -14,6 +14,10 @@ import {
   type MfdsDeclarationImporterLinkRequest,
   type MfdsDeclarationImporterLinkResult,
   type MfdsMatchingCandidates,
+  type MfdsBulkMatchingConfirmRequest,
+  type MfdsBulkMatchingConfirmResponse,
+  type MfdsBulkMatchingPreviewRequest,
+  type MfdsBulkMatchingPreviewResponse,
   type MfdsMatchingConfirmRequest,
   type MfdsMatchingConfirmResponse,
   type MfdsMatchingRunResponse,
@@ -28,6 +32,8 @@ export const mfdsDeclarationKeys = {
   matchingCandidates: (declarationId: number) =>
     [...mfdsDeclarationBaseKeys.detail(declarationId), 'matching-candidates'] as const,
   rcnoLinks: (rcno: string) => [...mfdsDeclarationBaseKeys.all, 'rcno-links', rcno] as const,
+  bulkMatchingPreview: (declarationId: number, alcoholId: number) =>
+    [...mfdsDeclarationBaseKeys.detail(declarationId), 'bulk-preview', alcoholId] as const,
 };
 
 export interface MfdsDeclarationListResponse {
@@ -90,6 +96,22 @@ export const mfdsDeclarationService = {
   releaseMatching: (declarationId: number): Promise<MfdsMatchingConfirmResponse> =>
     apiClient.post<MfdsMatchingConfirmResponse>(
       MfdsDeclarationApi.matchingRelease.endpoint(declarationId)
+    ),
+  previewBulkMatching: (
+    declarationId: number,
+    data: MfdsBulkMatchingPreviewRequest
+  ): Promise<MfdsBulkMatchingPreviewResponse> =>
+    apiClient.post<MfdsBulkMatchingPreviewResponse, MfdsBulkMatchingPreviewRequest>(
+      MfdsDeclarationApi.bulkMatchingPreview.endpoint(declarationId),
+      data
+    ),
+  confirmBulkMatching: (
+    declarationId: number,
+    data: MfdsBulkMatchingConfirmRequest
+  ): Promise<MfdsBulkMatchingConfirmResponse> =>
+    apiClient.post<MfdsBulkMatchingConfirmResponse, MfdsBulkMatchingConfirmRequest>(
+      MfdsDeclarationApi.bulkMatchingConfirm.endpoint(declarationId),
+      data
     ),
   rcnoLinks: async (rcno: string): Promise<MfdsRcnoLinkItem[]> => {
     const response = await apiClient.get<MfdsRcnoLinkItem[]>(

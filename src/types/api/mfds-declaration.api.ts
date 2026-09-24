@@ -48,6 +48,16 @@ export const MfdsDeclarationApi = {
       `/admin/api/v1/mfds/declarations/${declarationId}/matching/release`,
     method: 'POST',
   },
+  bulkMatchingPreview: {
+    endpoint: (declarationId: number) =>
+      `/admin/api/v1/mfds/declarations/${declarationId}/matching/bulk-preview`,
+    method: 'POST',
+  },
+  bulkMatchingConfirm: {
+    endpoint: (declarationId: number) =>
+      `/admin/api/v1/mfds/declarations/${declarationId}/matching/bulk-confirm`,
+    method: 'POST',
+  },
   rcnoLinks: {
     endpoint: '/admin/api/v1/mfds/rcno-links',
     method: 'GET',
@@ -214,6 +224,53 @@ export interface MfdsMatchingConfirmResponse {
   distilleryMatchSource: string | null;
   selectedRegionId: number | null;
   regionMatchSource: string | null;
+}
+
+/** 같은 제품 그룹 미리보기. 분류와 사유는 안내용이며 확정을 막지 않는다. */
+export interface MfdsBulkMatchingPreviewRequest {
+  alcoholId: number;
+  distilleryId?: number;
+  regionId?: number;
+}
+
+export interface MfdsBulkMatchingReason {
+  code: string;
+  message: string;
+}
+
+export interface MfdsBulkMatchingPreviewItem {
+  declarationId: number;
+  rcno: string;
+  displayName: string;
+  volumeMl: number | null;
+  importerBaseName: string | null;
+  processedDate: string | null;
+  classification: string;
+  reasons: MfdsBulkMatchingReason[];
+  currentAlcoholId: number | null;
+  currentDistilleryId: number | null;
+  currentRegionId: number | null;
+}
+
+export interface MfdsBulkMatchingPreviewResponse {
+  alcoholNameKo: string | null;
+  alcoholNameEn: string | null;
+  distilleryId: number | null;
+  regionId: number | null;
+  items: MfdsBulkMatchingPreviewItem[];
+}
+
+/** 선택한 신고에 적용값을 그대로 반영한다. 같은 값이면 건너뛰고 다르면 덮어쓴다. */
+export interface MfdsBulkMatchingConfirmRequest {
+  alcoholId: number;
+  distilleryId?: number;
+  regionId?: number;
+  declarationIds: number[];
+}
+
+export interface MfdsBulkMatchingConfirmResponse {
+  applied: MfdsMatchingConfirmResponse[];
+  unchangedDeclarationIds: number[];
 }
 
 export interface MfdsRcnoLinkItem {

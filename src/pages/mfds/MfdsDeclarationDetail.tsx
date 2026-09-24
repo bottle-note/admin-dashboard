@@ -11,9 +11,16 @@ import { useAdminAlcoholDetail } from '@/hooks/useAdminAlcohols';
 import type { MfdsDeclarationDetail } from '@/types/api';
 import { MFDS_MATCH_DECISION_MAP } from './mfds-alcohol-match-status';
 import { MfdsImporterLinkingSheet } from './MfdsImporterLinkingSheet';
-import { MfdsWhiskyMatchingSheet } from './MfdsWhiskyMatchingSheet';
+import { MfdsMatchingWorkspace, type MfdsWorkspaceState } from './MfdsMatchingWorkspace';
+import {
+  rankAlcoholCandidates,
+  toCandidateWhisky,
+  type PendingWhisky,
+} from './mfds-pending-whisky';
+import { MfdsMatchingButton } from './MfdsMatchingButton';
 import { MfdsRelatedDeclarations } from './MfdsRelatedDeclarations';
 import { MfdsSourceItem } from './MfdsSourceItem';
+import { MfdsTopCandidates } from './MfdsTopCandidates';
 import { MfdsWhiskyRegistration } from './MfdsWhiskyRegistration';
 
 const DETAIL_TABS = ['clean', 'source', 'history', 'register'] as const;
@@ -102,7 +109,7 @@ export function MfdsDeclarationDetailPage() {
   const requestedTab = params.get('tab');
   const tab = DETAIL_TABS.find((item) => item === requestedTab) ?? 'clean';
   const [registrationVisited, setRegistrationVisited] = useState<number | undefined>(undefined);
-  const [matchingOpen, setMatchingOpen] = useState(false);
+  const [workspace, setWorkspace] = useState<MfdsWorkspaceState | null>(null);
   const [importerOpen, setImporterOpen] = useState(false);
   const detailQuery = useMfdsDeclarationDetail(declarationId);
   const candidatesQuery = useMfdsMatchingCandidates(declarationId);
@@ -123,7 +130,12 @@ export function MfdsDeclarationDetailPage() {
     return (
       <div className="space-y-4 py-12 text-center">
         <p>신고 데이터를 불러오지 못했습니다.</p>
-        <Button onClick={() => detailQuery.refetch()}>다시 시도</Button>
+        <div className="flex justify-center gap-2">
+          <Button variant="outline" onClick={() => navigate('/mfds/declarations')}>
+            목록으로 돌아가기
+          </Button>
+          <Button onClick={() => detailQuery.refetch()}>다시 시도</Button>
+        </div>
       </div>
     );
   const connected = detail.selectedAlcoholId != null;
@@ -159,6 +171,25 @@ export function MfdsDeclarationDetailPage() {
     whiskyQuery.data?.regionId === detail.selectedRegionId
       ? whiskyQuery.data?.korRegion
       : region?.korName;
+  const currentWhisky: PendingWhisky | null =
+    detail.selectedAlcoholId != null
+      ? {
+          alcoholId: detail.selectedAlcoholId,
+          korName: ko,
+          engName: en ?? '',
+          imageUrl: whiskyQuery.data?.imageUrl ?? null,
+          source: 'current',
+        }
+      : null;
+  const topCandidate = rankAlcoholCandidates(candidatesQuery.data?.alcoholCandidates ?? [])[0];
+  const selectTab = (item: (typeof DETAIL_TABS)[number]) => {
+    if (item === 'register' || tab === 'register') setRegistrationVisited(detail.id);
+    setParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set('tab', item);
+      return next;
+    });
+  };
   return (
     <div className="min-w-0 space-y-5 [overflow-wrap:anywhere] [word-break:keep-all] [&_h1]:min-w-0 [&_h1]:max-w-full">
       <DetailPageHeader title={ko} onBack={() => navigate('/mfds/declarations')} />
@@ -188,14 +219,7 @@ export function MfdsDeclarationDetailPage() {
               aria-selected={tab === item}
               tabIndex={tab === item ? 0 : -1}
               className={`shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium ${tab === item ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
-              onClick={() => {
-                if (item === 'register' || tab === 'register') setRegistrationVisited(detail.id);
-                setParams((previous) => {
-                  const next = new URLSearchParams(previous);
-                  next.set('tab', item);
-                  return next;
-                });
-              }}
+              onClick={() => selectTab(item)}
               onKeyDown={(event) => {
                 if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
                   event.preventDefault();
@@ -351,16 +375,19 @@ export function MfdsDeclarationDetailPage() {
                         )}
                       </div>
                     ) : (
-                      <p className="font-medium">연결된 위스키가 없습니다.</p>
+                      <>
+                        <p className="font-medium">연결된 위스키가 없습니다.</p>
+                        <MfdsTopCandidates
+                          declarationId={detail.id}
+                          onSelect={(whisky) => setWorkspace({ view: 'whisky', selected: whisky })}
+                        />
+                      </>
                     )}
-                    <Button
-                      className={connected ? '' : 'bg-amber-700 text-white hover:bg-amber-800'}
-                      onClick={() => setMatchingOpen(true)}
-                    >
-                      {candidatesQuery.data?.alcoholCandidates.length
-                        ? `후보 ${candidatesQuery.data.alcoholCandidates.length}건 선택 · 직접 검색`
-                        : '위스키 검색 · 연결'}
-                    </Button>
+                    <MfdsMatchingButton
+                      connected={connected}
+                      candidateCount={candidatesQuery.data?.alcoholCandidates.length ?? 0}
+                      onClick={() => setWorkspace({ view: 'whisky', selected: null })}
+                    />
                     {candidatesQuery.isError && (
                       <p className="text-xs text-muted-foreground">
                         후보를 불러오지 못했습니다. 연결 창에서 재시도할 수 있습니다.
@@ -511,14 +538,32 @@ export function MfdsDeclarationDetailPage() {
           )}
         </section>
       </div>
-      <MfdsWhiskyMatchingSheet
+      <MfdsMatchingWorkspace
         key={`matching-${detail.id}`}
+        state={workspace}
+        onStateChange={setWorkspace}
         declarationId={detail.id}
-        declarationName={ko}
-        rcno={detail.rcno}
-        selectedAlcoholId={detail.selectedAlcoholId}
-        open={matchingOpen}
-        onOpenChange={setMatchingOpen}
+        currentWhisky={currentWhisky}
+        defaultBulkWhisky={
+          currentWhisky ?? (topCandidate ? toCandidateWhisky(topCandidate) : undefined)
+        }
+        onRegister={() => selectTab('register')}
+        summary={{
+          title: detail.skuDisplayNameKo || ko,
+          subtitle: detail.skuDisplayNameEn ?? null,
+          rcno: detail.rcno,
+          facts: [
+            { label: '신고 ID', value: String(detail.id) },
+            { label: '숙성', value: value(detail.ageYears, '년') },
+            { label: '용량', value: value(detail.unitVolumeMl, ' ml') },
+            { label: '도수', value: value(detail.abvPercent, '%') },
+            { label: '주종', value: value(detail.alcoholCategoryKo) },
+          ],
+          importer: {
+            name: detail.importer?.businessName ?? detail.importerBaseName ?? '연결 안 됨',
+            connected: detail.importer != null,
+          },
+        }}
       />
       <MfdsImporterLinkingSheet
         declarationId={detail.id}

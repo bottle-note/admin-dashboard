@@ -75,6 +75,17 @@ beforeEach(() => {
         })
       )
     ),
+    http.post(`${base}/1/matching/bulk-preview`, () =>
+      HttpResponse.json(
+        wrapApiResponse({
+          alcoholNameKo: '선택할 위스키',
+          alcoholNameEn: 'Selected',
+          distilleryId: 3,
+          regionId: 4,
+          items: [],
+        })
+      )
+    ),
     http.post(`${base}/1/matching/confirm`, async ({ request }) => {
       payload = await request.json();
       matched = true;
@@ -100,7 +111,7 @@ it('미매칭 SKU 이름을 표시하고 후보 확정 후 위스키·증류소�
   const user = userEvent.setup();
   openPage();
   expect(await screen.findByRole('heading', { name: '신고 제품 16년' })).toBeInTheDocument();
-  await user.click(screen.getByRole('button', { name: /후보.*선택/ }));
+  await user.click(screen.getByRole('button', { name: '매칭 관리' }));
   await user.click(await screen.findByRole('button', { name: '선택할 위스키 선택' }));
   expect(payload).toBeUndefined();
   await user.click(screen.getByRole('button', { name: '선택한 연결 확정' }));
