@@ -2,10 +2,11 @@
  * Region API 커스텀 훅
  */
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useApiQuery } from './useApiQuery';
 import { useApiMutation, type UseApiMutationOptions } from './useApiMutation';
 import { regionService, regionKeys, type RegionListResponse } from '@/services/region.service';
+import type { ApiError } from '@/lib/api-error';
 import type {
   RegionSearchParams,
   RegionDetail,
@@ -36,6 +37,19 @@ export function useRegionList(params?: RegionSearchParams) {
       staleTime: 1000 * 60 * 5, // 5분 (지역 데이터는 자주 변경되지 않음)
     }
   );
+}
+
+/** 지역 선택기의 서버 검색·페이지네이션. 목록과 동일한 API 응답을 사용한다. */
+export function useRegionListInfinite(keyword: string, enabled: boolean) {
+  return useInfiniteQuery<RegionListResponse, ApiError>({
+    queryKey: regionKeys.list({ keyword, size: 20, infinite: true }),
+    queryFn: ({ pageParam }) =>
+      regionService.list({ keyword: keyword || undefined, page: pageParam as number, size: 20 }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => (lastPage.meta.hasNext ? lastPage.meta.page + 1 : undefined),
+    enabled,
+    staleTime: 1000 * 60 * 5,
+  });
 }
 
 /**

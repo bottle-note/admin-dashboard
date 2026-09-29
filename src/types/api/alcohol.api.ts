@@ -91,7 +91,13 @@ export type AlcoholType =
   | 'ETC';
 
 /** 어드민 술 정렬 기준 */
-export type AdminAlcoholSortType = 'KOR_NAME' | 'ENG_NAME' | 'KOR_CATEGORY' | 'ENG_CATEGORY';
+export type AdminAlcoholSortType =
+  | 'KOR_NAME'
+  | 'ENG_NAME'
+  | 'KOR_CATEGORY'
+  | 'ENG_CATEGORY'
+  | 'CREATED_AT'
+  | 'UPDATED_AT';
 
 /** 정렬 방향 */
 export type SortOrder = 'ASC' | 'DESC';
