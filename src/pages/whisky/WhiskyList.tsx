@@ -188,19 +188,45 @@ export function WhiskyListPage() {
         <p className="text-muted-foreground">등록된 위스키를 관리합니다.</p>
       </div>
 
-      {/* 검색 · 필터 · 정렬 */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_130px_60px_130px_100px_max-content]">
-        <div className="relative w-full sm:w-[220px] xl:w-full">
+      {/* 필터 */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative min-w-[220px] flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="위스키명 검색..."
+            placeholder="위스키 이름으로 검색..."
             value={keywordInput}
             onChange={(e) => setKeywordInput(e.target.value)}
             onKeyDown={handleKeyDown}
             className="pl-9"
           />
         </div>
-        <div className="flex w-full min-w-0 items-center gap-2 sm:w-[240px] xl:w-full">
+        <Select value={category ?? 'ALL'} onValueChange={handleCategoryChange}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="카테고리" />
+          </SelectTrigger>
+          <SelectContent>
+            {CATEGORY_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button onClick={handleSearch}>검색</Button>
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="includeDeleted"
+            checked={includeDeleted}
+            onCheckedChange={handleIncludeDeletedChange}
+          />
+          <Label htmlFor="includeDeleted" className="cursor-pointer text-sm">
+            삭제된 데이터 포함
+          </Label>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex min-w-[220px] flex-1 items-center gap-2 sm:max-w-[360px]">
           <LookupSearchSelect
             value={regionSearch}
             onValueChange={setRegionSearch}
@@ -231,30 +257,15 @@ export function WhiskyListPage() {
               variant="outline"
               aria-label="지역 필터 해제"
               onClick={() => handleRegionChange()}
-              className="max-w-[150px] shrink-0 gap-1 xl:max-w-[100px]"
+              className="max-w-[150px] shrink-0 gap-1"
             >
               <span className="truncate">{selectedRegion.data?.korName ?? `#${regionId}`}</span>
               <X className="h-4 w-4" />
             </Button>
           )}
         </div>
-        <Select value={category ?? 'ALL'} onValueChange={handleCategoryChange}>
-          <SelectTrigger className="w-full sm:w-[130px] xl:w-full">
-            <SelectValue placeholder="카테고리" />
-          </SelectTrigger>
-          <SelectContent>
-            {CATEGORY_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button onClick={handleSearch} className="xl:w-full">
-          검색
-        </Button>
         <Select value={sortType ?? 'DEFAULT'} onValueChange={handleSortTypeChange}>
-          <SelectTrigger aria-label="정렬 기준" className="w-full sm:w-[130px] xl:w-full">
+          <SelectTrigger aria-label="정렬 기준" className="w-full sm:w-[180px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -270,7 +281,7 @@ export function WhiskyListPage() {
           onValueChange={handleSortOrderChange}
           disabled={!sortType || sortType === 'DEFAULT'}
         >
-          <SelectTrigger aria-label="정렬 방향" className="w-full sm:w-[100px] xl:w-full">
+          <SelectTrigger aria-label="정렬 방향" className="w-full sm:w-[130px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -278,16 +289,6 @@ export function WhiskyListPage() {
             <SelectItem value="DESC">내림차순</SelectItem>
           </SelectContent>
         </Select>
-        <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
-          <Checkbox
-            id="includeDeleted"
-            checked={includeDeleted}
-            onCheckedChange={handleIncludeDeletedChange}
-          />
-          <Label htmlFor="includeDeleted" className="cursor-pointer text-sm">
-            삭제된 데이터 포함
-          </Label>
-        </div>
       </div>
 
       {/* 테이블 */}
