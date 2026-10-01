@@ -20,6 +20,8 @@ import { TastingTagDetailPage } from '@/pages/tasting-tags/TastingTagDetail';
 import { BannerListPage } from '@/pages/banners/BannerList';
 import { BannerDetailPage } from '@/pages/banners/BannerDetail';
 import { BannerCreatePage } from '@/pages/banners/BannerCreate';
+import { CampaignContentListPage } from '@/pages/campaign-contents/CampaignContentList';
+import { CampaignContentDetailPage } from '@/pages/campaign-contents/CampaignContentDetail';
 import { CurationCreateEntry } from '@/pages/curation-spec/CurationCreateEntry';
 import { CurationDetail } from '@/pages/curation-spec/CurationDetail';
 import { CurationList } from '@/pages/curation-spec/CurationList';
@@ -189,6 +191,31 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
               <BannerDetailPage />
+            </RoleProtectedRoute>
+          }
+        />
+        {/* Campaign contents - ROOT_ADMIN only */}
+        <Route
+          path="campaign-contents"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <CampaignContentListPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="campaign-contents/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <CampaignContentDetailPage key="new" />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="campaign-contents/:id"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <CampaignContentDetailPage key="edit" />
             </RoleProtectedRoute>
           }
         />
