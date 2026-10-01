@@ -18,7 +18,7 @@ const metrics = vi.fn((_id: number | undefined, _range: unknown) => ({
     finishVisitors: 4,
     resultMembers: 3,
     activeMembers: 20,
-    completionRate: 50.0,
+    completionRate: 50.125,
     loginConversionRate: 75.0,
     participationRate: 15.0,
   },
@@ -101,6 +101,7 @@ describe('캠페인 콘텐츠 등록·상세', () => {
     render(<CampaignContentDetailPage />);
     expect(screen.getByLabelText('코드')).toBeDisabled();
     expect(screen.getByText('10')).toBeInTheDocument();
+    expect(screen.getByText('50.125%')).toBeInTheDocument();
     expect(metrics).toHaveBeenCalledWith(7, {});
     await userEvent.click(screen.getByRole('button', { name: '저장' }));
     await waitFor(() =>

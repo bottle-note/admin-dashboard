@@ -143,7 +143,7 @@ function CampaignContentMetricsCard({ id }: { id: number }) {
                 ).map(([label, value]) => (
                   <div key={label} className="rounded-lg border p-4">
                     <p className="text-sm text-muted-foreground">{label}</p>
-                    <p className="text-xl font-semibold">{value.toFixed(1)}%</p>
+                    <p className="text-xl font-semibold">{value}%</p>
                   </div>
                 ))}
               </div>
