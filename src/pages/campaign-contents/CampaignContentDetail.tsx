@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Info } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
@@ -142,7 +144,32 @@ function CampaignContentMetricsCard({ id }: { id: number }) {
                   ] as const
                 ).map(([label, value]) => (
                   <div key={label} className="rounded-lg border p-4">
-                    <p className="text-sm text-muted-foreground">{label}</p>
+                    <p className="flex items-center gap-1 text-sm text-muted-foreground">
+                      {label}
+                      {label === '로그인 전환율' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                aria-label="로그인 전환율 집계 기준"
+                                className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p>
+                                완료(FINISH) 방문자 중 같은 기간 같은 방문자로 로그인 상태의 결과
+                                조회(RESULT)가 기록된 비율입니다. 본인 결과는 로그인 후 볼 수 있어
+                                로그인 전환의 근사치로 사용합니다. 이미 로그인한 방문자도 포함되므로
+                                실제 로그인·가입 수는 아닙니다. 비회원 공유 결과 조회는 제외됩니다.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </p>
                     <p className="text-xl font-semibold">{value}%</p>
                   </div>
                 ))}
