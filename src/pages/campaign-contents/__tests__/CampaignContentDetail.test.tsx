@@ -112,15 +112,17 @@ describe('캠페인 콘텐츠 등록·상세', () => {
     );
   });
 
-  it('로그인 전환율의 근사 집계 기준을 툴팁으로 설명한다', async () => {
+  it('완료 방문자의 결과 조회율을 표시하고 로그인 전환 근사치의 집계 기준을 툴팁으로 설명한다', async () => {
     id = '7';
     render(<CampaignContentDetailPage />);
+    expect(screen.getByText('완료 방문자의 결과 조회율')).toBeInTheDocument();
+    expect(screen.queryByText('로그인 전환율')).not.toBeInTheDocument();
     expect(screen.getByText('75%')).toBeInTheDocument();
-    await userEvent.hover(screen.getByRole('button', { name: '로그인 전환율 집계 기준' }));
+    await userEvent.hover(screen.getByRole('button', { name: '결과 조회율 집계 기준' }));
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).toHaveTextContent('완료(FINISH) 방문자');
     expect(tooltip).toHaveTextContent('결과 조회(RESULT)');
-    expect(tooltip).toHaveTextContent('근사치');
+    expect(tooltip).toHaveTextContent('로그인 전환율의 근사치');
     expect(tooltip).toHaveTextContent('이미 로그인한 방문자도 포함');
     expect(tooltip).toHaveTextContent('비회원 공유 결과 조회는 제외');
   });

@@ -139,20 +139,20 @@ function CampaignContentMetricsCard({ id }: { id: number }) {
                 {(
                   [
                     ['완료율', data.completionRate],
-                    ['로그인 전환율', data.loginConversionRate],
+                    ['완료 방문자의 결과 조회율', data.loginConversionRate],
                     ['참여율', data.participationRate],
                   ] as const
                 ).map(([label, value]) => (
                   <div key={label} className="rounded-lg border p-4">
                     <p className="flex items-center gap-1 text-sm text-muted-foreground">
                       {label}
-                      {label === '로그인 전환율' && (
+                      {label === '완료 방문자의 결과 조회율' && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button
                                 type="button"
-                                aria-label="로그인 전환율 집계 기준"
+                                aria-label="결과 조회율 집계 기준"
                                 className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                               >
                                 <Info className="h-3.5 w-3.5" aria-hidden="true" />
@@ -162,8 +162,9 @@ function CampaignContentMetricsCard({ id }: { id: number }) {
                               <p>
                                 완료(FINISH) 방문자 중 같은 기간 같은 방문자로 로그인 상태의 결과
                                 조회(RESULT)가 기록된 비율입니다. 본인 결과는 로그인 후 볼 수 있어
-                                로그인 전환의 근사치로 사용합니다. 이미 로그인한 방문자도 포함되므로
-                                실제 로그인·가입 수는 아닙니다. 비회원 공유 결과 조회는 제외됩니다.
+                                로그인 전환율의 근사치로 볼 수 있습니다. 이미 로그인한 방문자도
+                                포함되므로 실제 로그인·가입 수는 아닙니다. 비회원 공유 결과 조회는
+                                제외됩니다.
                               </p>
                             </TooltipContent>
                           </Tooltip>
