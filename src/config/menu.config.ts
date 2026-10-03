@@ -207,6 +207,31 @@ export const menuConfig: MenuGroup[] = [
     ],
   },
   {
+    id: 'campaign-content',
+    items: [
+      {
+        id: 'campaign-content-management',
+        label: '캠페인 콘텐츠 관리',
+        icon: Layers,
+        roles: ['ROOT_ADMIN'],
+        children: [
+          {
+            id: 'campaign-content-list',
+            label: '캠페인 콘텐츠 목록',
+            icon: List,
+            path: '/campaign-contents',
+          },
+          {
+            id: 'campaign-content-create',
+            label: '캠페인 콘텐츠 추가',
+            icon: Plus,
+            path: '/campaign-contents/new',
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: 'inquiry',
     items: [
       {
