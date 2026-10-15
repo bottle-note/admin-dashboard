@@ -6,6 +6,8 @@ export * from './common';
 export * from './alcohol.api';
 export * from './help.api';
 export * from './tasting-tag.api';
+export * from './tasting-group.api';
+export * from './alcohol-attribute.api';
 export * from './region.api';
 export * from './distillery.api';
 export * from './s3.api';

@@ -1,5 +1,11 @@
 import { http, HttpResponse } from 'msw';
 import {
+  mockAlcoholAttributeRows,
+  mockAlcoholAttributeSummary,
+  mockAlcoholAttributeKeyStats,
+  mockAlcoholAttributeKeywords,
+  mockAlcoholAttributeEnums,
+  mockAttributedAlcohols,
   mockTastingTagListItems,
   mockTastingTagDetail,
   mockFormResponse,
@@ -30,7 +36,12 @@ import {
   mockRegionFormResponse,
   mockRegionDeleteResponse,
   mockRegionBulkReorderResponse,
+  mockTastingGroupItems,
+  mockTastingGroupFamilies,
+  mockUngroupedTastingTags,
+  mockTastingGroupResultResponse,
   wrapApiResponse,
+  wrapApiError,
 } from './data';
 
 const BASE = '/admin/api/v1/tasting-tags';
@@ -694,8 +705,195 @@ export const regionHandlers = [
   }),
 ];
 
+// ============================================
+// Tasting Tag Group Handlers
+// ============================================
+
+const TASTING_GROUP_BASE = '/admin/api/v1/tasting/groups';
+const TASTING_TAG_CATALOG_BASE = '/admin/api/v1/tasting/tags';
+
+export const tastingGroupHandlers = [
+  http.get(TASTING_GROUP_BASE, () => {
+    return HttpResponse.json(
+      wrapApiResponse({ groups: mockTastingGroupItems, families: mockTastingGroupFamilies })
+    );
+  }),
+
+  http.get(`${TASTING_GROUP_BASE}/:code`, ({ params }) => {
+    const group = mockTastingGroupItems.find((item) => item.code === params.code);
+    if (!group) {
+      return HttpResponse.json(
+        wrapApiError(404, 'TASTING_TAG_GROUP_NOT_FOUND', '맛 그룹이 없습니다.'),
+        { status: 404 }
+      );
+    }
+    return HttpResponse.json(wrapApiResponse(group));
+  }),
+
+  http.post(TASTING_GROUP_BASE, () => {
+    return HttpResponse.json(wrapApiResponse(mockTastingGroupResultResponse));
+  }),
+
+  http.put(`${TASTING_GROUP_BASE}/:code`, () => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockTastingGroupResultResponse,
+        code: 'TASTING_TAG_GROUP_UPDATED',
+        message: '맛 그룹이 수정되었습니다.',
+      })
+    );
+  }),
+
+  http.delete(`${TASTING_GROUP_BASE}/:code`, () => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockTastingGroupResultResponse,
+        code: 'TASTING_TAG_GROUP_DELETED',
+        message: '맛 그룹이 삭제되었습니다.',
+      })
+    );
+  }),
+
+  http.post(`${TASTING_GROUP_BASE}/:code/tags`, () => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockTastingGroupResultResponse,
+        code: 'TASTING_TAG_GROUP_TAG_ADDED',
+        message: '맛 그룹에 태그가 연결되었습니다.',
+      })
+    );
+  }),
+
+  http.put(`${TASTING_GROUP_BASE}/:code/tags/:tagId`, () => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockTastingGroupResultResponse,
+        code: 'TASTING_TAG_GROUP_TAG_ROLE_UPDATED',
+        message: '맛 그룹 태그의 역할이 변경되었습니다.',
+      })
+    );
+  }),
+
+  http.delete(`${TASTING_GROUP_BASE}/:code/tags/:tagId`, () => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockTastingGroupResultResponse,
+        code: 'TASTING_TAG_GROUP_TAG_REMOVED',
+        message: '맛 그룹에서 태그가 제거되었습니다.',
+      })
+    );
+  }),
+
+  http.get(`${TASTING_TAG_CATALOG_BASE}/ungrouped`, ({ request }) => {
+    const keyword = new URL(request.url).searchParams.get('keyword');
+    const items = keyword
+      ? mockUngroupedTastingTags.filter((tag) => tag.korName.includes(keyword))
+      : mockUngroupedTastingTags;
+    return HttpResponse.json(wrapApiResponse(items));
+  }),
+];
+
+// ============================================
+// 위스키 속성
+// ============================================
+
+const ALCOHOL_ATTRIBUTE_BASE = '/admin/api/v1/alcohols/attributes';
+
+function parseAlcoholIds(request: Request) {
+  const raw = new URL(request.url).searchParams.get('alcoholIds') ?? '';
+  return raw
+    .split(',')
+    .filter(Boolean)
+    .map((id) => Number(id));
+}
+
+export const alcoholAttributeHandlers = [
+  // 정적 경로를 먼저 둬 `/:id`보다 앞서 매칭되게 한다
+  http.get(`${ALCOHOL_ATTRIBUTE_BASE}/enums`, () =>
+    HttpResponse.json(wrapApiResponse(mockAlcoholAttributeEnums))
+  ),
+  http.get(`${ALCOHOL_ATTRIBUTE_BASE}/keys`, () =>
+    HttpResponse.json(wrapApiResponse(mockAlcoholAttributeKeyStats))
+  ),
+  http.get(`${ALCOHOL_ATTRIBUTE_BASE}/keywords`, () =>
+    HttpResponse.json(wrapApiResponse(mockAlcoholAttributeKeywords))
+  ),
+  // 필터·페이지 동작은 서버 책임이라 모의는 전체를 한 페이지로 돌려준다
+  http.get(`${ALCOHOL_ATTRIBUTE_BASE}/alcohols`, () =>
+    HttpResponse.json(
+      wrapApiResponse(mockAttributedAlcohols, {
+        page: 0,
+        size: 20,
+        totalElements: mockAttributedAlcohols.length,
+        totalPages: 1,
+        hasNext: false,
+      })
+    )
+  ),
+  http.get(`${ALCOHOL_ATTRIBUTE_BASE}/summary`, ({ request }) => {
+    const ids = parseAlcoholIds(request);
+    if (ids.length === 0) {
+      return HttpResponse.json(
+        wrapApiError(400, 'ALCOHOL_ATTRIBUTE_EMPTY_ALCOHOLS', 'alcoholIds가 비어 있습니다.'),
+        { status: 400 }
+      );
+    }
+    return HttpResponse.json(wrapApiResponse(mockAlcoholAttributeSummary));
+  }),
+  http.get(ALCOHOL_ATTRIBUTE_BASE, ({ request }) => {
+    const ids = parseAlcoholIds(request);
+    if (ids.length === 0) {
+      return HttpResponse.json(
+        wrapApiError(400, 'ALCOHOL_ATTRIBUTE_EMPTY_ALCOHOLS', 'alcoholIds가 비어 있습니다.'),
+        { status: 400 }
+      );
+    }
+    return HttpResponse.json(
+      wrapApiResponse(mockAlcoholAttributeRows.filter((row) => ids.includes(row.alcoholId)))
+    );
+  }),
+  http.post(`${ALCOHOL_ATTRIBUTE_BASE}/batch/delete`, async ({ request }) => {
+    const body = (await request.json()) as { ids: number[] };
+    return HttpResponse.json(
+      wrapApiResponse(mockAlcoholAttributeRows.filter((row) => body.ids.includes(row.id)))
+    );
+  }),
+  http.post(ALCOHOL_ATTRIBUTE_BASE, async ({ request }) => {
+    const body = (await request.json()) as { alcoholIds: number[] };
+    return HttpResponse.json(
+      wrapApiResponse({
+        added: body.alcoholIds.length,
+        skipped: 0,
+        createdIds: body.alcoholIds.map((_, index) => 100 + index),
+      })
+    );
+  }),
+  http.put(`${ALCOHOL_ATTRIBUTE_BASE}/:id`, ({ params }) =>
+    HttpResponse.json(
+      wrapApiResponse({
+        code: 'ALCOHOL_ATTRIBUTE_UPDATED',
+        message: '속성이 수정되었습니다.',
+        targetId: Number(params.id),
+        responseAt: '2026-10-15 10:00:00',
+      })
+    )
+  ),
+  http.delete(`${ALCOHOL_ATTRIBUTE_BASE}/:id`, ({ params }) =>
+    HttpResponse.json(
+      wrapApiResponse({
+        code: 'ALCOHOL_ATTRIBUTE_DELETED',
+        message: '속성이 삭제되었습니다.',
+        targetId: Number(params.id),
+        responseAt: '2026-10-15 10:00:00',
+      })
+    )
+  ),
+];
+
 export const handlers = [
+  ...alcoholAttributeHandlers,
   ...tastingTagHandlers,
+  ...tastingGroupHandlers,
   ...bannerHandlers,
   ...alcoholHandlers,
   ...userHandlers,

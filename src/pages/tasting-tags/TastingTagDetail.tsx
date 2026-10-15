@@ -21,10 +21,7 @@ import { DetailPageHeader } from '@/components/common/DetailPageHeader';
 import { MediaUpload } from '@/components/common/MediaUpload';
 import { FormField } from '@/components/common/FormField';
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
-import {
-  WhiskySearchSelect,
-  type SelectedWhisky,
-} from '@/components/common/WhiskySearchSelect';
+import { WhiskySearchSelect, type SelectedWhisky } from '@/components/common/WhiskySearchSelect';
 
 import {
   useTastingTagDetail,
@@ -82,9 +79,7 @@ export function TastingTagDetailPage() {
   // 상태
   const [iconBase64, setIconBase64] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [connectedWhiskies, setConnectedWhiskies] = useState<SelectedWhisky[]>(
-    []
-  );
+  const [connectedWhiskies, setConnectedWhiskies] = useState<SelectedWhisky[]>([]);
   // 초기 연결된 위스키 ID (diff 계산용)
   const [initialAlcoholIds, setInitialAlcoholIds] = useState<number[]>([]);
 
@@ -154,9 +149,7 @@ export function TastingTagDetailPage() {
 
   // 위스키 제거 (로컬 상태만 - 저장 시 API 호출)
   const handleRemoveWhisky = (alcoholId: number) => {
-    setConnectedWhiskies((prev) =>
-      prev.filter((w) => w.alcoholId !== alcoholId)
-    );
+    setConnectedWhiskies((prev) => prev.filter((w) => w.alcoholId !== alcoholId));
   };
 
   // 위스키 상세 페이지로 이동 (새 창)
@@ -191,9 +184,7 @@ export function TastingTagDetailPage() {
             const promises: Promise<unknown>[] = [];
 
             if (toConnect.length > 0) {
-              promises.push(
-                connectAlcoholsMutation.mutateAsync({ tagId, alcoholIds: toConnect })
-              );
+              promises.push(connectAlcoholsMutation.mutateAsync({ tagId, alcoholIds: toConnect }));
             }
 
             if (toDisconnect.length > 0) {
@@ -233,10 +224,7 @@ export function TastingTagDetailPage() {
         actions={
           <>
             {tagData && (
-              <Button
-                variant="destructive"
-                onClick={() => setIsDeleteDialogOpen(true)}
-              >
+              <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 삭제
               </Button>
@@ -264,25 +252,11 @@ export function TastingTagDetailPage() {
               <CardContent className="space-y-4">
                 {/* 한글명 / 영문명 */}
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    label="한글명"
-                    required
-                    error={form.formState.errors.korName?.message}
-                  >
-                    <Input
-                      {...form.register('korName')}
-                      placeholder="예: 바닐라"
-                    />
+                  <FormField label="한글명" required error={form.formState.errors.korName?.message}>
+                    <Input {...form.register('korName')} placeholder="예: 바닐라" />
                   </FormField>
-                  <FormField
-                    label="영문명"
-                    required
-                    error={form.formState.errors.engName?.message}
-                  >
-                    <Input
-                      {...form.register('engName')}
-                      placeholder="예: Vanilla"
-                    />
+                  <FormField label="영문명" required error={form.formState.errors.engName?.message}>
+                    <Input {...form.register('engName')} placeholder="예: Vanilla" />
                   </FormField>
                 </div>
 
@@ -301,9 +275,7 @@ export function TastingTagDetailPage() {
             <Card className="flex-1">
               <CardHeader>
                 <CardTitle>아이콘</CardTitle>
-                <CardDescription>
-                  태그 아이콘 이미지를 업로드합니다. (선택)
-                </CardDescription>
+                <CardDescription>태그 아이콘 이미지를 업로드합니다. (선택)</CardDescription>
               </CardHeader>
               <CardContent>
                 <MediaUpload
@@ -320,9 +292,7 @@ export function TastingTagDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle>연관 위스키</CardTitle>
-                <CardDescription>
-                  이 태그가 연결된 위스키 목록입니다.
-                </CardDescription>
+                <CardDescription>이 태그가 연결된 위스키 목록입니다.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* 위스키 검색 */}
@@ -340,10 +310,7 @@ export function TastingTagDetailPage() {
                 ) : (
                   <div className="divide-y rounded-md border">
                     {connectedWhiskies.map((whisky) => (
-                      <div
-                        key={whisky.alcoholId}
-                        className="flex items-center gap-3 p-3"
-                      >
+                      <div key={whisky.alcoholId} className="flex items-center gap-3 p-3">
                         {/* 이미지 */}
                         <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-md bg-muted">
                           {whisky.imageUrl ? (
@@ -361,9 +328,7 @@ export function TastingTagDetailPage() {
 
                         {/* 이름 */}
                         <div className="min-w-0 flex-1">
-                          <div className="truncate font-medium">
-                            {whisky.korName}
-                          </div>
+                          <div className="truncate font-medium">{whisky.korName}</div>
                           <div className="truncate text-sm text-muted-foreground">
                             {whisky.engName}
                           </div>
@@ -375,9 +340,7 @@ export function TastingTagDetailPage() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            onClick={() =>
-                              handleOpenWhiskyDetail(whisky.alcoholId)
-                            }
+                            onClick={() => handleOpenWhiskyDetail(whisky.alcoholId)}
                             title="상세 페이지 열기"
                           >
                             <ExternalLink className="h-4 w-4" />

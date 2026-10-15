@@ -31,24 +31,23 @@ export function useCategoryGroupMap(): UseCategoryGroupMapReturn {
 
   const categoryToGroupMap = useMemo(() => {
     const map = new Map<string, AlcoholCategory>();
-    (Object.entries(categoryReferencesByGroup) as Array<[AlcoholCategory, CategoryReference[]]>)
-      .forEach(([group, refs]) => {
-        refs.forEach((ref) => {
-          // 우선 등록된 그룹을 유지 (OTHER가 중복 포함하더라도 메인 그룹 우선)
-          if (!map.has(ref.korCategory) || group !== 'OTHER') {
-            map.set(ref.korCategory, group);
-          }
-        });
+    (
+      Object.entries(categoryReferencesByGroup) as Array<[AlcoholCategory, CategoryReference[]]>
+    ).forEach(([group, refs]) => {
+      refs.forEach((ref) => {
+        // 우선 등록된 그룹을 유지 (OTHER가 중복 포함하더라도 메인 그룹 우선)
+        if (!map.has(ref.korCategory) || group !== 'OTHER') {
+          map.set(ref.korCategory, group);
+        }
       });
+    });
     return map;
   }, [categoryReferencesByGroup]);
 
   const getCategoryGroup = (korCategory: string): AlcoholCategory =>
     categoryToGroupMap.get(korCategory) ?? 'OTHER';
 
-  const getGroupDefaultCategory = (
-    group: Exclude<AlcoholCategory, 'OTHER'>
-  ): CategoryReference => {
+  const getGroupDefaultCategory = (group: Exclude<AlcoholCategory, 'OTHER'>): CategoryReference => {
     const ref = categoryReferencesByGroup[group][0];
     if (!ref) {
       throw new Error(`No category reference found for group: ${group}`);

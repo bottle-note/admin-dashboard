@@ -123,9 +123,7 @@ export function flattenInfiniteData<T>(
 /**
  * 전체 아이템 수 계산
  */
-export function getTotalCount<T>(
-  data: InfiniteData<InfiniteApiResponse<T>> | undefined
-): number {
+export function getTotalCount<T>(data: InfiniteData<InfiniteApiResponse<T>> | undefined): number {
   if (!data) return 0;
   return data.pages.reduce((sum, page) => sum + page.items.length, 0);
 }

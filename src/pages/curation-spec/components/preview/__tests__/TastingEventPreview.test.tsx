@@ -42,10 +42,7 @@ const tastingEventPreview: WhiskyTastingEventPreviewValues = {
 describe('TastingEventPreview', () => {
   it('위스키 설명의 개행을 미리보기에 적용한다', () => {
     render(
-      <WhiskyTastingEventPreview
-        values={tastingEventPreview}
-        today={new Date('2026-06-01')}
-      />
+      <WhiskyTastingEventPreview values={tastingEventPreview} today={new Date('2026-06-01')} />
     );
 
     expect(screen.getByText('첫 줄 설명 둘째 줄 설명')).toHaveClass('whitespace-pre-line');

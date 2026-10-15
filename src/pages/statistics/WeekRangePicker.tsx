@@ -106,7 +106,8 @@ export function WeekRangePicker({ from, to, max, onChange }: WeekRangePickerProp
                   'h-9 text-sm transition-colors disabled:pointer-events-none disabled:opacity-30',
                   !isCurrentMonth && 'text-muted-foreground/50',
                   isInRange && 'bg-accent',
-                  (isSelectedStart || isSelectedEnd) && 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  (isSelectedStart || isSelectedEnd) &&
+                    'bg-primary text-primary-foreground hover:bg-primary/90'
                 )}
               >
                 {date.getUTCDate()}

@@ -222,11 +222,7 @@ export function CurationSpecAlcoholCard({
       )}
 
       {pairingSchema && pairingConfig && (
-        <PairingFields
-          name={`${name}.pairings`}
-          schema={pairingSchema}
-          config={pairingConfig}
-        />
+        <PairingFields name={`${name}.pairings`} schema={pairingSchema} config={pairingConfig} />
       )}
     </div>
   );

@@ -43,11 +43,7 @@ export function BannerTextSettingsCard({ form }: BannerTextSettingsCardProps) {
         </FormField>
 
         <FormField label="설명" required error={form.formState.errors.name?.message}>
-          <Input
-            id="name"
-            {...form.register('name')}
-            placeholder="설명을 입력하세요"
-          />
+          <Input id="name" {...form.register('name')} placeholder="설명을 입력하세요" />
         </FormField>
 
         <FormField label="텍스트 위치" required error={form.formState.errors.textPosition?.message}>

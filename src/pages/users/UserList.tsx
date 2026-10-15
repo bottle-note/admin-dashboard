@@ -155,13 +155,11 @@ export function UserListPage() {
       {/* 헤더 */}
       <div>
         <h1 className="text-2xl font-bold">사용자 관리</h1>
-        <p className="text-muted-foreground">
-          서비스에 가입한 사용자를 조회합니다.
-        </p>
+        <p className="text-muted-foreground">서비스에 가입한 사용자를 조회합니다.</p>
       </div>
 
       {/* 필터 */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -196,7 +194,12 @@ export function UserListPage() {
             ))}
           </SelectContent>
         </Select>
-        <Button variant="outline" size="icon" onClick={handleSortOrderToggle} title={sortOrder === 'DESC' ? '내림차순' : '오름차순'}>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleSortOrderToggle}
+          title={sortOrder === 'DESC' ? '내림차순' : '오름차순'}
+        >
           {sortOrder === 'DESC' ? '↓' : '↑'}
         </Button>
         <Button onClick={handleSearch}>검색</Button>
@@ -204,7 +207,7 @@ export function UserListPage() {
 
       {/* 테이블 */}
       <div className="rounded-lg border">
-        <Table className="[&_th]:px-4 [&_td]:px-4 [&_th]:whitespace-nowrap">
+        <Table className="[&_td]:px-4 [&_th]:whitespace-nowrap [&_th]:px-4">
           <TableHeader>
             <TableRow>
               <TableHead className="w-[60px]">프로필</TableHead>
@@ -223,13 +226,13 @@ export function UserListPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8">
+                <TableCell colSpan={11} className="py-8 text-center">
                   <span className="text-muted-foreground">로딩 중...</span>
                 </TableCell>
               </TableRow>
             ) : data?.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8">
+                <TableCell colSpan={11} className="py-8 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <Users className="h-8 w-8 text-muted-foreground/50" />
                     <span className="text-muted-foreground">
@@ -244,9 +247,7 @@ export function UserListPage() {
                   <TableCell>
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user.imageUrl ?? undefined} alt={user.nickName} />
-                      <AvatarFallback className="text-xs">
-                        {user.nickName.charAt(0)}
-                      </AvatarFallback>
+                      <AvatarFallback className="text-xs">{user.nickName.charAt(0)}</AvatarFallback>
                     </Avatar>
                   </TableCell>
                   <TableCell className="font-medium">{user.nickName}</TableCell>

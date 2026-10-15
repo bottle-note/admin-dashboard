@@ -3,11 +3,7 @@
  */
 
 import { useApiQuery } from './useApiQuery';
-import {
-  reviewService,
-  reviewKeys,
-  type ReviewListResponse,
-} from '@/services/review.service';
+import { reviewService, reviewKeys, type ReviewListResponse } from '@/services/review.service';
 import type { ReviewSearchParams } from '@/types/api';
 
 /**

@@ -64,7 +64,11 @@ export interface UseWhiskyDetailFormReturn {
   distilleries: Array<{ id: number; korName: string }>;
   onSubmit: (
     data: WhiskyFormValues,
-    options: { tastingTags: AlcoholTastingTag[]; relatedKeywords: string[]; imagePreviewUrl: string | null }
+    options: {
+      tastingTags: AlcoholTastingTag[];
+      relatedKeywords: string[];
+      imagePreviewUrl: string | null;
+    }
   ) => void;
   handleBack: () => void;
   handleDelete: () => void;
@@ -84,7 +88,9 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
   const { data: whiskyData, isLoading: isWhiskyLoading } = useAdminAlcoholDetail(alcoholId);
   const { data: categoryData, isLoading: isCategoryLoading } = useCategoryReferences();
   const { data: regionData, isLoading: isRegionLoading } = useRegionList({ size: 100 });
-  const { data: distilleryData, isLoading: isDistilleryLoading } = useDistilleryList({ size: 9999 });
+  const { data: distilleryData, isLoading: isDistilleryLoading } = useDistilleryList({
+    size: 9999,
+  });
 
   const isLoading = isWhiskyLoading || isCategoryLoading || isRegionLoading || isDistilleryLoading;
 
@@ -146,7 +152,14 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
 
   const onSubmit = (
     data: WhiskyFormValues,
-    { tastingTags, relatedKeywords }: { tastingTags: AlcoholTastingTag[]; relatedKeywords: string[]; imagePreviewUrl: string | null }
+    {
+      tastingTags,
+      relatedKeywords,
+    }: {
+      tastingTags: AlcoholTastingTag[];
+      relatedKeywords: string[];
+      imagePreviewUrl: string | null;
+    }
   ) => {
     // TODO: API에 relatedKeywords 필드 추가 시 요청 데이터에 포함
     console.log('Related Keywords:', relatedKeywords);
@@ -157,7 +170,9 @@ export function useWhiskyDetailForm(id: string | undefined): UseWhiskyDetailForm
     const description = data.description?.trim() || '-';
 
     // 증류소 미선택(0) 시 '-' 항목의 ID로 대체
-    const distilleryId = data.distilleryId || (distilleryData?.items.find((d) => d.korName === '-')?.id ?? data.distilleryId);
+    const distilleryId =
+      data.distilleryId ||
+      (distilleryData?.items.find((d) => d.korName === '-')?.id ?? data.distilleryId);
 
     // 테이스팅 태그 ID 목록 추출
     const tastingTagIds = tastingTags.map((tag) => tag.id);

@@ -92,17 +92,14 @@ export function useTastingTagListInfinite(
       }
     },
     initialPageParam: 0,
-    getNextPageParam: (lastPage) =>
-      lastPage.meta.hasNext ? lastPage.meta.page + 1 : undefined,
+    getNextPageParam: (lastPage) => (lastPage.meta.hasNext ? lastPage.meta.page + 1 : undefined),
     enabled: options.enabled ?? true,
     staleTime: 1000 * 60 * 5,
   });
 }
 
 /** 무한 쿼리 페이지들을 평탄화 */
-export function flattenTastingTagPages(
-  data: { pages: TastingTagListResponse[] } | undefined
-) {
+export function flattenTastingTagPages(data: { pages: TastingTagListResponse[] } | undefined) {
   return data?.pages.flatMap((p) => p.items) ?? [];
 }
 
@@ -134,21 +131,24 @@ export function useTastingTagCreate(
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<TastingTagFormResponse, TastingTagFormData>(
-    tastingTagService.create,
-    {
-      successMessage: '테이스팅 태그가 등록되었습니다.',
-      ...restOptions,
-      onSuccess: (data, variables, context) => {
-        // 목록 캐시 무효화
-        queryClient.invalidateQueries({ queryKey: tastingTagKeys.lists() });
-        // 원래 onSuccess 콜백 호출
-        if (onSuccess) {
-          (onSuccess as (data: TastingTagFormResponse, variables: TastingTagFormData, context: unknown) => void)(data, variables, context);
-        }
-      },
-    }
-  );
+  return useApiMutation<TastingTagFormResponse, TastingTagFormData>(tastingTagService.create, {
+    successMessage: '테이스팅 태그가 등록되었습니다.',
+    ...restOptions,
+    onSuccess: (data, variables, context) => {
+      // 목록 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: tastingTagKeys.lists() });
+      // 원래 onSuccess 콜백 호출
+      if (onSuccess) {
+        (
+          onSuccess as (
+            data: TastingTagFormResponse,
+            variables: TastingTagFormData,
+            context: unknown
+          ) => void
+        )(data, variables, context);
+      }
+    },
+  });
 }
 
 /**
@@ -180,7 +180,10 @@ export interface TastingTagUpdateVariables {
  * ```
  */
 export function useTastingTagUpdate(
-  options?: Omit<UseApiMutationOptions<TastingTagFormResponse, TastingTagUpdateVariables>, 'successMessage'>
+  options?: Omit<
+    UseApiMutationOptions<TastingTagFormResponse, TastingTagUpdateVariables>,
+    'successMessage'
+  >
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
@@ -195,7 +198,13 @@ export function useTastingTagUpdate(
         queryClient.invalidateQueries({ queryKey: tastingTagKeys.lists() });
         // 원래 onSuccess 콜백 호출
         if (onSuccess) {
-          (onSuccess as (data: TastingTagFormResponse, variables: TastingTagUpdateVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: TastingTagFormResponse,
+              variables: TastingTagUpdateVariables,
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }
@@ -222,21 +231,20 @@ export function useTastingTagDelete(
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<TastingTagDeleteResponse, number>(
-    tastingTagService.delete,
-    {
-      successMessage: '테이스팅 태그가 삭제되었습니다.',
-      ...restOptions,
-      onSuccess: (data, variables, context) => {
-        // 목록 캐시 무효화
-        queryClient.invalidateQueries({ queryKey: tastingTagKeys.lists() });
-        // 원래 onSuccess 콜백 호출
-        if (onSuccess) {
-          (onSuccess as (data: TastingTagDeleteResponse, variables: number, context: unknown) => void)(data, variables, context);
-        }
-      },
-    }
-  );
+  return useApiMutation<TastingTagDeleteResponse, number>(tastingTagService.delete, {
+    successMessage: '테이스팅 태그가 삭제되었습니다.',
+    ...restOptions,
+    onSuccess: (data, variables, context) => {
+      // 목록 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: tastingTagKeys.lists() });
+      // 원래 onSuccess 콜백 호출
+      if (onSuccess) {
+        (
+          onSuccess as (data: TastingTagDeleteResponse, variables: number, context: unknown) => void
+        )(data, variables, context);
+      }
+    },
+  });
 }
 
 /**
@@ -259,7 +267,13 @@ export interface TastingTagAlcoholConnectionVariables {
 }
 
 export function useTastingTagConnectAlcohols(
-  options?: Omit<UseApiMutationOptions<TastingTagAlcoholConnectionResponse, TastingTagAlcoholConnectionVariables>, 'successMessage'>
+  options?: Omit<
+    UseApiMutationOptions<
+      TastingTagAlcoholConnectionResponse,
+      TastingTagAlcoholConnectionVariables
+    >,
+    'successMessage'
+  >
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
@@ -272,7 +286,13 @@ export function useTastingTagConnectAlcohols(
       onSuccess: (data, variables, context) => {
         queryClient.invalidateQueries({ queryKey: tastingTagKeys.details() });
         if (onSuccess) {
-          (onSuccess as (data: TastingTagAlcoholConnectionResponse, variables: TastingTagAlcoholConnectionVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: TastingTagAlcoholConnectionResponse,
+              variables: TastingTagAlcoholConnectionVariables,
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }
@@ -280,7 +300,13 @@ export function useTastingTagConnectAlcohols(
 }
 
 export function useTastingTagDisconnectAlcohols(
-  options?: Omit<UseApiMutationOptions<TastingTagAlcoholConnectionResponse, TastingTagAlcoholConnectionVariables>, 'successMessage'>
+  options?: Omit<
+    UseApiMutationOptions<
+      TastingTagAlcoholConnectionResponse,
+      TastingTagAlcoholConnectionVariables
+    >,
+    'successMessage'
+  >
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
@@ -293,7 +319,13 @@ export function useTastingTagDisconnectAlcohols(
       onSuccess: (data, variables, context) => {
         queryClient.invalidateQueries({ queryKey: tastingTagKeys.details() });
         if (onSuccess) {
-          (onSuccess as (data: TastingTagAlcoholConnectionResponse, variables: TastingTagAlcoholConnectionVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: TastingTagAlcoholConnectionResponse,
+              variables: TastingTagAlcoholConnectionVariables,
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }

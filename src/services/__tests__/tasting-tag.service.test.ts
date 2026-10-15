@@ -1,11 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
-import {
-  mockTastingTagListItems,
-  wrapApiResponse,
-  wrapApiError,
-} from '@/test/mocks/data';
+import { mockTastingTagListItems, wrapApiResponse, wrapApiError } from '@/test/mocks/data';
 import { tastingTagService } from '../tasting-tag.service';
 
 const BASE = '/admin/api/v1/tasting-tags';

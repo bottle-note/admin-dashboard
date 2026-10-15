@@ -1,10 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 import type { CurationSpecSections } from '../curation-sections.type';
-import type {
-  ProgramListRequestSpec,
-  WhiskyCurationRequestSpec,
-} from '../curation-spec.schema';
+import type { ProgramListRequestSpec, WhiskyCurationRequestSpec } from '../curation-spec.schema';
 import { CurationSpecAlcoholCardListField } from './CurationSpecAlcoholCardListField';
 import { CurationSpecField } from './CurationSpecField';
 import { ProgramListField } from '../program/ProgramListField';

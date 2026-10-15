@@ -216,9 +216,13 @@ export function MfdsImporterListPage() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => navigate(`/mfds/importers/${importer.id}`)}
                   >
-                    <TableCell className="min-w-[220px] font-medium">{importer.businessName}</TableCell>
+                    <TableCell className="min-w-[220px] font-medium">
+                      {importer.businessName}
+                    </TableCell>
                     <TableCell className="font-mono text-sm">{importer.licenseNo}</TableCell>
-                    <TableCell className="font-mono text-sm">{importer.officialBusinessCode}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {importer.officialBusinessCode}
+                    </TableCell>
                     <TableCell>{importer.representativeName ?? '-'}</TableCell>
                     <TableCell>{importer.operatingStatus || '-'}</TableCell>
                     <TableCell>

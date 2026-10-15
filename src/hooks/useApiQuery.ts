@@ -97,7 +97,6 @@ export function createQueryKeys<T extends string>(namespace: T) {
         ? ([...createQueryKeys(namespace).lists(), params] as const)
         : createQueryKeys(namespace).lists(),
     details: () => [...createQueryKeys(namespace).all, 'detail'] as const,
-    detail: (id: string | number) =>
-      [...createQueryKeys(namespace).details(), id] as const,
+    detail: (id: string | number) => [...createQueryKeys(namespace).details(), id] as const,
   };
 }

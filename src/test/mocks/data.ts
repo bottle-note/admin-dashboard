@@ -1,4 +1,10 @@
 import type {
+  AlcoholAttributeRow,
+  AlcoholAttributeSummaryItem,
+  AlcoholAttributeKeyStat,
+  AlcoholAttributeKeywordCount,
+  AlcoholAttributeEnums,
+  AttributedAlcoholItem,
   TastingTagListItem,
   TastingTagDetail,
   TastingTagFormResponse,
@@ -28,6 +34,9 @@ import type {
   RegionFormResponse,
   RegionDeleteResponse,
   RegionBulkReorderResponse,
+  TastingGroupItem,
+  TastingGroupResultResponse,
+  UngroupedTastingTag,
 } from '@/types/api';
 
 export const mockTastingTagListItems: TastingTagListItem[] = [
@@ -615,6 +624,81 @@ export const mockRegionBulkReorderResponse: RegionBulkReorderResponse = {
 // Utility Functions
 // ============================================
 
+// ============================================
+// Tasting Tag Group Mock Data
+// ============================================
+
+const CORE_ROLE = {
+  code: 'CORE' as const,
+  korName: '대표 태그',
+  engName: 'core',
+  description: '이 맛을 결정짓는 태그. 추천 점수에 그대로 반영',
+};
+
+const PERIPHERAL_ROLE = {
+  code: 'PERIPHERAL' as const,
+  korName: '보조 태그',
+  engName: 'peripheral',
+  description: '같이 나타나는 태그. 추천 점수에 0.4만 반영',
+};
+
+const ADMIN_PROVIDER = {
+  code: 'ADMIN',
+  korName: '관리자',
+  engName: 'admin',
+  description: '관리자가 어드민에서 직접 입력하거나 조절한다',
+};
+
+export const mockTastingGroupItems: TastingGroupItem[] = [
+  {
+    id: 1,
+    code: 'PEAT_SMOKE',
+    name: '피트 스모크',
+    family: '스모키',
+    description: '아일라 계열',
+    displayOrder: 1,
+    tags: [
+      {
+        tastingTagId: 11,
+        korName: '피트',
+        role: CORE_ROLE,
+        provider: ADMIN_PROVIDER,
+        alcoholCount: 402,
+      },
+      {
+        tastingTagId: 12,
+        korName: '요오드',
+        role: PERIPHERAL_ROLE,
+        provider: ADMIN_PROVIDER,
+        alcoholCount: 96,
+      },
+    ],
+  },
+  {
+    id: 2,
+    code: 'CITRUS',
+    name: '시트러스',
+    family: '과일',
+    description: null,
+    displayOrder: 2,
+    tags: [],
+  },
+];
+
+export const mockTastingGroupFamilies = ['스모키', '과일'];
+
+export const mockUngroupedTastingTags: UngroupedTastingTag[] = [
+  { id: 21, korName: '가죽', engName: 'Leather', parentId: null, alcoholCount: 210, groups: [] },
+  { id: 22, korName: '민트', engName: 'Mint', parentId: null, alcoholCount: 61, groups: [] },
+];
+
+export const mockTastingGroupResultResponse: TastingGroupResultResponse = {
+  code: 'TASTING_TAG_GROUP_CREATED',
+  message: '맛 그룹이 등록되었습니다.',
+  targetId: 1,
+  responseAt: '2026-10-15 10:00:00',
+};
+
 export function wrapApiResponse<T>(data: T, meta?: Record<string, unknown>) {
   return {
     success: true,
@@ -645,3 +729,211 @@ export function wrapApiError(code: number, errorCode: string, message: string) {
     },
   };
 }
+
+// ============================================
+// 위스키 속성 (글렌피딕 12년=10, 맥캘란 18년=20 기준)
+// ============================================
+
+const attributeAudit = {
+  createAt: '2026-10-10T09:00:00',
+  lastModifyAt: '2026-10-12T15:30:00',
+  createPrincipal: { id: 1, type: 'ADMIN' as const, email: 'admin@bottle-note.com' },
+  lastModifyPrincipal: { id: 1, type: 'ADMIN' as const, email: 'admin@bottle-note.com' },
+};
+
+export const mockAlcoholAttributeRows: AlcoholAttributeRow[] = [
+  {
+    id: 1,
+    alcoholId: 10,
+    key: 'keyword',
+    type: 'KEYWORD',
+    datatype: 'STRING',
+    value: '피트',
+    description: null,
+    basedAt: null,
+    ...attributeAudit,
+  },
+  {
+    id: 2,
+    alcoholId: 20,
+    key: 'keyword',
+    type: 'KEYWORD',
+    datatype: 'STRING',
+    value: '피트',
+    description: null,
+    basedAt: null,
+    ...attributeAudit,
+  },
+  {
+    id: 3,
+    alcoholId: 10,
+    key: 'bottle_price_krw',
+    type: 'PRICE',
+    datatype: 'INT',
+    value: '98000',
+    description: '공식몰 판매가',
+    basedAt: '2026-10-01T00:00:00',
+    ...attributeAudit,
+  },
+  {
+    id: 4,
+    alcoholId: 10,
+    key: 'is_flavored',
+    type: 'FLAG',
+    datatype: 'BOOLEAN',
+    value: 'false',
+    description: null,
+    basedAt: null,
+    ...attributeAudit,
+  },
+  {
+    id: 5,
+    alcoholId: 20,
+    key: 'is_flavored',
+    type: 'FLAG',
+    datatype: 'BOOLEAN',
+    value: 'false',
+    description: null,
+    basedAt: null,
+    ...attributeAudit,
+  },
+];
+
+export const mockAlcoholAttributeSummary: AlcoholAttributeSummaryItem[] = [
+  {
+    key: 'keyword',
+    value: '피트',
+    type: 'KEYWORD',
+    datatype: 'STRING',
+    alcoholIds: [10, 20],
+    attributeIds: [1, 2],
+    registeredCount: 2,
+    selectedCount: 2,
+    min: null,
+    max: null,
+    allSameValue: true,
+  },
+  {
+    key: 'bottle_price_krw',
+    value: null,
+    type: 'PRICE',
+    datatype: 'INT',
+    alcoholIds: [10],
+    attributeIds: [3],
+    registeredCount: 1,
+    selectedCount: 2,
+    min: 98000,
+    max: 98000,
+    allSameValue: true,
+  },
+  {
+    key: 'is_flavored',
+    value: 'false',
+    type: 'FLAG',
+    datatype: 'BOOLEAN',
+    alcoholIds: [10, 20],
+    attributeIds: [4, 5],
+    registeredCount: 2,
+    selectedCount: 2,
+    min: null,
+    max: null,
+    allSameValue: true,
+  },
+];
+
+export const mockAlcoholAttributeKeyStats: AlcoholAttributeKeyStat[] = [
+  { key: 'keyword', type: 'KEYWORD', datatype: 'STRING', count: 3, alcoholCount: 2 },
+  { key: 'bottle_price_krw', type: 'PRICE', datatype: 'INT', count: 1, alcoholCount: 1 },
+  { key: 'is_flavored', type: 'FLAG', datatype: 'BOOLEAN', count: 2, alcoholCount: 2 },
+];
+
+export const mockAlcoholAttributeKeywords: AlcoholAttributeKeywordCount[] = [
+  { value: '피트', alcoholCount: 2 },
+  { value: '셰리', alcoholCount: 1 },
+];
+
+export const mockAlcoholAttributeEnums: AlcoholAttributeEnums = {
+  types: [
+    {
+      code: 'KEYWORD',
+      korName: '키워드',
+      engName: 'keyword',
+      description: '추천 필터와 키워드 그래프에 쓰는 라벨',
+    },
+    {
+      code: 'POPULARITY',
+      korName: '대중성 점수',
+      engName: 'popularity',
+      description: '관리자가 시즌에 맞게 조절해서 넣는 대중성 점수',
+    },
+    {
+      code: 'PRICE',
+      korName: '가격',
+      engName: 'price',
+      description: '병·잔 가격. 출처와 기준 시점을 함께 남긴다',
+    },
+    {
+      code: 'FLAG',
+      korName: '예/아니오 속성',
+      engName: 'flag',
+      description: '향 첨가 여부처럼 참·거짓으로 나뉘는 속성',
+    },
+    {
+      code: 'IDENTITY',
+      korName: '묶음 코드',
+      engName: 'identity',
+      description: '같은 브랜드처럼 여러 병을 하나로 묶는 식별 코드',
+    },
+    { code: 'NOTE', korName: '메모', engName: 'note', description: '운영자가 남기는 자유 메모' },
+  ],
+  datatypes: [
+    { code: 'STRING', korName: '텍스트', engName: 'string', description: '자유 문자열' },
+    {
+      code: 'INT',
+      korName: '정수',
+      engName: 'int',
+      description: '소수점 없는 정수. 가격처럼 원 단위 값',
+    },
+    {
+      code: 'DOUBLE',
+      korName: '소수',
+      engName: 'double',
+      description: '소수점을 포함할 수 있는 숫자. 점수처럼 비율 값',
+    },
+    { code: 'BOOLEAN', korName: '예/아니오', engName: 'boolean', description: 'true 또는 false' },
+  ],
+  providers: [
+    {
+      code: 'ADMIN',
+      korName: '관리자',
+      engName: 'admin',
+      description: '관리자가 어드민에서 직접 입력하거나 조절한다',
+    },
+    {
+      code: 'ANY',
+      korName: '제한 없음',
+      engName: 'any',
+      description: '관리자, AI, 자동 계산 어느 쪽이든 넣을 수 있다',
+    },
+  ],
+};
+
+/** 속성이 붙은 위스키 목록 (글렌피딕 12년, 맥캘란 18년) */
+export const mockAttributedAlcohols: AttributedAlcoholItem[] = [
+  {
+    alcoholId: 10,
+    korName: '글렌피딕 12년',
+    engName: 'Glenfiddich 12',
+    korCategory: '싱글몰트',
+    imageUrl: 'https://example.com/glenfiddich.jpg',
+    attributes: mockAlcoholAttributeRows.filter((row) => row.alcoholId === 10),
+  },
+  {
+    alcoholId: 20,
+    korName: '맥캘란 18년',
+    engName: 'Macallan 18',
+    korCategory: '싱글몰트',
+    imageUrl: null,
+    attributes: mockAlcoholAttributeRows.filter((row) => row.alcoholId === 20),
+  },
+];
