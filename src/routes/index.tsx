@@ -17,6 +17,8 @@ import { WhiskyDetailPage } from '@/pages/whisky/WhiskyDetail';
 import { WhiskyExcelBulkPage } from '@/pages/whisky/WhiskyExcelBulkPage';
 import { TastingTagListPage } from '@/pages/tasting-tags/TastingTagList';
 import { TastingTagDetailPage } from '@/pages/tasting-tags/TastingTagDetail';
+import { TastingGroupListPage } from '@/pages/tasting-groups/TastingGroupList';
+import { AlcoholAttributeListPage } from '@/pages/alcohol-attributes/AlcoholAttributeList';
 import { BannerListPage } from '@/pages/banners/BannerList';
 import { BannerDetailPage } from '@/pages/banners/BannerDetail';
 import { BannerCreatePage } from '@/pages/banners/BannerCreate';
@@ -165,6 +167,24 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
               <TastingTagDetailPage key="edit" />
+            </RoleProtectedRoute>
+          }
+        />
+
+        {/* Tasting groups / Alcohol attributes (모의 화면) - ROOT_ADMIN only */}
+        <Route
+          path="tasting-groups"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <TastingGroupListPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="alcohol-attributes"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <AlcoholAttributeListPage />
             </RoleProtectedRoute>
           }
         />

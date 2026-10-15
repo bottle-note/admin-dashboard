@@ -19,6 +19,8 @@ import {
   FileSpreadsheet,
   MapPinned,
   FileSearch,
+  Shapes,
+  SlidersHorizontal,
 } from 'lucide-react';
 import type { MenuGroup } from '@/types/menu';
 
@@ -93,6 +95,12 @@ export const menuConfig: MenuGroup[] = [
                 icon: FileSpreadsheet,
                 path: '/whisky/excel-bulk',
               },
+              {
+                id: 'alcohol-attribute-management',
+                label: '속성 관리',
+                icon: SlidersHorizontal,
+                path: '/alcohol-attributes',
+              },
             ],
           },
           {
@@ -111,6 +119,12 @@ export const menuConfig: MenuGroup[] = [
                 label: '태그 추가',
                 icon: Plus,
                 path: '/tasting-tags/new',
+              },
+              {
+                id: 'tasting-group-management',
+                label: '그룹 관리',
+                icon: Shapes,
+                path: '/tasting-groups',
               },
             ],
           },
