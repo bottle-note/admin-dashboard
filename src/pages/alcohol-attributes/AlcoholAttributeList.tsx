@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Layers, RotateCcw, Search } from 'lucide-react';
+import { Layers, Plus, RotateCcw, Search } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -273,12 +273,21 @@ export function AlcoholAttributeListPage() {
         title="위스키 속성 관리"
         description="키워드·가격·대중성 점수 같은 부가 속성이 붙은 위스키를 찾아보고 고쳐 넣습니다."
         actions={
-          selectedIds.length > 0 && (
-            <Button size="sm" onClick={() => setIsBulkOpen(true)}>
-              <Layers className="mr-1.5 h-4 w-4" />
-              선택 {selectedIds.length}개 일괄 편집
+          <>
+            {selectedIds.length > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setIsBulkOpen(true)}>
+                <Layers className="mr-1.5 h-4 w-4" />
+                선택 {selectedIds.length}개 일괄 편집
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={() => setFormTarget({ open: true, row: null, whiskies: [] })}
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              속성 추가
             </Button>
-          )
+          </>
         }
       />
 

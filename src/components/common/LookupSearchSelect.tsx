@@ -177,7 +177,8 @@ export function LookupSearchSelect<TItem>({
           ref={dropdownRef}
           data-testid={dropdownTestId}
           className="fixed z-[100] rounded-md border bg-popover shadow-lg"
-          style={dropdownStyle}
+          // 모달 다이얼로그 안에서는 body가 pointer-events:none이라 인라인으로 되살린다
+          style={{ ...dropdownStyle, pointerEvents: 'auto' }}
         >
           {isLoading ? (
             <div className="flex items-center justify-center py-6">

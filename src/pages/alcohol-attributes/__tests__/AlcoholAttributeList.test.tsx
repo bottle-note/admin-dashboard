@@ -166,6 +166,43 @@ describe('AlcoholAttributeListPage', () => {
     );
   });
 
+  it('상단 속성 추가에서는 폼 안에서 위스키를 검색해 대상을 고르고 그 위스키에 POST한다', async () => {
+    const user = userEvent.setup();
+    let captured: Record<string, unknown> | null = null;
+    server.use(
+      http.post(BASE, async ({ request }) => {
+        captured = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(wrapApiResponse({ added: 1, skipped: 0, createdIds: [8] }));
+      })
+    );
+
+    render(<AlcoholAttributeListPage />);
+    await findListTable();
+
+    await user.click(screen.getByRole('button', { name: '속성 추가' }));
+    const dialog = await screen.findByRole('dialog', { name: '속성 추가' });
+    expect(within(dialog).getByText('대상 위스키 0개')).toBeInTheDocument();
+    await user.type(within(dialog).getByPlaceholderText('위스키를 검색해 대상에 추가'), '맥캘란');
+    await user.click(await screen.findByRole('button', { name: '맥캘란 18년 위스키 선택' }));
+    expect(within(dialog).getByText('대상 위스키 1개')).toBeInTheDocument();
+
+    await user.type(within(dialog).getByLabelText(/^항목\*?$/), 'keyword');
+    await user.type(within(dialog).getByLabelText(/^값\*?$/), '셰리');
+    await user.click(within(dialog).getByRole('button', { name: '저장' }));
+
+    await waitFor(() =>
+      expect(captured).toEqual({
+        alcoholIds: [20],
+        key: 'keyword',
+        type: 'KEYWORD',
+        datatype: 'STRING',
+        value: '셰리',
+        description: null,
+        basedAt: null,
+      })
+    );
+  });
+
   it('일괄 편집에서 "나머지에 적용"은 빠진 위스키에만, 묶음 삭제는 행 id로 batch/delete를 호출한다', async () => {
     const user = userEvent.setup();
     let created: Record<string, unknown> | null = null;

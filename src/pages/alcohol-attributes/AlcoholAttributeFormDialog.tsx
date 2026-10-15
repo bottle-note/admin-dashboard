@@ -5,11 +5,11 @@
  */
 
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/components/common/FormField';
+import { WhiskySearchSelect } from '@/components/common/WhiskySearchSelect';
 import { fieldErrorProps } from '@/lib/form';
 import {
   useAlcoholAttributeCreate,
@@ -55,7 +56,7 @@ import type { SelectedWhisky } from './AlcoholAttributeList';
 interface AlcoholAttributeFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** 추가 모드의 대상 후보 (선택한 위스키) */
+  /** 추가 모드에서 미리 채울 대상. 비어 있으면 폼 안에서 검색해 고른다 */
   whiskies: SelectedWhisky[];
   /** 수정 대상. 없으면 추가 모드 */
   row?: AlcoholAttributeRow | null;
@@ -85,7 +86,7 @@ export function AlcoholAttributeFormDialog({
   const typeOptions = enums?.types ?? [];
   const datatypeOptions = enums?.datatypes ?? [];
 
-  const [targetIds, setTargetIds] = useState<number[]>([]);
+  const [targets, setTargets] = useState<SelectedWhisky[]>([]);
 
   const form = useForm<AttributeFormValues>({
     resolver: zodResolver(attributeFormSchema),
@@ -95,7 +96,7 @@ export function AlcoholAttributeFormDialog({
   useEffect(() => {
     if (!open) return;
     form.reset(row ? rowToFormValues(row) : attributeFormDefaultValues);
-    setTargetIds(whiskies.map((whisky) => whisky.alcoholId));
+    setTargets(whiskies);
     // whiskies는 열릴 때의 선택만 반영하면 된다
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, row, form]);
@@ -132,20 +133,23 @@ export function AlcoholAttributeFormDialog({
       updateMutation.mutate({ id: row.id, data: common });
       return;
     }
-    if (targetIds.length === 0) {
+    if (targets.length === 0) {
       form.setError('key', { message: '대상 위스키를 하나 이상 고르세요.' });
       return;
     }
-    createMutation.mutate({ alcoholIds: targetIds, key: values.key, ...common });
+    createMutation.mutate({
+      alcoholIds: targets.map((whisky) => whisky.alcoholId),
+      key: values.key,
+      ...common,
+    });
   };
 
-  const toggleTarget = (alcoholId: number, checked: boolean) => {
-    setTargetIds((prev) =>
-      checked
-        ? [...prev.filter((id) => id !== alcoholId), alcoholId].sort((a, b) => a - b)
-        : prev.filter((id) => id !== alcoholId)
+  const addTarget = (whisky: SelectedWhisky) =>
+    setTargets((prev) =>
+      prev.some((item) => item.alcoholId === whisky.alcoholId) ? prev : [...prev, whisky]
     );
-  };
+  const removeTarget = (alcoholId: number) =>
+    setTargets((prev) => prev.filter((item) => item.alcoholId !== alcoholId));
 
   const valueField = (() => {
     if (datatype === 'BOOLEAN') {
@@ -199,7 +203,14 @@ export function AlcoholAttributeFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : close())}>
-      <DialogContent className="max-w-lg">
+      <DialogContent
+        className="max-w-lg"
+        // 위스키 검색 드롭다운은 포털로 그려져 다이얼로그 바깥 클릭으로 잡히므로 닫지 않는다
+        onInteractOutside={(event) => {
+          const target = event.target as HTMLElement | null;
+          if (target?.closest('[data-testid="whisky-search-dropdown"]')) event.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{isEdit ? '속성 수정' : '속성 추가'}</DialogTitle>
           <DialogDescription>
@@ -328,30 +339,48 @@ export function AlcoholAttributeFormDialog({
           </FormField>
 
           {!isEdit && (
-            <fieldset className="space-y-1.5 rounded-md border p-3">
-              <legend className="px-1 text-xs font-medium">
-                대상 위스키 {targetIds.length}/{whiskies.length}
-              </legend>
-              <ul className="max-h-32 space-y-1 overflow-auto">
-                {whiskies.map((whisky) => {
-                  const checked = targetIds.includes(whisky.alcoholId);
-                  const id = `attribute-target-${whisky.alcoholId}`;
-                  return (
-                    <li key={whisky.alcoholId} className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        id={id}
-                        checked={checked}
-                        onCheckedChange={(next) => toggleTarget(whisky.alcoholId, next === true)}
+            <fieldset className="space-y-2 rounded-md border p-3">
+              <legend className="px-1 text-xs font-medium">대상 위스키 {targets.length}개</legend>
+              <WhiskySearchSelect
+                onSelect={(whisky) =>
+                  addTarget({
+                    alcoholId: whisky.alcoholId,
+                    korName: whisky.korName,
+                    engName: whisky.engName,
+                  })
+                }
+                excludeIds={targets.map((whisky) => whisky.alcoholId)}
+                placeholder="위스키를 검색해 대상에 추가"
+                disabled={isPending}
+              />
+              {targets.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  아직 고른 위스키가 없습니다. 검색해서 하나 이상 추가하세요.
+                </p>
+              ) : (
+                <ul
+                  className="flex max-h-28 flex-wrap gap-1.5 overflow-auto"
+                  aria-label="대상 위스키"
+                >
+                  {targets.map((whisky) => (
+                    <li
+                      key={whisky.alcoholId}
+                      className="inline-flex h-6 items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-0.5 text-xs"
+                    >
+                      {whisky.korName}
+                      <button
+                        type="button"
+                        className="rounded-full p-0.5 opacity-60 hover:bg-muted hover:opacity-100"
+                        aria-label={`${whisky.korName} 대상에서 제외`}
                         disabled={isPending}
-                      />
-                      <label htmlFor={id} className="cursor-pointer truncate">
-                        {whisky.korName}
-                        <span className="ml-1 text-xs text-muted-foreground">{whisky.engName}</span>
-                      </label>
+                        onClick={() => removeTarget(whisky.alcoholId)}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </li>
-                  );
-                })}
-              </ul>
+                  ))}
+                </ul>
+              )}
             </fieldset>
           )}
         </form>
