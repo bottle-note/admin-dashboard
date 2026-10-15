@@ -18,17 +18,30 @@ export interface FormFieldProps {
   error?: string;
   children: React.ReactNode;
   className?: string;
+  /** 입력 요소의 id. 넘기면 라벨이 연결되고 오류 문구는 `${htmlFor}-error` id로 렌더링된다 */
+  htmlFor?: string;
 }
 
-export function FormField({ label, required, error, children, className }: FormFieldProps) {
+export function FormField({
+  label,
+  required,
+  error,
+  children,
+  className,
+  htmlFor,
+}: FormFieldProps) {
   return (
     <div className={`space-y-2 ${className ?? ''}`}>
-      <label className="text-sm font-medium">
+      <label className="text-sm font-medium" htmlFor={htmlFor}>
         {label}
         {required && <span className="ml-1 text-destructive">*</span>}
       </label>
       {children}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p id={htmlFor ? `${htmlFor}-error` : undefined} className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
