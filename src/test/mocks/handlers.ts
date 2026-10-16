@@ -1,11 +1,5 @@
 import { http, HttpResponse } from 'msw';
 import {
-  mockAlcoholAttributeRows,
-  mockAlcoholAttributeSummary,
-  mockAlcoholAttributeKeyStats,
-  mockAlcoholAttributeKeywords,
-  mockAlcoholAttributeEnums,
-  mockAttributedAlcohols,
   mockTastingTagListItems,
   mockTastingTagDetail,
   mockFormResponse,
@@ -793,105 +787,7 @@ export const tastingGroupHandlers = [
   }),
 ];
 
-// ============================================
-// 위스키 속성
-// ============================================
-
-const ALCOHOL_ATTRIBUTE_BASE = '/admin/api/v1/alcohols/attributes';
-
-function parseAlcoholIds(request: Request) {
-  const raw = new URL(request.url).searchParams.get('alcoholIds') ?? '';
-  return raw
-    .split(',')
-    .filter(Boolean)
-    .map((id) => Number(id));
-}
-
-export const alcoholAttributeHandlers = [
-  // 정적 경로를 먼저 둬 `/:id`보다 앞서 매칭되게 한다
-  http.get(`${ALCOHOL_ATTRIBUTE_BASE}/enums`, () =>
-    HttpResponse.json(wrapApiResponse(mockAlcoholAttributeEnums))
-  ),
-  http.get(`${ALCOHOL_ATTRIBUTE_BASE}/keys`, () =>
-    HttpResponse.json(wrapApiResponse(mockAlcoholAttributeKeyStats))
-  ),
-  http.get(`${ALCOHOL_ATTRIBUTE_BASE}/keywords`, () =>
-    HttpResponse.json(wrapApiResponse(mockAlcoholAttributeKeywords))
-  ),
-  // 필터·페이지 동작은 서버 책임이라 모의는 전체를 한 페이지로 돌려준다
-  http.get(`${ALCOHOL_ATTRIBUTE_BASE}/alcohols`, () =>
-    HttpResponse.json(
-      wrapApiResponse(mockAttributedAlcohols, {
-        page: 0,
-        size: 20,
-        totalElements: mockAttributedAlcohols.length,
-        totalPages: 1,
-        hasNext: false,
-      })
-    )
-  ),
-  http.get(`${ALCOHOL_ATTRIBUTE_BASE}/summary`, ({ request }) => {
-    const ids = parseAlcoholIds(request);
-    if (ids.length === 0) {
-      return HttpResponse.json(
-        wrapApiError(400, 'ALCOHOL_ATTRIBUTE_EMPTY_ALCOHOLS', 'alcoholIds가 비어 있습니다.'),
-        { status: 400 }
-      );
-    }
-    return HttpResponse.json(wrapApiResponse(mockAlcoholAttributeSummary));
-  }),
-  http.get(ALCOHOL_ATTRIBUTE_BASE, ({ request }) => {
-    const ids = parseAlcoholIds(request);
-    if (ids.length === 0) {
-      return HttpResponse.json(
-        wrapApiError(400, 'ALCOHOL_ATTRIBUTE_EMPTY_ALCOHOLS', 'alcoholIds가 비어 있습니다.'),
-        { status: 400 }
-      );
-    }
-    return HttpResponse.json(
-      wrapApiResponse(mockAlcoholAttributeRows.filter((row) => ids.includes(row.alcoholId)))
-    );
-  }),
-  http.post(`${ALCOHOL_ATTRIBUTE_BASE}/batch/delete`, async ({ request }) => {
-    const body = (await request.json()) as { ids: number[] };
-    return HttpResponse.json(
-      wrapApiResponse(mockAlcoholAttributeRows.filter((row) => body.ids.includes(row.id)))
-    );
-  }),
-  http.post(ALCOHOL_ATTRIBUTE_BASE, async ({ request }) => {
-    const body = (await request.json()) as { alcoholIds: number[] };
-    return HttpResponse.json(
-      wrapApiResponse({
-        added: body.alcoholIds.length,
-        skipped: 0,
-        createdIds: body.alcoholIds.map((_, index) => 100 + index),
-      })
-    );
-  }),
-  http.put(`${ALCOHOL_ATTRIBUTE_BASE}/:id`, ({ params }) =>
-    HttpResponse.json(
-      wrapApiResponse({
-        code: 'ALCOHOL_ATTRIBUTE_UPDATED',
-        message: '속성이 수정되었습니다.',
-        targetId: Number(params.id),
-        responseAt: '2026-10-15 10:00:00',
-      })
-    )
-  ),
-  http.delete(`${ALCOHOL_ATTRIBUTE_BASE}/:id`, ({ params }) =>
-    HttpResponse.json(
-      wrapApiResponse({
-        code: 'ALCOHOL_ATTRIBUTE_DELETED',
-        message: '속성이 삭제되었습니다.',
-        targetId: Number(params.id),
-        responseAt: '2026-10-15 10:00:00',
-      })
-    )
-  ),
-];
-
 export const handlers = [
-  ...alcoholAttributeHandlers,
   ...tastingTagHandlers,
   ...tastingGroupHandlers,
   ...bannerHandlers,
