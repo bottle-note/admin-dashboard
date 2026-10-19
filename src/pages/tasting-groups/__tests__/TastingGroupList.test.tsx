@@ -1,3 +1,4 @@
+import { tastingGroupService } from '@/services/tasting-group.service';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -166,6 +167,37 @@ describe('TastingGroupListPage', () => {
     // 패널은 닫히지 않고 선택만 비워진다
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     await waitFor(() => expect(within(panel).getByRole('button', { name: '추가' })).toBeDisabled());
+  });
+
+  it('대표 태그 저장 후 보조 태그 저장이 실패하면 성공한 선택을 제거하고 실패한 태그만 재시도한다', async () => {
+    const listReads = vi.spyOn(tastingGroupService, 'list');
+    const user = userEvent.setup();
+    const calls: unknown[] = [];
+    server.use(
+      http.post(`${BASE}/:code/tags`, async ({ request }) => {
+        const body = await request.json();
+        calls.push(body);
+        if (calls.length === 2)
+          return HttpResponse.json(wrapApiError(500, 'FAILED', '보조 저장 실패'), { status: 500 });
+        return okResult('TASTING_TAG_GROUP_TAG_ADDED');
+      })
+    );
+    render(<TastingGroupListPage />);
+    const card = await screen.findByRole('region', { name: '선택한 태그 그룹' });
+    await user.click(within(card).getByRole('button', { name: '태그 연결' }));
+    const panel = await screen.findByRole('dialog');
+    await within(panel).findByRole('option', { name: '가죽' });
+    await user.click(within(panel).getByRole('button', { name: '결과 전체 선택' }));
+    await user.click(within(panel).getByRole('button', { name: /민트 역할 전환/ }));
+    await user.click(within(panel).getByRole('button', { name: '2개 추가' }));
+    expect(await within(panel).findByRole('alert')).toHaveTextContent('1개');
+    expect(listReads).toHaveBeenCalledTimes(2);
+    expect(within(panel).queryByRole('button', { name: '가죽 선택 해제' })).not.toBeInTheDocument();
+    expect(within(panel).getByRole('button', { name: '민트 선택 해제' })).toBeInTheDocument();
+    await user.click(within(panel).getByRole('button', { name: '1개 추가' }));
+    await waitFor(() => expect(calls).toHaveLength(3));
+    expect(calls[2]).toEqual({ tastingTagIds: [22], role: 'PERIPHERAL' });
+    listReads.mockRestore();
   });
 
   it('태그 연결 패널의 "이 그룹의 태그"에서 역할 변경과 제거를 호출한다', async () => {

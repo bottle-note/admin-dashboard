@@ -1,3 +1,5 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { getErrorMessage } from '@/lib/api-error';
 /**
  * 태그 그룹(맛 그룹) API 커스텀 훅
  */
@@ -83,20 +85,42 @@ export interface TastingGroupAddTagsVariables {
   data: TastingGroupTagsRequest | TastingGroupTagsRequest[];
 }
 
+export class PartialTagConnectionError extends Error {
+  constructor(
+    public readonly savedTagIds: number[],
+    cause: unknown
+  ) {
+    super(
+      `${savedTagIds.length}개는 저장됐습니다. 나머지 태그만 다시 시도하세요. ${getErrorMessage(cause)}`
+    );
+    this.name = 'PartialTagConnectionError';
+  }
+}
+
 export function useTastingGroupAddTags(options?: MutationOptions<TastingGroupAddTagsVariables>) {
+  const queryClient = useQueryClient();
   return useGroupMutation(
     async ({ code, data }: TastingGroupAddTagsVariables) => {
       const requests = Array.isArray(data) ? data : [data];
+      const savedTagIds: number[] = [];
       let last: TastingGroupResultResponse | undefined;
-      for (const request of requests) {
-        if (request.tastingTagIds.length === 0) continue;
-        last = await tastingGroupService.addTags(code, request);
+      try {
+        for (const request of requests) {
+          if (request.tastingTagIds.length === 0) continue;
+          last = await tastingGroupService.addTags(code, request);
+          savedTagIds.push(...request.tastingTagIds);
+        }
+      } catch (error) {
+        if (!savedTagIds.length) throw error;
+        // 이전 요청의 저장은 되돌릴 수 없으므로 캐시와 재시도 대상을 일치시킨다.
+        await queryClient.invalidateQueries({ queryKey: tastingGroupKeys.all });
+        throw new PartialTagConnectionError(savedTagIds, error);
       }
       if (!last) throw new Error('연결할 태그가 없습니다.');
       return last;
     },
     '태그가 연결되었습니다.',
-    options
+    { ...options, retry: false }
   );
 }
 

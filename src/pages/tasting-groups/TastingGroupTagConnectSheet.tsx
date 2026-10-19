@@ -1,3 +1,5 @@
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { getErrorMessage } from '@/lib/api-error';
 /**
  * 태그 연결 측면 패널
  * - 전송 목록 구조: 왼쪽은 미소속 태그(즉시 검색·결과 전체 선택), 오른쪽은 이 그룹의 태그(역할 변경·제거)
@@ -6,7 +8,7 @@
  * - 키보드: ↑↓ 이동, Enter 체크, Backspace(빈 검색창) 마지막 칩 삭제, Cmd/Ctrl+A 결과 전체 선택
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ArrowLeftRight, Check, Search, X } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +24,7 @@ import {
 } from '@/components/ui/sheet';
 import {
   useTastingGroupAddTags,
+  PartialTagConnectionError,
   useTastingGroupChangeTagRole,
   useTastingGroupRemoveTag,
   useUngroupedTastingTags,
@@ -42,22 +45,13 @@ interface Picked {
 
 const SEARCH_DEBOUNCE_MS = 200;
 
-function useDebounced(value: string, delay: number) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebounced(value), delay);
-    return () => window.clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
-}
-
 export function TastingGroupTagConnectSheet({
   open,
   onOpenChange,
   group,
 }: TastingGroupTagConnectSheetProps) {
   const [keywordInput, setKeywordInput] = useState('');
-  const keyword = useDebounced(keywordInput.trim(), SEARCH_DEBOUNCE_MS);
+  const keyword = useDebouncedValue(keywordInput.trim(), SEARCH_DEBOUNCE_MS);
   const [picked, setPicked] = useState<Picked[]>([]);
   const [defaultRole, setDefaultRole] = useState<TastingGroupRole>('CORE');
   const [highlight, setHighlight] = useState(0);
@@ -71,7 +65,15 @@ export function TastingGroupTagConnectSheet({
   const maxCount = sorted[0]?.alcoholCount ?? 0;
   const pickedIds = useMemo(() => new Set(picked.map((item) => item.tag.id)), [picked]);
 
-  const addTagsMutation = useTastingGroupAddTags({ onSuccess: () => setPicked([]) });
+  const addTagsMutation = useTastingGroupAddTags({
+    onSuccess: () => setPicked([]),
+    onError: (error) => {
+      if (error instanceof PartialTagConnectionError)
+        setPicked((previous) =>
+          previous.filter((item) => !error.savedTagIds.includes(item.tag.id))
+        );
+    },
+  });
   const changeRoleMutation = useTastingGroupChangeTagRole();
   const removeTagMutation = useTastingGroupRemoveTag();
   const isMutating =
@@ -79,7 +81,9 @@ export function TastingGroupTagConnectSheet({
 
   // 닫을 때 입력 상태를 비워 다음에 열 때 깨끗한 상태로 시작한다
   const handleOpenChange = (next: boolean) => {
+    if (isMutating) return;
     if (!next) {
+      addTagsMutation.reset();
       setKeywordInput('');
       setPicked([]);
       setDefaultRole('CORE');
@@ -89,6 +93,7 @@ export function TastingGroupTagConnectSheet({
   };
 
   const togglePick = (tag: UngroupedTastingTag) => {
+    if (isMutating) return;
     setPicked((prev) =>
       prev.some((item) => item.tag.id === tag.id)
         ? prev.filter((item) => item.tag.id !== tag.id)
@@ -97,6 +102,7 @@ export function TastingGroupTagConnectSheet({
   };
 
   const selectAllResults = () => {
+    if (isMutating) return;
     setPicked((prev) => {
       const existing = new Set(prev.map((item) => item.tag.id));
       const additions = sorted
@@ -107,13 +113,14 @@ export function TastingGroupTagConnectSheet({
   };
 
   const flipPickedRole = (id: number) => {
+    if (isMutating) return;
     setPicked((prev) =>
       prev.map((item) => (item.tag.id === id ? { ...item, role: OTHER_ROLE[item.role] } : item))
     );
   };
 
   const submit = () => {
-    if (!group || picked.length === 0) return;
+    if (!group || picked.length === 0 || isMutating) return;
     const byRole = (role: TastingGroupRole) =>
       picked.filter((item) => item.role === role).map((item) => item.tag.id);
     addTagsMutation.mutate({
@@ -126,7 +133,7 @@ export function TastingGroupTagConnectSheet({
   };
 
   const onSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.nativeEvent.isComposing) return;
+    if (event.nativeEvent.isComposing || isMutating) return;
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       setHighlight((h) => Math.min(h + 1, Math.max(sorted.length - 1, 0)));
@@ -308,6 +315,11 @@ export function TastingGroupTagConnectSheet({
               })}
             </ul>
 
+            {addTagsMutation.error && (
+              <p role="alert" className="border-t px-4 py-2 text-xs text-destructive">
+                {getErrorMessage(addTagsMutation.error)}
+              </p>
+            )}
             <div className="flex items-center justify-between border-t px-4 py-3">
               <span className="text-xs text-muted-foreground">
                 {picked.length > 0
