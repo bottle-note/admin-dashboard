@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import {
   ArrowRight,
@@ -37,16 +37,29 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { AttributeRelationshipGraph } from './AttributeRelationshipGraph';
+import { MappingValueEditor } from './MappingValueEditor';
 import { AttributeEditor } from './AttributeEditor';
 import {
-  alcohols,
   displayValue,
+  valueError,
   emptyAttribute,
-  initialAttributes,
-  initialMappings,
   TYPE_LABELS,
   type Attribute,
-} from './mock-data';
+} from './attribute-model';
+
+import {
+  useAlcoholAttributes,
+  useAttributeRelations,
+  useAttributeAlcoholLookup,
+  useAlcoholAttributeCreate,
+  useAlcoholAttributeUpdate,
+  useAlcoholAttributeBatchDelete,
+  useAttributeLink,
+  useAttributeUnlink,
+  useAttributeMappingUpdate,
+} from '@/hooks/useAlcoholAttributes';
+import { getErrorMessage } from '@/lib/api-error';
+import type { AttributeType } from '@/types/api/alcohol-attribute.api';
 
 const tabs = [
   { value: 'attributes', label: '속성관리' },
@@ -68,15 +81,87 @@ export function AlcoholAttributeVariantA() {
         : 'attributes';
   const keyword = params.get('q') ?? '';
   const type = params.get('type') ?? 'ALL';
-  const [attributes, setAttributes] = useState(initialAttributes);
-  const [mappings, setMappings] = useState(initialMappings);
+  const rawPage = Number(params.get('page'));
+  const page = Number.isSafeInteger(rawPage) && rawPage >= 0 ? rawPage : 0;
+  const relations = useAttributeRelations();
+  const dictionary = useAlcoholAttributes(
+    {
+      keyword: keyword || undefined,
+      type: type in TYPE_LABELS ? (type as AttributeType) : undefined,
+      page,
+      size: 20,
+    },
+    tab === 'attributes'
+  );
+  const lookup = useAttributeAlcoholLookup(keyword, page, tab === 'mappings');
+  const create = useAlcoholAttributeCreate();
+  const update = useAlcoholAttributeUpdate();
+  const remove = useAlcoholAttributeBatchDelete();
+  const link = useAttributeLink();
+  const unlink = useAttributeUnlink();
+  const [actionError, setActionError] = useState<string | null>(null);
+  const mappingUpdate = useAttributeMappingUpdate();
+  const [pairValues, setPairValues] = useState<Record<string, string>>({});
+  const pending =
+    mappingUpdate.isPending ||
+    create.isPending ||
+    update.isPending ||
+    remove.isPending ||
+    link.isPending ||
+    unlink.isPending;
+  const toAttribute = (
+    item: { unit: string | null; description: string | null } & Omit<
+      Attribute,
+      'unit' | 'description'
+    >
+  ): Attribute => ({
+    id: item.id,
+    key: item.key,
+    displayName: item.displayName,
+    type: item.type,
+    datatype: item.datatype,
+    unit: item.unit ?? '',
+    description: item.description ?? '',
+  });
+  const attributes = (relations.data?.attributes ?? []).map(toAttribute);
+  const mappings = relations.data?.mappings ?? [];
+  const connectedAlcohols = (relations.data?.alcohols ?? []).map((item) => ({
+    id: item.alcoholId,
+    name: item.korName,
+    english: item.engName ?? '',
+    category: item.korCategory ?? '',
+    region: '',
+    imageUrl: item.imageUrl,
+  }));
+  const lookupAlcohols = (lookup.data?.items ?? []).map((item) => ({
+    id: item.alcoholId,
+    name: item.korName,
+    english: item.engName ?? '',
+    category: item.korCategoryName ?? '',
+    region: item.korRegion ?? '',
+    imageUrl: item.imageUrl,
+  }));
+  const alcohols = [
+    ...new Map([...connectedAlcohols, ...lookupAlcohols].map((item) => [item.id, item])).values(),
+  ];
+  const currentQuery = tab === 'attributes' ? dictionary : tab === 'mappings' ? lookup : relations;
+  const loading = relations.isPending || currentQuery.isPending;
+  const queryError = relations.error || currentQuery.error;
+  const pageMeta = tab === 'attributes' ? dictionary.data?.meta : lookup.data?.meta;
   const [selectedAttributes, setSelectedAttributes] = useState<number[]>([]);
-  const [selectedAlcohols, setSelectedAlcohols] = useState<number[]>([]);
-  const [activeAttribute, setActiveAttribute] = useState(101);
-  const [activeAlcohol, setActiveAlcohol] = useState(2001);
+  const [selectedAlcohols, setSelectedAlcoholIds] = useState<number[]>([]);
+  const [selectedAlcoholNames, setSelectedAlcoholNames] = useState<Record<number, string>>({});
+  function setSelectedAlcohols(next: number[] | ((previous: number[]) => number[])) {
+    setSelectedAlcoholIds(next);
+    setSelectedAlcoholNames((previous) => ({
+      ...previous,
+      ...Object.fromEntries(alcohols.map((item) => [item.id, item.name])),
+    }));
+  }
+  const [activeAttribute, setActiveAttribute] = useState<number | null>(null);
+  const [activeAlcohol, setActiveAlcohol] = useState<number | null>(null);
   const [newAttribute, setNewAttribute] = useState(false);
   const [editorVersion, setEditorVersion] = useState(0);
-  const [connectionFilter, setConnectionFilter] = useState('ALL');
   const [attributeQuery, setAttributeQuery] = useState('');
   const [notice, setNotice] = useState(
     '행을 열어 상세 내용을 확인하고, 체크박스로 일괄 작업 대상을 선택하세요.'
@@ -84,30 +169,19 @@ export function AlcoholAttributeVariantA() {
   const [confirmation, setConfirmation] = useState<
     { kind: 'delete'; ids: number[] } | { kind: 'unlink'; id: number } | { kind: 'connect' } | null
   >(null);
-  const nextAttributeId = useRef(113);
-  const nextMappingId = useRef(5021);
   const linkedCount = (id: number) =>
     mappings.filter((mapping) => mapping.attributeId === id).length;
-  const active = attributes.find((attribute) => attribute.id === activeAttribute);
-  const focusedAlcohol = alcohols.find((alcohol) => alcohol.id === activeAlcohol)!;
-  const filteredAttributes = attributes.filter(
-    (attribute) =>
-      `${attribute.displayName} ${attribute.key} ${attribute.value}`
-        .toLowerCase()
-        .includes(keyword.trim().toLowerCase()) &&
-      (type === 'ALL' || attribute.type === type) &&
-      (connectionFilter !== 'EMPTY' || linkedCount(attribute.id) === 0)
-  );
-  const filteredAlcohols = alcohols.filter((alcohol) => {
-    const connected = mappings.filter((mapping) => mapping.alcoholId === alcohol.id);
-    return (
-      `${alcohol.name} ${alcohol.english} ${alcohol.id}`
-        .toLowerCase()
-        .includes(keyword.trim().toLowerCase()) &&
-      (connectionFilter === 'ALL' ||
-        (connectionFilter === 'EMPTY' ? connected.length === 0 : connected.length > 0))
-    );
-  });
+  const active =
+    attributes.find((attribute) => attribute.id === activeAttribute) ??
+    (activeAttribute === null
+      ? dictionary.data?.items[0]
+        ? toAttribute(dictionary.data.items[0])
+        : undefined
+      : undefined);
+  const currentAlcoholId = activeAlcohol ?? lookupAlcohols[0]?.id;
+  const focusedAlcohol = alcohols.find((alcohol) => alcohol.id === currentAlcoholId);
+  const filteredAttributes = (dictionary.data?.items ?? []).map(toAttribute);
+  const filteredAlcohols = lookupAlcohols;
   const candidateAttributes = attributes.filter((attribute) =>
     `${attribute.displayName} ${attribute.key}`
       .toLowerCase()
@@ -132,6 +206,7 @@ export function AlcoholAttributeVariantA() {
     setParams(
       (previous) => {
         const next = new URLSearchParams(previous);
+        if (key !== 'page') next.delete('page');
         if (value) next.set(key, value);
         else next.delete(key);
         return next;
@@ -146,60 +221,66 @@ export function AlcoholAttributeVariantA() {
         next.set('tab', value);
         next.delete('q');
         next.delete('type');
+        next.delete('page');
         return next;
       },
       { replace: true }
     );
-    setConnectionFilter('ALL');
   }
-  function saveAttribute(attribute: Attribute) {
-    if (
-      attributes.some(
-        (item) => item.id !== attribute.id && item.displayName === attribute.displayName
-      )
-    )
-      return '같은 이름의 속성이 있습니다. 다른 이름을 입력하세요.';
+  async function saveAttribute(attribute: Attribute) {
     if (!attribute.id && attributes.some((item) => item.key === attribute.key))
       return '이미 등록된 키입니다. 기존 속성을 열어 수정하세요.';
-    const saved = { ...attribute, id: attribute.id || nextAttributeId.current++ };
-    setAttributes((previous) =>
-      attribute.id
-        ? previous.map((item) => (item.id === attribute.id ? saved : item))
-        : [...previous, saved]
-    );
-    setActiveAttribute(saved.id);
-    setNewAttribute(false);
-    setEditorVersion((previous) => previous + 1);
-    setNotice(
-      `“${saved.displayName}” ${attribute.id ? '변경을 저장' : '속성을 등록'}했습니다. 이 화면의 모의 데이터에만 반영됩니다.`
-    );
-    return undefined;
-  }
-  function confirmAction() {
-    if (confirmation?.kind === 'delete') {
-      setAttributes((previous) =>
-        previous.filter((attribute) => !confirmation.ids.includes(attribute.id))
-      );
-      setMappings((previous) =>
-        previous.filter((mapping) => !confirmation.ids.includes(mapping.attributeId))
-      );
-      setSelectedAttributes((previous) => previous.filter((id) => !confirmation.ids.includes(id)));
-      setNotice(
-        `속성 ${confirmation.ids.length}개와 연결 ${deleteCount}개를 삭제했습니다. 모의 데이터에만 반영됩니다.`
-      );
-    } else if (confirmation?.kind === 'unlink') {
-      setMappings((previous) => previous.filter((mapping) => mapping.id !== confirmation.id));
-      setNotice('연결 1개를 해제했습니다. 공통 속성은 사전에 남아 있습니다.');
-    } else if (confirmation?.kind === 'connect') {
-      setMappings((previous) => [
-        ...previous,
-        ...newPairs.map((pair) => ({ ...pair, id: nextMappingId.current++ })),
-      ]);
-      setNotice(
-        `연결 ${newPairs.length}개를 추가하고 기존 연결 ${pairs.length - newPairs.length}개는 건너뛰었습니다.`
-      );
+    const { id, key, ...values } = attribute;
+    const data = { ...values, unit: values.unit || null, description: values.description || null };
+    try {
+      const savedId = id
+        ? (await update.mutateAsync({ id, data })).targetId
+        : (await create.mutateAsync({ ...data, key })).id;
+      await relations.refetch();
+      setActiveAttribute(savedId);
+      setNewAttribute(false);
+      setEditorVersion((previous) => previous + 1);
+      setNotice(`“${attribute.displayName}” ${id ? '변경을 저장' : '속성을 등록'}했습니다.`);
+      return undefined;
+    } catch (error) {
+      return getErrorMessage(error);
     }
-    setConfirmation(null);
+  }
+  async function confirmAction() {
+    if (pending) return;
+    setActionError(null);
+    try {
+      if (confirmation?.kind === 'delete') {
+        await remove.mutateAsync(confirmation.ids);
+        setSelectedAttributes((previous) =>
+          previous.filter((id) => !confirmation.ids.includes(id))
+        );
+        setNotice('선택한 속성과 연결을 삭제했습니다.');
+      } else if (confirmation?.kind === 'unlink') {
+        await unlink.mutateAsync(confirmation.id);
+        setNotice('연결 1개를 해제했습니다. 공통 속성은 사전에 남아 있습니다.');
+      } else if (confirmation?.kind === 'connect') {
+        const items = newPairs.map((pair) => ({
+          ...pair,
+          value: (pairValues[`${pair.alcoholId}:${pair.attributeId}`] ?? '').trim(),
+        }));
+        for (const item of items) {
+          const attribute = attributes.find((a) => a.id === item.attributeId);
+          if (!attribute) throw new Error('속성을 다시 조회해 주세요.');
+          const error = valueError(attribute.datatype, item.value);
+          if (error) throw new Error(`${attribute.displayName}: ${error}`);
+        }
+        const result = items.length ? await link.mutateAsync(items) : { added: 0, skipped: 0 };
+        setPairValues({});
+        setNotice(
+          `연결 ${result.added}개를 추가하고 기존 연결 ${result.skipped + pairs.length - newPairs.length}개는 건너뛰었습니다.`
+        );
+      }
+      await relations.refetch();
+      setConfirmation(null);
+    } catch (error) {
+      setActionError(getErrorMessage(error));
+    }
   }
   function selectVisible(ids: number[], selected: number[], setSelected: (ids: number[]) => void) {
     const allSelected = ids.every((id) => selected.includes(id));
@@ -217,38 +298,25 @@ export function AlcoholAttributeVariantA() {
 
   return (
     <div className="flex min-w-0 flex-col gap-3 text-xs text-slate-800 [&_button]:text-xs [&_input]:text-xs [&_td]:text-xs [&_th]:text-xs">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-teal-200 bg-teal-50 px-4 py-2 text-xs text-teal-900">
-        <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded bg-teal-800 font-mono font-semibold text-white">
-            <SlidersHorizontal className="h-4 w-4" />
-          </span>
-          <strong>속성 관리</strong>
-          <span className="text-teal-700">디자인 시안 · 모의 데이터</span>
-        </div>
-        <span>변경은 현재 화면에서만 유지됩니다.</span>
-      </div>
-      <header className="flex flex-wrap items-end justify-between gap-3">
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white px-4 py-3">
         <div>
-          <p className="mb-1 text-[11px] font-medium tracking-[0.14em] text-slate-500">
-            BOTTLE NOTE / ATTRIBUTE WORKSPACE
-          </p>
-          <h1 className="text-xl font-bold tracking-tight">위스키 속성 관리</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            목록에서 빠르게 찾고, 선택한 항목을 한 번에 처리하세요.
+          <h1 className="text-lg font-semibold tracking-tight">위스키 속성 관리</h1>
+          <p className="mt-1 text-xs text-slate-500">
+            속성은 공통으로 정의하고, 값은 위스키마다 입력합니다.
           </p>
         </div>
-        <div className="flex gap-5 text-xs text-slate-500">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
           <span>
             공통 속성{' '}
-            <strong className="ml-1 font-mono text-base text-slate-800">{attributes.length}</strong>
+            <strong className="ml-1 font-mono text-sm text-slate-800">{attributes.length}</strong>
           </span>
           <span>
             전체 연결{' '}
-            <strong className="ml-1 font-mono text-base text-slate-800">{mappings.length}</strong>
+            <strong className="ml-1 font-mono text-sm text-slate-800">{mappings.length}</strong>
           </span>
           <span>
             미연결 속성{' '}
-            <strong className="ml-1 font-mono text-base text-amber-700">
+            <strong className="ml-1 font-mono text-sm text-amber-700">
               {attributes.filter((attribute) => linkedCount(attribute.id) === 0).length}
             </strong>
           </span>
@@ -278,7 +346,11 @@ export function AlcoholAttributeVariantA() {
           tools={
             <span className="flex items-center gap-1.5 text-xs text-slate-500">
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              {tab === 'graph' ? '조회 전용' : '목록 + 상세 패널'}
+              {tab === 'graph'
+                ? '술별 값과 연결 조회'
+                : tab === 'attributes'
+                  ? '이름 · 분류 · 값 형식'
+                  : '위스키 선택 · 값 입력'}
             </span>
           }
         />
@@ -289,14 +361,31 @@ export function AlcoholAttributeVariantA() {
         aria-labelledby={`tab-${tab}`}
         className="min-w-0"
       >
-        {tab === 'graph' ? (
+        {queryError ? (
+          <div role="alert" className="rounded border p-6">
+            {getErrorMessage(queryError)}
+            <Button
+              variant="outline"
+              onClick={() => {
+                void relations.refetch();
+                void currentQuery.refetch();
+              }}
+            >
+              다시 조회
+            </Button>
+          </div>
+        ) : loading ? (
+          <p role="status" className="p-8">
+            서버 데이터를 불러오는 중입니다.
+          </p>
+        ) : tab === 'graph' ? (
           <AttributeRelationshipGraph
             attributes={attributes}
-            alcohols={alcohols}
+            alcohols={connectedAlcohols}
             mappings={mappings}
           />
         ) : (
-          <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
+          <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
             <div className="min-w-0 overflow-hidden rounded-lg border bg-white">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b p-3">
                 <div className="flex items-center gap-2">
@@ -332,7 +421,7 @@ export function AlcoholAttributeVariantA() {
                     value={keyword}
                     onChange={(event) => updateParam('q', event.target.value)}
                     placeholder={
-                      tab === 'attributes' ? '속성 이름, 키, 값 검색' : '위스키 이름 또는 ID 검색'
+                      tab === 'attributes' ? '속성 이름 또는 키 검색' : '위스키 이름 검색'
                     }
                     className="bg-white pl-9 text-xs"
                   />
@@ -352,17 +441,7 @@ export function AlcoholAttributeVariantA() {
                     ))}
                   </select>
                 )}
-                <select
-                  aria-label="연결 상태 필터"
-                  value={connectionFilter}
-                  onChange={(event) => setConnectionFilter(event.target.value)}
-                  className={selectClass}
-                >
-                  <option value="ALL">전체 상태</option>
-                  <option value="EMPTY">미연결만</option>
-                  {tab === 'mappings' && <option value="LINKED">연결된 위스키</option>}
-                </select>
-                {(keyword || type !== 'ALL' || connectionFilter !== 'ALL') && (
+                {(keyword || type !== 'ALL') && (
                   <Button
                     size="icon"
                     variant="ghost"
@@ -373,11 +452,11 @@ export function AlcoholAttributeVariantA() {
                           const next = new URLSearchParams(previous);
                           next.delete('q');
                           next.delete('type');
+                          next.delete('page');
                           return next;
                         },
                         { replace: true }
                       );
-                      setConnectionFilter('ALL');
                     }}
                   >
                     <X />
@@ -446,6 +525,7 @@ export function AlcoholAttributeVariantA() {
                         size="sm"
                         variant="ghost"
                         className="text-red-700 hover:bg-red-50 hover:text-red-800"
+                        disabled={pending || selectedAttributes.length > 500}
                         onClick={() => setConfirmation({ kind: 'delete', ids: selectedAttributes })}
                       >
                         <Trash2 />
@@ -478,7 +558,7 @@ export function AlcoholAttributeVariantA() {
                     {tab === 'attributes' ? (
                       <>
                         <TableHead>분류</TableHead>
-                        <TableHead>값 · 조건</TableHead>
+                        <TableHead>값 형식 · 단위</TableHead>
                         <TableHead className="text-right">연결</TableHead>
                       </>
                     ) : (
@@ -535,8 +615,18 @@ export function AlcoholAttributeVariantA() {
                               {TYPE_LABELS[attribute.type]}
                             </span>
                           </TableCell>
-                          <TableCell className="whitespace-nowrap font-mono text-[11px] text-slate-600">
-                            {displayValue(attribute)}
+                          <TableCell className="whitespace-nowrap text-[11px] text-slate-600">
+                            <span className="rounded border bg-slate-50 px-1.5 py-0.5">
+                              {
+                                {
+                                  STRING: '문자',
+                                  INT: '정수',
+                                  DOUBLE: '소수',
+                                  BOOLEAN: '참 / 거짓',
+                                }[attribute.datatype]
+                              }
+                            </span>
+                            {attribute.unit ? ` · ${attribute.unit}` : ''}
                           </TableCell>
                           <TableCell className="text-right font-mono">
                             <span
@@ -604,6 +694,14 @@ export function AlcoholAttributeVariantA() {
                                           (attribute) => attribute.id === mapping.attributeId
                                         )?.displayName
                                       }
+                                      {(() => {
+                                        const attribute = attributes.find(
+                                          (a) => a.id === mapping.attributeId
+                                        );
+                                        return attribute
+                                          ? `: ${displayValue(attribute, mapping.value)}`
+                                          : '';
+                                      })()}
                                     </span>
                                   ))
                                 ) : (
@@ -622,8 +720,18 @@ export function AlcoholAttributeVariantA() {
                       <TableCell colSpan={6}>
                         <div className="flex flex-col items-center gap-2 py-12 text-slate-500">
                           <Filter className="h-6 w-6 text-slate-300" />
-                          <p className="font-medium">검색 조건에 맞는 항목이 없습니다.</p>
-                          <p>검색어와 필터를 바꿔 다시 찾아보세요.</p>
+                          <p className="font-medium">
+                            {!keyword && type === 'ALL'
+                              ? tab === 'attributes'
+                                ? '등록된 속성이 없습니다.'
+                                : '등록된 위스키가 없습니다.'
+                              : '검색 조건에 맞는 항목이 없습니다.'}
+                          </p>
+                          <p>
+                            {tab === 'attributes' && !keyword
+                              ? '속성 만들기로 공통 속성을 등록하세요.'
+                              : '검색어와 필터를 바꿔 다시 찾아보세요.'}
+                          </p>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -632,10 +740,26 @@ export function AlcoholAttributeVariantA() {
               </Table>
               <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-slate-50 px-4 py-3 text-[11px] text-slate-500">
                 <span>
-                  {visibleIds.length ? `1–${visibleIds.length}` : '0'} / {visibleIds.length}개 ·
-                  모의 목록 전체 표시
+                  {pageMeta?.totalElements ?? 0}개 · {page + 1}페이지
                 </span>
-                <span>이름을 클릭하면 오른쪽에 상세가 열립니다.</span>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page === 0}
+                    onClick={() => updateParam('page', String(page - 1))}
+                  >
+                    이전
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!pageMeta?.hasNext}
+                    onClick={() => updateParam('page', String(page + 1))}
+                  >
+                    다음
+                  </Button>
+                </div>
               </div>
             </div>
             <aside
@@ -646,9 +770,9 @@ export function AlcoholAttributeVariantA() {
                 newAttribute || active ? (
                   <>
                     <AttributeEditor
-                      key={`${newAttribute ? 'new' : activeAttribute}-${editorVersion}`}
+                      key={`${newAttribute ? 'new' : active?.id}-${editorVersion}`}
                       attribute={newAttribute ? emptyAttribute : active!}
-                      linkedCount={newAttribute ? 0 : linkedCount(activeAttribute)}
+                      linkedCount={newAttribute ? 0 : linkedCount(active?.id ?? 0)}
                       onSave={saveAttribute}
                       onCancel={() => {
                         setNewAttribute(false);
@@ -688,6 +812,9 @@ export function AlcoholAttributeVariantA() {
                                       ?.name
                                   }
                                 </span>
+                                <span className="text-xs">
+                                  {displayValue(active, mapping.value)}
+                                </span>
                                 <Button
                                   size="icon"
                                   variant="ghost"
@@ -726,7 +853,7 @@ export function AlcoholAttributeVariantA() {
                       </span>
                     </div>
                     <p className="text-xs leading-relaxed text-slate-300">
-                      왼쪽에서 위스키를 고르고 아래에서 속성을 선택하세요.
+                      위스키와 속성을 고른 뒤 검토 화면에서 각각의 값을 입력하세요.
                     </p>
                   </div>
                   <div className="border-b p-3">
@@ -797,7 +924,7 @@ export function AlcoholAttributeVariantA() {
                     <Button
                       className="w-full bg-teal-800 hover:bg-teal-900"
                       size="sm"
-                      disabled={!pairs.length || pairs.length > 500}
+                      disabled={pending || !pairs.length || pairs.length > 500}
                       onClick={() => setConfirmation({ kind: 'connect' })}
                     >
                       <Link2 />
@@ -813,22 +940,36 @@ export function AlcoholAttributeVariantA() {
                     </p>
                   </div>
                   <div className="p-3">
-                    <p className="mb-1 text-[10px] text-slate-500">선택 행의 현재 연결</p>
-                    <h3 className="text-sm font-semibold">{focusedAlcohol.name}</h3>
-                    <div className="mt-3 space-y-1">
+                    <p className="mb-1 text-[10px] text-slate-500">개별 값 편집</p>
+                    <h3 className="text-sm font-semibold">
+                      {focusedAlcohol?.name ?? '위스키를 선택하세요.'}
+                    </h3>
+                    <div className="mt-3 max-h-[45vh] space-y-2 overflow-y-auto">
                       {mappings
-                        .filter((mapping) => mapping.alcoholId === activeAlcohol)
+                        .filter((mapping) => mapping.alcoholId === currentAlcoholId)
                         .map((mapping) => (
                           <div
                             key={mapping.id}
-                            className="flex items-center justify-between rounded bg-slate-50 px-2 py-1"
+                            className="flex items-start gap-2 rounded-md border bg-white p-3"
                           >
-                            <span className="text-xs">
-                              {
-                                attributes.find((attribute) => attribute.id === mapping.attributeId)
-                                  ?.displayName
-                              }
-                            </span>
+                            {(() => {
+                              const attribute = attributes.find(
+                                (item) => item.id === mapping.attributeId
+                              );
+                              return (
+                                attribute && (
+                                  <MappingValueEditor
+                                    key={`${mapping.id}:${mapping.value}`}
+                                    attribute={attribute}
+                                    mapping={mapping}
+                                    onSave={async (value) => {
+                                      await mappingUpdate.mutateAsync({ id: mapping.id, value });
+                                      setNotice('선택한 위스키의 값을 저장했습니다.');
+                                    }}
+                                  />
+                                )
+                              );
+                            })()}
                             <Button
                               size="icon"
                               variant="ghost"
@@ -840,7 +981,7 @@ export function AlcoholAttributeVariantA() {
                             </Button>
                           </div>
                         ))}
-                      {!mappings.some((mapping) => mapping.alcoholId === activeAlcohol) && (
+                      {!mappings.some((mapping) => mapping.alcoholId === currentAlcoholId) && (
                         <p className="text-xs text-slate-500">
                           연결된 속성이 없습니다. 위스키를 체크해 첫 속성을 연결하세요.
                         </p>
@@ -866,15 +1007,24 @@ export function AlcoholAttributeVariantA() {
       </div>
       <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
         <CircleHelp className="h-3.5 w-3.5" />
-        속성은 공통 사전입니다. 값과 조건을 수정하면 연결된 모든 위스키가 같은 변경을 공유합니다.
+        속성 이름·분류·단위는 공통입니다. 값 변경은 선택한 위스키의 연결에만 적용됩니다.
       </p>
       <Dialog
         open={confirmation !== null}
         onOpenChange={(open) => {
-          if (!open) setConfirmation(null);
+          if (!open && !pending) {
+            setConfirmation(null);
+            setActionError(null);
+          }
         }}
       >
-        <DialogContent>
+        <DialogContent
+          className={
+            confirmation?.kind === 'connect'
+              ? 'max-h-[90vh] w-[94vw] overflow-y-auto sm:max-w-5xl'
+              : undefined
+          }
+        >
           <DialogHeader>
             <DialogTitle>
               {confirmation?.kind === 'delete'
@@ -892,25 +1042,104 @@ export function AlcoholAttributeVariantA() {
             </DialogDescription>
           </DialogHeader>
           {confirmation?.kind === 'connect' && (
-            <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border bg-slate-50 p-3 text-xs">
-              <p className="font-semibold">연결할 속성</p>
-              {attributes
-                .filter((attribute) => selectedAttributes.includes(attribute.id))
-                .map((attribute) => (
-                  <p key={attribute.id}>
-                    {attribute.displayName}
-                    <span className="ml-2 text-slate-500">{displayValue(attribute)}</span>
-                  </p>
-                ))}
+            <div className="max-h-[55vh] overflow-auto rounded-md border">
+              <table className="w-full min-w-[34rem] text-left text-xs">
+                <thead className="sticky top-0 z-10 bg-slate-100 text-slate-600">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">위스키</th>
+                    <th className="px-3 py-2 font-medium">속성</th>
+                    <th className="w-2/5 px-3 py-2 font-medium">연결할 값</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pairs.map((pair) => {
+                    const attribute = attributes.find((item) => item.id === pair.attributeId)!;
+                    const key = `${pair.alcoholId}:${pair.attributeId}`;
+                    const name =
+                      selectedAlcoholNames[pair.alcoholId] ??
+                      alcohols.find((item) => item.id === pair.alcoholId)?.name ??
+                      '이름 확인 필요';
+                    const existing = mappings.find(
+                      (item) =>
+                        item.alcoholId === pair.alcoholId && item.attributeId === pair.attributeId
+                    );
+                    return (
+                      <tr
+                        key={key}
+                        className={`border-t ${existing ? 'bg-slate-50 text-slate-500' : 'bg-white'}`}
+                      >
+                        <td className="px-3 py-2 align-top">
+                          <span className="block font-medium">{name}</span>
+                          <span className="font-mono text-[10px] text-slate-400">
+                            #{pair.alcoholId}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          <span className="block">{attribute.displayName}</span>
+                          <span className="text-[10px] text-slate-400">
+                            {attribute.datatype}
+                            {attribute.unit ? ` · ${attribute.unit}` : ''}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">
+                          {existing ? (
+                            <div>
+                              <span>{displayValue(attribute, existing.value)}</span>
+                              <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-[10px]">
+                                기존 값 유지
+                              </span>
+                            </div>
+                          ) : (
+                            <Input
+                              aria-label={`${name} · ${attribute.displayName} 값`}
+                              value={pairValues[key] ?? ''}
+                              disabled={pending}
+                              onChange={(event) =>
+                                setPairValues((previous) => ({
+                                  ...previous,
+                                  [key]: event.target.value,
+                                }))
+                              }
+                              className="h-8 bg-white font-mono text-xs"
+                              placeholder={
+                                attribute.datatype === 'BOOLEAN'
+                                  ? 'true 또는 false'
+                                  : attribute.unit
+                                    ? `${attribute.unit} 단위로 입력`
+                                    : '값 입력'
+                              }
+                            />
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
-          <p className="text-xs text-slate-500">디자인 시안의 모의 데이터에만 적용합니다.</p>
+          <p className="text-xs text-slate-500">확정하면 서버에 반영됩니다.</p>
+          {actionError && (
+            <p role="alert" className="text-xs text-red-700">
+              {actionError}
+            </p>
+          )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmation(null)}>
+            <Button
+              variant="outline"
+              disabled={pending}
+              onClick={() => {
+                setConfirmation(null);
+                setActionError(null);
+              }}
+            >
               취소
             </Button>
             <Button
               variant={confirmation?.kind === 'connect' ? 'default' : 'destructive'}
+              disabled={
+                pending || (confirmation?.kind === 'delete' && confirmation.ids.length > 500)
+              }
               onClick={confirmAction}
             >
               {confirmation?.kind === 'delete'

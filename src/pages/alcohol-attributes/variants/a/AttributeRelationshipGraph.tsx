@@ -1,144 +1,149 @@
 import { useMemo, useState } from 'react';
-import { RelationshipCanvas } from './RelationshipCanvas';
 import type { GraphData } from '@antv/g6';
 import { Network, Search } from 'lucide-react';
+import { RelationshipCanvas } from './RelationshipCanvas';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { type Attribute, type Mapping, type alcohols as AlcoholList } from './mock-data';
+import { displayValue, type Attribute, type Mapping, type AlcoholNode } from './attribute-model';
 
-type Selection = { kind: 'attribute' | 'alcohol'; id: number };
+const ALCOHOL_LIMIT = 100;
+const MAPPING_LIMIT = 500;
+const valueId = (mapping: Mapping) =>
+  `value-${JSON.stringify([mapping.attributeId, mapping.value])}`;
+// Stable, evenly spaced samples avoid changing the graph on unrelated rerenders.
+function sample<T>(items: T[], limit: number): T[] {
+  if (items.length <= limit) return items;
+  return Array.from({ length: limit }, (_, i) => items[Math.floor((i * items.length) / limit)]!);
+}
 
 export function AttributeRelationshipGraph({
-  attributes: dictionaryAttributes,
-  alcohols: availableAlcohols,
+  attributes,
+  alcohols,
   mappings,
 }: {
   attributes: Attribute[];
-  alcohols: typeof AlcoholList;
+  alcohols: AlcoholNode[];
   mappings: Mapping[];
 }) {
-  const attributes = useMemo(
-    () =>
-      dictionaryAttributes.filter((item) =>
-        mappings.some((mapping) => mapping.attributeId === item.id)
-      ),
-    [dictionaryAttributes, mappings]
-  );
-  const alcohols = useMemo(
-    () =>
-      availableAlcohols.filter((item) => mappings.some((mapping) => mapping.alcoholId === item.id)),
-    [availableAlcohols, mappings]
-  );
-  const [selection, setSelection] = useState<Selection | null>(null);
-  const [focusAlcoholId, setFocusAlcoholId] = useState<number | null>(alcohols[0]?.id ?? null);
   const [query, setQuery] = useState('');
-  const [onlyRelated, setOnlyRelated] = useState(false);
-  const selectedAttribute =
-    selection?.kind === 'attribute'
-      ? attributes.find((item) => item.id === selection.id)
-      : undefined;
-  const selectedAlcohol =
-    selection?.kind === 'alcohol' ? alcohols.find((item) => item.id === selection.id) : undefined;
-  const connections = mappings.filter((item) =>
-    selection?.kind === 'attribute'
-      ? item.attributeId === selection.id
-      : selection?.kind === 'alcohol' && item.alcoholId === selection.id
-  );
-  const relatedAttributeIds = new Set(connections.map((item) => item.attributeId));
-  const relatedAlcoholIds = new Set(connections.map((item) => item.alcoholId));
-  const search = query.trim().toLowerCase();
-  const matchesAttributes = attributes.filter((item) =>
-    `${item.displayName} ${item.key}`.toLowerCase().includes(search)
-  );
-  const matchesAlcohols = alcohols.filter((item) =>
-    `${item.name} ${item.english}`.toLowerCase().includes(search)
-  );
-  const matchingAttributeIds = new Set(matchesAttributes.map((item) => item.id));
-  const matchingAlcoholIds = new Set(matchesAlcohols.map((item) => item.id));
-  const searchConnections = mappings.filter(
-    (item) => matchingAttributeIds.has(item.attributeId) || matchingAlcoholIds.has(item.alcoholId)
-  );
-  const visibleAttributes = attributes.filter(
-    (item) =>
-      (focusAlcoholId === null ||
-        mappings.some(
-          (mapping) => mapping.alcoholId === focusAlcoholId && mapping.attributeId === item.id
-        )) &&
-      (!onlyRelated ||
-        !selection ||
-        selectedAttribute?.id === item.id ||
-        relatedAttributeIds.has(item.id)) &&
-      (!search ||
-        matchingAttributeIds.has(item.id) ||
-        searchConnections.some((mapping) => mapping.attributeId === item.id))
-  );
-  const visibleAlcohols = alcohols.filter(
-    (item) =>
-      (focusAlcoholId === null || item.id === focusAlcoholId) &&
-      (!onlyRelated ||
-        !selection ||
-        selectedAlcohol?.id === item.id ||
-        relatedAlcoholIds.has(item.id)) &&
-      (!search ||
-        matchingAlcoholIds.has(item.id) ||
-        searchConnections.some((mapping) => mapping.alcoholId === item.id))
-  );
-  const visibleMappings = mappings.filter(
-    (item) =>
-      visibleAttributes.some((attribute) => attribute.id === item.attributeId) &&
-      visibleAlcohols.some((alcohol) => alcohol.id === item.alcoholId)
-  );
-  const visibleKey = `${visibleAttributes.map((item) => item.id).join(',')}/${visibleAlcohols.map((item) => item.id).join(',')}/${visibleMappings.map((item) => item.id).join(',')}`;
-  const data: GraphData = useMemo(() => {
-    const [attributeIds = '', alcoholIds = '', mappingIds = ''] = visibleKey.split('/');
-    const includes = (ids: string, id: number) => ids.split(',').includes(String(id));
-    return {
+  const [attributeFilter, setAttributeFilter] = useState('all');
+  const [valueFilter, setValueFilter] = useState('');
+  const [selection, setSelection] = useState<string | null>(null);
+  const model = useMemo(() => {
+    const attributeById = new Map(attributes.map((a) => [a.id, a]));
+    const alcoholById = new Map(alcohols.map((a) => [a.id, a]));
+    const valid = mappings.filter(
+      (m) => attributeById.has(m.attributeId) && alcoholById.has(m.alcoholId) && m.value?.trim()
+    );
+    const search = query.trim().toLowerCase();
+    const valueSearch = valueFilter.trim().toLowerCase();
+    const filtered = valid.filter((m) => {
+      const a = attributeById.get(m.attributeId)!;
+      const alcohol = alcoholById.get(m.alcoholId)!;
+      return (
+        (attributeFilter === 'all' || m.attributeId === Number(attributeFilter)) &&
+        (!search ||
+          `${alcohol.name} ${alcohol.english} ${a.displayName} ${a.key}`
+            .toLowerCase()
+            .includes(search)) &&
+        (!valueSearch ||
+          m.value.toLowerCase().includes(valueSearch) ||
+          displayValue(a, m.value).toLowerCase().includes(valueSearch))
+      );
+    });
+    const allIds = new Set(valid.map((m) => m.alcoholId));
+    const filteredIds = [...new Set(filtered.map((m) => m.alcoholId))].sort((a, b) => a - b);
+    const sampledIds = new Set(sample(filteredIds, ALCOHOL_LIMIT));
+    const candidates = filtered
+      .filter((m) => sampledIds.has(m.alcoholId))
+      .sort((a, b) => a.id - b.id);
+    // Give each sampled whisky at least one edge before sampling the remaining edges.
+    const firstByAlcohol = new Map<number, Mapping>();
+    for (const m of candidates)
+      if (!firstByAlcohol.has(m.alcoholId)) firstByAlcohol.set(m.alcoholId, m);
+    const first = [...firstByAlcohol.values()];
+    const firstIds = new Set(first.map((m) => m.id));
+    const visible =
+      candidates.length <= MAPPING_LIMIT
+        ? candidates
+        : [
+            ...first,
+            ...sample(
+              candidates.filter((m) => !firstIds.has(m.id)),
+              MAPPING_LIMIT - first.length
+            ),
+          ].sort((a, b) => a.id - b.id);
+    const visibleAlcoholIds = new Set(visible.map((m) => m.alcoholId));
+    const groups = new Map<string, { id: string; attribute: Attribute; value: string }>();
+    for (const m of visible)
+      groups.set(valueId(m), {
+        id: valueId(m),
+        attribute: attributeById.get(m.attributeId)!,
+        value: m.value,
+      });
+    const visibleAlcohols = [...visibleAlcoholIds].map((id) => alcoholById.get(id)!);
+    const data: GraphData = {
       nodes: [
-        ...alcohols
-          .filter((item) => includes(alcoholIds, item.id))
-          .map((item) => ({
-            id: `alcohol-${item.id}`,
-            type: 'image',
-            data: { kind: 'alcohol' },
-            style: {
-              src: '/images/whisky-node.svg',
-              size: [64, 112] as [number, number],
-              labelText: item.name,
-              labelPlacement: 'bottom' as const,
-              labelFontSize: 12,
-              labelFill: '#79502f',
-              labelFontWeight: 600,
-            },
-          })),
-        ...attributes
-          .filter((item) => includes(attributeIds, item.id))
-          .map((item) => ({
-            id: `attribute-${item.id}`,
-            type: 'rect',
-            data: { kind: 'attribute' },
-            style: {
-              size: [144, 44] as [number, number],
-              radius: 10,
-              fill: '#edf1f6',
-              stroke: '#8796a9',
-              labelText: item.displayName,
-              labelPlacement: 'center' as const,
-              labelFontSize: 12,
-              labelFill: '#293341',
-            },
-          })),
-      ],
-      edges: mappings
-        .filter((item) => includes(mappingIds, item.id))
-        .map((item) => ({
-          id: `mapping-${item.id}`,
-          source: `alcohol-${item.alcoholId}`,
-          target: `attribute-${item.attributeId}`,
+        ...visibleAlcohols.map((a) => ({
+          id: `alcohol-${a.id}`,
+          type: 'image',
+          style: {
+            src: a.imageUrl || '/images/whisky-node.svg',
+            size: [48, 80] as [number, number],
+            labelText: a.name,
+            labelPlacement: 'bottom' as const,
+            labelFontSize: 13,
+            labelFill: '#79502f',
+          },
         })),
+        ...[...groups.values()].map((g) => ({
+          id: g.id,
+          type: 'rect',
+          style: {
+            size: [164, 52] as [number, number],
+            radius: 8,
+            fill: '#edf5f3',
+            stroke: '#89aaa1',
+            labelText: `${displayValue(g.attribute, g.value)}\n${g.attribute.displayName}`,
+            labelPlacement: 'center' as const,
+            labelFontSize: 13,
+            labelFill: '#25473f',
+          },
+        })),
+      ],
+      edges: visible.map((m) => ({
+        id: `mapping-${m.id}`,
+        source: `alcohol-${m.alcoholId}`,
+        target: valueId(m),
+      })),
     };
-  }, [visibleKey, attributes, alcohols, mappings]);
-  const choose = (next: Selection) => setSelection(next);
-
+    return {
+      attributeById,
+      alcoholById,
+      valid,
+      filtered,
+      allIds,
+      filteredIds,
+      visible,
+      visibleAlcohols,
+      groups,
+      data,
+    };
+  }, [attributes, alcohols, mappings, query, attributeFilter, valueFilter]);
+  const selectedGroup = selection ? model.groups.get(selection) : undefined;
+  const selectedAlcohol = selection?.startsWith('alcohol-')
+    ? model.visibleAlcohols.find((a) => `alcohol-${a.id}` === selection)
+    : undefined;
+  const connections = model.filtered.filter((m) =>
+    selectedGroup
+      ? valueId(m) === selectedGroup.id
+      : selectedAlcohol && m.alcoholId === selectedAlcohol.id
+  );
+  const sampled = model.visible.length < model.filtered.length;
+  const changeFilter = (set: (value: string) => void, value: string) => {
+    set(value);
+    setSelection(null);
+  };
   return (
     <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
       <div className="min-w-0 overflow-hidden rounded-lg border bg-white">
@@ -148,120 +153,117 @@ export function AttributeRelationshipGraph({
             <h2 className="font-semibold">속성과 위스키의 관계</h2>
             <span className="ml-auto text-xs text-slate-500">조회 전용</span>
           </div>
-          <p className="text-xs text-slate-600">
-            술병은 위스키, 사각형은 속성, 선은 연결입니다. 노드를 선택하면 관계를 강조합니다. 연결
-            변경은 ‘속성 연결’ 탭에서 진행하세요.
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="text-xs" htmlFor="graph-alcohol-focus">
-              중심 위스키
+
+          <div
+            role="group"
+            aria-label="관계 그래프 필터"
+            className="grid gap-2 rounded-md bg-slate-50 p-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+          >
+            <label className="min-w-0 space-y-1 text-[11px] text-slate-600">
+              위스키 · 속성 검색
+              <div className="relative">
+                <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" />
+                <Input
+                  aria-label="그래프 검색"
+                  value={query}
+                  onChange={(e) => changeFilter(setQuery, e.target.value)}
+                  placeholder="전체 데이터에서 검색"
+                  className="h-8 bg-white pl-7 text-xs"
+                />
+              </div>
             </label>
-            <select
-              id="graph-alcohol-focus"
-              className="h-8 rounded border bg-white px-2 text-xs"
-              value={focusAlcoholId ?? 'all'}
-              onChange={(event) => {
-                setFocusAlcoholId(event.target.value === 'all' ? null : Number(event.target.value));
-                setSelection(null);
-                setQuery('');
-                setOnlyRelated(false);
-              }}
-            >
-              <option value="all">전체 관계 보기</option>
-              {alcohols.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative min-w-48 flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <label className="min-w-0 space-y-1 text-[11px] text-slate-600">
+              속성
+              <select
+                aria-label="그래프 속성 필터"
+                value={attributeFilter}
+                onChange={(e) => changeFilter(setAttributeFilter, e.target.value)}
+                className="h-8 w-full rounded border bg-white px-2 text-xs"
+              >
+                <option value="all">모든 속성</option>
+                {attributes.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="min-w-0 space-y-1 text-[11px] text-slate-600">
+              값
               <Input
-                aria-label="그래프 검색"
-                placeholder="속성 또는 위스키 검색"
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setFocusAlcoholId(null);
-                  setSelection(null);
-                  setOnlyRelated(false);
-                }}
-                className="pl-9"
+                aria-label="속성 값 필터"
+                value={valueFilter}
+                onChange={(e) => changeFilter(setValueFilter, e.target.value)}
+                placeholder="예: 33,000"
+                className="h-8 bg-white text-xs"
               />
-            </div>
-            <label className="flex items-center gap-2 text-xs">
-              <input
-                type="checkbox"
-                checked={onlyRelated}
-                disabled={!selection}
-                onChange={(event) => setOnlyRelated(event.target.checked)}
-              />
-              선택한 항목과 연결만
             </label>
             <Button
               variant="outline"
               size="sm"
+              className="self-end"
               onClick={() => {
                 setQuery('');
-                setFocusAlcoholId(null);
+                setAttributeFilter('all');
+                setValueFilter('');
                 setSelection(null);
-                setOnlyRelated(false);
               }}
             >
               전체 보기
             </Button>
           </div>
           <p className="text-xs text-slate-600">
-            속성 {visibleAttributes.length}개 · 위스키 {visibleAlcohols.length}개 · 연결{' '}
-            {visibleMappings.length}개
+            전체 위스키 {model.allIds.size}개 · 연결 {model.valid.length}개 / 필터 결과 위스키{' '}
+            {model.filteredIds.length}개 · 연결 {model.filtered.length}개
+          </p>
+          <p role="status" className={`text-xs ${sampled ? 'text-amber-800' : 'text-slate-500'}`}>
+            표시: 위스키 {model.visibleAlcohols.length}개 · 속성 값 {model.groups.size}개 · 연결{' '}
+            {model.visible.length}개
+            {sampled &&
+              ' · 샘플 표시 중 (최대 위스키 100개·연결 500개). 필터는 전체 데이터에 적용됩니다.'}
           </p>
         </div>
         <div className="overflow-hidden bg-slate-50/60 p-2">
-          {!visibleAttributes.length && !visibleAlcohols.length ? (
+          {!model.visible.length ? (
             <p className="p-10 text-center text-xs text-slate-500">표시할 연결이 없습니다.</p>
           ) : (
             <RelationshipCanvas
-              data={data}
-              focusId={focusAlcoholId === null ? null : `alcohol-${focusAlcoholId}`}
-              selectedId={selection ? `${selection.kind}-${selection.id}` : null}
-              onSelect={(id) => {
-                const [kind, value] = id.split('-');
-                if (kind === 'alcohol' || kind === 'attribute') choose({ kind, id: Number(value) });
-              }}
+              data={model.data}
+              focusId={null}
+              selectedId={selectedGroup || selectedAlcohol ? selection : null}
+              onSelect={setSelection}
             />
           )}
         </div>
+        <p className="sr-only" role="status">
+          {selectedGroup
+            ? `${selectedGroup.attribute.displayName} ${displayValue(selectedGroup.attribute, selectedGroup.value)}`
+            : (selectedAlcohol?.name ?? '선택 없음')}{' '}
+          · 연결 {connections.length}개
+        </p>
         <details className="border-t p-3 text-xs">
           <summary className="cursor-pointer text-slate-600">노드 목록으로 탐색</summary>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {attributes.map((item) => (
+          <div className="mt-2 flex max-h-48 flex-wrap gap-2 overflow-auto">
+            {[...model.groups.values()].map((g) => (
               <button
-                key={`a-${item.id}`}
-                type="button"
-                aria-label={`속성: ${item.displayName}`}
-                className="rounded border px-2 py-1"
-                onClick={() => {
-                  setFocusAlcoholId(null);
-                  choose({ kind: 'attribute', id: item.id });
-                }}
+                key={g.id}
+                aria-pressed={selection === g.id}
+                aria-label={`속성: ${g.attribute.displayName} · ${displayValue(g.attribute, g.value)}`}
+                className="rounded border px-2 py-1 text-left focus-visible:ring-2 focus-visible:ring-teal-700 aria-pressed:border-teal-700 aria-pressed:bg-teal-50 aria-pressed:text-teal-900"
+                onClick={() => setSelection(g.id)}
               >
-                {item.displayName}
+                {g.attribute.displayName} · {displayValue(g.attribute, g.value)}
               </button>
             ))}
-            {alcohols.map((item) => (
+            {model.visibleAlcohols.map((a) => (
               <button
-                key={`w-${item.id}`}
-                type="button"
-                aria-label={`위스키: ${item.name}`}
-                className="rounded border px-2 py-1"
-                onClick={() => {
-                  setFocusAlcoholId(item.id);
-                  choose({ kind: 'alcohol', id: item.id });
-                }}
+                key={a.id}
+                aria-pressed={selection === `alcohol-${a.id}`}
+                aria-label={`위스키: ${a.name}`}
+                className="rounded border px-2 py-1 focus-visible:ring-2 focus-visible:ring-teal-700 aria-pressed:border-teal-700 aria-pressed:bg-teal-50 aria-pressed:text-teal-900"
+                onClick={() => setSelection(`alcohol-${a.id}`)}
               >
-                {item.name}
+                {a.name}
               </button>
             ))}
           </div>
@@ -271,66 +273,55 @@ export function AttributeRelationshipGraph({
         aria-label="그래프 상세"
         className="min-w-0 rounded-lg border bg-white p-3 lg:sticky lg:top-3"
       >
-        {selectedAttribute || selectedAlcohol ? (
+        {selectedGroup || selectedAlcohol ? (
           <>
-            <p className="text-xs text-teal-800">{selectedAttribute ? '공통 속성' : '위스키'}</p>
-            <h3 className="mt-2 break-words text-xs font-semibold">
-              {selectedAttribute?.displayName ?? selectedAlcohol?.name}
+            <p className="text-xs text-teal-800">{selectedGroup ? '속성 값' : '위스키'}</p>
+            <h3 className="mt-2 break-words text-sm font-semibold">
+              {selectedGroup?.attribute.displayName ?? selectedAlcohol?.name}
             </h3>
-            {selectedAttribute && (
+            {selectedGroup && (
               <>
-                <p className="mt-2 break-all font-mono text-xs text-slate-500">
-                  {selectedAttribute.key}
+                <p className="mt-2 break-all font-mono text-lg font-semibold text-teal-900">
+                  {displayValue(selectedGroup.attribute, selectedGroup.value)}
                 </p>
-                <p className="mt-3 text-xs">
-                  {selectedAttribute.value} {selectedAttribute.unit} ·{' '}
-                  {selectedAttribute.operator === 'GTE' ? '이상 (≥)' : '같음 (=)'}
-                </p>
-                <p className="mt-2 whitespace-pre-wrap break-words text-xs text-slate-600">
-                  {selectedAttribute.description}
+                <p className="mt-2 whitespace-pre-wrap text-xs text-slate-500">
+                  {selectedGroup.attribute.description}
                 </p>
               </>
             )}
-            {selectedAlcohol && (
-              <p className="mt-2 text-xs text-slate-600">
-                {selectedAlcohol.region} · {selectedAlcohol.category}
-              </p>
-            )}
             <h4 className="mb-2 mt-3 border-t pt-3 text-xs font-semibold">
-              {selectedAttribute ? '연결된 위스키' : '연결된 속성'} {connections.length}개
+              {selectedGroup ? '이 값에 연결된 위스키' : '연결된 속성 값'} {connections.length}개
             </h4>
-            <div className="space-y-2">
-              {connections.map((item) => {
-                const label = selectedAttribute
-                  ? alcohols.find((alcohol) => alcohol.id === item.alcoholId)?.name
-                  : attributes.find((attribute) => attribute.id === item.attributeId)?.displayName;
+            <p className="mb-2 text-[11px] text-slate-500">현재 필터 결과 기준 · 최대 100건 표시</p>
+            <div className="max-h-[45vh] space-y-2 overflow-y-auto">
+              {connections.slice(0, 100).map((m) => {
+                const a = model.attributeById.get(m.attributeId)!;
+                const label = selectedGroup
+                  ? model.alcoholById.get(m.alcoholId)!.name
+                  : a.displayName;
+                const target = selectedGroup ? `alcohol-${m.alcoholId}` : valueId(m);
+                const visible = model.data.nodes!.some((n) => n.id === target);
                 return (
                   <button
-                    key={item.id}
-                    type="button"
-                    className="block w-full rounded border px-3 py-2 text-left text-xs hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-teal-700"
-                    onClick={() =>
-                      choose(
-                        selectedAttribute
-                          ? { kind: 'alcohol', id: item.alcoholId }
-                          : { kind: 'attribute', id: item.attributeId }
-                      )
-                    }
+                    key={m.id}
+                    aria-label={label}
+                    disabled={!visible}
+                    className="block w-full rounded border px-3 py-2 text-left text-xs hover:bg-teal-50 disabled:opacity-60"
+                    onClick={() => setSelection(target)}
                   >
-                    {label}
+                    <span>{label}</span>
+                    <span className="ml-2 text-slate-500">
+                      {displayValue(a, m.value)}
+                      {!visible && ' · 샘플 밖'}
+                    </span>
                   </button>
                 );
               })}
             </div>
-            {!connections.length && (
-              <p className="text-xs text-slate-500">
-                {selectedAttribute ? '연결된 위스키가 없습니다.' : '연결된 속성이 없습니다.'}
-              </p>
-            )}
           </>
         ) : (
           <p className="text-xs leading-5 text-slate-500">
-            그래프에서 속성이나 위스키를 선택하세요. 연결 목록과 공통 정의를 여기에서 확인합니다.
+            술병이나 속성 값을 선택하세요. 필터를 바꾸기 전까지 전체 표시 범위는 유지됩니다.
           </p>
         )}
       </aside>

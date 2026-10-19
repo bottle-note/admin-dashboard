@@ -7,52 +7,26 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertTriangle, Check, LockKeyhole, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { type Attribute, TYPE_LABELS } from './mock-data';
+import { type Attribute, TYPE_LABELS } from './attribute-model';
 
-const schema = z
-  .object({
-    key: z
-      .string()
-      .trim()
-      .regex(/^[a-z][a-z0-9_]{0,63}$/, '소문자로 시작하는 영문·숫자·밑줄 64자 이내로 입력하세요.'),
-    displayName: z.string().trim().min(1, '속성 이름을 입력하세요.').max(100),
-    type: z.enum(['KEYWORD', 'PRICE', 'POPULARITY', 'FLAG', 'IDENTITY', 'NOTE']),
-    datatype: z.enum(['STRING', 'INT', 'DOUBLE', 'BOOLEAN']),
-    operator: z.enum(['EQ', 'GTE']),
-    value: z.string().trim().min(1, '값을 입력하세요.').max(255),
-    unit: z.string().trim().max(20),
-    description: z.string().trim().max(500),
-  })
-  .superRefine((data, context) => {
-    const numeric = data.datatype === 'INT' || data.datatype === 'DOUBLE';
-    if (data.operator === 'GTE' && !numeric)
-      context.addIssue({
-        code: 'custom',
-        path: ['operator'],
-        message: '이상 조건은 숫자 형식에서만 사용합니다.',
-      });
-    if (data.datatype === 'INT' && !/^-?\d+$/.test(data.value))
-      context.addIssue({ code: 'custom', path: ['value'], message: '정수를 입력하세요.' });
-    if (data.datatype === 'DOUBLE' && !/^-?\d+(\.\d{1,6})?$/.test(data.value))
-      context.addIssue({
-        code: 'custom',
-        path: ['value'],
-        message: '소수점 6자리 이내 숫자를 입력하세요.',
-      });
-    if (data.datatype === 'BOOLEAN' && !['true', 'false'].includes(data.value))
-      context.addIssue({
-        code: 'custom',
-        path: ['value'],
-        message: 'true 또는 false를 입력하세요.',
-      });
-  });
+const schema = z.object({
+  key: z
+    .string()
+    .trim()
+    .regex(/^[a-z][a-z0-9_]{0,63}$/, '소문자로 시작하는 영문·숫자·밑줄 64자 이내로 입력하세요.'),
+  displayName: z.string().trim().min(1, '속성 이름을 입력하세요.').max(100),
+  type: z.enum(['KEYWORD', 'PRICE', 'POPULARITY', 'FLAG', 'IDENTITY', 'NOTE']),
+  datatype: z.enum(['STRING', 'INT', 'DOUBLE', 'BOOLEAN']),
+  unit: z.string().trim().max(20),
+  description: z.string().trim().max(500),
+});
 
 type FormValues = z.infer<typeof schema>;
 const selectClass =
@@ -66,19 +40,17 @@ export function AttributeEditor({
 }: {
   attribute: Attribute;
   linkedCount: number;
-  onSave: (attribute: Attribute) => string | undefined;
+  onSave: (attribute: Attribute) => Promise<string | undefined>;
   onCancel: () => void;
 }) {
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [preview, setPreview] = useState<Attribute | null>(null);
   const {
     register,
     handleSubmit,
-    control,
-    setError,
     formState: { errors, isDirty },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: attribute });
-  const datatype = useWatch({ control, name: 'datatype' });
-  const numeric = datatype === 'INT' || datatype === 'DOUBLE';
   return (
     <form
       className="flex flex-col [&_button]:h-7 [&_button]:text-xs [&_input]:h-7 [&_input]:text-xs [&_input]:md:text-xs"
@@ -134,38 +106,35 @@ export function AttributeEditor({
           </label>
           <label className="space-y-1 text-xs font-medium">
             값 형식
-            <select {...register('datatype')} className={selectClass}>
-              <option value="STRING">문자</option>
-              <option value="INT">정수</option>
-              <option value="DOUBLE">소수</option>
-              <option value="BOOLEAN">참 / 거짓</option>
+            <select
+              {...register('datatype')}
+              className={selectClass}
+              aria-disabled={linkedCount > 0}
+            >
+              <option disabled={linkedCount > 0 && attribute.datatype !== 'STRING'} value="STRING">
+                문자
+              </option>
+              <option disabled={linkedCount > 0 && attribute.datatype !== 'INT'} value="INT">
+                정수
+              </option>
+              <option disabled={linkedCount > 0 && attribute.datatype !== 'DOUBLE'} value="DOUBLE">
+                소수
+              </option>
+              <option
+                disabled={linkedCount > 0 && attribute.datatype !== 'BOOLEAN'}
+                value="BOOLEAN"
+              >
+                참 / 거짓
+              </option>
             </select>
           </label>
         </div>
-        <div className="grid grid-cols-[1fr_80px] gap-3">
-          <label className="space-y-1 text-xs font-medium">
-            값 <span className="text-rose-600">*</span>
-            <Input
-              {...register('value')}
-              placeholder={datatype === 'BOOLEAN' ? 'true 또는 false' : '속성이 갖는 값'}
-            />
-          </label>
-          <label className="space-y-1 text-xs font-medium">
-            단위
-            <Input {...register('unit')} placeholder="원, 점" maxLength={20} />
-          </label>
-        </div>
         <label className="block space-y-1 text-xs font-medium">
-          비교 조건
-          <select {...register('operator')} className={selectClass}>
-            <option value="EQ">같음 (=)</option>
-            <option value="GTE" disabled={!numeric}>
-              이상 (≥) · 숫자만
-            </option>
-          </select>
+          단위
+          <Input {...register('unit')} placeholder="원, 점" maxLength={20} />
         </label>
-        <p className="-mt-2 text-[11px] leading-relaxed text-muted-foreground">
-          조건에 맞는 위스키가 자동으로 연결되지는 않습니다.
+        <p className="text-xs text-muted-foreground">
+          값은 위스키를 연결할 때 입력합니다. 연결된 속성의 값 형식은 변경할 수 없습니다.
         </p>
         <label className="block space-y-1 text-xs font-medium">
           설명
@@ -210,7 +179,7 @@ export function AttributeEditor({
       <Dialog
         open={preview !== null}
         onOpenChange={(open) => {
-          if (!open) setPreview(null);
+          if (!open && !saving) setPreview(null);
         }}
       >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -238,20 +207,12 @@ export function AttributeEditor({
                         ['key', '고유 키'],
                         ['type', '분류'],
                         ['datatype', '값 형식'],
-                        ['operator', '비교 조건'],
-                        ['value', '값'],
                         ['unit', '단위'],
                         ['description', '설명'],
                       ] as const
                     ).map(([field, label]) => {
                       const format = (item: Attribute) =>
-                        field === 'type'
-                          ? TYPE_LABELS[item.type]
-                          : field === 'operator'
-                            ? item.operator === 'GTE'
-                              ? '이상 (≥)'
-                              : '같음 (=)'
-                            : item[field] || '없음';
+                        field === 'type' ? TYPE_LABELS[item.type] : item[field] || '없음';
                       const changed = !attribute.id || attribute[field] !== preview[field];
                       return (
                         <tr key={field} className={`border-t ${changed ? 'bg-teal-50' : ''}`}>
@@ -278,17 +239,32 @@ export function AttributeEditor({
                   따른 자동 연결은 없습니다.
                 </p>
               </div>
+              {saveError && (
+                <p role="alert" className="text-xs text-red-700">
+                  {saveError}
+                </p>
+              )}
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setPreview(null)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={() => setPreview(null)}
+                >
                   다시 편집
                 </Button>
                 <Button
                   type="button"
-                  onClick={() => {
-                    const error = onSave(preview);
-                    if (error) {
-                      setPreview(null);
-                      setError('root', { message: error });
+                  disabled={saving}
+                  onClick={async () => {
+                    setSaving(true);
+                    setSaveError(null);
+                    try {
+                      const error = await onSave(preview);
+                      if (error) setSaveError(error);
+                      else setPreview(null);
+                    } finally {
+                      setSaving(false);
                     }
                   }}
                 >
