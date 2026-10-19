@@ -7,6 +7,8 @@ import {
   type GraphData,
   type NodeData,
   type IPointerEvent,
+  type IElementEvent,
+  type ElementDatum,
 } from '@antv/g6';
 import { relationshipStates } from './relationship-states';
 import { Button } from '@/components/ui/button';
@@ -15,7 +17,9 @@ export function RelationshipCanvas({
   data,
   selectedId,
   onSelect,
+  expanded = false,
 }: {
+  expanded?: boolean;
   data: GraphData;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
@@ -72,28 +76,44 @@ export function RelationshipCanvas({
         velocityDecay: 0.4,
       },
       node: {
-        type: (node) => (node.type === 'image' ? 'image' : 'circle'),
+        type: (node) => (node.type === 'image' ? 'image' : 'rect'),
         // Reserve collision space for expanded nodes, but keep the overview compact.
         style: {
           size: (node) => {
             if (node.type === 'image') {
               const scale = Math.min(2, Math.max(1, 0.7 / (graphRef.current?.getZoom() ?? 1)));
-              return [48 * scale, 80 * scale];
+              return [36 * scale, 64 * scale];
             }
-            return Math.min(32, 7 / (graphRef.current?.getZoom() ?? 1));
+            return isEmphasized(node.id) || (graphRef.current?.getZoom() ?? 1) >= 0.55
+              ? [124, 30]
+              : [40, 14];
           },
-          fill: (node) => (node.type === 'image' ? '#b77945' : '#5a9c8c'),
-          labelPlacement: 'bottom',
+          fill: (node) => node.style?.fill ?? '#edf5f3',
+          stroke: (node) => node.style?.stroke ?? '#89aaa1',
+          radius: 15,
+          labelPlacement: (node) => (node.type === 'image' ? 'bottom' : 'center'),
           labelPointerEvents: 'none',
+          labelWordWrap: true,
+          labelMaxWidth: (node) => (node.type === 'image' ? 160 : 108),
+          labelMaxLines: (node) => (node.type === 'image' ? 2 : 1),
+          labelTextOverflow: '…',
           labelText: (node) => {
             const label = labels.get(node.id) ?? '';
-            return showDetail(node.id) ? label : '';
+            const visible =
+              node.type === 'image'
+                ? showDetail(node.id)
+                : isEmphasized(node.id) || (graphRef.current?.getZoom() ?? 1) >= 0.55;
+            return visible ? label : '';
           },
           labelFontSize: (node) =>
-            Math.max(13, (isEmphasized(node.id) ? 13 : 9) / (graphRef.current?.getZoom() ?? 1)),
+            node.type === 'image'
+              ? Math.max(13, (isEmphasized(node.id) ? 13 : 9) / (graphRef.current?.getZoom() ?? 1))
+              : 12,
           labelLineHeight: (node) =>
-            Math.max(17, (isEmphasized(node.id) ? 17 : 12) / (graphRef.current?.getZoom() ?? 1)),
-          labelBackground: (node) => isEmphasized(node.id),
+            node.type === 'image'
+              ? Math.max(17, (isEmphasized(node.id) ? 17 : 12) / (graphRef.current?.getZoom() ?? 1))
+              : 16,
+          labelBackground: (node) => node.type === 'image' && isEmphasized(node.id),
           labelBackgroundFill: '#ffffff',
           labelBackgroundRadius: 3,
           labelPadding: [3, 5],
@@ -105,7 +125,7 @@ export function RelationshipCanvas({
           lineWidth: 1,
         },
         state: {
-          normal: { opacity: 1, halo: false, lineWidth: 1, stroke: '#89aaa1' },
+          normal: { opacity: 1, halo: false, lineWidth: 1 },
           chosen: {
             opacity: 1,
             halo: true,
@@ -115,8 +135,8 @@ export function RelationshipCanvas({
             stroke: '#0f766e',
             lineWidth: 2,
           },
-          related: { opacity: 1, halo: false, lineWidth: 1, stroke: '#89aaa1' },
-          muted: { opacity: 0.3, halo: false, lineWidth: 1, stroke: '#89aaa1' },
+          related: { opacity: 1, halo: false, lineWidth: 1 },
+          muted: { opacity: 0.3, halo: false, lineWidth: 1 },
           hovered: {
             opacity: 1,
             halo: true,
@@ -136,6 +156,23 @@ export function RelationshipCanvas({
           muted: { stroke: '#94a3b8', lineWidth: 1, opacity: 0.06 },
         },
       },
+      plugins: [
+        {
+          type: 'tooltip',
+          enable: (_event: IElementEvent, items: ElementDatum[]) =>
+            items.some((item) => labels.has(item.id ?? '')),
+          getContent: async (_event: IElementEvent, items: ElementDatum[]) => {
+            const content = document.createElement('div');
+            content.style.cssText =
+              'max-width:280px;white-space:pre-wrap;overflow-wrap:anywhere;padding:4px 6px;line-height:1.6';
+            const node = items[0];
+            content.textContent = node
+              ? String(node.data?.detailLabel ?? labels.get(node.id ?? '') ?? '')
+              : '';
+            return content;
+          },
+        },
+      ],
       behaviors: ['drag-canvas', 'zoom-canvas', { type: 'drag-element-force', fixed: false }],
     });
     graphRef.current = graph;
@@ -326,7 +363,11 @@ export function RelationshipCanvas({
         ref={containerRef}
         role="img"
         aria-label="G6 위스키 중심 속성 관계 그래프"
-        className="h-[clamp(280px,calc(100dvh-490px),560px)] w-full"
+        className={
+          expanded
+            ? 'h-[calc(100dvh-270px)] min-h-80 w-full'
+            : 'h-[max(440px,calc(100dvh-480px))] w-full'
+        }
       />
     </div>
   );

@@ -90,7 +90,7 @@ describe('관계 그래프 탐색', () => {
     view.rerender(<RelationshipCanvas data={data} selectedId="value" onSelect={() => {}} />);
     expect(label.call({} as never, node)).toBe('77 점\n대중성');
   });
-  it('축소해도 위스키는 이미지로 유지하고 속성 값만 점으로 표시한다', async () => {
+  it('축소해도 위스키는 이미지로 유지하고 속성 값은 캡슐로 표시한다', async () => {
     const whisky: NodeData = { id: 'alcohol-1', type: 'image' };
     render(
       <RelationshipCanvas
@@ -103,9 +103,9 @@ describe('관계 그래프 탐색', () => {
     const type = engine.options.node?.type;
     if (typeof type !== 'function') throw new Error('Dynamic node type required');
     expect(type.call({} as never, whisky)).toBe('image');
-    expect(type.call({} as never, node)).toBe('circle');
+    expect(type.call({} as never, node)).toBe('rect');
   });
-  it('속성을 선택해도 점의 모양을 교체하거나 강조 전에 전체를 다시 그리지 않는다', async () => {
+  it('속성을 선택해도 캡슐의 종류를 교체하거나 강조 전에 전체를 다시 그리지 않는다', async () => {
     const view = render(<RelationshipCanvas data={data} selectedId={null} onSelect={() => {}} />);
     await waitFor(() => expect(engine.states).toHaveBeenCalled());
     engine.draw.mockClear();
@@ -114,7 +114,7 @@ describe('관계 그래프 탐색', () => {
     await waitFor(() => expect(engine.states).toHaveBeenCalled());
     const type = engine.options.node?.type;
     if (typeof type !== 'function') throw new Error('Dynamic node type required');
-    expect(type.call({} as never, node)).toBe('circle');
+    expect(type.call({} as never, node)).toBe('rect');
     expect(engine.draw).not.toHaveBeenCalled();
     expect(engine.states).toHaveBeenLastCalledWith({ value: ['chosen'] }, false);
   });

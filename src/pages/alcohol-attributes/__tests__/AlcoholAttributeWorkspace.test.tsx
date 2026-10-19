@@ -128,6 +128,25 @@ beforeEach(() => {
 });
 
 describe('속성 관리 통합 화면', () => {
+  it('그래프 상세는 선택 후 표시하고 접어도 선택을 유지한다', async () => {
+    const user = await renderPage();
+    await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
+    expect(screen.queryByRole('complementary', { name: '그래프 상세' })).not.toBeInTheDocument();
+    await user.click(screen.getByText('노드 목록으로 탐색'));
+    await user.click(screen.getByRole('button', { name: '속성: 선물용 · gift' }));
+    expect(screen.getByRole('complementary', { name: '그래프 상세' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '상세 접기' }));
+    expect(screen.queryByRole('complementary', { name: '그래프 상세' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '속성: 선물용 · gift' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await user.click(screen.getByRole('button', { name: '상세 보기' }));
+    expect(
+      within(screen.getByRole('complementary', { name: '그래프 상세' })).getByText('선물용')
+    ).toBeInTheDocument();
+  });
+
   it('후속 페이지와 전체 연결 조회를 기다리지 않고 속성 목록을 표시한다', async () => {
     const reads = vi.fn();
     server.use(

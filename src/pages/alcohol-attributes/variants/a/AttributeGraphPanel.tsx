@@ -61,42 +61,45 @@ export function AttributeGraphPanel() {
   }, [query.data, definitions.data, selectedDefinition]);
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2 rounded border bg-white p-2">
-        <Input
-          aria-label="그래프 속성 선택지 검색"
-          placeholder="속성 선택지 검색"
-          value={optionSearch}
-          className="h-8 max-w-xs"
-          onChange={(event) => {
-            setOptionSearch(event.target.value);
-            setOptionPage(0);
-          }}
-        />
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={optionPage === 0}
-          onClick={() => setOptionPage((p) => p - 1)}
-        >
-          속성 이전
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={!definitions.data?.meta.hasNext}
-          onClick={() => setOptionPage((p) => p + 1)}
-        >
-          속성 다음
-        </Button>
-        {definitions.error && (
-          <span role="alert">
-            속성 선택지 조회 실패{' '}
-            <Button size="sm" variant="ghost" onClick={() => void definitions.refetch()}>
-              다시 조회
-            </Button>
-          </span>
-        )}
-      </div>
+      <details className="rounded border bg-white px-3 py-2 text-xs">
+        <summary className="cursor-pointer text-slate-500">속성 선택지 검색</summary>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Input
+            aria-label="그래프 속성 선택지 검색"
+            placeholder="속성 선택지 검색"
+            value={optionSearch}
+            className="h-8 max-w-xs"
+            onChange={(event) => {
+              setOptionSearch(event.target.value);
+              setOptionPage(0);
+            }}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={optionPage === 0}
+            onClick={() => setOptionPage((p) => p - 1)}
+          >
+            속성 이전
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!definitions.data?.meta.hasNext}
+            onClick={() => setOptionPage((p) => p + 1)}
+          >
+            속성 다음
+          </Button>
+          {definitions.error && (
+            <span role="alert">
+              속성 선택지 조회 실패{' '}
+              <Button size="sm" variant="ghost" onClick={() => void definitions.refetch()}>
+                다시 조회
+              </Button>
+            </span>
+          )}
+        </div>
+      </details>
       {query.error && (
         <div role="alert">
           {getErrorMessage(query.error)}{' '}
