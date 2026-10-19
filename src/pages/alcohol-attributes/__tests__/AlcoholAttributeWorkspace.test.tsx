@@ -372,3 +372,99 @@ describe('속성 관리 통합 화면', () => {
     expect(screen.getByRole('button', { name: '속성: 선물용 · gift' })).toBeInTheDocument();
   });
 });
+
+it('연결 여부와 선택한 속성으로 서버 목록을 검색하고 초기화한다', async () => {
+  const requests: URLSearchParams[] = [];
+  server.use(
+    http.get(`${base}/alcohols`, ({ request }) => {
+      const params = new URL(request.url).searchParams;
+      if (params.get('size') === '20') requests.push(params);
+      const items = (params.get('key') ? alcohols.slice(0, 1) : alcohols.slice(0, 2)).map((a) => ({
+        alcoholId: a.id,
+        korName: a.name,
+        engName: a.english,
+        korCategory: a.category,
+        imageUrl: null,
+        attributes: [],
+      }));
+      return HttpResponse.json({
+        ...wrap(items),
+        meta: {
+          page: Number(params.get('page') ?? 0),
+          size: 20,
+          totalElements: 21,
+          totalPages: 2,
+          hasNext: Number(params.get('page') ?? 0) === 0,
+        },
+      });
+    })
+  );
+  const user = await renderPage();
+  await user.click(screen.getByRole('tab', { name: '속성 연결' }));
+  await user.click(screen.getByRole('checkbox', { name: `${alcohols[0]!.name} 선택` }));
+  await user.click(screen.getByRole('checkbox', { name: '연결된 것만 보기' }));
+  await waitFor(() => expect(requests[requests.length - 1]?.get('page')).toBe('0'));
+  await user.click(screen.getByRole('button', { name: '다음' }));
+  await waitFor(() => expect(requests[requests.length - 1]?.get('page')).toBe('1'));
+  await user.selectOptions(screen.getByRole('combobox', { name: '연결된 속성 필터' }), 'gift');
+  await waitFor(() => expect(requests[requests.length - 1]?.get('key')).toBe('gift'));
+  expect(requests[requests.length - 1]?.get('page')).toBe('0');
+  expect(screen.getByRole('checkbox', { name: `${alcohols[0]!.name} 선택` })).toBeChecked();
+  expect(
+    screen.queryByRole('checkbox', { name: `${alcohols[1]!.name} 선택` })
+  ).not.toBeInTheDocument();
+  await user.type(screen.getByRole('textbox', { name: '위스키 검색' }), '맥');
+  await waitFor(() => expect(requests[requests.length - 1]?.get('keyword')).toBe('맥'));
+  expect(requests[requests.length - 1]?.get('key')).toBe('gift');
+  await user.click(screen.getByRole('button', { name: '필터 초기화' }));
+  expect(screen.getByRole('checkbox', { name: '연결된 것만 보기' })).not.toBeChecked();
+  expect(screen.getByRole('combobox', { name: '연결된 속성 필터' })).toHaveValue('');
+  expect(
+    await screen.findByRole('checkbox', { name: `${alcohols[1]!.name} 선택` })
+  ).toBeInTheDocument();
+  await user.selectOptions(screen.getByRole('combobox', { name: '연결된 속성 필터' }), 'gift');
+  expect(screen.getByRole('checkbox', { name: '연결된 것만 보기' })).toBeChecked();
+  await user.click(screen.getByRole('checkbox', { name: '연결된 것만 보기' }));
+  expect(screen.getByRole('combobox', { name: '연결된 속성 필터' })).toHaveValue('');
+});
+
+it('분류·값·비교·제외 속성을 서버 조건으로 전달하고 잘못된 GTE 조합을 막는다', async () => {
+  const requests: URLSearchParams[] = [];
+  server.use(
+    http.get(`${base}/alcohols`, ({ request }) => {
+      const params = new URL(request.url).searchParams;
+      if (params.get('size') === '20') requests.push(params);
+      return HttpResponse.json(wrap([]));
+    })
+  );
+  const user = await renderPage();
+  await user.click(screen.getByRole('tab', { name: '속성 연결' }));
+  await user.selectOptions(screen.getByRole('combobox', { name: '분류 필터' }), 'PRICE');
+  await waitFor(() => expect(requests[requests.length - 1]?.get('type')).toBe('PRICE'));
+  const price = initialAttributes.find((a) => a.datatype === 'INT')!;
+  await user.selectOptions(screen.getByRole('combobox', { name: '연결된 속성 필터' }), price.key);
+  expect(screen.getByRole('option', { name: '이상 (≥)' })).toBeDisabled();
+  await user.type(screen.getByRole('textbox', { name: '속성 값 검색' }), '50000');
+  await user.selectOptions(screen.getByRole('combobox', { name: '값 비교 조건' }), 'GTE');
+  await user.selectOptions(screen.getByRole('combobox', { name: '제외 속성 필터' }), 'gift');
+  await waitFor(() => expect(requests[requests.length - 1]?.get('missingKey')).toBe('gift'));
+  expect(Object.fromEntries(requests[requests.length - 1]!)).toMatchObject({
+    type: 'PRICE',
+    key: price.key,
+    value: '50000',
+    operator: 'GTE',
+    missingKey: 'gift',
+    page: '0',
+  });
+  await user.clear(screen.getByRole('textbox', { name: '속성 값 검색' }));
+  expect(screen.getByRole('combobox', { name: '값 비교 조건' })).toHaveValue('EQ');
+  expect(screen.getByRole('option', { name: '이상 (≥)' })).toBeDisabled();
+  await user.selectOptions(screen.getByRole('combobox', { name: '연결된 속성 필터' }), 'gift');
+  await user.type(screen.getByRole('textbox', { name: '속성 값 검색' }), 'gift');
+  expect(screen.getByRole('option', { name: '이상 (≥)' })).toBeDisabled();
+  await user.click(screen.getByRole('button', { name: '필터 초기화' }));
+  expect(screen.getByRole('combobox', { name: '분류 필터' })).toHaveValue('ALL');
+  expect(screen.getByRole('combobox', { name: '제외 속성 필터' })).toHaveValue('');
+  expect(screen.getByRole('textbox', { name: '속성 값 검색' })).toHaveValue('');
+  expect(screen.getByRole('checkbox', { name: '연결된 것만 보기' })).not.toBeChecked();
+});

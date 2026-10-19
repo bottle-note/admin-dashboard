@@ -51,6 +51,7 @@ import {
   useAlcoholAttributes,
   useAttributeRelations,
   useAttributeAlcoholLookup,
+  useAttributedAlcohols,
   useAlcoholAttributeCreate,
   useAlcoholAttributeUpdate,
   useAlcoholAttributeBatchDelete,
@@ -81,9 +82,26 @@ export function AlcoholAttributeVariantA() {
         : 'attributes';
   const keyword = params.get('q') ?? '';
   const type = params.get('type') ?? 'ALL';
+  const attributeKey = params.get('attributeKey') ?? '';
+  const filterValue = params.get('attributeValue') ?? '';
+  const missingKey = params.get('missingKey') ?? '';
+  const linkedOnly =
+    params.get('linkedOnly') === 'true' ||
+    !!attributeKey ||
+    !!filterValue ||
+    !!missingKey ||
+    type !== 'ALL';
   const rawPage = Number(params.get('page'));
   const page = Number.isSafeInteger(rawPage) && rawPage >= 0 ? rawPage : 0;
   const relations = useAttributeRelations();
+  const filterAttribute = relations.data?.attributes.find(
+    (attribute) => attribute.key === attributeKey
+  );
+  const canCompare =
+    !!filterAttribute &&
+    ['INT', 'DOUBLE'].includes(filterAttribute.datatype) &&
+    !valueError(filterAttribute.datatype, filterValue);
+  const filterOperator = params.get('operator') === 'GTE' && canCompare ? 'GTE' : 'EQ';
   const dictionary = useAlcoholAttributes(
     {
       keyword: keyword || undefined,
@@ -93,7 +111,21 @@ export function AlcoholAttributeVariantA() {
     },
     tab === 'attributes'
   );
-  const lookup = useAttributeAlcoholLookup(keyword, page, tab === 'mappings');
+  const lookup = useAttributeAlcoholLookup(keyword, page, tab === 'mappings' && !linkedOnly);
+  const linkedLookup = useAttributedAlcohols(
+    {
+      keyword: keyword || undefined,
+      type: type in TYPE_LABELS ? (type as AttributeType) : undefined,
+      key: attributeKey || undefined,
+      value: filterValue.trim() || undefined,
+      operator: filterOperator,
+      missingKey: missingKey || undefined,
+      page,
+      size: 20,
+    },
+    tab === 'mappings' && linkedOnly
+  );
+  const alcoholQuery = linkedOnly ? linkedLookup : lookup;
   const create = useAlcoholAttributeCreate();
   const update = useAlcoholAttributeUpdate();
   const remove = useAlcoholAttributeBatchDelete();
@@ -133,21 +165,31 @@ export function AlcoholAttributeVariantA() {
     region: '',
     imageUrl: item.imageUrl,
   }));
-  const lookupAlcohols = (lookup.data?.items ?? []).map((item) => ({
-    id: item.alcoholId,
-    name: item.korName,
-    english: item.engName ?? '',
-    category: item.korCategoryName ?? '',
-    region: item.korRegion ?? '',
-    imageUrl: item.imageUrl,
-  }));
+  const lookupAlcohols = linkedOnly
+    ? (linkedLookup.data?.items ?? []).map((item) => ({
+        id: item.alcoholId,
+        name: item.korName,
+        english: item.engName ?? '',
+        category: item.korCategory ?? '',
+        region: '',
+        imageUrl: item.imageUrl,
+      }))
+    : (lookup.data?.items ?? []).map((item) => ({
+        id: item.alcoholId,
+        name: item.korName,
+        english: item.engName ?? '',
+        category: item.korCategoryName ?? '',
+        region: item.korRegion ?? '',
+        imageUrl: item.imageUrl,
+      }));
   const alcohols = [
     ...new Map([...connectedAlcohols, ...lookupAlcohols].map((item) => [item.id, item])).values(),
   ];
-  const currentQuery = tab === 'attributes' ? dictionary : tab === 'mappings' ? lookup : relations;
-  const loading = relations.isPending || currentQuery.isPending;
-  const queryError = relations.error || currentQuery.error;
-  const pageMeta = tab === 'attributes' ? dictionary.data?.meta : lookup.data?.meta;
+  const currentQuery =
+    tab === 'attributes' ? dictionary : tab === 'mappings' ? alcoholQuery : relations;
+  const loading = relations.isPending || (tab !== 'mappings' && currentQuery.isPending);
+  const queryError = relations.error || (tab !== 'mappings' ? currentQuery.error : null);
+  const pageMeta = tab === 'attributes' ? dictionary.data?.meta : alcoholQuery.data?.meta;
   const [selectedAttributes, setSelectedAttributes] = useState<number[]>([]);
   const [selectedAlcohols, setSelectedAlcoholIds] = useState<number[]>([]);
   const [selectedAlcoholNames, setSelectedAlcoholNames] = useState<Record<number, string>>({});
@@ -207,6 +249,15 @@ export function AlcoholAttributeVariantA() {
       (previous) => {
         const next = new URLSearchParams(previous);
         if (key !== 'page') next.delete('page');
+        if (key === 'attributeKey') {
+          next.delete('attributeValue');
+          next.delete('operator');
+        }
+        if (
+          key === 'attributeValue' &&
+          (!filterAttribute || valueError(filterAttribute.datatype, value))
+        )
+          next.delete('operator');
         if (value) next.set(key, value);
         else next.delete(key);
         return next;
@@ -221,6 +272,9 @@ export function AlcoholAttributeVariantA() {
         next.set('tab', value);
         next.delete('q');
         next.delete('type');
+        next.delete('attributeValue');
+        next.delete('operator');
+        next.delete('missingKey');
         next.delete('page');
         return next;
       },
@@ -410,7 +464,11 @@ export function AlcoholAttributeVariantA() {
                     속성 만들기
                   </Button>
                 ) : (
-                  <span className="text-xs text-slate-500">미연결 위스키도 검색합니다.</span>
+                  <span className="text-xs text-slate-500">
+                    {linkedOnly
+                      ? '조건에 맞는 속성이 연결된 위스키입니다.'
+                      : '미연결 위스키도 검색합니다.'}
+                  </span>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2 border-b bg-slate-50/70 p-3">
@@ -426,7 +484,7 @@ export function AlcoholAttributeVariantA() {
                     className="bg-white pl-9 text-xs"
                   />
                 </div>
-                {tab === 'attributes' && (
+                {
                   <select
                     aria-label="분류 필터"
                     value={type}
@@ -440,8 +498,50 @@ export function AlcoholAttributeVariantA() {
                       </option>
                     ))}
                   </select>
+                }
+                {tab === 'mappings' && (
+                  <>
+                    <label className="flex cursor-pointer items-center gap-2 whitespace-nowrap text-xs">
+                      <Checkbox
+                        checked={linkedOnly}
+                        onCheckedChange={(checked) =>
+                          setParams(
+                            (previous) => {
+                              const next = new URLSearchParams(previous);
+                              next.delete('page');
+                              if (checked === true) next.set('linkedOnly', 'true');
+                              else {
+                                next.delete('linkedOnly');
+                                next.delete('attributeKey');
+                                next.delete('attributeValue');
+                                next.delete('operator');
+                                next.delete('missingKey');
+                                next.delete('type');
+                              }
+                              return next;
+                            },
+                            { replace: true }
+                          )
+                        }
+                      />
+                      연결된 것만 보기
+                    </label>
+                    <select
+                      aria-label="연결된 속성 필터"
+                      value={attributeKey}
+                      onChange={(event) => updateParam('attributeKey', event.target.value)}
+                      className={`${selectClass} max-w-full sm:max-w-64`}
+                    >
+                      <option value="">모든 속성</option>
+                      {attributes.map((attribute) => (
+                        <option key={attribute.id} value={attribute.key}>
+                          {attribute.displayName}
+                        </option>
+                      ))}
+                    </select>
+                  </>
                 )}
-                {(keyword || type !== 'ALL') && (
+                {(keyword || type !== 'ALL' || (tab === 'mappings' && linkedOnly)) && (
                   <Button
                     size="icon"
                     variant="ghost"
@@ -452,6 +552,11 @@ export function AlcoholAttributeVariantA() {
                           const next = new URLSearchParams(previous);
                           next.delete('q');
                           next.delete('type');
+                          next.delete('linkedOnly');
+                          next.delete('attributeKey');
+                          next.delete('attributeValue');
+                          next.delete('operator');
+                          next.delete('missingKey');
                           next.delete('page');
                           return next;
                         },
@@ -463,6 +568,74 @@ export function AlcoholAttributeVariantA() {
                   </Button>
                 )}
               </div>
+              {tab === 'mappings' && (
+                <div className="space-y-2 border-b bg-slate-50/40 px-3 py-2">
+                  <div className="flex flex-wrap items-end gap-2">
+                    <label className="min-w-36 flex-1 space-y-1 text-xs text-slate-600">
+                      <span>속성 값</span>
+                      {filterAttribute?.datatype === 'BOOLEAN' ? (
+                        <select
+                          aria-label="속성 값 검색"
+                          value={filterValue}
+                          onChange={(event) => updateParam('attributeValue', event.target.value)}
+                          className={`${selectClass} w-full`}
+                        >
+                          <option value="">모든 값</option>
+                          <option value="true">예</option>
+                          <option value="false">아니오</option>
+                        </select>
+                      ) : (
+                        <Input
+                          aria-label="속성 값 검색"
+                          value={filterValue}
+                          maxLength={255}
+                          onChange={(event) => updateParam('attributeValue', event.target.value)}
+                          placeholder={
+                            filterAttribute?.unit
+                              ? `값 입력 (${filterAttribute.unit})`
+                              : '검색할 연결 값'
+                          }
+                          className="h-9 bg-white text-xs"
+                        />
+                      )}
+                    </label>
+                    <label className="space-y-1 text-xs text-slate-600">
+                      <span>비교</span>
+                      <select
+                        aria-label="값 비교 조건"
+                        value={filterOperator}
+                        onChange={(event) => updateParam('operator', event.target.value)}
+                        className={`${selectClass} block`}
+                      >
+                        <option value="EQ">일치 (=)</option>
+                        <option value="GTE" disabled={!canCompare}>
+                          이상 (≥)
+                        </option>
+                      </select>
+                    </label>
+                    <label className="min-w-44 flex-1 space-y-1 text-xs text-slate-600">
+                      <span>이 속성이 없는 위스키</span>
+                      <select
+                        aria-label="제외 속성 필터"
+                        value={missingKey}
+                        onChange={(event) => updateParam('missingKey', event.target.value)}
+                        className={`${selectClass} w-full`}
+                      >
+                        <option value="">제외 조건 없음</option>
+                        {attributes.map((attribute) => (
+                          <option key={attribute.id} value={attribute.key}>
+                            {attribute.displayName}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    ‘이상’은 숫자 속성과 값을 지정하면 사용할 수 있습니다. 제외 조건은 속성이 하나
+                    이상 연결된 위스키 중에서 적용됩니다.
+                  </p>
+                </div>
+              )}
               {tab === 'attributes' && (
                 <div className="flex flex-wrap gap-1.5 border-b px-3 py-2">
                   {(
@@ -535,6 +708,19 @@ export function AlcoholAttributeVariantA() {
                   )}
                 </div>
               </div>
+              {tab === 'mappings' && alcoholQuery.isPending && (
+                <p role="status" className="border-b px-3 py-2 text-xs text-slate-500">
+                  조건에 맞는 위스키를 조회 중입니다.
+                </p>
+              )}
+              {tab === 'mappings' && alcoholQuery.error && (
+                <div role="alert" className="border-b px-3 py-2 text-xs text-red-700">
+                  {getErrorMessage(alcoholQuery.error)}
+                  <Button variant="ghost" size="sm" onClick={() => void alcoholQuery.refetch()}>
+                    다시 조회
+                  </Button>
+                </div>
+              )}
               <Table className="text-xs [&_td]:!py-1.5">
                 <TableHeader className="bg-slate-50">
                   <TableRow>
