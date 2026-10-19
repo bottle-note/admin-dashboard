@@ -79,7 +79,7 @@ export function useApiMutation<TData = unknown, TVariables = void, TContext = un
   return useMutation<TData, ApiError, TVariables, TContext>({
     mutationFn,
     ...mutationOptions,
-    onError: (error, variables, context) => {
+    onError: async (error, variables, context, mutationContext) => {
       // 에러 Toast 표시
       if (showErrorToast) {
         showToast({
@@ -88,16 +88,12 @@ export function useApiMutation<TData = unknown, TVariables = void, TContext = un
         });
       }
       // 원래 onError 콜백 호출
-      if (onError) {
-        (
-          onError as (error: ApiError, variables: TVariables, context: TContext | undefined) => void
-        )(error, variables, context);
-      }
+      await onError?.(error, variables, context, mutationContext);
     },
-    onSuccess: (data, variables, context) => {
-      invalidateKeys?.forEach((queryKey) => {
-        void queryClient.invalidateQueries({ queryKey });
-      });
+    onSuccess: async (data, variables, context, mutationContext) => {
+      await Promise.all(
+        (invalidateKeys ?? []).map((queryKey) => queryClient.invalidateQueries({ queryKey }))
+      );
       // 성공 Toast 표시
       if (successMessage) {
         showToast({
@@ -106,13 +102,7 @@ export function useApiMutation<TData = unknown, TVariables = void, TContext = un
         });
       }
       // 원래 onSuccess 콜백 호출
-      if (onSuccess) {
-        (onSuccess as (data: TData, variables: TVariables, context: TContext | undefined) => void)(
-          data,
-          variables,
-          context
-        );
-      }
+      await onSuccess?.(data, variables, context, mutationContext);
     },
   });
 }

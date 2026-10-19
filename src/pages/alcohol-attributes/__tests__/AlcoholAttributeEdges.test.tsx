@@ -50,6 +50,24 @@ beforeEach(() => {
       return HttpResponse.json(wrap(attributes.filter((a) => a.displayName.includes(keyword))));
     }),
     http.get(`${base}/mappings`, () => HttpResponse.json(wrap(mappings))),
+    http.get(`${base}/summary`, ({ request }) => {
+      const ids = new URL(request.url).searchParams.getAll('alcoholIds').map(Number);
+      const selected = mappings.filter((m) => ids.includes(m.alcoholId));
+      return HttpResponse.json(
+        wrap(
+          attributes.map((attribute) => ({
+            attribute,
+            mappings: selected.filter((m) => m.attributeId === attribute.id),
+            alcoholIds: selected
+              .filter((m) => m.attributeId === attribute.id)
+              .map((m) => m.alcoholId),
+            mappingIds: selected.filter((m) => m.attributeId === attribute.id).map((m) => m.id),
+            registeredCount: selected.filter((m) => m.attributeId === attribute.id).length,
+            selectedCount: ids.length,
+          }))
+        )
+      );
+    }),
     http.get(`${base}/alcohols`, () =>
       HttpResponse.json(
         wrap(
@@ -59,9 +77,13 @@ beforeEach(() => {
             engName: a.english,
             korCategory: a.category,
             imageUrl: null,
-            attributes: attributes.filter((t) =>
-              mappings.some((m) => m.alcoholId === a.id && m.attributeId === t.id)
-            ),
+            attributes: mappings
+              .filter((m) => m.alcoholId === a.id)
+              .map((m) => ({
+                mappingId: m.id,
+                value: m.value,
+                attribute: attributes.find((t) => t.id === m.attributeId)!,
+              })),
           }))
         )
       )
@@ -291,15 +313,15 @@ describe('선택과 비동기 작업', () => {
     });
     let failed = true;
     server.use(
-      http.get(`${base}/mappings`, async () => {
+      http.get(base, async () => {
         if (failed) {
           await gate;
           return HttpResponse.json(
-            { success: false, errors: [{ message: '관계 조회 실패' }] },
+            { success: false, errors: [{ message: '목록 조회 실패' }] },
             { status: 500 }
           );
         }
-        return HttpResponse.json(wrap(mappings));
+        return HttpResponse.json(wrap(attributes));
       })
     );
     const user = userEvent.setup();
@@ -310,7 +332,7 @@ describe('선택과 비동기 작업', () => {
     } finally {
       release();
     }
-    expect(await screen.findByRole('alert')).toHaveTextContent('관계 조회 실패');
+    expect(await screen.findByRole('alert')).toHaveTextContent('목록 조회 실패');
     failed = false;
     await user.click(screen.getByRole('button', { name: '다시 조회' }));
     expect(await screen.findByRole('textbox', { name: /속성 이름/ })).toHaveValue('선물용');

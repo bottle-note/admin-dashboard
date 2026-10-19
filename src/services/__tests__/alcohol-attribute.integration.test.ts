@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { wrapApiError, wrapApiResponse } from '@/test/mocks/data';
-import {
-  alcoholAttributeService as service,
-  loadAttributeRelations,
-} from '../alcohol-attribute.service';
+import { alcoholAttributeService as service } from '../alcohol-attribute.service';
 import type {
   AlcoholAttribute,
   AttributeCreateRequest,
@@ -57,29 +54,6 @@ function pageResponse<T>(items: T[], page: number, size: number) {
     totalPages: Math.ceil(items.length / size),
     hasNext: (page + 1) * size < items.length,
   });
-}
-
-function relationPages() {
-  const datasets = {
-    attributes: Array.from({ length: 101 }, (_, index) => attribute(index + 1)),
-    mappings: Array.from({ length: 201 }, (_, index) => mapping(index + 1)),
-    alcohols: Array.from({ length: 100 }, (_, index) => alcohol(index + 1)),
-  };
-  const calls = { attributes: [] as number[], mappings: [] as number[], alcohols: [] as number[] };
-  const paths = { attributes: base, mappings: `${base}/mappings`, alcohols: `${base}/alcohols` };
-  for (const kind of ['attributes', 'mappings', 'alcohols'] as const) {
-    server.use(
-      http.get(paths[kind], ({ request }) => {
-        const params = new URL(request.url).searchParams;
-        const page = Number(params.get('page'));
-        const size = Number(params.get('size'));
-        calls[kind].push(page);
-        expect(size).toBe(100);
-        return HttpResponse.json(pageResponse<unknown>(datasets[kind], page, size));
-      })
-    );
-  }
-  return { datasets, calls, paths };
 }
 
 describe('alcoholAttributeService HTTP 계약', () => {
@@ -304,64 +278,30 @@ describe('alcoholAttributeService HTTP 계약', () => {
   });
 });
 
-describe('loadAttributeRelations 전체 페이지 수집', () => {
-  it('각 목록의 hasNext를 따르며 101개 속성과 201개 연결을 빠짐없이 수집한다', async () => {
-    const { datasets, calls } = relationPages();
-    expect(await loadAttributeRelations()).toEqual(datasets);
-    expect(calls).toEqual({ attributes: [0, 1], mappings: [0, 1, 2], alcohols: [0] });
-  });
-
-  it('속성이 붙은 술도 첫 100건 이후의 마지막 페이지까지 수집한다', async () => {
-    const { datasets, calls } = relationPages();
-    datasets.alcohols.push(alcohol(101));
-    expect((await loadAttributeRelations()).alcohols).toEqual(datasets.alcohols);
-    expect(calls.alcohols).toEqual([0, 1]);
-  });
-
-  it.each(['attributes', 'mappings', 'alcohols'] as const)(
-    '%s 후속 페이지 실패 시 부분 결과를 반환하지 않는다',
-    async (kind) => {
-      const { paths, datasets } = relationPages();
-      datasets.alcohols.push(alcohol(101));
-      const calls: number[] = [];
-      server.use(
-        http.get(paths[kind], ({ request }) => {
-          const page = Number(new URL(request.url).searchParams.get('page'));
-          calls.push(page);
-          if (page === 0) return HttpResponse.json(pageResponse<unknown>(datasets[kind], 0, 100));
-          return HttpResponse.json(
-            wrapApiError(500, 'UNKNOWN_ERROR', '후속 페이지 조회에 실패했습니다.'),
-            { status: 500 }
-          );
-        })
-      );
-      await expect(loadAttributeRelations()).rejects.toMatchObject({
-        name: 'ApiError',
-        code: 500,
-        message: '후속 페이지 조회에 실패했습니다.',
-      });
-      expect(calls).toEqual([0, 1]);
-    }
-  );
-
-  it('빈 페이지가 hasNext=true이면 추가 요청을 반복하지 않고 실패한다', async () => {
-    const { paths } = relationPages();
-    let calls = 0;
+describe('페이지 조회 범위', () => {
+  it('hasNext가 있어도 요청한 페이지 한 번만 조회하고 다음 페이지는 호출자가 선택한다', async () => {
+    const reads: number[] = [];
     server.use(
-      http.get(paths.attributes, () => {
-        calls++;
+      http.get(`${base}/alcohols`, ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        const page = Number(params.get('page'));
+        reads.push(page);
+        expect(params.get('size')).toBe('100');
         return HttpResponse.json(
-          wrapApiResponse([], {
-            page: 0,
-            size: 100,
-            totalElements: 101,
-            totalPages: 2,
-            hasNext: true,
-          })
+          pageResponse(
+            Array.from({ length: 3000 }, (_, i) => alcohol(i + 1)),
+            page,
+            100
+          )
         );
       })
     );
-    await expect(loadAttributeRelations()).rejects.toThrow('페이지 응답이 일치하지 않습니다.');
-    expect(calls).toBe(1);
+    const first = await service.alcohols({ page: 0, size: 100 });
+    expect(first.items).toHaveLength(100);
+    expect(first.meta.hasNext).toBe(true);
+    expect(reads).toEqual([0]);
+    const second = await service.alcohols({ page: 1, size: 100 });
+    expect(second.items[0]?.alcoholId).toBe(101);
+    expect(reads).toEqual([0, 1]);
   });
 });

@@ -39,7 +39,7 @@ export function AttributeEditor({
   onCancel,
 }: {
   attribute: Attribute;
-  linkedCount: number;
+  linkedCount: number | undefined;
   onSave: (attribute: Attribute) => Promise<string | undefined>;
   onCancel: () => void;
 }) {
@@ -68,7 +68,9 @@ export function AttributeEditor({
         </h2>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
           {attribute.id
-            ? `현재 ${linkedCount}개 위스키가 이 속성을 공유합니다.`
+            ? linkedCount === undefined
+              ? '연결된 위스키 수를 확인 중입니다.'
+              : `현재 ${linkedCount}개 위스키가 이 속성을 공유합니다.`
             : '먼저 사전에 등록하고 필요한 위스키에 연결하세요.'}
         </p>
       </div>
@@ -109,19 +111,36 @@ export function AttributeEditor({
             <select
               {...register('datatype')}
               className={selectClass}
-              aria-disabled={linkedCount > 0}
+              aria-disabled={linkedCount === undefined || linkedCount > 0}
             >
-              <option disabled={linkedCount > 0 && attribute.datatype !== 'STRING'} value="STRING">
+              <option
+                disabled={
+                  (linkedCount === undefined || linkedCount > 0) && attribute.datatype !== 'STRING'
+                }
+                value="STRING"
+              >
                 문자
               </option>
-              <option disabled={linkedCount > 0 && attribute.datatype !== 'INT'} value="INT">
+              <option
+                disabled={
+                  (linkedCount === undefined || linkedCount > 0) && attribute.datatype !== 'INT'
+                }
+                value="INT"
+              >
                 정수
               </option>
-              <option disabled={linkedCount > 0 && attribute.datatype !== 'DOUBLE'} value="DOUBLE">
+              <option
+                disabled={
+                  (linkedCount === undefined || linkedCount > 0) && attribute.datatype !== 'DOUBLE'
+                }
+                value="DOUBLE"
+              >
                 소수
               </option>
               <option
-                disabled={linkedCount > 0 && attribute.datatype !== 'BOOLEAN'}
+                disabled={
+                  (linkedCount === undefined || linkedCount > 0) && attribute.datatype !== 'BOOLEAN'
+                }
                 value="BOOLEAN"
               >
                 참 / 거짓
@@ -145,12 +164,15 @@ export function AttributeEditor({
             maxLength={500}
           />
         </label>
-        {attribute.id > 0 && linkedCount > 0 && (
+        {attribute.id > 0 && (linkedCount === undefined || linkedCount > 0) && (
           <div className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>
-              저장하면 연결된 <strong>{linkedCount}개 위스키</strong>에 바뀐 의미가 적용됩니다. 기존
-              연결은 유지됩니다.
+              저장하면 연결된{' '}
+              <strong>
+                {linkedCount === undefined ? '모든 연결 위스키' : `${linkedCount}개 위스키`}
+              </strong>
+              에 바뀐 의미가 적용됩니다. 기존 연결은 유지됩니다.
             </p>
           </div>
         )}
@@ -233,7 +255,12 @@ export function AttributeEditor({
                 </table>
               </div>
               <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-                <strong>연결된 위스키 {linkedCount}개의 공통 정의에 반영됩니다.</strong>
+                <strong>
+                  {linkedCount === undefined
+                    ? '연결된 모든 위스키의'
+                    : `연결된 위스키 ${linkedCount}개의`}{' '}
+                  공통 정의에 반영됩니다.
+                </strong>
                 <p className="mt-1">
                   기존 연결은 유지됩니다. 새 정의에도 연결된 위스키가 적합한지 확인하세요. 조건에
                   따른 자동 연결은 없습니다.

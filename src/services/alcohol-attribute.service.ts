@@ -28,30 +28,32 @@ export const alcoholAttributeKeys = {
 };
 
 export const alcoholAttributeService = {
-  async list(params: AttributeSearchParams) {
+  async list(params: AttributeSearchParams, signal?: AbortSignal) {
     const { data, meta } = await apiClient.get<AlcoholAttribute[], AttributePageMeta>(base, {
       params,
+      signal,
       paramsSerializer: { indexes: null },
     });
     return { items: data, meta };
   },
-  async mappings(params: MappingSearchParams) {
+  async mappings(params: MappingSearchParams, signal?: AbortSignal) {
     const { data, meta } = await apiClient.get<AttributeMapping[], AttributePageMeta>(
       `${base}/mappings`,
-      { params }
+      { params, signal }
     );
     return { items: data, meta };
   },
-  async alcohols(params: AttributedAlcoholSearchParams) {
+  async alcohols(params: AttributedAlcoholSearchParams, signal?: AbortSignal) {
     const { data, meta } = await apiClient.get<AttributedAlcohol[], AttributePageMeta>(
       `${base}/alcohols`,
-      { params }
+      { params, signal }
     );
     return { items: data, meta };
   },
-  async summary(alcoholIds: number[]) {
+  async summary(alcoholIds: number[], signal?: AbortSignal) {
     const { data } = await apiClient.get<AttributeSummary[]>(`${base}/summary`, {
       params: { alcoholIds },
+      signal,
       paramsSerializer: { indexes: null },
     });
     return data;
@@ -71,28 +73,3 @@ export const alcoholAttributeService = {
     apiClient.put<AttributeMapping>(`${base}/mappings/${id}`, { value }),
   unlink: (id: number) => apiClient.delete<AttributeResult>(`${base}/mappings/${id}`),
 };
-
-// 집계와 그래프에서 첫 페이지만 전체로 오인하지 않도록 마지막 페이지까지 읽는다.
-export async function loadAttributeRelations() {
-  async function collect<T>(
-    read: (params: {
-      page: number;
-      size: number;
-    }) => Promise<{ items: T[]; meta: { hasNext: boolean } }>
-  ) {
-    const items: T[] = [];
-    for (let page = 0; ; page++) {
-      const result = await read({ page, size: 100 });
-      items.push(...result.items);
-      if (!result.meta.hasNext) return items;
-      if (!result.items.length)
-        throw new Error('페이지 응답이 일치하지 않습니다. 다시 조회해 주세요.');
-    }
-  }
-  const [attributes, mappings, alcohols] = await Promise.all([
-    collect(alcoholAttributeService.list),
-    collect(alcoholAttributeService.mappings),
-    collect(alcoholAttributeService.alcohols),
-  ]);
-  return { attributes, mappings, alcohols };
-}

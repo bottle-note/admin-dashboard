@@ -92,6 +92,44 @@ describe('속성 API 데이터 흐름', () => {
     await waitFor(() => expect(result.current.list.data?.items[0]?.displayName).toBe('수정 후'));
   });
 
+  it('저장 완료를 반환하기 전에 활성 목록 갱신을 한 번 기다린다', async () => {
+    let reads = 0;
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(base, async () => {
+        reads++;
+        if (reads > 1) await gate;
+        return HttpResponse.json(envelope([]));
+      }),
+      http.put(`${base}/1`, () => HttpResponse.json(envelope({ targetId: 1 })))
+    );
+    const { result } = renderHook(
+      () => ({ list: useAlcoholAttributes({}), update: useAlcoholAttributeUpdate() }),
+      { wrapper: wrapper() }
+    );
+    await waitFor(() => expect(result.current.list.isSuccess).toBe(true));
+    let completed = false;
+    let save!: Promise<unknown>;
+    act(() => {
+      save = result.current.update
+        .mutateAsync({ id: 1, data: { displayName: '수정', type: 'FLAG', datatype: 'BOOLEAN' } })
+        .then(() => {
+          completed = true;
+        });
+    });
+    await waitFor(() => expect(reads).toBe(2));
+    const finishedBeforeRefresh = completed;
+    await act(async () => {
+      release!();
+      await save;
+    });
+    expect(finishedBeforeRefresh).toBe(false);
+    expect(reads).toBe(2);
+  });
+
   it('중복 연결 결과를 보존하고 해제 후 매핑을 재조회한다', async () => {
     let mappings = [{ id: 8, alcoholId: 12, attributeId: 1, value: '9007199254740993' }];
     server.use(

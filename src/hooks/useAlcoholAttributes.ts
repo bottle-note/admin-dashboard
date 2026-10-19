@@ -1,4 +1,3 @@
-import { loadAttributeRelations } from '@/services/alcohol-attribute.service';
 import { adminAlcoholService } from '@/services/admin-alcohol.service';
 import { useApiQuery } from './useApiQuery';
 import { useApiMutation } from './useApiMutation';
@@ -14,18 +13,26 @@ import type {
 } from '@/types/api/alcohol-attribute.api';
 
 export function useAlcoholAttributes(params: AttributeSearchParams, enabled = true) {
-  return useApiQuery(keys.list(params), () => service.list(params), { enabled });
+  return useApiQuery(keys.list(params), ({ signal }) => service.list(params, signal), { enabled });
 }
 export function useAttributeMappings(params: MappingSearchParams, enabled = true) {
-  return useApiQuery(keys.mappings(params), () => service.mappings(params), { enabled });
+  return useApiQuery(keys.mappings(params), ({ signal }) => service.mappings(params, signal), {
+    enabled,
+  });
 }
 export function useAttributedAlcohols(params: AttributedAlcoholSearchParams, enabled = true) {
-  return useApiQuery(keys.alcohols(params), () => service.alcohols(params), { enabled });
+  return useApiQuery(keys.alcohols(params), ({ signal }) => service.alcohols(params, signal), {
+    enabled,
+  });
 }
 export function useAttributeSummary(alcoholIds: number[]) {
-  return useApiQuery(keys.summary(alcoholIds), () => service.summary(alcoholIds), {
-    enabled: alcoholIds.length > 0,
-  });
+  return useApiQuery(
+    keys.summary(alcoholIds),
+    ({ signal }) => service.summary(alcoholIds, signal),
+    {
+      enabled: alcoholIds.length > 0 && alcoholIds.length <= 500,
+    }
+  );
 }
 export function useAttributeEnums() {
   return useApiQuery(keys.enums, service.enums, { staleTime: Infinity });
@@ -55,9 +62,6 @@ export function useAttributeUnlink() {
   return useApiMutation(service.unlink, mutationOptions);
 }
 
-export function useAttributeRelations() {
-  return useApiQuery([...keys.all, 'relations'], loadAttributeRelations);
-}
 export function useAttributeAlcoholLookup(keyword: string, page: number, enabled: boolean) {
   return useApiQuery(
     [...keys.all, 'lookup', keyword, page],

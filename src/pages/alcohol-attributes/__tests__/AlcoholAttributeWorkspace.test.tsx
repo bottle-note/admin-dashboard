@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, within, waitFor } from '@testing-library/react';
 import { render } from '@/test/test-utils';
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse, delay } from 'msw';
 import { server } from '@/test/mocks/server';
 import { initialAttributes, initialMappings, alcohols } from '../variants/a/mock-data';
 import userEvent from '@testing-library/user-event';
@@ -42,6 +42,24 @@ beforeEach(() => {
       );
     }),
     http.get(`${base}/mappings`, () => HttpResponse.json(wrap(mappings))),
+    http.get(`${base}/summary`, ({ request }) => {
+      const ids = new URL(request.url).searchParams.getAll('alcoholIds').map(Number);
+      const selected = mappings.filter((m) => ids.includes(m.alcoholId));
+      return HttpResponse.json(
+        wrap(
+          attributes.map((attribute) => ({
+            attribute,
+            mappings: selected.filter((m) => m.attributeId === attribute.id),
+            alcoholIds: selected
+              .filter((m) => m.attributeId === attribute.id)
+              .map((m) => m.alcoholId),
+            mappingIds: selected.filter((m) => m.attributeId === attribute.id).map((m) => m.id),
+            registeredCount: selected.filter((m) => m.attributeId === attribute.id).length,
+            selectedCount: ids.length,
+          }))
+        )
+      );
+    }),
     http.get(`${base}/alcohols`, () =>
       HttpResponse.json(
         wrap(
@@ -53,9 +71,13 @@ beforeEach(() => {
               engName: a.english,
               korCategory: a.category,
               imageUrl: null,
-              attributes: attributes.filter((t) =>
-                mappings.some((m) => m.alcoholId === a.id && m.attributeId === t.id)
-              ),
+              attributes: mappings
+                .filter((m) => m.alcoholId === a.id)
+                .map((m) => ({
+                  mappingId: m.id,
+                  value: m.value,
+                  attribute: attributes.find((t) => t.id === m.attributeId)!,
+                })),
             }))
         )
       )
@@ -107,6 +129,122 @@ beforeEach(() => {
 });
 
 describe('속성 관리 통합 화면', () => {
+  it('후속 페이지와 전체 연결 조회를 기다리지 않고 속성 목록을 표시한다', async () => {
+    const reads = vi.fn();
+    server.use(
+      http.get(base, ({ request }) => {
+        const query = new URL(request.url).searchParams;
+        reads(Number(query.get('page')));
+        if (Number(query.get('page')) > 0) return HttpResponse.json(wrap([]));
+        return HttpResponse.json({
+          ...wrap(attributes),
+          meta: { ...wrap(attributes).meta, hasNext: true, totalElements: 3000 },
+        });
+      }),
+      http.get(`${base}/mappings`, async () => {
+        await delay('infinite');
+        return HttpResponse.json(wrap([]));
+      }),
+      http.get(`${base}/alcohols`, async () => {
+        await delay('infinite');
+        return HttpResponse.json(wrap([]));
+      })
+    );
+    render(<AlcoholAttributeVariantA />);
+    expect(
+      await screen.findByRole('checkbox', { name: `${attributes[0]!.displayName} 선택` })
+    ).toBeInTheDocument();
+    expect(reads.mock.calls.every(([page]) => page === 0)).toBe(true);
+  });
+
+  it('현재 목록의 연결 조회가 실패해도 위스키 목록을 표시하고 미연결로 오인하지 않는다', async () => {
+    const ids: number[][] = [];
+    server.use(
+      http.get(`${base}/summary`, ({ request }) => {
+        ids.push(new URL(request.url).searchParams.getAll('alcoholIds').map(Number));
+        return HttpResponse.json(
+          { success: false, errors: [{ message: '연결 조회 실패' }] },
+          { status: 500 }
+        );
+      })
+    );
+    const user = await renderPage();
+    await user.click(screen.getByRole('tab', { name: '속성 연결' }));
+    expect(
+      await screen.findByRole('checkbox', { name: `${alcohols[0]!.name} 선택` })
+    ).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('연결 정보를 불러오지 못했습니다.');
+    expect(screen.queryByText('미연결')).not.toBeInTheDocument();
+    expect(ids[0]).toEqual(alcohols.map((a) => a.id));
+    await user.click(screen.getByRole('checkbox', { name: `${alcohols[0]!.name} 선택` }));
+    await user.click(screen.getByRole('checkbox', { name: /겨울 추천 후보/ }));
+    expect(screen.getByRole('button', { name: '1쌍 연결 검토' })).toBeDisabled();
+  });
+
+  it('그래프는 한 페이지 100개만 요청하고 검색은 샘플 밖의 술도 서버에서 찾는다', async () => {
+    const reads: URLSearchParams[] = [];
+    server.use(
+      http.get(`${base}/alcohols`, ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        reads.push(params);
+        const filtered = params.get('keyword') === '멀리 있는 술';
+        return HttpResponse.json({
+          ...wrap([
+            {
+              alcoholId: filtered ? 3000 : 1,
+              korName: filtered ? '멀리 있는 술' : '첫 페이지 술',
+              engName: null,
+              korCategory: null,
+              imageUrl: null,
+              attributes: [
+                { mappingId: filtered ? 3000 : 1, value: 'true', attribute: attributes[0]! },
+              ],
+            },
+          ]),
+          meta: { ...wrap([]).meta, hasNext: !filtered, totalElements: filtered ? 1 : 3000 },
+        });
+      })
+    );
+    const user = await renderPage();
+    reads.length = 0;
+    await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
+    await screen.findByRole('button', { name: '위스키: 첫 페이지 술' });
+    expect(reads).toHaveLength(1);
+    expect(reads[0]!.get('size')).toBe('100');
+    expect(reads[0]!.get('page')).toBe('0');
+    await user.type(screen.getByRole('textbox', { name: '그래프 검색' }), '멀리 있는 술');
+    expect(await screen.findByRole('button', { name: '위스키: 멀리 있는 술' })).toBeInTheDocument();
+    expect(reads[reads.length - 1]!.get('keyword')).toBe('멀리 있는 술');
+    expect(screen.queryByRole('button', { name: '위스키: 첫 페이지 술' })).not.toBeInTheDocument();
+  });
+
+  it('사전의 다른 페이지에서 고른 속성을 연결 검토에서도 보존한다', async () => {
+    server.use(
+      http.get(base, ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get('page') ?? 0);
+        return HttpResponse.json({
+          ...wrap([attributes[page]!]),
+          meta: { ...wrap([]).meta, page, totalElements: 2, hasNext: page === 0 },
+        });
+      })
+    );
+    const user = await renderPage();
+    await user.click(screen.getByRole('button', { name: '다음' }));
+    await user.click(
+      await screen.findByRole('checkbox', { name: `${attributes[1]!.displayName} 선택` })
+    );
+    await user.click(screen.getByRole('tab', { name: '속성 연결' }));
+    await user.click(await screen.findByRole('checkbox', { name: `${alcohols[9]!.name} 선택` }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '1쌍 연결 검토' })).toBeEnabled()
+    );
+    await user.click(screen.getByRole('button', { name: '1쌍 연결 검토' }));
+    expect(
+      within(screen.getByRole('dialog')).getByText(attributes[1]!.displayName)
+    ).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByRole('textbox')).toBeInTheDocument();
+  });
+
   it('등록과 삭제를 서버 요청으로 처리하고 목록을 갱신한다', async () => {
     const user = await renderPage();
     server.use(
@@ -211,7 +349,7 @@ describe('속성 관리 통합 화면', () => {
     );
     await user.click(screen.getByRole('tab', { name: '속성 연결' }));
     const panel = within(screen.getByRole('complementary', { name: '연결 작업 패널' }));
-    const input = panel.getAllByRole('textbox', { name: / 값$/ })[0]!;
+    const input = (await panel.findAllByRole('textbox', { name: / 값$/ }))[0]!;
     await user.clear(input);
     await user.type(input, 'updated');
     await user.click(panel.getAllByRole('button', { name: '값 저장' })[0]!);
@@ -321,7 +459,7 @@ describe('속성 관리 통합 화면', () => {
   it('연결 해제 결과를 그래프에 반영하며 그래프에서는 변경 동작을 제공하지 않는다', async () => {
     const user = await renderPage();
     const panel = screen.getByRole('complementary', { name: '속성 상세 패널' });
-    const unlink = within(panel).getAllByRole('button', { name: /연결 해제/ })[0]!;
+    const unlink = (await within(panel).findAllByRole('button', { name: /연결 해제/ }))[0]!;
     const name = unlink.getAttribute('aria-label')!.replace(' 연결 해제', '');
     await user.click(unlink);
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '연결 해제' }));
