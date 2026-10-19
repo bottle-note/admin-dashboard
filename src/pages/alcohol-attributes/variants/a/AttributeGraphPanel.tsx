@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAlcoholAttributes, useAttributedAlcohols } from '@/hooks/useAlcoholAttributes';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { getErrorMessage } from '@/lib/api-error';
@@ -27,35 +27,38 @@ export function AttributeGraphPanel() {
     page,
     size: 100,
   });
-  const alcohols = (query.data?.items ?? []).map((item) => ({
-    id: item.alcoholId,
-    name: item.korName,
-    english: item.engName ?? '',
-    category: item.korCategory ?? '',
-    region: '',
-    imageUrl: item.imageUrl,
-  }));
-  const entries = (query.data?.items ?? []).flatMap((item) =>
-    item.attributes.map((entry) => ({ ...entry, alcoholId: item.alcoholId }))
-  );
-  const attributes = [
-    ...new Map(
-      [
-        ...(selectedDefinition ? [selectedDefinition] : []),
-        ...(definitions.data?.items ?? []),
-        ...entries.map((entry) => entry.attribute),
-      ].map((item) => [
-        item.id,
-        { ...item, unit: item.unit ?? '', description: item.description ?? '' },
-      ])
-    ).values(),
-  ];
-  const mappings = entries.map((entry) => ({
-    id: entry.mappingId,
-    alcoholId: entry.alcoholId,
-    attributeId: entry.attribute.id,
-    value: entry.value,
-  }));
+  const { alcohols, attributes, mappings } = useMemo(() => {
+    const alcohols = (query.data?.items ?? []).map((item) => ({
+      id: item.alcoholId,
+      name: item.korName,
+      english: item.engName ?? '',
+      category: item.korCategory ?? '',
+      region: '',
+      imageUrl: item.imageUrl,
+    }));
+    const entries = (query.data?.items ?? []).flatMap((item) =>
+      item.attributes.map((entry) => ({ ...entry, alcoholId: item.alcoholId }))
+    );
+    const attributes = [
+      ...new Map(
+        [
+          ...(selectedDefinition ? [selectedDefinition] : []),
+          ...(definitions.data?.items ?? []),
+          ...entries.map((entry) => entry.attribute),
+        ].map((item) => [
+          item.id,
+          { ...item, unit: item.unit ?? '', description: item.description ?? '' },
+        ])
+      ).values(),
+    ];
+    const mappings = entries.map((entry) => ({
+      id: entry.mappingId,
+      alcoholId: entry.alcoholId,
+      attributeId: entry.attribute.id,
+      value: entry.value,
+    }));
+    return { alcohols, attributes, mappings };
+  }, [query.data, definitions.data, selectedDefinition]);
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2 rounded border bg-white p-2">

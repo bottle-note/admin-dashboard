@@ -5,6 +5,7 @@ import {
   CanvasEvent,
   GraphEvent,
   type GraphData,
+  type NodeData,
   type IPointerEvent,
 } from '@antv/g6';
 import { relationshipStates } from './relationship-states';
@@ -47,30 +48,46 @@ export function RelationshipCanvas({
       (data.nodes ?? []).map((node) => [node.id, String(node.style?.labelText ?? '')])
     );
     const isEmphasized = (id: string) => id === selectedRef.current || id === hoverRef.current;
+    const showDetail = (id: string) =>
+      isEmphasized(id) || (graphRef.current?.getZoom() ?? 1) >= 0.85;
     const graph = new Graph({
       container,
       autoResize: true,
-      autoFit: 'view',
       padding: 24,
       animation: false,
       zoomRange: [0.05, 3],
       data,
       layout: {
-        type: 'force',
+        type: 'd3-force',
+        // Keep simulation ticks connected to the renderer when dragging reheats it.
+        animation: true,
         preventOverlap: true,
-        nodeSize: 110,
-        nodeSpacing: 24,
-        linkDistance: 150,
+        nodeSize: (node: NodeData) => (node.id.startsWith('alcohol-') ? 190 : 180),
+        nodeSpacing: 12,
+        linkDistance: 130,
+        nodeStrength: -180,
+        collideStrength: 1,
+        collideIterations: 3,
+        alphaDecay: 0.045,
+        velocityDecay: 0.4,
       },
       node: {
-        // Force layout writes its collision diameter into data.style.size.
-        // Keep visual dimensions independent from that layout output.
+        type: (node) => (node.type === 'image' ? 'image' : 'circle'),
+        // Reserve collision space for expanded nodes, but keep the overview compact.
         style: {
-          size: (node) => (node.type === 'image' ? [48, 80] : [164, 52]),
+          size: (node) => {
+            if (node.type === 'image') {
+              const scale = Math.min(2, Math.max(1, 0.7 / (graphRef.current?.getZoom() ?? 1)));
+              return [48 * scale, 80 * scale];
+            }
+            return Math.min(32, 7 / (graphRef.current?.getZoom() ?? 1));
+          },
+          fill: (node) => (node.type === 'image' ? '#b77945' : '#5a9c8c'),
+          labelPlacement: 'bottom',
+          labelPointerEvents: 'none',
           labelText: (node) => {
             const label = labels.get(node.id) ?? '';
-            if (isEmphasized(node.id) || (graphRef.current?.getZoom() ?? 1) >= 0.6) return label;
-            return node.type === 'image' ? '' : label.split('\n')[0];
+            return showDetail(node.id) ? label : '';
           },
           labelFontSize: (node) =>
             Math.max(13, (isEmphasized(node.id) ? 13 : 9) / (graphRef.current?.getZoom() ?? 1)),
@@ -99,7 +116,7 @@ export function RelationshipCanvas({
             lineWidth: 2,
           },
           related: { opacity: 1, halo: false, lineWidth: 1, stroke: '#89aaa1' },
-          muted: { opacity: 0.55, halo: false, lineWidth: 1, stroke: '#89aaa1' },
+          muted: { opacity: 0.3, halo: false, lineWidth: 1, stroke: '#89aaa1' },
           hovered: {
             opacity: 1,
             halo: true,
@@ -116,26 +133,37 @@ export function RelationshipCanvas({
         state: {
           normal: { stroke: '#94a3b8', lineWidth: 1, opacity: 0.65 },
           related: { stroke: '#0f766e', lineWidth: 2, opacity: 1 },
-          muted: { stroke: '#94a3b8', lineWidth: 1, opacity: 0.2 },
+          muted: { stroke: '#94a3b8', lineWidth: 1, opacity: 0.06 },
         },
       },
-      behaviors: ['drag-canvas', 'zoom-canvas', 'drag-element'],
+      behaviors: ['drag-canvas', 'zoom-canvas', { type: 'drag-element-force', fixed: false }],
     });
     graphRef.current = graph;
+    let frame = 0;
+    let hoverTimer = 0;
+    let dragging = false;
     const sync = () => {
-      if (!ready || disposed) return;
-      void graph
-        .draw()
-        .then(() =>
-          graph.setElementState(relationshipStates(data, selectedRef.current, hoverRef.current))
-        )
-        .catch((cause: unknown) => console.error('Attribute graph emphasis failed', cause));
+      if (!ready || disposed || frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        if (disposed) return;
+        // Apply emphasis in one render; never flash the normal graph first.
+        void graph
+          .setElementState(relationshipStates(data, selectedRef.current, hoverRef.current), false)
+          .catch((cause: unknown) => console.error('Attribute graph emphasis failed', cause));
+      });
     };
     syncRef.current = sync;
-    const leave = () => {
-      hoverRef.current = null;
-      sync();
+    const queueHover = (id: string | null) => {
+      window.clearTimeout(hoverTimer);
+      if (dragging) return;
+      hoverTimer = window.setTimeout(() => {
+        if (disposed || dragging || hoverRef.current === id) return;
+        hoverRef.current = id;
+        sync();
+      }, 100);
     };
+    const leave = () => queueHover(null);
     container.addEventListener('pointerleave', leave);
     graph.on(NodeEvent.CLICK, (event: IPointerEvent) => {
       const id = String((event.target as { id?: string }).id ?? '');
@@ -144,10 +172,19 @@ export function RelationshipCanvas({
       sync();
     });
     graph.on(NodeEvent.POINTER_ENTER, (event: IPointerEvent) => {
+      queueHover(String((event.target as { id?: string }).id ?? ''));
+    });
+    graph.on(NodeEvent.POINTER_LEAVE, leave);
+    graph.on(NodeEvent.DRAG_START, (event: IPointerEvent) => {
+      dragging = true;
+      window.clearTimeout(hoverTimer);
       hoverRef.current = String((event.target as { id?: string }).id ?? '');
       sync();
     });
-    graph.on(NodeEvent.POINTER_LEAVE, leave);
+    graph.on(NodeEvent.DRAG_END, () => {
+      dragging = false;
+      leave();
+    });
     graph.on(CanvasEvent.CLICK, () => {
       selectedRef.current = null;
       hoverRef.current = null;
@@ -204,15 +241,15 @@ export function RelationshipCanvas({
     const observer = new ResizeObserver(() => {
       if (!disposed && ready) {
         graph.resize();
-        void fit(graph).catch((cause: unknown) =>
-          console.error('Attribute graph resize failed', cause)
-        );
+        // Resizing must not discard the user's zoom and pan position.
       }
     });
     observer.observe(container);
     return () => {
       disposed = true;
       window.clearTimeout(timer);
+      window.clearTimeout(hoverTimer);
+      window.cancelAnimationFrame(frame);
       observer.disconnect();
       container.removeEventListener('pointerleave', leave);
       hoverRef.current = null;
@@ -239,7 +276,12 @@ export function RelationshipCanvas({
       }}
     >
       <div className="flex items-center justify-between border-b px-3 py-2 text-xs text-slate-500">
-        <span>술병 · 속성 값</span>
+        <span>
+          위스키 · 속성 값{' '}
+          <span className="ml-2 hidden text-slate-400 sm:inline">
+            드래그로 이동 · 휠로 확대 · 선택하면 상세 보기
+          </span>
+        </span>
         <div className="ml-auto flex items-center gap-1">
           <Button
             variant="ghost"
