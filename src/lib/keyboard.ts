@@ -1,9 +1,6 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
-type ReactKeyboardEventLike = Pick<
-  ReactKeyboardEvent<Element>,
-  'key' | 'keyCode' | 'nativeEvent'
->;
+type ReactKeyboardEventLike = Pick<ReactKeyboardEvent<Element>, 'key' | 'keyCode' | 'nativeEvent'>;
 
 export function isKeyboardEventComposing(event: ReactKeyboardEventLike) {
   return event.nativeEvent.isComposing || event.keyCode === 229;

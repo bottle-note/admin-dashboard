@@ -185,7 +185,11 @@ export function MfdsImporterDetailPage() {
   }
 
   if (!isNewMode && detailQuery.isLoading) {
-    return <div className="py-16 text-center text-muted-foreground">수입사 정보를 불러오는 중입니다.</div>;
+    return (
+      <div className="py-16 text-center text-muted-foreground">
+        수입사 정보를 불러오는 중입니다.
+      </div>
+    );
   }
 
   if (!isNewMode && (detailQuery.isError || !detailQuery.data)) {
@@ -205,7 +209,8 @@ export function MfdsImporterDetailPage() {
   }
 
   const detail = detailQuery.data;
-  const isPending = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
+  const isPending =
+    createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -263,11 +268,7 @@ export function MfdsImporterDetailPage() {
               error={form.formState.errors.sourceListUrl?.message}
               className="sm:col-span-2"
             >
-              <Input
-                type="url"
-                {...form.register('sourceListUrl')}
-                placeholder="https://..."
-              />
+              <Input type="url" {...form.register('sourceListUrl')} placeholder="https://..." />
             </FormField>
           </CardContent>
         </Card>
@@ -351,10 +352,7 @@ export function MfdsImporterDetailPage() {
             />
           </FormField>
           <FormField label="관리자 메모">
-            <Textarea
-              {...form.register('adminNote')}
-              placeholder="내부 운영 메모를 입력합니다."
-            />
+            <Textarea {...form.register('adminNote')} placeholder="내부 운영 메모를 입력합니다." />
           </FormField>
         </CardContent>
       </Card>
@@ -387,7 +385,8 @@ export function MfdsImporterDetailPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>등록 후 식약처 공식 정보는 수정할 수 없습니다</AlertDialogTitle>
               <AlertDialogDescription>
-                공식 업소 코드, 인허가 번호, 대표자 등 입력한 식약처 공식 정보를 확인해주세요. 등록 후에는 이 화면에서 수정할 수 없습니다.
+                공식 업소 코드, 인허가 번호, 대표자 등 입력한 식약처 공식 정보를 확인해주세요. 등록
+                후에는 이 화면에서 수정할 수 없습니다.
               </AlertDialogDescription>
               <p className="text-sm font-medium text-destructive">등록하시겠습니까?</p>
             </AlertDialogHeader>

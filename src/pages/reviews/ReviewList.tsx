@@ -61,14 +61,12 @@ const ACTIVE_STATUS_LABELS: Record<ReviewActiveStatus, string> = {
   DISABLED: '비활성',
 };
 
-const ACTIVE_STATUS_VARIANTS: Record<
-  ReviewActiveStatus,
-  'outline' | 'destructive' | 'secondary'
-> = {
-  ACTIVE: 'outline',
-  DELETED: 'destructive',
-  DISABLED: 'secondary',
-};
+const ACTIVE_STATUS_VARIANTS: Record<ReviewActiveStatus, 'outline' | 'destructive' | 'secondary'> =
+  {
+    ACTIVE: 'outline',
+    DELETED: 'destructive',
+    DISABLED: 'secondary',
+  };
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return '-';
@@ -200,14 +198,12 @@ export function ReviewListPage() {
       {/* 헤더 */}
       <div>
         <h1 className="text-2xl font-bold">리뷰 관리</h1>
-        <p className="text-muted-foreground">
-          사용자가 작성한 리뷰를 조회합니다.
-        </p>
+        <p className="text-muted-foreground">사용자가 작성한 리뷰를 조회합니다.</p>
       </div>
 
       {/* 필터 */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -218,10 +214,7 @@ export function ReviewListPage() {
               className="pl-9"
             />
           </div>
-          <Select
-            value={activeStatusParam ?? 'ALL'}
-            onValueChange={handleActiveStatusChange}
-          >
+          <Select value={activeStatusParam ?? 'ALL'} onValueChange={handleActiveStatusChange}>
             <SelectTrigger className="w-full sm:w-[150px]">
               <SelectValue placeholder="활성 상태" />
             </SelectTrigger>
@@ -233,10 +226,7 @@ export function ReviewListPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select
-            value={displayStatusParam ?? 'ALL'}
-            onValueChange={handleDisplayStatusChange}
-          >
+          <Select value={displayStatusParam ?? 'ALL'} onValueChange={handleDisplayStatusChange}>
             <SelectTrigger className="w-full sm:w-[150px]">
               <SelectValue placeholder="노출 상태" />
             </SelectTrigger>
@@ -250,11 +240,9 @@ export function ReviewListPage() {
           </Select>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground whitespace-nowrap">
-              작성일
-            </label>
+            <label className="whitespace-nowrap text-sm text-muted-foreground">작성일</label>
             <Input
               type="date"
               value={createdFrom}
@@ -297,7 +285,7 @@ export function ReviewListPage() {
 
       {/* 테이블 */}
       <div className="rounded-lg border">
-        <Table className="[&_th]:px-4 [&_td]:px-4 [&_th]:whitespace-nowrap">
+        <Table className="[&_td]:px-4 [&_th]:whitespace-nowrap [&_th]:px-4">
           <TableHeader>
             <TableRow>
               <TableHead className="w-[70px]">리뷰 ID</TableHead>
@@ -315,13 +303,13 @@ export function ReviewListPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8">
+                <TableCell colSpan={10} className="py-8 text-center">
                   <span className="text-muted-foreground">로딩 중...</span>
                 </TableCell>
               </TableRow>
             ) : data?.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8">
+                <TableCell colSpan={10} className="py-8 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <MessageSquare className="h-8 w-8 text-muted-foreground/50" />
                     <span className="text-muted-foreground">
@@ -355,11 +343,7 @@ export function ReviewListPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={
-                        review.displayStatus === 'PUBLIC' ? 'outline' : 'secondary'
-                      }
-                    >
+                    <Badge variant={review.displayStatus === 'PUBLIC' ? 'outline' : 'secondary'}>
                       {review.displayStatus === 'PUBLIC' ? '공개' : '비공개'}
                     </Badge>
                   </TableCell>

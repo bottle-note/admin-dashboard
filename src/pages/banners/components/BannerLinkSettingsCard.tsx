@@ -43,11 +43,12 @@ export function BannerLinkSettingsCard({ form, curations }: BannerLinkSettingsCa
       </CardHeader>
       <CardContent className="space-y-4">
         {isCurationType && (
-          <FormField label="큐레이션 선택" required error={form.formState.errors.curationId?.message}>
-            <Select
-              value={curationId?.toString() ?? ''}
-              onValueChange={handleCurationChange}
-            >
+          <FormField
+            label="큐레이션 선택"
+            required
+            error={form.formState.errors.curationId?.message}
+          >
+            <Select value={curationId?.toString() ?? ''} onValueChange={handleCurationChange}>
               <SelectTrigger>
                 <SelectValue placeholder="큐레이션을 선택하세요" />
               </SelectTrigger>

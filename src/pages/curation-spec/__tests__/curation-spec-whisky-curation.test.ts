@@ -145,8 +145,7 @@ describe('추천·페어링 큐레이션 스펙', () => {
           items: {
             ...whiskyPairingRequestSpec.properties.pairings.items,
             properties: {
-              itemName:
-                whiskyPairingRequestSpec.properties.pairings.items.properties.itemName,
+              itemName: whiskyPairingRequestSpec.properties.pairings.items.properties.itemName,
               pairingNote:
                 whiskyPairingRequestSpec.properties.pairings.items.properties.pairingNote,
             },

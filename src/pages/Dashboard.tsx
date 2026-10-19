@@ -11,10 +11,7 @@ import { useHelpList } from '@/hooks/useHelps';
 import { useTastingTagList } from '@/hooks/useTastingTags';
 import { useBannerList } from '@/hooks/useBanners';
 import { useCurationList } from '@/hooks/useCurations';
-import {
-  useActiveVisitorStatistics,
-  useVisitorRetentionStatistics,
-} from '@/hooks/useStatistics';
+import { useActiveVisitorStatistics, useVisitorRetentionStatistics } from '@/hooks/useStatistics';
 import type { TimeSeriesPayload, VisitorStatisticsParams } from '@/types/api';
 
 interface StatCardProps {

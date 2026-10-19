@@ -5,6 +5,8 @@
 
 import {
   useMutation,
+  useQueryClient,
+  type QueryKey,
   type UseMutationOptions,
   type UseMutationResult,
 } from '@tanstack/react-query';
@@ -15,11 +17,7 @@ import { useToast } from './useToast';
 // Types
 // ============================================
 
-export type UseApiMutationOptions<
-  TData = unknown,
-  TVariables = void,
-  TContext = unknown,
-> = Omit<
+export type UseApiMutationOptions<TData = unknown, TVariables = void, TContext = unknown> = Omit<
   UseMutationOptions<TData, ApiError, TVariables, TContext>,
   'mutationFn'
 > & {
@@ -29,10 +27,14 @@ export type UseApiMutationOptions<
    */
   showErrorToast?: boolean;
   /**
-   * 성공 시 표시할 Toast 메시지
+   * 성공 시 표시할 Toast 메시지. 응답에 따라 문구가 달라지면 함수로 준다
    * 설정하지 않으면 성공 Toast를 표시하지 않음
    */
-  successMessage?: string;
+  successMessage?: string | ((data: TData) => string);
+  /**
+   * 성공 시 무효화할 쿼리 키. 보통 도메인 namespace(`xxxKeys.all`) 하나를 준다
+   */
+  invalidateKeys?: QueryKey[];
 };
 
 // ============================================
@@ -59,27 +61,25 @@ export type UseApiMutationOptions<
  * createMutation.mutate({ korName: '글렌피딕', ... });
  * ```
  */
-export function useApiMutation<
-  TData = unknown,
-  TVariables = void,
-  TContext = unknown,
->(
+export function useApiMutation<TData = unknown, TVariables = void, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   options?: UseApiMutationOptions<TData, TVariables, TContext>
 ): UseMutationResult<TData, ApiError, TVariables, TContext> {
   const {
     showErrorToast = true,
     successMessage,
+    invalidateKeys,
     onError,
     onSuccess,
     ...mutationOptions
   } = options ?? {};
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
 
   return useMutation<TData, ApiError, TVariables, TContext>({
     mutationFn,
     ...mutationOptions,
-    onError: (error, variables, context) => {
+    onError: async (error, variables, context, mutationContext) => {
       // 에러 Toast 표시
       if (showErrorToast) {
         showToast({
@@ -88,22 +88,21 @@ export function useApiMutation<
         });
       }
       // 원래 onError 콜백 호출
-      if (onError) {
-        (onError as (error: ApiError, variables: TVariables, context: TContext | undefined) => void)(error, variables, context);
-      }
+      await onError?.(error, variables, context, mutationContext);
     },
-    onSuccess: (data, variables, context) => {
+    onSuccess: async (data, variables, context, mutationContext) => {
+      await Promise.all(
+        (invalidateKeys ?? []).map((queryKey) => queryClient.invalidateQueries({ queryKey }))
+      );
       // 성공 Toast 표시
       if (successMessage) {
         showToast({
           type: 'success',
-          message: successMessage,
+          message: typeof successMessage === 'function' ? successMessage(data) : successMessage,
         });
       }
       // 원래 onSuccess 콜백 호출
-      if (onSuccess) {
-        (onSuccess as (data: TData, variables: TVariables, context: TContext | undefined) => void)(data, variables, context);
-      }
+      await onSuccess?.(data, variables, context, mutationContext);
     },
   });
 }

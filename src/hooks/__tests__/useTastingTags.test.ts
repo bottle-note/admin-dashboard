@@ -3,10 +3,7 @@ import { act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { renderHook } from '@/test/test-utils';
-import {
-  wrapApiError,
-  wrapApiResponse,
-} from '@/test/mocks/data';
+import { wrapApiError, wrapApiResponse } from '@/test/mocks/data';
 import type { TastingTagListItem } from '@/types/api';
 import {
   useTastingTagList,
@@ -153,8 +150,7 @@ describe('useTastingTags hooks', () => {
       setupPaginatedHandler(25);
 
       const { result, rerender } = renderHook(
-        ({ keyword }: { keyword?: string }) =>
-          useTastingTagListInfinite({ keyword }),
+        ({ keyword }: { keyword?: string }) => useTastingTagListInfinite({ keyword }),
         { initialProps: { keyword: undefined } as { keyword?: string } }
       );
 
@@ -166,7 +162,9 @@ describe('useTastingTags hooks', () => {
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
         // 키워드 결과는 '태그2', '태그20'~'태그29'(존재 범위 내)만 포함
-        expect(result.current.data!.pages[0]!.items.every((i) => i.korName.includes('태그2'))).toBe(true);
+        expect(result.current.data!.pages[0]!.items.every((i) => i.korName.includes('태그2'))).toBe(
+          true
+        );
       });
     });
 
@@ -286,10 +284,9 @@ describe('useTastingTags hooks', () => {
     it('자식 태그 있으면 에러가 된다', async () => {
       server.use(
         http.delete(`${BASE}/:id`, () => {
-          return HttpResponse.json(
-            wrapApiError(400, 'HAS_CHILDREN', '자식 태그가 있습니다.'),
-            { status: 400 }
-          );
+          return HttpResponse.json(wrapApiError(400, 'HAS_CHILDREN', '자식 태그가 있습니다.'), {
+            status: 400,
+          });
         })
       );
 
@@ -307,9 +304,7 @@ describe('useTastingTags hooks', () => {
   describe('useTastingTagConnectAlcohols', () => {
     it('위스키 연결 mutation이 성공한다', async () => {
       const onSuccess = vi.fn();
-      const { result } = renderHook(() =>
-        useTastingTagConnectAlcohols({ onSuccess })
-      );
+      const { result } = renderHook(() => useTastingTagConnectAlcohols({ onSuccess }));
 
       result.current.mutate({ tagId: 1, alcoholIds: [10, 20] });
 
@@ -320,10 +315,9 @@ describe('useTastingTags hooks', () => {
     it('에러 시 에러 상태가 된다', async () => {
       server.use(
         http.post(`${BASE}/:id/alcohols`, () => {
-          return HttpResponse.json(
-            wrapApiError(400, 'ALREADY_CONNECTED', '이미 연결됨'),
-            { status: 400 }
-          );
+          return HttpResponse.json(wrapApiError(400, 'ALREADY_CONNECTED', '이미 연결됨'), {
+            status: 400,
+          });
         })
       );
 
@@ -341,9 +335,7 @@ describe('useTastingTags hooks', () => {
   describe('useTastingTagDisconnectAlcohols', () => {
     it('위스키 연결 해제 mutation이 성공한다', async () => {
       const onSuccess = vi.fn();
-      const { result } = renderHook(() =>
-        useTastingTagDisconnectAlcohols({ onSuccess })
-      );
+      const { result } = renderHook(() => useTastingTagDisconnectAlcohols({ onSuccess }));
 
       result.current.mutate({ tagId: 1, alcoholIds: [10] });
 
@@ -354,10 +346,9 @@ describe('useTastingTags hooks', () => {
     it('에러 시 에러 상태가 된다', async () => {
       server.use(
         http.delete(`${BASE}/:id/alcohols`, () => {
-          return HttpResponse.json(
-            wrapApiError(400, 'NOT_CONNECTED', '연결 안됨'),
-            { status: 400 }
-          );
+          return HttpResponse.json(wrapApiError(400, 'NOT_CONNECTED', '연결 안됨'), {
+            status: 400,
+          });
         })
       );
 

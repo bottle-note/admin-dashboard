@@ -3,11 +3,7 @@
  */
 
 import { useApiQuery } from './useApiQuery';
-import {
-  userService,
-  userKeys,
-  type UserListResponse,
-} from '@/services/user.service';
+import { userService, userKeys, type UserListResponse } from '@/services/user.service';
 import type { UserSearchParams } from '@/types/api';
 
 /**
@@ -24,11 +20,7 @@ import type { UserSearchParams } from '@/types/api';
  * ```
  */
 export function useUserList(params?: UserSearchParams) {
-  return useApiQuery<UserListResponse>(
-    userKeys.list(params),
-    () => userService.list(params),
-    {
-      staleTime: 1000 * 60 * 5, // 5분
-    }
-  );
+  return useApiQuery<UserListResponse>(userKeys.list(params), () => userService.list(params), {
+    staleTime: 1000 * 60 * 5, // 5분
+  });
 }

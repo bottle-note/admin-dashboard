@@ -3,11 +3,7 @@
  * 토큰 자동 첨부 및 리프레시 로직 포함
  */
 
-import axios, {
-  type AxiosError,
-  type AxiosResponse,
-  type InternalAxiosRequestConfig,
-} from 'axios';
+import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/stores/auth';
 import type { ApiResponse } from '@/types/api';
 import type { RefreshTokenResponse } from '@/types/auth';
@@ -114,10 +110,13 @@ api.interceptors.response.use(
 
     try {
       // 리프레시 토큰으로 새 토큰 발급 (상대 경로 - nginx/vite proxy 사용)
-      const response: AxiosResponse<ApiResponse<RefreshTokenResponse>> =
-        await axios.post('/admin/api/v1/auth/refresh', { refreshToken }, {
+      const response: AxiosResponse<ApiResponse<RefreshTokenResponse>> = await axios.post(
+        '/admin/api/v1/auth/refresh',
+        { refreshToken },
+        {
           headers: { 'Content-Type': 'application/json' },
-        });
+        }
+      );
 
       if (!response.data.success) {
         throw new Error('Token refresh failed');

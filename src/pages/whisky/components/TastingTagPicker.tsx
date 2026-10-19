@@ -4,10 +4,7 @@ import { Plus, Search, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import {
-  useTastingTagListInfinite,
-  flattenTastingTagPages,
-} from '@/hooks/useTastingTags';
+import { useTastingTagListInfinite, flattenTastingTagPages } from '@/hooks/useTastingTags';
 
 import type { AlcoholTastingTag } from '@/types/api';
 
@@ -31,22 +28,12 @@ export function TastingTagPicker({
   const [keyword, setKeyword] = useState('');
   const debouncedKeyword = useDebouncedValue(keyword.trim(), 300);
 
-  const {
-    data,
-    isLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-  } = useTastingTagListInfinite(
-    debouncedKeyword ? { keyword: debouncedKeyword } : undefined
-  );
+  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
+    useTastingTagListInfinite(debouncedKeyword ? { keyword: debouncedKeyword } : undefined);
 
   const fetchedItems = useMemo(() => flattenTastingTagPages(data), [data]);
 
-  const selectedIds = useMemo(
-    () => new Set(selectedTags.map((t) => t.id)),
-    [selectedTags]
-  );
+  const selectedIds = useMemo(() => new Set(selectedTags.map((t) => t.id)), [selectedTags]);
   const candidateTags = useMemo(
     () => fetchedItems.filter((t) => !selectedIds.has(t.id)),
     [fetchedItems, selectedIds]
@@ -70,10 +57,7 @@ export function TastingTagPicker({
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const handleAdd = (tag: { id: number; korName: string; engName: string }) => {
-    onTagsChange([
-      ...selectedTags,
-      { id: tag.id, korName: tag.korName, engName: tag.engName },
-    ]);
+    onTagsChange([...selectedTags, { id: tag.id, korName: tag.korName, engName: tag.engName }]);
   };
 
   const handleRemove = (id: number) => {

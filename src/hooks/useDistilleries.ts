@@ -59,19 +59,22 @@ export function useDistilleryCreate(
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<DistilleryFormResponse, DistilleryFormData>(
-    distilleryService.create,
-    {
-      successMessage: '증류소가 등록되었습니다.',
-      ...restOptions,
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries({ queryKey: distilleryKeys.lists() });
-        if (onSuccess) {
-          (onSuccess as (data: DistilleryFormResponse, variables: DistilleryFormData, context: unknown) => void)(data, variables, context);
-        }
-      },
-    }
-  );
+  return useApiMutation<DistilleryFormResponse, DistilleryFormData>(distilleryService.create, {
+    successMessage: '증류소가 등록되었습니다.',
+    ...restOptions,
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: distilleryKeys.lists() });
+      if (onSuccess) {
+        (
+          onSuccess as (
+            data: DistilleryFormResponse,
+            variables: DistilleryFormData,
+            context: unknown
+          ) => void
+        )(data, variables, context);
+      }
+    },
+  });
 }
 
 export interface DistilleryUpdateVariables {
@@ -83,7 +86,10 @@ export interface DistilleryUpdateVariables {
  * 증류소 수정 훅
  */
 export function useDistilleryUpdate(
-  options?: Omit<UseApiMutationOptions<DistilleryFormResponse, DistilleryUpdateVariables>, 'successMessage'>
+  options?: Omit<
+    UseApiMutationOptions<DistilleryFormResponse, DistilleryUpdateVariables>,
+    'successMessage'
+  >
 ) {
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
@@ -97,7 +103,13 @@ export function useDistilleryUpdate(
         queryClient.invalidateQueries({ queryKey: distilleryKeys.lists() });
         queryClient.invalidateQueries({ queryKey: distilleryKeys.details() });
         if (onSuccess) {
-          (onSuccess as (data: DistilleryFormResponse, variables: DistilleryUpdateVariables, context: unknown) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: DistilleryFormResponse,
+              variables: DistilleryUpdateVariables,
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }
@@ -130,11 +142,13 @@ export function useDistillerySortOrderUpdate(
         queryClient.invalidateQueries({ queryKey: distilleryKeys.lists() });
         queryClient.invalidateQueries({ queryKey: distilleryKeys.details() });
         if (onSuccess) {
-          (onSuccess as (
-            data: DistillerySortOrderResponse,
-            variables: DistillerySortOrderVariables,
-            context: unknown
-          ) => void)(data, variables, context);
+          (
+            onSuccess as (
+              data: DistillerySortOrderResponse,
+              variables: DistillerySortOrderVariables,
+              context: unknown
+            ) => void
+          )(data, variables, context);
         }
       },
     }
@@ -150,17 +164,16 @@ export function useDistilleryDelete(
   const queryClient = useQueryClient();
   const { onSuccess, ...restOptions } = options ?? {};
 
-  return useApiMutation<DistilleryDeleteResponse, number>(
-    distilleryService.delete,
-    {
-      successMessage: '증류소가 삭제되었습니다.',
-      ...restOptions,
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries({ queryKey: distilleryKeys.lists() });
-        if (onSuccess) {
-          (onSuccess as (data: DistilleryDeleteResponse, variables: number, context: unknown) => void)(data, variables, context);
-        }
-      },
-    }
-  );
+  return useApiMutation<DistilleryDeleteResponse, number>(distilleryService.delete, {
+    successMessage: '증류소가 삭제되었습니다.',
+    ...restOptions,
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: distilleryKeys.lists() });
+      if (onSuccess) {
+        (
+          onSuccess as (data: DistilleryDeleteResponse, variables: number, context: unknown) => void
+        )(data, variables, context);
+      }
+    },
+  });
 }

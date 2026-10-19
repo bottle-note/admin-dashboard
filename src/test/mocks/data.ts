@@ -28,6 +28,9 @@ import type {
   RegionFormResponse,
   RegionDeleteResponse,
   RegionBulkReorderResponse,
+  TastingGroupItem,
+  TastingGroupResultResponse,
+  UngroupedTastingTag,
 } from '@/types/api';
 
 export const mockTastingTagListItems: TastingTagListItem[] = [
@@ -614,6 +617,81 @@ export const mockRegionBulkReorderResponse: RegionBulkReorderResponse = {
 // ============================================
 // Utility Functions
 // ============================================
+
+// ============================================
+// Tasting Tag Group Mock Data
+// ============================================
+
+const CORE_ROLE = {
+  code: 'CORE' as const,
+  korName: '대표 태그',
+  engName: 'core',
+  description: '이 맛을 결정짓는 태그. 추천 점수에 그대로 반영',
+};
+
+const PERIPHERAL_ROLE = {
+  code: 'PERIPHERAL' as const,
+  korName: '보조 태그',
+  engName: 'peripheral',
+  description: '같이 나타나는 태그. 추천 점수에 0.4만 반영',
+};
+
+const ADMIN_PROVIDER = {
+  code: 'ADMIN',
+  korName: '관리자',
+  engName: 'admin',
+  description: '관리자가 어드민에서 직접 입력하거나 조절한다',
+};
+
+export const mockTastingGroupItems: TastingGroupItem[] = [
+  {
+    id: 1,
+    code: 'PEAT_SMOKE',
+    name: '피트 스모크',
+    family: '스모키',
+    description: '아일라 계열',
+    displayOrder: 1,
+    tags: [
+      {
+        tastingTagId: 11,
+        korName: '피트',
+        role: CORE_ROLE,
+        provider: ADMIN_PROVIDER,
+        alcoholCount: 402,
+      },
+      {
+        tastingTagId: 12,
+        korName: '요오드',
+        role: PERIPHERAL_ROLE,
+        provider: ADMIN_PROVIDER,
+        alcoholCount: 96,
+      },
+    ],
+  },
+  {
+    id: 2,
+    code: 'CITRUS',
+    name: '시트러스',
+    family: '과일',
+    description: null,
+    displayOrder: 2,
+    tags: [],
+  },
+];
+
+export const mockTastingGroupFamilies = ['스모키', '과일'];
+
+export const mockUngroupedTastingTags: UngroupedTastingTag[] = [
+  { id: 21, korName: '가죽', engName: 'Leather', parentId: null, alcoholCount: 210, groups: [] },
+  { id: 22, korName: '민트', engName: 'Mint', parentId: null, alcoholCount: 61, groups: [] },
+];
+
+export const mockTastingGroupResultResponse: TastingGroupResultResponse = {
+  code: 'TASTING_TAG_GROUP_CREATED',
+  message: '맛 그룹이 등록되었습니다.',
+  targetId: 1,
+  responseAt: '2026-10-15 10:00:00',
+};
 
 export function wrapApiResponse<T>(data: T, meta?: Record<string, unknown>) {
   return {

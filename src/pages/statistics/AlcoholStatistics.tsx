@@ -528,9 +528,7 @@ function IndividualCharts({
   );
   const [visiblePopularityComponents, setVisiblePopularityComponents] = useState<string[]>([]);
   const [selectedObservationMetric, setSelectedObservationMetric] = useState('viewCount');
-  const [visibleEngagementMetrics, setVisibleEngagementMetrics] = useState([
-    'deltaReviewCount',
-  ]);
+  const [visibleEngagementMetrics, setVisibleEngagementMetrics] = useState(['deltaReviewCount']);
   if (group === 'POPULARITY') {
     const scoreDefinitions = metricDefinitions.POPULARITY;
     const closedPoints =
@@ -731,10 +729,7 @@ function IndividualCharts({
         ? [
             {
               label: '평균 평점',
-              value: formatObservationValue(
-                latestValue(observations.data, 'averageRating'),
-                '점'
-              ),
+              value: formatObservationValue(latestValue(observations.data, 'averageRating'), '점'),
             },
             {
               label: '누적 평점 수',

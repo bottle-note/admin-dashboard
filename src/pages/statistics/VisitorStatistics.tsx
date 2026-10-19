@@ -16,10 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TimeSeriesChart } from '@/components/common/TimeSeriesChart';
-import {
-  useActiveVisitorStatistics,
-  useVisitorRetentionStatistics,
-} from '@/hooks/useStatistics';
+import { useActiveVisitorStatistics, useVisitorRetentionStatistics } from '@/hooks/useStatistics';
 import { WeekRangePicker } from './WeekRangePicker';
 import type {
   TimeSeriesPayload,
@@ -128,10 +125,8 @@ function getSelectedRange(
     return { from, to, error: validateRange(from, to) };
   }
 
-  const rangeStart =
-    granularity === 'WEEK' ? getWeekStart(parseKstDate(from)) : monthToStart(from);
-  const rangeEndStart =
-    granularity === 'WEEK' ? getWeekStart(parseKstDate(to)) : monthToStart(to);
+  const rangeStart = granularity === 'WEEK' ? getWeekStart(parseKstDate(from)) : monthToStart(from);
+  const rangeEndStart = granularity === 'WEEK' ? getWeekStart(parseKstDate(to)) : monthToStart(to);
   if (Number.isNaN(rangeStart) || Number.isNaN(rangeEndStart)) {
     return {
       from: '',
@@ -143,13 +138,21 @@ function getSelectedRange(
   const rangeEnd =
     granularity === 'WEEK'
       ? rangeEndStart + 6 * 86_400_000
-      : Date.UTC(new Date(rangeEndStart).getUTCFullYear(), new Date(rangeEndStart).getUTCMonth() + 1, 0);
+      : Date.UTC(
+          new Date(rangeEndStart).getUTCFullYear(),
+          new Date(rangeEndStart).getUTCMonth() + 1,
+          0
+        );
   const today = parseKstDate(getKstToday());
   const resolvedTo = rangeEnd > today && rangeEndStart <= today ? today : rangeEnd;
   const resolvedFrom = formatDate(rangeStart);
   const resolvedToDate = formatDate(resolvedTo);
 
-  return { from: resolvedFrom, to: resolvedToDate, error: validateRange(resolvedFrom, resolvedToDate) };
+  return {
+    from: resolvedFrom,
+    to: resolvedToDate,
+    error: validateRange(resolvedFrom, resolvedToDate),
+  };
 }
 
 interface StatisticsCardProps {

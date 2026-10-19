@@ -20,10 +20,7 @@ import {
 } from '@/components/ui/select';
 import { useAlcoholPopularityStatistics } from '@/hooks/useStatistics';
 import { getErrorMessage } from '@/lib/api-error';
-import type {
-  AlcoholStatisticsGranularity,
-  AlcoholStatisticsParams,
-} from '@/types/api';
+import type { AlcoholStatisticsGranularity, AlcoholStatisticsParams } from '@/types/api';
 
 const GRANULARITY_OPTIONS: Array<{
   value: AlcoholStatisticsGranularity;
@@ -116,8 +113,9 @@ export interface WhiskyPopularityChartCardProps {
 
 export function WhiskyPopularityChartCard({ alcoholId }: WhiskyPopularityChartCardProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [statisticsParams, setStatisticsParams] =
-    useState<AlcoholStatisticsParams>(getDefaultStatisticsParams);
+  const [statisticsParams, setStatisticsParams] = useState<AlcoholStatisticsParams>(
+    getDefaultStatisticsParams
+  );
   const [draftStatisticsParams, setDraftStatisticsParams] =
     useState<AlcoholStatisticsParams>(statisticsParams);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -241,9 +239,7 @@ export function WhiskyPopularityChartCard({ alcoholId }: WhiskyPopularityChartCa
                 <h3 id="popularity-score-title" className="font-semibold">
                   인기도 점수
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  서버에서 계산된 인기도 점수입니다.
-                </p>
+                <p className="text-sm text-muted-foreground">서버에서 계산된 인기도 점수입니다.</p>
               </div>
               <TimeSeriesChart
                 payload={popularityQuery.data}
@@ -252,9 +248,7 @@ export function WhiskyPopularityChartCard({ alcoholId }: WhiskyPopularityChartCa
                 isLoading={popularityQuery.isLoading}
                 isError={popularityQuery.isError}
                 errorMessage={
-                  popularityQuery.isError
-                    ? getErrorMessage(popularityQuery.error)
-                    : undefined
+                  popularityQuery.isError ? getErrorMessage(popularityQuery.error) : undefined
                 }
                 onRetry={() => void popularityQuery.refetch()}
               />

@@ -36,11 +36,7 @@ class ApiClient {
   /**
    * POST 요청
    */
-  async post<T, D = unknown>(
-    url: string,
-    data?: D,
-    config?: AxiosRequestConfig
-  ): Promise<T> {
+  async post<T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig): Promise<T> {
     try {
       const response = await api.post<ApiResponse<T>>(url, data, config);
 
@@ -78,11 +74,7 @@ class ApiClient {
   /**
    * PUT 요청
    */
-  async put<T, D = unknown>(
-    url: string,
-    data?: D,
-    config?: AxiosRequestConfig
-  ): Promise<T> {
+  async put<T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig): Promise<T> {
     try {
       const response = await api.put<ApiResponse<T>>(url, data, config);
 
@@ -99,11 +91,7 @@ class ApiClient {
   /**
    * PATCH 요청
    */
-  async patch<T, D = unknown>(
-    url: string,
-    data?: D,
-    config?: AxiosRequestConfig
-  ): Promise<T> {
+  async patch<T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig): Promise<T> {
     try {
       const response = await api.patch<ApiResponse<T>>(url, data, config);
 

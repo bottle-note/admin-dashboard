@@ -8,6 +8,7 @@ import {
   type UseQueryOptions,
   type UseQueryResult,
   type QueryKey,
+  type QueryFunctionContext,
 } from '@tanstack/react-query';
 import { ApiError, getErrorMessage } from '@/lib/api-error';
 import { useToast } from './useToast';
@@ -45,7 +46,7 @@ export type UseApiQueryOptions<TData = unknown> = Omit<
  */
 export function useApiQuery<TData = unknown>(
   queryKey: QueryKey,
-  queryFn: () => Promise<TData>,
+  queryFn: (context: QueryFunctionContext) => Promise<TData>,
   options?: UseApiQueryOptions<TData>
 ): UseQueryResult<TData, ApiError> {
   const { showErrorToast = true, ...queryOptions } = options ?? {};
@@ -53,12 +54,12 @@ export function useApiQuery<TData = unknown>(
 
   return useQuery<TData, ApiError, TData, QueryKey>({
     queryKey,
-    queryFn: async () => {
+    queryFn: async (context) => {
       try {
-        return await queryFn();
+        return await queryFn(context);
       } catch (error) {
         // 에러 Toast 표시
-        if (showErrorToast) {
+        if (showErrorToast && !context.signal.aborted) {
           showToast({
             type: 'error',
             message: getErrorMessage(error),
@@ -97,7 +98,6 @@ export function createQueryKeys<T extends string>(namespace: T) {
         ? ([...createQueryKeys(namespace).lists(), params] as const)
         : createQueryKeys(namespace).lists(),
     details: () => [...createQueryKeys(namespace).all, 'detail'] as const,
-    detail: (id: string | number) =>
-      [...createQueryKeys(namespace).details(), id] as const,
+    detail: (id: string | number) => [...createQueryKeys(namespace).details(), id] as const,
   };
 }

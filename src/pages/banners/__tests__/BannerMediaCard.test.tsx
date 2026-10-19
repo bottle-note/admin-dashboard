@@ -50,11 +50,11 @@ describe('BannerMediaCard', () => {
     expect(onMediaChange).not.toHaveBeenCalled();
   });
 
-  it('이미지와 video/mp4를 허용한다', () => {
+  it('이미지 처리 정책에 따라 JPG·PNG·WEBP와 MP4를 허용한다', () => {
     renderWithToast(<BannerMediaCard {...defaultProps} />);
 
     const input = document.querySelector('input[type="file"]');
-    expect(input?.getAttribute('accept')).toBe('image/*,video/mp4');
+    expect(input?.getAttribute('accept')).toBe('image/jpeg,image/png,image/webp,video/mp4');
   });
 
   it('추출한 동영상 대표 이미지를 표시한다', () => {

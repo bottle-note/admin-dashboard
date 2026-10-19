@@ -81,17 +81,14 @@ export function useMfdsImporterUpdate() {
   return useApiMutation<
     MfdsImporterMutationResult,
     { importerId: number; data: MfdsImporterUpdateRequest }
-  >(
-    ({ importerId, data }) => mfdsImporterService.update(importerId, data),
-    {
-      successMessage: '수입사 관리 정보를 저장했습니다.',
-      onSuccess: (_, { importerId }) =>
-        Promise.all([
-          queryClient.invalidateQueries({ queryKey: mfdsImporterKeys.lists() }),
-          queryClient.invalidateQueries({ queryKey: mfdsImporterKeys.detail(importerId) }),
-        ]),
-    }
-  );
+  >(({ importerId, data }) => mfdsImporterService.update(importerId, data), {
+    successMessage: '수입사 관리 정보를 저장했습니다.',
+    onSuccess: (_, { importerId }) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: mfdsImporterKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: mfdsImporterKeys.detail(importerId) }),
+      ]),
+  });
 }
 
 export function useMfdsImporterDelete(

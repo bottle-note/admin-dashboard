@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-40 -76 80 140">
+<path d="M-12 -65 H12 V-35 Q12 -29 23 -22 Q32 -16 32 -7 V51 Q32 58 25 58 H-25 Q-32 58 -32 51 V-7 Q-32 -16 -23 -22 Q-12 -29 -12 -35 Z" fill="#f6e4d2" stroke="#aa7549" stroke-width="2"/>
+<rect x="-14" y="-72" width="28" height="12" rx="3" fill="#8e5c3a"/>
+<path d="M-25 8 H25 V48 Q25 51 21 51 H-21 Q-25 51 -25 48 Z" fill="#dba35f" fill-opacity=".38"/>
+<rect x="-25" y="0" width="50" height="33" rx="3" fill="#fff9ef"/>
+<text y="20" text-anchor="middle" fill="#9b673d" font-size="8" font-family="sans-serif">WHISKY</text>
+</svg>

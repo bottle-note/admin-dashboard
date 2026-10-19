@@ -31,11 +31,7 @@ export function WhiskyRelatedKeywordsCard({
         </CardDescription>
       </CardHeader>
       <CardContent className={disabled ? 'pointer-events-none opacity-60' : ''}>
-        <TagSelector
-          selectedTags={keywords}
-          availableTags={[]}
-          onTagsChange={onKeywordsChange}
-        />
+        <TagSelector selectedTags={keywords} availableTags={[]} onTagsChange={onKeywordsChange} />
       </CardContent>
     </Card>
   );

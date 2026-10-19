@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  createCurationTargetUrl,
-  extractCurationIdFromTargetUrl,
-} from '../banner-curation-link';
+import { createCurationTargetUrl, extractCurationIdFromTargetUrl } from '../banner-curation-link';
 
 describe('banner curation links', () => {
   it('V2 큐레이션 상세 링크를 생성한다', () => {

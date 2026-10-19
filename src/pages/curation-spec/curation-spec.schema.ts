@@ -412,9 +412,7 @@ function createAlcoholListValidationSchema(
   return validationSchema;
 }
 
-export function createWhiskyCurationFormValidationSchema(
-  requestSpec: WhiskyCurationRequestSpec
-) {
+export function createWhiskyCurationFormValidationSchema(requestSpec: WhiskyCurationRequestSpec) {
   const alcoholDisplayName =
     requestSpec.properties.alcohol['x-display-name'] ?? requestSpec['x-display-name'] ?? '라인업';
   const selectedTagsSpec = requestSpec.properties.alcohol.properties.selectedTags;
@@ -462,7 +460,10 @@ export function createWhiskyCurationFormValidationSchema(
         });
       }
 
-      if (commentSpec.maxLength !== undefined && (item.comment?.length ?? 0) > commentSpec.maxLength) {
+      if (
+        commentSpec.maxLength !== undefined &&
+        (item.comment?.length ?? 0) > commentSpec.maxLength
+      ) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['alcohols', index, 'comment'],

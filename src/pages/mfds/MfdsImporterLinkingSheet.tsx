@@ -29,10 +29,7 @@ import {
 } from '@/components/ui/sheet';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useMfdsImporterLinkActions } from '@/hooks/useMfdsDeclarations';
-import {
-  flattenMfdsImporterPages,
-  useMfdsImporterLookupInfinite,
-} from '@/hooks/useMfdsImporters';
+import { flattenMfdsImporterPages, useMfdsImporterLookupInfinite } from '@/hooks/useMfdsImporters';
 import type { MfdsImporterItem } from '@/types/api';
 
 interface MfdsImporterLinkingSheetProps {
@@ -69,9 +66,7 @@ function ImporterCard({
         </div>
         {action}
       </div>
-      {footerAction && (
-        <div className="flex justify-end border-t px-3 py-2">{footerAction}</div>
-      )}
+      {footerAction && <div className="flex justify-end border-t px-3 py-2">{footerAction}</div>}
     </div>
   );
 }

@@ -13,13 +13,7 @@ import { Plus, X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog';
 import {
   useTastingTagListInfinite,
@@ -37,15 +31,8 @@ export function TastingTagListPage() {
   const debouncedKeyword = useDebouncedValue(searchKeyword.trim(), 300);
   const [deleteTarget, setDeleteTarget] = useState<TastingTagListItem | null>(null);
 
-  const {
-    data,
-    isLoading,
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-  } = useTastingTagListInfinite(
-    debouncedKeyword ? { keyword: debouncedKeyword } : undefined
-  );
+  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    useTastingTagListInfinite(debouncedKeyword ? { keyword: debouncedKeyword } : undefined);
 
   const tags = useMemo(() => flattenTastingTagPages(data), [data]);
   const totalElements = data?.pages[0]?.meta.totalElements ?? 0;
@@ -87,9 +74,7 @@ export function TastingTagListPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">테이스팅 태그 관리</h1>
-          <p className="text-muted-foreground">
-            위스키에 사용되는 테이스팅 태그를 관리합니다.
-          </p>
+          <p className="text-muted-foreground">위스키에 사용되는 테이스팅 태그를 관리합니다.</p>
         </div>
         <Button onClick={() => navigate('/tasting-tags/new')}>
           <Plus className="mr-2 h-4 w-4" />
@@ -134,11 +119,7 @@ export function TastingTagListPage() {
                   onClick={() => handleTagClick(tag.id)}
                 >
                   {tag.icon && (
-                    <img
-                      src={tag.icon}
-                      alt=""
-                      className="h-4 w-4 rounded object-cover"
-                    />
+                    <img src={tag.icon} alt="" className="h-4 w-4 rounded object-cover" />
                   )}
                   <span>{tag.korName}</span>
                   <span className="text-muted-foreground">({tag.engName})</span>
@@ -160,9 +141,7 @@ export function TastingTagListPage() {
           <div ref={sentinelRef} className="h-1" />
 
           {isFetchingNextPage && (
-            <p className="py-2 text-center text-sm text-muted-foreground">
-              더 불러오는 중...
-            </p>
+            <p className="py-2 text-center text-sm text-muted-foreground">더 불러오는 중...</p>
           )}
         </CardContent>
       </Card>

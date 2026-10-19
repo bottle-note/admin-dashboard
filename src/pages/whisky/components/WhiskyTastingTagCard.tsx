@@ -24,9 +24,7 @@ export function WhiskyTastingTagCard({
     <Card>
       <CardHeader>
         <CardTitle>테이스팅 태그</CardTitle>
-        <CardDescription>
-          이 위스키의 테이스팅 노트를 선택할 수 있습니다.
-        </CardDescription>
+        <CardDescription>이 위스키의 테이스팅 노트를 선택할 수 있습니다.</CardDescription>
       </CardHeader>
       <CardContent>
         <TastingTagPicker

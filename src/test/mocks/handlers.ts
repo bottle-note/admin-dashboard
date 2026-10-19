@@ -30,7 +30,12 @@ import {
   mockRegionFormResponse,
   mockRegionDeleteResponse,
   mockRegionBulkReorderResponse,
+  mockTastingGroupItems,
+  mockTastingGroupFamilies,
+  mockUngroupedTastingTags,
+  mockTastingGroupResultResponse,
   wrapApiResponse,
+  wrapApiError,
 } from './data';
 
 const BASE = '/admin/api/v1/tasting-tags';
@@ -694,8 +699,97 @@ export const regionHandlers = [
   }),
 ];
 
+// ============================================
+// Tasting Tag Group Handlers
+// ============================================
+
+const TASTING_GROUP_BASE = '/admin/api/v1/tasting/groups';
+const TASTING_TAG_CATALOG_BASE = '/admin/api/v1/tasting/tags';
+
+export const tastingGroupHandlers = [
+  http.get(TASTING_GROUP_BASE, () => {
+    return HttpResponse.json(
+      wrapApiResponse({ groups: mockTastingGroupItems, families: mockTastingGroupFamilies })
+    );
+  }),
+
+  http.get(`${TASTING_GROUP_BASE}/:code`, ({ params }) => {
+    const group = mockTastingGroupItems.find((item) => item.code === params.code);
+    if (!group) {
+      return HttpResponse.json(
+        wrapApiError(404, 'TASTING_TAG_GROUP_NOT_FOUND', '맛 그룹이 없습니다.'),
+        { status: 404 }
+      );
+    }
+    return HttpResponse.json(wrapApiResponse(group));
+  }),
+
+  http.post(TASTING_GROUP_BASE, () => {
+    return HttpResponse.json(wrapApiResponse(mockTastingGroupResultResponse));
+  }),
+
+  http.put(`${TASTING_GROUP_BASE}/:code`, () => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockTastingGroupResultResponse,
+        code: 'TASTING_TAG_GROUP_UPDATED',
+        message: '맛 그룹이 수정되었습니다.',
+      })
+    );
+  }),
+
+  http.delete(`${TASTING_GROUP_BASE}/:code`, () => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockTastingGroupResultResponse,
+        code: 'TASTING_TAG_GROUP_DELETED',
+        message: '맛 그룹이 삭제되었습니다.',
+      })
+    );
+  }),
+
+  http.post(`${TASTING_GROUP_BASE}/:code/tags`, () => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockTastingGroupResultResponse,
+        code: 'TASTING_TAG_GROUP_TAG_ADDED',
+        message: '맛 그룹에 태그가 연결되었습니다.',
+      })
+    );
+  }),
+
+  http.put(`${TASTING_GROUP_BASE}/:code/tags/:tagId`, () => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockTastingGroupResultResponse,
+        code: 'TASTING_TAG_GROUP_TAG_ROLE_UPDATED',
+        message: '맛 그룹 태그의 역할이 변경되었습니다.',
+      })
+    );
+  }),
+
+  http.delete(`${TASTING_GROUP_BASE}/:code/tags/:tagId`, () => {
+    return HttpResponse.json(
+      wrapApiResponse({
+        ...mockTastingGroupResultResponse,
+        code: 'TASTING_TAG_GROUP_TAG_REMOVED',
+        message: '맛 그룹에서 태그가 제거되었습니다.',
+      })
+    );
+  }),
+
+  http.get(`${TASTING_TAG_CATALOG_BASE}/ungrouped`, ({ request }) => {
+    const keyword = new URL(request.url).searchParams.get('keyword');
+    const items = keyword
+      ? mockUngroupedTastingTags.filter((tag) => tag.korName.includes(keyword))
+      : mockUngroupedTastingTags;
+    return HttpResponse.json(wrapApiResponse(items));
+  }),
+];
+
 export const handlers = [
   ...tastingTagHandlers,
+  ...tastingGroupHandlers,
   ...bannerHandlers,
   ...alcoholHandlers,
   ...userHandlers,

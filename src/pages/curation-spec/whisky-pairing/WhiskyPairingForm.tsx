@@ -1,10 +1,7 @@
 import type { CurationV2Spec } from '@/types/api';
 
 import { CurationSpecWhiskyCurationForm } from '../components/CurationSpecWhiskyCurationForm';
-import type {
-  WhiskyCurationFormValues,
-  WhiskyCurationRequestSpec,
-} from '../curation-spec.schema';
+import type { WhiskyCurationFormValues, WhiskyCurationRequestSpec } from '../curation-spec.schema';
 import { WhiskyPairingFormPreview } from './WhiskyPairingFormPreview';
 import { getWhiskyPairingSections } from './whisky-pairing-sections';
 
