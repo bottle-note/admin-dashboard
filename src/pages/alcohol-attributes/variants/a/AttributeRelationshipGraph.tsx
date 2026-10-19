@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { displayValue, type Attribute, type Mapping, type AlcoholNode } from './attribute-model';
 
-const ALCOHOL_LIMIT = 100;
 const MAPPING_LIMIT = 500;
 const valueId = (mapping: Mapping) =>
   `value-${JSON.stringify([mapping.attributeId, mapping.value])}`;
@@ -25,7 +24,7 @@ export function AttributeRelationshipGraph({
   attributes: Attribute[];
   alcohols: AlcoholNode[];
   mappings: Mapping[];
-  serverFilter?: {
+  serverFilter: {
     keyword: string;
     key: string;
     value: string;
@@ -34,9 +33,6 @@ export function AttributeRelationshipGraph({
     onChange: (filters: { keyword: string; key: string; value: string }) => void;
   };
 }) {
-  const [query, setQuery] = useState('');
-  const [attributeFilter, setAttributeFilter] = useState('all');
-  const [valueFilter, setValueFilter] = useState('');
   const [selection, setSelection] = useState<string | null>(null);
   const model = useMemo(() => {
     const attributeById = new Map(attributes.map((a) => [a.id, a]));
@@ -44,31 +40,13 @@ export function AttributeRelationshipGraph({
     const valid = mappings.filter(
       (m) => attributeById.has(m.attributeId) && alcoholById.has(m.alcoholId) && m.value?.trim()
     );
-    const search = serverFilter ? '' : query.trim().toLowerCase();
-    const valueSearch = serverFilter ? '' : valueFilter.trim().toLowerCase();
-    const filtered = valid.filter((m) => {
-      const a = attributeById.get(m.attributeId)!;
-      const alcohol = alcoholById.get(m.alcoholId)!;
-      return (
-        (serverFilter
-          ? (!serverFilter.key || a.key === serverFilter.key) &&
-            (!serverFilter.value || m.value === serverFilter.value)
-          : attributeFilter === 'all' || m.attributeId === Number(attributeFilter)) &&
-        (!search ||
-          `${alcohol.name} ${alcohol.english} ${a.displayName} ${a.key}`
-            .toLowerCase()
-            .includes(search)) &&
-        (!valueSearch ||
-          m.value.toLowerCase().includes(valueSearch) ||
-          displayValue(a, m.value).toLowerCase().includes(valueSearch))
-      );
-    });
-    const allIds = new Set(valid.map((m) => m.alcoholId));
-    const filteredIds = [...new Set(filtered.map((m) => m.alcoholId))].sort((a, b) => a - b);
-    const sampledIds = new Set(sample(filteredIds, ALCOHOL_LIMIT));
-    const candidates = filtered
-      .filter((m) => sampledIds.has(m.alcoholId))
-      .sort((a, b) => a.id - b.id);
+    // 서버 응답에는 다른 속성도 포함되므로 현재 조건에 해당하는 간선만 표시한다.
+    const filtered = valid.filter(
+      (m) =>
+        (!serverFilter.key || attributeById.get(m.attributeId)!.key === serverFilter.key) &&
+        (!serverFilter.value || m.value === serverFilter.value)
+    );
+    const candidates = [...filtered].sort((a, b) => a.id - b.id);
     // Give each sampled whisky at least one edge before sampling the remaining edges.
     const firstByAlcohol = new Map<number, Mapping>();
     for (const m of candidates)
@@ -132,16 +110,13 @@ export function AttributeRelationshipGraph({
     return {
       attributeById,
       alcoholById,
-      valid,
       filtered,
-      allIds,
-      filteredIds,
       visible,
       visibleAlcohols,
       groups,
       data,
     };
-  }, [attributes, alcohols, mappings, query, attributeFilter, valueFilter, serverFilter]);
+  }, [attributes, alcohols, mappings, serverFilter.key, serverFilter.value]);
   const selectedGroup = selection ? model.groups.get(selection) : undefined;
   const selectedAlcohol = selection?.startsWith('alcohol-')
     ? model.visibleAlcohols.find((a) => `alcohol-${a.id}` === selection)
@@ -152,10 +127,6 @@ export function AttributeRelationshipGraph({
       : selectedAlcohol && m.alcoholId === selectedAlcohol.id
   );
   const sampled = model.visible.length < model.filtered.length;
-  const changeFilter = (set: (value: string) => void, value: string) => {
-    set(value);
-    setSelection(null);
-  };
   return (
     <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
       <div className="min-w-0 overflow-hidden rounded-lg border bg-white">
@@ -172,19 +143,17 @@ export function AttributeRelationshipGraph({
             className="grid gap-2 rounded-md bg-slate-50 p-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
           >
             <label className="min-w-0 space-y-1 text-[11px] text-slate-600">
-              {serverFilter ? '위스키 검색' : '위스키 · 속성 검색'}
+              위스키 검색
               <div className="relative">
                 <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" />
                 <Input
                   aria-label="그래프 검색"
-                  value={serverFilter?.keyword ?? query}
+                  value={serverFilter.keyword}
                   onChange={(e) => {
-                    if (serverFilter)
-                      serverFilter.onChange({ ...serverFilter, keyword: e.target.value });
-                    else changeFilter(setQuery, e.target.value);
+                    serverFilter.onChange({ ...serverFilter, keyword: e.target.value });
                     setSelection(null);
                   }}
-                  placeholder={serverFilter ? '전체 위스키에서 검색' : '전체 데이터에서 검색'}
+                  placeholder="전체 위스키에서 검색"
                   className="h-8 bg-white pl-7 text-xs"
                 />
               </div>
@@ -193,18 +162,12 @@ export function AttributeRelationshipGraph({
               속성
               <select
                 aria-label="그래프 속성 필터"
-                value={
-                  serverFilter
-                    ? (attributes.find((a) => a.key === serverFilter.key)?.id ?? 'all')
-                    : attributeFilter
-                }
+                value={attributes.find((a) => a.key === serverFilter.key)?.id ?? 'all'}
                 onChange={(e) => {
-                  if (serverFilter)
-                    serverFilter.onChange({
-                      ...serverFilter,
-                      key: attributes.find((a) => a.id === Number(e.target.value))?.key ?? '',
-                    });
-                  else changeFilter(setAttributeFilter, e.target.value);
+                  serverFilter.onChange({
+                    ...serverFilter,
+                    key: attributes.find((a) => a.id === Number(e.target.value))?.key ?? '',
+                  });
                   setSelection(null);
                 }}
                 className="h-8 w-full rounded border bg-white px-2 text-xs"
@@ -221,14 +184,12 @@ export function AttributeRelationshipGraph({
               값
               <Input
                 aria-label="속성 값 필터"
-                value={serverFilter?.value ?? valueFilter}
+                value={serverFilter.value}
                 onChange={(e) => {
-                  if (serverFilter)
-                    serverFilter.onChange({ ...serverFilter, value: e.target.value });
-                  else changeFilter(setValueFilter, e.target.value);
+                  serverFilter.onChange({ ...serverFilter, value: e.target.value });
                   setSelection(null);
                 }}
-                placeholder={serverFilter ? '정확한 값: 33000' : '예: 33,000'}
+                placeholder="정확한 값: 33000"
                 className="h-8 bg-white text-xs"
               />
             </label>
@@ -237,10 +198,7 @@ export function AttributeRelationshipGraph({
               size="sm"
               className="self-end"
               onClick={() => {
-                serverFilter?.onChange({ keyword: '', key: '', value: '' });
-                setQuery('');
-                setAttributeFilter('all');
-                setValueFilter('');
+                serverFilter.onChange({ keyword: '', key: '', value: '' });
                 setSelection(null);
               }}
             >
@@ -248,26 +206,13 @@ export function AttributeRelationshipGraph({
             </Button>
           </div>
           <p className="text-xs text-slate-600">
-            {serverFilter ? (
-              serverFilter.loading ? (
-                '서버에서 관계를 조회 중입니다.'
-              ) : (
-                `검색 결과 위스키 ${serverFilter.total ?? 0}개 · 현재 페이지 ${alcohols.length}개`
-              )
-            ) : (
-              <>
-                전체 위스키 {model.allIds.size}개 · 연결 {model.valid.length}개 / 필터 결과 위스키{' '}
-                {model.filteredIds.length}개 · 연결 {model.filtered.length}개
-              </>
-            )}
+            {serverFilter.loading
+              ? '서버에서 관계를 조회 중입니다.'
+              : `검색 결과 위스키 ${serverFilter.total ?? 0}개 · 현재 페이지 ${alcohols.length}개`}
           </p>
           <p role="status" className={`text-xs ${sampled ? 'text-amber-800' : 'text-slate-500'}`}>
             표시: 위스키 {model.visibleAlcohols.length}개 · 속성 값 {model.groups.size}개 · 연결{' '}
-            {model.visible.length}개
-            {sampled &&
-              (serverFilter
-                ? ' · 현재 페이지에서 최대 500개 연결을 표시합니다.'
-                : ' · 샘플 표시 중 (최대 위스키 100개·연결 500개). 필터는 전체 데이터에 적용됩니다.')}
+            {model.visible.length}개{sampled && ' · 현재 페이지에서 최대 500개 연결을 표시합니다.'}
           </p>
         </div>
         <div className="overflow-hidden bg-slate-50/60 p-2">
@@ -276,7 +221,6 @@ export function AttributeRelationshipGraph({
           ) : (
             <RelationshipCanvas
               data={model.data}
-              focusId={null}
               selectedId={selectedGroup || selectedAlcohol ? selection : null}
               onSelect={setSelection}
             />

@@ -12,17 +12,14 @@ import { Button } from '@/components/ui/button';
 
 export function RelationshipCanvas({
   data,
-  focusId,
   selectedId,
   onSelect,
 }: {
   data: GraphData;
-  focusId: string | null;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const readyRef = useRef(false);
   const graphRef = useRef<Graph | null>(null);
   const selectRef = useRef(onSelect);
   const selectedRef = useRef(selectedId);
@@ -46,7 +43,6 @@ export function RelationshipCanvas({
     if (!container) return;
     let disposed = false;
     let ready = false;
-    readyRef.current = false;
     const labels = new Map(
       (data.nodes ?? []).map((node) => [node.id, String(node.style?.labelText ?? '')])
     );
@@ -59,22 +55,13 @@ export function RelationshipCanvas({
       animation: false,
       zoomRange: [0.05, 3],
       data,
-      layout: focusId
-        ? {
-            type: 'radial',
-            focusNode: focusId,
-            unitRadius: 170,
-            preventOverlap: true,
-            nodeSize: 110,
-            nodeSpacing: 30,
-          }
-        : {
-            type: 'force',
-            preventOverlap: true,
-            nodeSize: 110,
-            nodeSpacing: 24,
-            linkDistance: 150,
-          },
+      layout: {
+        type: 'force',
+        preventOverlap: true,
+        nodeSize: 110,
+        nodeSpacing: 24,
+        linkDistance: 150,
+      },
       node: {
         // Force layout writes its collision diameter into data.style.size.
         // Keep visual dimensions independent from that layout output.
@@ -200,7 +187,6 @@ export function RelationshipCanvas({
           await fit(graph);
           if (disposed) return;
           ready = true;
-          readyRef.current = true;
           setError(null);
           setZoom(graph.getZoom());
           container.querySelectorAll('canvas').forEach((canvas) => {
@@ -234,7 +220,7 @@ export function RelationshipCanvas({
       graphRef.current = null;
       graph.destroy();
     };
-  }, [data, focusId]);
+  }, [data]);
   useEffect(() => {
     selectedRef.current = selectedId;
     syncRef.current?.();

@@ -1,25 +1,10 @@
-export const TYPE_LABELS = {
-  KEYWORD: '키워드',
-  PRICE: '가격',
-  POPULARITY: '대중성',
-  FLAG: '예/아니오',
-  IDENTITY: '묶음 코드',
-  NOTE: '메모',
-} as const;
+import type {
+  Attribute as AttributeDefinition,
+  Mapping as AttributeMapping,
+} from '../variants/a/attribute-model';
 
-export type AttributeType = keyof typeof TYPE_LABELS;
-export type Attribute = {
-  id: number;
-  key: string;
-  displayName: string;
-  type: AttributeType;
-  datatype: 'STRING' | 'INT' | 'DOUBLE' | 'BOOLEAN';
-  operator: 'EQ' | 'GTE';
-  value: string;
-  unit: string;
-  description: string;
-};
-export type Mapping = { id: number; alcoholId: number; attributeId: number };
+type Attribute = AttributeDefinition & { value: string };
+type Mapping = Omit<AttributeMapping, 'value'>;
 
 export const initialAttributes: Attribute[] = [
   {
@@ -28,7 +13,6 @@ export const initialAttributes: Attribute[] = [
     displayName: '선물용',
     type: 'KEYWORD',
     datatype: 'STRING',
-    operator: 'EQ',
     value: 'gift',
     unit: '',
     description: '패키지와 인지도를 고려해 운영자가 선물용으로 선정한 위스키.',
@@ -39,7 +23,6 @@ export const initialAttributes: Attribute[] = [
     displayName: '스모키',
     type: 'KEYWORD',
     datatype: 'STRING',
-    operator: 'EQ',
     value: 'smoky',
     unit: '',
     description: '훈연 또는 피트 향이 뚜렷한 위스키.',
@@ -50,7 +33,6 @@ export const initialAttributes: Attribute[] = [
     displayName: '10만 원 이상',
     type: 'PRICE',
     datatype: 'INT',
-    operator: 'GTE',
     value: '100000',
     unit: '원',
     description: '운영자가 확인한 판매가 기준. 가격 변동 시 연결을 직접 검토합니다.',
@@ -61,7 +43,6 @@ export const initialAttributes: Attribute[] = [
     displayName: '입문 추천',
     type: 'KEYWORD',
     datatype: 'STRING',
-    operator: 'EQ',
     value: 'beginner',
     unit: '',
     description: '처음 위스키를 접하는 사람에게 추천하는 제품.',
@@ -72,7 +53,6 @@ export const initialAttributes: Attribute[] = [
     displayName: '셰리 캐스크',
     type: 'KEYWORD',
     datatype: 'STRING',
-    operator: 'EQ',
     value: 'sherry',
     unit: '',
     description: '셰리 캐스크의 풍미가 드러나는 제품.',
@@ -83,7 +63,6 @@ export const initialAttributes: Attribute[] = [
     displayName: '대중성 80점 이상',
     type: 'POPULARITY',
     datatype: 'INT',
-    operator: 'GTE',
     value: '80',
     unit: '점',
     description: '이번 시즌 운영자가 선정한 대중성 평가 기준.',
@@ -94,7 +73,6 @@ export const initialAttributes: Attribute[] = [
     displayName: '45,000원',
     type: 'PRICE',
     datatype: 'INT',
-    operator: 'EQ',
     value: '45000',
     unit: '원',
     description: '확인된 판매가가 45,000원인 제품.',
@@ -105,7 +83,6 @@ export const initialAttributes: Attribute[] = [
     displayName: '맥캘란 브랜드',
     type: 'IDENTITY',
     datatype: 'STRING',
-    operator: 'EQ',
     value: 'macallan',
     unit: '',
     description: '맥캘란 제품을 묶어 관리합니다.',
@@ -116,7 +93,6 @@ export const initialAttributes: Attribute[] = [
     displayName: '패키지 확인 필요',
     type: 'NOTE',
     datatype: 'STRING',
-    operator: 'EQ',
     value: '패키지 리뉴얼 확인',
     unit: '',
     description: '이미지 교체 전 패키지 리뉴얼 여부를 확인합니다.',
@@ -127,7 +103,6 @@ export const initialAttributes: Attribute[] = [
     displayName: '향료 무첨가',
     type: 'FLAG',
     datatype: 'BOOLEAN',
-    operator: 'EQ',
     value: 'false',
     unit: '',
     description: '제품 정보를 확인해 향료 첨가 여부가 false인 제품에 연결합니다.',
@@ -138,7 +113,6 @@ export const initialAttributes: Attribute[] = [
     displayName: '하이볼 추천',
     type: 'KEYWORD',
     datatype: 'STRING',
-    operator: 'EQ',
     value: 'highball',
     unit: '',
     description: '하이볼로 즐기기 좋은 위스키.',
@@ -149,7 +123,6 @@ export const initialAttributes: Attribute[] = [
     displayName: '겨울 추천 후보',
     type: 'NOTE',
     datatype: 'STRING',
-    operator: 'EQ',
     value: '겨울 큐레이션 후보',
     unit: '',
     description: '다음 시즌 큐레이션을 위해 미리 만든 속성.',
@@ -250,27 +223,3 @@ export const initialMappings: Mapping[] = pairs.map(([alcoholId, attributeId], i
   alcoholId,
   attributeId,
 }));
-
-export const emptyAttribute: Attribute = {
-  id: 0,
-  key: '',
-  displayName: '',
-  type: 'KEYWORD',
-  datatype: 'STRING',
-  operator: 'EQ',
-  value: '',
-  unit: '',
-  description: '',
-};
-
-export function displayValue(attribute: Attribute) {
-  const value =
-    attribute.datatype === 'INT' || attribute.datatype === 'DOUBLE'
-      ? Number(attribute.value).toLocaleString('ko-KR')
-      : attribute.datatype === 'BOOLEAN'
-        ? attribute.value === 'true'
-          ? '예'
-          : '아니오'
-        : attribute.value;
-  return `${value}${attribute.unit ? ` ${attribute.unit}` : ''}${attribute.operator === 'GTE' ? ' 이상' : ''}`;
-}

@@ -8,7 +8,7 @@ import { server } from '@/test/mocks/server';
 import {
   useAlcoholAttributes,
   useAlcoholAttributeUpdate,
-  useAttributeMappings,
+  useAttributeSummary,
   useAttributeLink,
   useAttributeUnlink,
 } from '../useAlcoholAttributes';
@@ -130,10 +130,24 @@ describe('속성 API 데이터 흐름', () => {
     expect(reads).toBe(2);
   });
 
-  it('중복 연결 결과를 보존하고 해제 후 매핑을 재조회한다', async () => {
+  it('중복 연결 결과를 보존하고 해제 후 현재 대상의 summary를 재조회한다', async () => {
     let mappings = [{ id: 8, alcoholId: 12, attributeId: 1, value: '9007199254740993' }];
     server.use(
-      http.get(`${base}/mappings`, () => HttpResponse.json(envelope(mappings))),
+      http.get(`${base}/summary`, ({ request }) => {
+        expect(new URL(request.url).searchParams.getAll('alcoholIds')).toEqual(['12']);
+        return HttpResponse.json(
+          envelope([
+            {
+              attribute: { id: 1 },
+              mappings,
+              alcoholIds: mappings.map((m) => m.alcoholId),
+              mappingIds: mappings.map((m) => m.id),
+              registeredCount: mappings.length,
+              selectedCount: 1,
+            },
+          ])
+        );
+      }),
       http.post(`${base}/mappings/batch`, async ({ request }) => {
         expect(await request.json()).toEqual({
           items: [{ alcoholId: 12, attributeId: 1, value: '9007199254740993' }],
@@ -147,13 +161,14 @@ describe('속성 API 데이터 흐름', () => {
     );
     const { result } = renderHook(
       () => ({
-        list: useAttributeMappings({ alcoholId: 12 }),
+        list: useAttributeSummary([12]),
         link: useAttributeLink(),
         unlink: useAttributeUnlink(),
       }),
       { wrapper: wrapper() }
     );
     await waitFor(() => expect(result.current.list.isSuccess).toBe(true));
+    expect(result.current.list.data?.[0]?.mappings).toEqual(mappings);
     await act(async () => {
       expect(
         await result.current.link.mutateAsync([
@@ -166,7 +181,7 @@ describe('속성 API 데이터 흐름', () => {
       });
       await result.current.unlink.mutateAsync(8);
     });
-    await waitFor(() => expect(result.current.list.data?.items).toEqual([]));
+    await waitFor(() => expect(result.current.list.data?.[0]?.mappings).toEqual([]));
   });
 
   it('저장 실패를 호출자에게 전달하고 기존 조회 값을 유지한다', async () => {

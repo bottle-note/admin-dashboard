@@ -44,10 +44,6 @@ export interface AttributePageMeta extends ApiMeta {
   totalPages: number;
   hasNext: boolean;
 }
-export interface AttributePage<T> {
-  items: T[];
-  meta: AttributePageMeta;
-}
 export interface AttributePageParams {
   page?: number;
   size?: number;
@@ -56,10 +52,6 @@ export interface AttributeSearchParams extends AttributePageParams {
   keyword?: string;
   type?: AttributeType;
   alcoholIds?: number[];
-}
-export interface MappingSearchParams extends AttributePageParams {
-  alcoholId?: number;
-  attributeId?: number;
 }
 export interface AttributedAlcoholSearchParams extends AttributePageParams {
   keyword?: string;
@@ -102,15 +94,4 @@ export interface AttributeSummary {
   mappings: AttributeMapping[];
   registeredCount: number;
   selectedCount: number;
-}
-export interface AttributeEnums {
-  types: { code: AttributeType; korName: string; engName: string; description: string }[];
-  datatypes: { code: AttributeDatatype; korName: string; engName: string; description: string }[];
-  operators: { code: AttributeOperator; korName: string; engName: string; description: string }[];
-  providers: {
-    code: 'ADMIN' | 'AI' | 'AUTOMATIC' | 'ANY';
-    korName: string;
-    engName: string;
-    description: string;
-  }[];
 }

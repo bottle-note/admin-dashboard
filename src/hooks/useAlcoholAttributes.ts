@@ -7,18 +7,12 @@ import {
 } from '@/services/alcohol-attribute.service';
 import type {
   AttributeSearchParams,
-  MappingSearchParams,
   AttributedAlcoholSearchParams,
   AttributeUpdateRequest,
 } from '@/types/api/alcohol-attribute.api';
 
 export function useAlcoholAttributes(params: AttributeSearchParams, enabled = true) {
   return useApiQuery(keys.list(params), ({ signal }) => service.list(params, signal), { enabled });
-}
-export function useAttributeMappings(params: MappingSearchParams, enabled = true) {
-  return useApiQuery(keys.mappings(params), ({ signal }) => service.mappings(params, signal), {
-    enabled,
-  });
 }
 export function useAttributedAlcohols(params: AttributedAlcoholSearchParams, enabled = true) {
   return useApiQuery(keys.alcohols(params), ({ signal }) => service.alcohols(params, signal), {
@@ -34,10 +28,6 @@ export function useAttributeSummary(alcoholIds: number[]) {
     }
   );
 }
-export function useAttributeEnums() {
-  return useApiQuery(keys.enums, service.enums, { staleTime: Infinity });
-}
-
 // 속성과 연결 변경은 목록, 영향 집계, 그래프 조회를 함께 갱신한다.
 const mutationOptions = { invalidateKeys: [keys.all] };
 export function useAlcoholAttributeCreate() {
@@ -48,9 +38,6 @@ export function useAlcoholAttributeUpdate() {
     ({ id, data }: { id: number; data: AttributeUpdateRequest }) => service.update(id, data),
     mutationOptions
   );
-}
-export function useAlcoholAttributeDelete() {
-  return useApiMutation(service.delete, mutationOptions);
 }
 export function useAlcoholAttributeBatchDelete() {
   return useApiMutation(service.deleteBatch, mutationOptions);

@@ -3,7 +3,7 @@ import { screen, within, waitFor } from '@testing-library/react';
 import { render } from '@/test/test-utils';
 import { http, HttpResponse, delay } from 'msw';
 import { server } from '@/test/mocks/server';
-import { initialAttributes, initialMappings, alcohols } from '../variants/a/mock-data';
+import { initialAttributes, initialMappings, alcohols } from './fixtures';
 import userEvent from '@testing-library/user-event';
 
 import { AlcoholAttributeVariantA } from '../variants/a/AlcoholAttributeVariantA';
@@ -41,7 +41,6 @@ beforeEach(() => {
         wrap(attributes.filter((a) => `${a.displayName} ${a.key}`.includes(q)))
       );
     }),
-    http.get(`${base}/mappings`, () => HttpResponse.json(wrap(mappings))),
     http.get(`${base}/summary`, ({ request }) => {
       const ids = new URL(request.url).searchParams.getAll('alcoholIds').map(Number);
       const selected = mappings.filter((m) => ids.includes(m.alcoholId));

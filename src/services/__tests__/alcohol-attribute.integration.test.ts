@@ -59,7 +59,6 @@ function pageResponse<T>(items: T[], page: number, size: number) {
 describe('alcoholAttributeService HTTP 계약', () => {
   it.each([
     ['list', base, attribute(101)],
-    ['mappings', `${base}/mappings`, mapping(101)],
     ['alcohols', `${base}/alcohols`, alcohol(101)],
   ] as const)('%s는 두 번째 페이지와 서버 메타데이터를 보존한다', async (method, path, item) => {
     let query: URLSearchParams | undefined;

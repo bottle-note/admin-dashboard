@@ -1,3 +1,4 @@
+import { useState, type ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -10,7 +11,7 @@ import { MappingValueEditor } from '../variants/a/MappingValueEditor';
 import { AttributeEditor } from '../variants/a/AttributeEditor';
 import { AttributeRelationshipGraph } from '../variants/a/AttributeRelationshipGraph';
 import { displayValue, type Attribute } from '../variants/a/attribute-model';
-import { initialAttributes, alcohols } from '../variants/a/mock-data';
+import { initialAttributes, alcohols } from './fixtures';
 
 // Inspect the actual canvas input without requiring a browser or a rendering engine.
 const canvas = vi.hoisted(() => ({ data: null as GraphData | null }));
@@ -49,7 +50,6 @@ beforeEach(() => {
       const keyword = new URL(request.url).searchParams.get('keyword') ?? '';
       return HttpResponse.json(wrap(attributes.filter((a) => a.displayName.includes(keyword))));
     }),
-    http.get(`${base}/mappings`, () => HttpResponse.json(wrap(mappings))),
     http.get(`${base}/summary`, ({ request }) => {
       const ids = new URL(request.url).searchParams.getAll('alcoholIds').map(Number);
       const selected = mappings.filter((m) => ids.includes(m.alcoholId));
@@ -339,19 +339,37 @@ describe('선택과 비동기 작업', () => {
   });
 });
 
+type GraphProps = ComponentProps<typeof AttributeRelationshipGraph>;
+function GraphView({
+  onFilterChange,
+  ...props
+}: Omit<GraphProps, 'serverFilter'> & {
+  onFilterChange?: (filters: { keyword: string; key: string; value: string }) => void;
+}) {
+  const [filters, setFilters] = useState({ keyword: '', key: '', value: '' });
+  return (
+    <AttributeRelationshipGraph
+      {...props}
+      serverFilter={{
+        ...filters,
+        loading: false,
+        total: props.alcohols.length,
+        onChange: (next) => {
+          setFilters(next);
+          onFilterChange?.({ keyword: next.keyword, key: next.key, value: next.value });
+        },
+      }}
+    />
+  );
+}
+
 describe('그래프 관계 데이터', () => {
   const graphAlcohols = () => alcohols.slice(0, 2);
   const nodeIds = () => canvas.data?.nodes?.map((node) => node.id);
 
   it('전체 그래프에서 연결되지 않은 노드를 제외하고 모든 간선의 양 끝을 제공한다', async () => {
     const user = userEvent.setup();
-    render(
-      <AttributeRelationshipGraph
-        attributes={attributes}
-        alcohols={graphAlcohols()}
-        mappings={mappings}
-      />
-    );
+    render(<GraphView attributes={attributes} alcohols={graphAlcohols()} mappings={mappings} />);
     await user.click(screen.getByRole('button', { name: '전체 보기' }));
     expect(canvas.data?.nodes?.some((n) => n.style?.labelText?.toString().includes('스모키'))).toBe(
       false
@@ -365,13 +383,7 @@ describe('그래프 관계 데이터', () => {
 
   it('위스키 상세에서 속성을 따라가면 그 속성에 연결된 다른 위스키도 그래프에 표시한다', async () => {
     const user = userEvent.setup();
-    render(
-      <AttributeRelationshipGraph
-        attributes={attributes}
-        alcohols={graphAlcohols()}
-        mappings={mappings}
-      />
-    );
+    render(<GraphView attributes={attributes} alcohols={graphAlcohols()} mappings={mappings} />);
     await user.click(screen.getByText('노드 목록으로 탐색'));
     await user.click(screen.getByRole('button', { name: `위스키: ${alcohols[0]!.name}` }));
     const details = within(screen.getByRole('complementary', { name: '그래프 상세' }));
@@ -382,31 +394,21 @@ describe('그래프 관계 데이터', () => {
 
   it('중심 위스키의 마지막 연결이 사라지면 남아 있는 관계를 계속 표시한다', () => {
     const { rerender } = render(
-      <AttributeRelationshipGraph
-        attributes={attributes}
-        alcohols={graphAlcohols()}
-        mappings={mappings}
-      />
+      <GraphView attributes={attributes} alcohols={graphAlcohols()} mappings={mappings} />
     );
     const remaining = mappings.filter((m) => m.alcoholId !== alcohols[0]!.id);
-    rerender(
-      <AttributeRelationshipGraph
-        attributes={attributes}
-        alcohols={graphAlcohols()}
-        mappings={remaining}
-      />
-    );
+    rerender(<GraphView attributes={attributes} alcohols={graphAlcohols()} mappings={remaining} />);
     expect(screen.queryByText('표시할 연결이 없습니다.')).not.toBeInTheDocument();
     expect(nodeIds()).toContain(`alcohol-${alcohols[1]!.id}`);
   });
 });
 
-describe('값 기준 그래프와 전체 대상 필터', () => {
+describe('값 기준 그래프와 서버 검색 조건', () => {
   it('같은 속성과 값만 공유하고 노드 선택으로 표시 범위를 바꾸지 않는다', async () => {
     const user = userEvent.setup();
     const price = { ...initialAttributes[2]!, displayName: '병 참고 가격' };
     render(
-      <AttributeRelationshipGraph
+      <GraphView
         attributes={[price, { ...price, id: 104, displayName: '잔 가격' }]}
         alcohols={alcohols.slice(0, 3)}
         mappings={[
@@ -444,33 +446,40 @@ describe('값 기준 그래프와 전체 대상 필터', () => {
     );
   });
 
-  it('샘플 밖의 술도 전체에서 검색하고 필터 초기화 시 샘플로 복귀한다', async () => {
+  it('검색 조건을 상위로 전달하고 서버 응답에 로컬 이름 검색을 중복 적용하지 않는다', async () => {
     const user = userEvent.setup();
-    const many = Array.from({ length: 1000 }, (_, i) => ({
+    const onFilterChange = vi.fn();
+    const page = Array.from({ length: 100 }, (_, i) => ({
       ...alcohols[0]!,
       id: i + 1,
       name: `제품 ${i + 1}`,
-      english: '',
     }));
     render(
-      <AttributeRelationshipGraph
+      <GraphView
         attributes={[initialAttributes[0]!]}
-        alcohols={many}
-        mappings={many.map((a) => ({
+        alcohols={page}
+        mappings={page.map((a) => ({
           id: a.id,
           alcoholId: a.id,
           attributeId: 101,
           value: String(a.id),
         }))}
+        onFilterChange={onFilterChange}
       />
     );
+    await user.type(screen.getByRole('textbox', { name: '그래프 검색' }), '서버 검색');
+    expect(onFilterChange).toHaveBeenLastCalledWith({ keyword: '서버 검색', key: '', value: '' });
     expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(100);
-    const absent = many.find((a) => !canvas.data!.nodes!.some((n) => n.id === `alcohol-${a.id}`))!;
-    await user.type(screen.getByRole('textbox', { name: '그래프 검색' }), absent.name);
-    await user.type(screen.getByRole('textbox', { name: '속성 값 필터' }), String(absent.id));
-    expect(canvas.data!.nodes!.some((n) => n.id === `alcohol-${absent.id}`)).toBe(true);
     await user.selectOptions(screen.getByRole('combobox', { name: '그래프 속성 필터' }), '101');
+    await user.type(screen.getByRole('textbox', { name: '속성 값 필터' }), '3');
+    expect(onFilterChange).toHaveBeenLastCalledWith({
+      keyword: '서버 검색',
+      key: 'gift',
+      value: '3',
+    });
+    expect(canvas.data!.edges).toHaveLength(1);
     await user.click(screen.getByRole('button', { name: '전체 보기' }));
+    expect(onFilterChange).toHaveBeenLastCalledWith({ keyword: '', key: '', value: '' });
     expect(screen.getByRole('textbox', { name: '그래프 검색' })).toHaveValue('');
     expect(screen.getByRole('textbox', { name: '속성 값 필터' })).toHaveValue('');
     expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(100);
@@ -481,12 +490,13 @@ describe('값 기준 그래프와 전체 대상 필터', () => {
   });
 });
 
-it('연결이 많은 경우에도 500개만 표시하고 속성 필터로 전체 연결을 다시 좁힌다', async () => {
+it('현재 페이지의 연결이 많아도 500개만 표시하고 속성 조건에 해당하는 간선을 보여준다', async () => {
   const user = userEvent.setup();
   const definitions = Array.from({ length: 10 }, (_, i) => ({
     ...initialAttributes[0]!,
     id: i + 1,
     displayName: `속성 ${i + 1}`,
+    key: `attribute_${i + 1}`,
   }));
   const products = Array.from({ length: 100 }, (_, i) => ({ ...alcohols[0]!, id: i + 1 }));
   const links = products.flatMap((a) =>
@@ -497,9 +507,7 @@ it('연결이 많은 경우에도 500개만 표시하고 속성 필터로 전체
       value: 'same',
     }))
   );
-  render(
-    <AttributeRelationshipGraph attributes={definitions} alcohols={products} mappings={links} />
-  );
+  render(<GraphView attributes={definitions} alcohols={products} mappings={links} />);
   expect(canvas.data!.edges).toHaveLength(500);
   expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(100);
   await user.selectOptions(screen.getByRole('combobox', { name: '그래프 속성 필터' }), '10');

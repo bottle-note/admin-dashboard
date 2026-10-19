@@ -5,7 +5,6 @@ import type {
   AttributedAlcohol,
   AttributePageMeta,
   AttributeSearchParams,
-  MappingSearchParams,
   AttributedAlcoholSearchParams,
   AttributeCreateRequest,
   AttributeUpdateRequest,
@@ -13,7 +12,6 @@ import type {
   AttributeMappingResult,
   AttributeResult,
   AttributeSummary,
-  AttributeEnums,
 } from '@/types/api/alcohol-attribute.api';
 
 const base = '/admin/api/v1/alcohols/attributes';
@@ -21,10 +19,8 @@ const all = ['alcohol-attributes'] as const;
 export const alcoholAttributeKeys = {
   all,
   list: (params: AttributeSearchParams) => [...all, 'list', params] as const,
-  mappings: (params: MappingSearchParams) => [...all, 'mappings', params] as const,
   alcohols: (params: AttributedAlcoholSearchParams) => [...all, 'alcohols', params] as const,
   summary: (alcoholIds: number[]) => [...all, 'summary', alcoholIds] as const,
-  enums: [...all, 'enums'] as const,
 };
 
 export const alcoholAttributeService = {
@@ -34,13 +30,6 @@ export const alcoholAttributeService = {
       signal,
       paramsSerializer: { indexes: null },
     });
-    return { items: data, meta };
-  },
-  async mappings(params: MappingSearchParams, signal?: AbortSignal) {
-    const { data, meta } = await apiClient.get<AttributeMapping[], AttributePageMeta>(
-      `${base}/mappings`,
-      { params, signal }
-    );
     return { items: data, meta };
   },
   async alcohols(params: AttributedAlcoholSearchParams, signal?: AbortSignal) {
@@ -58,13 +47,9 @@ export const alcoholAttributeService = {
     });
     return data;
   },
-  async enums() {
-    return (await apiClient.get<AttributeEnums>(`${base}/enums`)).data;
-  },
   create: (data: AttributeCreateRequest) => apiClient.post<AlcoholAttribute>(base, data),
   update: (id: number, data: AttributeUpdateRequest) =>
     apiClient.put<AttributeResult>(`${base}/${id}`, data),
-  delete: (id: number) => apiClient.delete<AttributeResult>(`${base}/${id}`),
   deleteBatch: (ids: number[]) =>
     apiClient.post<AlcoholAttribute[]>(`${base}/batch/delete`, { ids }),
   link: (items: AttributeMappingRequest[]) =>
