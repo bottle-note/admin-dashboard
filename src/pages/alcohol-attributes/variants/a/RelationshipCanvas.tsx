@@ -85,7 +85,7 @@ export function RelationshipCanvas({
               return [36 * scale, 64 * scale];
             }
             return isEmphasized(node.id) || (graphRef.current?.getZoom() ?? 1) >= 0.55
-              ? [124, 30]
+              ? [160, 46]
               : [40, 14];
           },
           fill: (node) => node.style?.fill ?? '#edf5f3',
@@ -94,8 +94,8 @@ export function RelationshipCanvas({
           labelPlacement: (node) => (node.type === 'image' ? 'bottom' : 'center'),
           labelPointerEvents: 'none',
           labelWordWrap: true,
-          labelMaxWidth: (node) => (node.type === 'image' ? 160 : 108),
-          labelMaxLines: (node) => (node.type === 'image' ? 2 : 1),
+          labelMaxWidth: (node) => (node.type === 'image' ? 160 : 144),
+          labelMaxLines: 2,
           labelTextOverflow: '…',
           labelText: (node) => {
             const label = labels.get(node.id) ?? '';
@@ -312,14 +312,14 @@ export function RelationshipCanvas({
         if (event.key === 'Escape') onSelect(null);
       }}
     >
-      <div className="flex items-center justify-between border-b px-3 py-2 text-xs text-slate-500">
-        <span>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2 text-xs text-slate-500">
+        <span className="shrink-0 whitespace-nowrap">
           위스키 · 속성 값{' '}
           <span className="ml-2 hidden text-slate-400 sm:inline">
             드래그로 이동 · 휠로 확대 · 선택하면 상세 보기
           </span>
         </span>
-        <div className="ml-auto flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1 sm:ml-auto">
           <Button
             variant="ghost"
             size="sm"

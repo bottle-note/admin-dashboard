@@ -1,6 +1,7 @@
 import { apiClient } from '@/lib/api-client';
 import type {
   AlcoholAttribute,
+  AlcoholCompoundSearchParams,
   AttributeMapping,
   AttributedAlcohol,
   AttributePageMeta,
@@ -20,6 +21,7 @@ export const alcoholAttributeKeys = {
   all,
   list: (params: AttributeSearchParams) => [...all, 'list', params] as const,
   alcohols: (params: AttributedAlcoholSearchParams) => [...all, 'alcohols', params] as const,
+  compound: (params: AlcoholCompoundSearchParams) => [...all, 'compound', params] as const,
   summary: (alcoholIds: number[]) => [...all, 'summary', alcoholIds] as const,
 };
 
@@ -37,6 +39,14 @@ export const alcoholAttributeService = {
       `${base}/alcohols`,
       { params, signal }
     );
+    return { items: data, meta };
+  },
+  async searchAlcohols(params: AlcoholCompoundSearchParams, signal?: AbortSignal) {
+    const { data, meta } = await apiClient.postWithMeta<
+      AttributedAlcohol[],
+      AlcoholCompoundSearchParams,
+      AttributePageMeta
+    >(`${base}/alcohols/search`, params, { signal });
     return { items: data, meta };
   },
   async summary(alcoholIds: number[], signal?: AbortSignal) {

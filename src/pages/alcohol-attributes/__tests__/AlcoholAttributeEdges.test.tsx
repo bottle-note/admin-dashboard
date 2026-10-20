@@ -367,10 +367,8 @@ describe('그래프 관계 데이터', () => {
   const graphAlcohols = () => alcohols.slice(0, 2);
   const nodeIds = () => canvas.data?.nodes?.map((node) => node.id);
 
-  it('전체 그래프에서 연결되지 않은 노드를 제외하고 모든 간선의 양 끝을 제공한다', async () => {
-    const user = userEvent.setup();
+  it('미연결 속성 노드는 제외하고 모든 간선의 양 끝을 제공한다', () => {
     render(<GraphView attributes={attributes} alcohols={graphAlcohols()} mappings={mappings} />);
-    await user.click(screen.getByRole('button', { name: '전체 보기' }));
     expect(canvas.data?.nodes?.some((n) => n.style?.labelText?.toString().includes('스모키'))).toBe(
       false
     );
@@ -470,18 +468,9 @@ describe('값 기준 그래프와 서버 검색 조건', () => {
     await user.type(screen.getByRole('textbox', { name: '그래프 검색' }), '서버 검색');
     expect(onFilterChange).toHaveBeenLastCalledWith({ keyword: '서버 검색', key: '', value: '' });
     expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(100);
-    await user.selectOptions(screen.getByRole('combobox', { name: '그래프 속성 필터' }), '101');
-    await user.type(screen.getByRole('textbox', { name: '속성 값 필터' }), '3');
-    expect(onFilterChange).toHaveBeenLastCalledWith({
-      keyword: '서버 검색',
-      key: 'gift',
-      value: '3',
-    });
-    expect(canvas.data!.edges).toHaveLength(1);
-    await user.click(screen.getByRole('button', { name: '전체 보기' }));
+    expect(canvas.data!.edges).toHaveLength(100);
+    await user.clear(screen.getByRole('textbox', { name: '그래프 검색' }));
     expect(onFilterChange).toHaveBeenLastCalledWith({ keyword: '', key: '', value: '' });
-    expect(screen.getByRole('textbox', { name: '그래프 검색' })).toHaveValue('');
-    expect(screen.getByRole('textbox', { name: '속성 값 필터' })).toHaveValue('');
     expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(100);
     for (const edge of canvas.data!.edges!) {
       expect(canvas.data!.nodes!.some((n) => n.id === edge.source)).toBe(true);
@@ -490,8 +479,7 @@ describe('값 기준 그래프와 서버 검색 조건', () => {
   });
 });
 
-it('현재 페이지의 연결이 많아도 500개만 표시하고 속성 조건에 해당하는 간선을 보여준다', async () => {
-  const user = userEvent.setup();
+it('간선을 500개로 제한하고 서버 검색 결과와 미연결 위스키를 표시한다', () => {
   const definitions = Array.from({ length: 10 }, (_, i) => ({
     ...initialAttributes[0]!,
     id: i + 1,
@@ -507,12 +495,23 @@ it('현재 페이지의 연결이 많아도 500개만 표시하고 속성 조건
       value: 'same',
     }))
   );
-  render(<GraphView attributes={definitions} alcohols={products} mappings={links} />);
+  const { rerender } = render(
+    <GraphView attributes={definitions} alcohols={products} mappings={links} />
+  );
   expect(canvas.data!.edges).toHaveLength(500);
   expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(100);
-  await user.selectOptions(screen.getByRole('combobox', { name: '그래프 속성 필터' }), '10');
+  expect(new Set(canvas.data!.edges!.map((edge) => edge.source)).size).toBe(100);
+  rerender(
+    <GraphView
+      attributes={definitions}
+      alcohols={products.slice(0, 10)}
+      mappings={links.filter((link) => link.alcoholId <= 10)}
+    />
+  );
   expect(canvas.data!.edges).toHaveLength(100);
-  expect(canvas.data!.nodes!.filter((n) => n.type === 'rect')).toHaveLength(1);
-  await user.type(screen.getByRole('textbox', { name: '속성 값 필터' }), 'absent');
-  expect(screen.getByText('표시할 연결이 없습니다.')).toBeInTheDocument();
+  expect(canvas.data!.nodes!.filter((n) => n.type === 'rect')).toHaveLength(10);
+  rerender(<GraphView attributes={definitions} alcohols={products.slice(0, 2)} mappings={[]} />);
+  expect(canvas.data!.edges).toHaveLength(0);
+  expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(2);
+  expect(screen.queryByText('표시할 연결이 없습니다.')).not.toBeInTheDocument();
 });

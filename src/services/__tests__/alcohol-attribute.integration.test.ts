@@ -57,6 +57,31 @@ function pageResponse<T>(items: T[], page: number, size: number) {
 }
 
 describe('alcoholAttributeService HTTP 계약', () => {
+  it('복합 검색은 조건 배열과 AND/OR 및 페이지 메타데이터를 보존한다', async () => {
+    const payload = {
+      keyword: '글렌',
+      match: 'AND' as const,
+      page: 1,
+      size: 20,
+      conditions: [
+        { key: 'price', operator: 'GTE' as const, value: '9007199254740993' },
+        { key: 'price', operator: 'LTE' as const, value: '9007199254740999' },
+        { key: 'recommended', operator: 'EXISTS' as const },
+      ],
+    };
+    let body: unknown;
+    const response = pageResponse([alcohol(1)], 0, 20);
+    server.use(
+      http.post(`${base}/alcohols/search`, async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json(response);
+      })
+    );
+    const result = await service.searchAlcohols(payload);
+    expect(body).toEqual(payload);
+    expect(result).toEqual({ items: response.data, meta: response.meta });
+  });
+
   it.each([
     ['list', base, attribute(101)],
     ['alcohols', `${base}/alcohols`, alcohol(101)],

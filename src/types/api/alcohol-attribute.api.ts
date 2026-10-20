@@ -95,3 +95,26 @@ export interface AttributeSummary {
   registeredCount: number;
   selectedCount: number;
 }
+
+export type AttributeSearchOperator =
+  | 'EQ'
+  | 'NE'
+  | 'GT'
+  | 'GTE'
+  | 'LT'
+  | 'LTE'
+  | 'CONTAINS'
+  | 'EXISTS'
+  | 'NOT_EXISTS';
+export interface AttributeSearchCondition {
+  key: string;
+  operator: AttributeSearchOperator;
+  value?: string;
+}
+export interface AlcoholCompoundSearchParams extends AttributePageParams {
+  keyword?: string;
+  match?: 'AND' | 'OR';
+  conditions: AttributeSearchCondition[];
+  type?: AttributeType;
+  linkedOnly?: boolean;
+}

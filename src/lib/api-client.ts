@@ -53,13 +53,13 @@ class ApiClient {
   /**
    * POST 요청 - 전체 응답 반환
    */
-  async postWithMeta<T, D = unknown>(
+  async postWithMeta<T, D = unknown, TMeta extends ApiMeta = ApiMeta>(
     url: string,
     data?: D,
     config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
+  ): Promise<ApiResponse<T, TMeta>> {
     try {
-      const response = await api.post<ApiResponse<T>>(url, data, config);
+      const response = await api.post<ApiResponse<T, TMeta>>(url, data, config);
 
       if (!response.data.success) {
         throw new ApiError(response.data);

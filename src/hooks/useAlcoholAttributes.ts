@@ -7,6 +7,7 @@ import {
 } from '@/services/alcohol-attribute.service';
 import type {
   AttributeSearchParams,
+  AlcoholCompoundSearchParams,
   AttributedAlcoholSearchParams,
   AttributeUpdateRequest,
 } from '@/types/api/alcohol-attribute.api';
@@ -61,5 +62,13 @@ export function useAttributeMappingUpdate() {
   return useApiMutation(
     ({ id, value }: { id: number; value: string }) => service.updateMapping(id, value),
     mutationOptions
+  );
+}
+
+export function useCompoundAlcoholSearch(params: AlcoholCompoundSearchParams, enabled = true) {
+  return useApiQuery(
+    keys.compound(params),
+    ({ signal }) => service.searchAlcohols(params, signal),
+    { enabled }
   );
 }

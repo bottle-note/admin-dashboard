@@ -1,32 +1,51 @@
-import { useMemo, useState } from 'react';
-import { useAlcoholAttributes, useAttributedAlcohols } from '@/hooks/useAlcoholAttributes';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router';
+import { useAttributedAlcohols, useCompoundAlcoholSearch } from '@/hooks/useAlcoholAttributes';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { getErrorMessage } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { AttributeRelationshipGraph } from './AttributeRelationshipGraph';
-import type { Attribute } from './attribute-model';
+import { AttributeSearchBuilder } from './AttributeSearchBuilder';
+import { readAttributeSearch, type AttributeSearch } from './attribute-search';
 
 export function AttributeGraphPanel() {
-  const [filters, setFilters] = useState({ keyword: '', key: '', value: '' });
-  const [page, setPage] = useState(0);
-  const [optionSearch, setOptionSearch] = useState('');
-  const [optionPage, setOptionPage] = useState(0);
-  const [selectedDefinition, setSelectedDefinition] = useState<Attribute | null>(null);
-  const keyword = useDebouncedValue(filters.keyword, 200);
-  const value = useDebouncedValue(filters.value, 200);
-  const definitions = useAlcoholAttributes({
-    keyword: optionSearch || undefined,
-    page: optionPage,
-    size: 20,
-  });
-  const query = useAttributedAlcohols({
-    keyword: keyword || undefined,
-    key: filters.key || undefined,
-    value: value || undefined,
-    page,
-    size: 100,
-  });
+  const [params, setParams] = useSearchParams();
+  const compound = readAttributeSearch(params, 'graph');
+  const advanced = !!compound.error || compound.value.conditions.length > 0;
+  const requestedSize = Number(params.get('graphSize'));
+  const size = [25, 50, 100].includes(requestedSize) ? requestedSize : 25;
+  const input = params.get('graphKeyword') ?? '';
+  const keyword = useDebouncedValue(input, 200);
+  const rawPage = Number(params.get('graphPage'));
+  const page = Number.isSafeInteger(rawPage) && rawPage >= 0 ? rawPage : 0;
+  const legacyQuery = useAttributedAlcohols(
+    { keyword: keyword || undefined, page, size },
+    !advanced
+  );
+  const compoundQuery = useCompoundAlcoholSearch(
+    { keyword: keyword || undefined, ...compound.value, page, size },
+    advanced && !compound.error
+  );
+  const query = advanced ? compoundQuery : legacyQuery;
+  const setPage = (next: number) =>
+    setParams((previous) => {
+      const result = new URLSearchParams(previous);
+      result.set('graphPage', String(next));
+      return result;
+    });
+  const applySearch = (search: AttributeSearch) =>
+    setParams((previous) => {
+      const next = new URLSearchParams(previous);
+      if (search.conditions.length) {
+        next.set('graphconditions', JSON.stringify(search.conditions));
+        next.set('graphmatch', search.match);
+      } else {
+        next.delete('graphconditions');
+        next.delete('graphmatch');
+      }
+      next.delete('graphPage');
+      return next;
+    });
   const { alcohols, attributes, mappings } = useMemo(() => {
     const alcohols = (query.data?.items ?? []).map((item) => ({
       id: item.alcoholId,
@@ -41,13 +60,13 @@ export function AttributeGraphPanel() {
     );
     const attributes = [
       ...new Map(
-        [
-          ...(selectedDefinition ? [selectedDefinition] : []),
-          ...(definitions.data?.items ?? []),
-          ...entries.map((entry) => entry.attribute),
-        ].map((item) => [
-          item.id,
-          { ...item, unit: item.unit ?? '', description: item.description ?? '' },
+        entries.map((entry) => [
+          entry.attribute.id,
+          {
+            ...entry.attribute,
+            unit: entry.attribute.unit ?? '',
+            description: entry.attribute.description ?? '',
+          },
         ])
       ).values(),
     ];
@@ -58,48 +77,14 @@ export function AttributeGraphPanel() {
       value: entry.value,
     }));
     return { alcohols, attributes, mappings };
-  }, [query.data, definitions.data, selectedDefinition]);
+  }, [query.data]);
   return (
     <div className="space-y-2">
-      <details className="rounded border bg-white px-3 py-2 text-xs">
-        <summary className="cursor-pointer text-slate-500">속성 선택지 검색</summary>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Input
-            aria-label="그래프 속성 선택지 검색"
-            placeholder="속성 선택지 검색"
-            value={optionSearch}
-            className="h-8 max-w-xs"
-            onChange={(event) => {
-              setOptionSearch(event.target.value);
-              setOptionPage(0);
-            }}
-          />
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={optionPage === 0}
-            onClick={() => setOptionPage((p) => p - 1)}
-          >
-            속성 이전
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={!definitions.data?.meta.hasNext}
-            onClick={() => setOptionPage((p) => p + 1)}
-          >
-            속성 다음
-          </Button>
-          {definitions.error && (
-            <span role="alert">
-              속성 선택지 조회 실패{' '}
-              <Button size="sm" variant="ghost" onClick={() => void definitions.refetch()}>
-                다시 조회
-              </Button>
-            </span>
-          )}
-        </div>
-      </details>
+      <p className="text-xs text-slate-500">
+        {advanced
+          ? '조건에 맞는 위스키와 모든 연결을 표시합니다.'
+          : '속성이 연결된 위스키를 표시합니다. 조건 초기화 시 이 범위로 돌아옵니다.'}
+      </p>
       {query.error && (
         <div role="alert">
           {getErrorMessage(query.error)}{' '}
@@ -112,32 +97,71 @@ export function AttributeGraphPanel() {
         attributes={attributes}
         alcohols={alcohols}
         mappings={mappings}
+        filterControls={
+          <AttributeSearchBuilder
+            key={JSON.stringify(compound.value)}
+            value={compound.value}
+            onApply={applySearch}
+            error={compound.error}
+            label="그래프 속성 조건"
+          />
+        }
         serverFilter={{
-          ...filters,
+          keyword: input,
+          key: '',
+          value: '',
           total: query.data?.meta.totalElements,
           loading: query.isFetching,
-          onChange: (next) => {
-            setFilters(next);
-            setPage(0);
-            setSelectedDefinition(attributes.find((item) => item.key === next.key) ?? null);
-          },
+          onChange: (next) =>
+            setParams(
+              (previous) => {
+                const result = new URLSearchParams(previous);
+                if (next.keyword) result.set('graphKeyword', next.keyword);
+                else result.delete('graphKeyword');
+                result.delete('graphPage');
+                return result;
+              },
+              { replace: true }
+            ),
         }}
       />
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
         <Button
           size="sm"
           variant="outline"
           disabled={page === 0 || query.isFetching}
-          onClick={() => setPage((p) => p - 1)}
+          onClick={() => setPage(page - 1)}
         >
           그래프 이전
         </Button>
-        <span>{page + 1}페이지 · 서버 검색 결과를 위스키 100개씩 조회합니다.</span>
+        <span>{page + 1}페이지</span>
+        <label className="flex items-center gap-2">
+          페이지당 위스키
+          <select
+            aria-label="그래프 표시 개수"
+            className="h-8 rounded border bg-white px-2"
+            value={size}
+            onChange={(event) =>
+              setParams((previous) => {
+                const next = new URLSearchParams(previous);
+                next.set('graphSize', event.target.value);
+                next.delete('graphPage');
+                return next;
+              })
+            }
+          >
+            {[25, 50, 100].map((count) => (
+              <option key={count} value={count}>
+                {count}개
+              </option>
+            ))}
+          </select>
+        </label>
         <Button
           size="sm"
           variant="outline"
           disabled={!query.data?.meta.hasNext || query.isFetching}
-          onClick={() => setPage((p) => p + 1)}
+          onClick={() => setPage(page + 1)}
         >
           그래프 다음
         </Button>

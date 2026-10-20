@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { GraphData } from '@antv/g6';
 import { Network, Search } from 'lucide-react';
 import { RelationshipCanvas } from './RelationshipCanvas';
@@ -28,7 +28,9 @@ export function AttributeRelationshipGraph({
   alcohols,
   mappings,
   serverFilter,
+  filterControls,
 }: {
+  filterControls?: ReactNode;
   attributes: Attribute[];
   alcohols: AlcoholNode[];
   mappings: Mapping[];
@@ -43,6 +45,7 @@ export function AttributeRelationshipGraph({
 }) {
   const [selection, setSelection] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(true);
+  const [listOpen, setListOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenError, setFullscreenError] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -70,12 +73,8 @@ export function AttributeRelationshipGraph({
     const valid = mappings.filter(
       (m) => attributeById.has(m.attributeId) && alcoholById.has(m.alcoholId) && m.value?.trim()
     );
-    // 서버 응답에는 다른 속성도 포함되므로 현재 조건에 해당하는 간선만 표시한다.
-    const filtered = valid.filter(
-      (m) =>
-        (!serverFilter.key || attributeById.get(m.attributeId)!.key === serverFilter.key) &&
-        (!serverFilter.value || m.value === serverFilter.value)
-    );
+    // 복합 조건은 서버에서 술을 선별하며 그래프에는 반환된 전체 관계를 표시한다.
+    const filtered = valid;
     const candidates = [...filtered].sort((a, b) => a.id - b.id);
     // Give each sampled whisky at least one edge before sampling the remaining edges.
     const firstByAlcohol = new Map<number, Mapping>();
@@ -93,7 +92,6 @@ export function AttributeRelationshipGraph({
               MAPPING_LIMIT - first.length
             ),
           ].sort((a, b) => a.id - b.id);
-    const visibleAlcoholIds = new Set(visible.map((m) => m.alcoholId));
     const groups = new Map<string, { id: string; attribute: Attribute; value: string }>();
     for (const m of visible)
       groups.set(valueId(m), {
@@ -101,7 +99,7 @@ export function AttributeRelationshipGraph({
         attribute: attributeById.get(m.attributeId)!,
         value: m.value,
       });
-    const visibleAlcohols = [...visibleAlcoholIds].map((id) => alcoholById.get(id)!);
+    const visibleAlcohols = alcohols;
     const data: GraphData = {
       nodes: [
         ...visibleAlcohols.map((a) => ({
@@ -127,11 +125,12 @@ export function AttributeRelationshipGraph({
             type: 'rect',
             data: { detailLabel: `${g.attribute.displayName}\n${value}` },
             style: {
-              size: [124, 30] as [number, number],
+              size: [160, 46] as [number, number],
               radius: 15,
               fill: colors.fill,
               stroke: colors.stroke,
-              labelText: `${prefix} ${value}`.trim(),
+              labelText:
+                `${g.attribute.displayName.replace(/^bartender note:\s*/i, '')}\n${prefix} ${value}`.trim(),
               labelPlacement: 'center' as const,
               labelFontSize: 12,
               labelFill: colors.text,
@@ -154,7 +153,7 @@ export function AttributeRelationshipGraph({
       groups,
       data,
     };
-  }, [attributes, alcohols, mappings, serverFilter.key, serverFilter.value]);
+  }, [attributes, alcohols, mappings]);
   const selectedGroup = selection ? model.groups.get(selection) : undefined;
   const selectedAlcohol = selection?.startsWith('alcohol-')
     ? model.visibleAlcohols.find((a) => `alcohol-${a.id}` === selection)
@@ -176,7 +175,7 @@ export function AttributeRelationshipGraph({
     >
       <div className="min-w-0 overflow-hidden rounded-lg border bg-white">
         <div className="space-y-2 border-b p-3">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Network className="h-4 w-4 text-teal-800" />
             <h2 className="font-semibold">속성과 위스키의 관계</h2>
             <span className="ml-auto text-xs text-slate-500">조회 전용</span>
@@ -190,6 +189,14 @@ export function AttributeRelationshipGraph({
                 {detailsOpen ? '상세 접기' : '상세 보기'}
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="outline"
+              aria-expanded={listOpen}
+              onClick={() => setListOpen(!listOpen)}
+            >
+              {listOpen ? '목록 접기' : '목록으로 탐색'}
+            </Button>
             <Button size="sm" variant="outline" onClick={() => void toggleFullscreen()}>
               {fullscreen ? '전체화면 닫기' : '전체화면'}
             </Button>
@@ -198,7 +205,7 @@ export function AttributeRelationshipGraph({
           <div
             role="group"
             aria-label="관계 그래프 필터"
-            className="grid gap-2 rounded-md bg-slate-50 p-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+            className="grid gap-2 rounded-md bg-slate-50 p-2"
           >
             <label className="min-w-0 space-y-1 text-[11px] text-slate-600">
               위스키 검색
@@ -216,53 +223,9 @@ export function AttributeRelationshipGraph({
                 />
               </div>
             </label>
-            <label className="min-w-0 space-y-1 text-[11px] text-slate-600">
-              속성
-              <select
-                aria-label="그래프 속성 필터"
-                value={attributes.find((a) => a.key === serverFilter.key)?.id ?? 'all'}
-                onChange={(e) => {
-                  serverFilter.onChange({
-                    ...serverFilter,
-                    key: attributes.find((a) => a.id === Number(e.target.value))?.key ?? '',
-                  });
-                  selectNode(null);
-                }}
-                className="h-8 w-full rounded border bg-white px-2 text-xs"
-              >
-                <option value="all">모든 속성</option>
-                {attributes.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.displayName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="min-w-0 space-y-1 text-[11px] text-slate-600">
-              값
-              <Input
-                aria-label="속성 값 필터"
-                value={serverFilter.value}
-                onChange={(e) => {
-                  serverFilter.onChange({ ...serverFilter, value: e.target.value });
-                  selectNode(null);
-                }}
-                placeholder="정확한 값: 33000"
-                className="h-8 bg-white text-xs"
-              />
-            </label>
-            <Button
-              variant="outline"
-              size="sm"
-              className="self-end"
-              onClick={() => {
-                serverFilter.onChange({ keyword: '', key: '', value: '' });
-                selectNode(null);
-              }}
-            >
-              전체 보기
-            </Button>
           </div>
+          {filterControls}
+
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <p className="text-xs text-slate-600">
               {serverFilter.loading
@@ -281,25 +244,11 @@ export function AttributeRelationshipGraph({
             </p>
           )}
         </div>
-        <div className="overflow-hidden bg-slate-50/60 p-2">
-          {!model.visible.length ? (
-            <p className="p-10 text-center text-xs text-slate-500">표시할 연결이 없습니다.</p>
-          ) : (
-            <RelationshipCanvas
-              data={model.data}
-              selectedId={selectedGroup || selectedAlcohol ? selection : null}
-              onSelect={selectNode}
-              expanded={fullscreen}
-            />
-          )}
-        </div>
-        <p className="sr-only" role="status">
-          {selectedGroup
-            ? `${selectedGroup.attribute.displayName} ${displayValue(selectedGroup.attribute, selectedGroup.value)}`
-            : (selectedAlcohol?.name ?? '선택 없음')}{' '}
-          · 연결 {connections.length}개
-        </p>
-        <details className="border-t p-3 text-xs">
+        <details
+          open={listOpen}
+          onToggle={(event) => setListOpen(event.currentTarget.open)}
+          className="border-t p-3 text-xs"
+        >
           <summary className="cursor-pointer text-slate-600">노드 목록으로 탐색</summary>
           <div className="mt-2 flex max-h-48 flex-wrap gap-2 overflow-auto">
             {[...model.groups.values()].map((g) => (
@@ -326,6 +275,24 @@ export function AttributeRelationshipGraph({
             ))}
           </div>
         </details>
+        <div className="overflow-hidden bg-slate-50/60 p-2">
+          {!model.visibleAlcohols.length ? (
+            <p className="p-10 text-center text-xs text-slate-500">표시할 연결이 없습니다.</p>
+          ) : (
+            <RelationshipCanvas
+              data={model.data}
+              selectedId={selectedGroup || selectedAlcohol ? selection : null}
+              onSelect={selectNode}
+              expanded={fullscreen}
+            />
+          )}
+        </div>
+        <p className="sr-only" role="status">
+          {selectedGroup
+            ? `${selectedGroup.attribute.displayName} ${displayValue(selectedGroup.attribute, selectedGroup.value)}`
+            : (selectedAlcohol?.name ?? '선택 없음')}{' '}
+          · 연결 {connections.length}개
+        </p>
       </div>
       {(selectedGroup || selectedAlcohol) && detailsOpen && (
         <aside
