@@ -6,7 +6,12 @@ import { http, HttpResponse } from 'msw';
 
 import { render } from '@/test/test-utils';
 import { server } from '@/test/mocks/server';
-import { wrapApiError, wrapApiResponse } from '@/test/mocks/data';
+import {
+  mockTastingGroupItems,
+  mockUngroupedTastingTags,
+  wrapApiError,
+  wrapApiResponse,
+} from '@/test/mocks/data';
 
 import { TastingGroupListPage } from '../TastingGroupList';
 
@@ -167,6 +172,60 @@ describe('TastingGroupListPage', () => {
     // 패널은 닫히지 않고 선택만 비워진다
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     await waitFor(() => expect(within(panel).getByRole('button', { name: '추가' })).toBeDisabled());
+  });
+
+  it('다른 그룹의 사과를 검색해 추가하고 현재 그룹의 태그만 후보에서 제외한다', async () => {
+    const user = userEvent.setup();
+    const groups = structuredClone(mockTastingGroupItems);
+    const apple = { ...groups[0]!.tags[0]!, tastingTagId: 31, korName: '사과' };
+    groups[1]!.tags.push(apple);
+    const calls: unknown[] = [];
+    server.use(
+      http.get(BASE, () => HttpResponse.json(wrapApiResponse({ groups, families: [] }))),
+      http.get('/admin/api/v1/tasting/tags/all', () =>
+        HttpResponse.json(
+          wrapApiResponse([
+            ...mockUngroupedTastingTags,
+            ...[groups[0]!.tags[0]!, apple].map((tag) => ({
+              id: tag.tastingTagId,
+              korName: tag.korName,
+              engName: '',
+              parentId: null,
+              alcoholCount: tag.alcoholCount,
+              groups: [
+                {
+                  groupCode: tag === apple ? groups[1]!.code : groups[0]!.code,
+                  groupName: tag === apple ? groups[1]!.name : groups[0]!.name,
+                  role: tag.role,
+                },
+              ],
+            })),
+          ])
+        )
+      ),
+      http.post(`${BASE}/PEAT_SMOKE/tags`, async ({ request }) => {
+        calls.push(await request.json());
+        groups[0]!.tags.push(apple);
+        return okResult('TASTING_TAG_GROUP_TAG_ADDED');
+      })
+    );
+    render(<TastingGroupListPage />);
+    const card = await screen.findByRole('region', { name: '선택한 태그 그룹' });
+    await user.click(within(card).getByRole('button', { name: '태그 연결' }));
+    const panel = await screen.findByRole('dialog');
+    await within(panel).findByRole('option', { name: '가죽' });
+    expect(within(panel).queryByRole('option', { name: '피트' })).not.toBeInTheDocument();
+    await user.type(within(panel).getByPlaceholderText('태그 이름으로 검색'), '사과');
+    await user.click(await within(panel).findByRole('option', { name: '사과' }));
+    await waitFor(() =>
+      expect(within(panel).queryByRole('option', { name: '가죽' })).not.toBeInTheDocument()
+    );
+    await user.click(within(panel).getByRole('button', { name: '1개 추가' }));
+    await waitFor(() => expect(calls).toEqual([{ tastingTagIds: [31], role: 'CORE' }]));
+    const current = within(panel).getByRole('region', { name: '이 그룹의 태그' });
+    expect(await within(current).findByText('사과')).toBeInTheDocument();
+    expect(within(panel).queryByRole('option', { name: '사과' })).not.toBeInTheDocument();
+    expect(groups[1]!.tags).toContainEqual(apple);
   });
 
   it('대표 태그 저장 후 보조 태그 저장이 실패하면 성공한 선택을 제거하고 실패한 태그만 재시도한다', async () => {

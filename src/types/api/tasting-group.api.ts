@@ -49,6 +49,11 @@ export const TastingGroupApi = {
     endpoint: '/admin/api/v1/tasting/groups/:code/tags/:tagId',
     method: 'DELETE',
   },
+  /** 소속 그룹과 관계없이 전체 테이스팅 태그 조회 */
+  allTags: {
+    endpoint: '/admin/api/v1/tasting/tags/all',
+    method: 'GET',
+  },
   /** 어느 그룹에도 속하지 않은 테이스팅 태그 조회 */
   ungroupedTags: {
     endpoint: '/admin/api/v1/tasting/tags/ungrouped',
@@ -98,8 +103,8 @@ export interface TastingGroupRef {
   role: CodeLabel & { code: TastingGroupRole };
 }
 
-/** 아이콘을 뺀 테이스팅 태그 사전 항목 (미소속 태그 조회 응답) */
-export interface UngroupedTastingTag {
+/** 아이콘을 뺀 테이스팅 태그 사전 항목 */
+export interface TastingTagCatalogItem {
   id: number;
   korName: string;
   engName: string;
@@ -107,6 +112,8 @@ export interface UngroupedTastingTag {
   alcoholCount: number;
   groups: TastingGroupRef[];
 }
+
+export type UngroupedTastingTag = TastingTagCatalogItem;
 
 /** 생성·수정·삭제·연결 공통 결과 응답 */
 export interface TastingGroupResultResponse {

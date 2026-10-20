@@ -778,6 +778,20 @@ export const tastingGroupHandlers = [
     );
   }),
 
+  http.get(`${TASTING_TAG_CATALOG_BASE}/all`, () => {
+    const grouped = mockTastingGroupItems.flatMap((group) =>
+      group.tags.map((tag) => ({
+        id: tag.tastingTagId,
+        korName: tag.korName,
+        engName: '',
+        parentId: null,
+        alcoholCount: tag.alcoholCount,
+        groups: [{ groupCode: group.code, groupName: group.name, role: tag.role }],
+      }))
+    );
+    return HttpResponse.json(wrapApiResponse([...grouped, ...mockUngroupedTastingTags]));
+  }),
+
   http.get(`${TASTING_TAG_CATALOG_BASE}/ungrouped`, ({ request }) => {
     const keyword = new URL(request.url).searchParams.get('keyword');
     const items = keyword

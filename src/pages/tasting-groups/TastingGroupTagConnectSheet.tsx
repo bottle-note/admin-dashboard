@@ -2,7 +2,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { getErrorMessage } from '@/lib/api-error';
 /**
  * 태그 연결 측면 패널
- * - 전송 목록 구조: 왼쪽은 미소속 태그(즉시 검색·결과 전체 선택), 오른쪽은 이 그룹의 태그(역할 변경·제거)
+ * - 전송 목록 구조: 왼쪽은 추가 가능한 태그(즉시 검색·결과 전체 선택), 오른쪽은 이 그룹의 태그(역할 변경·제거)
  * - 고른 태그는 칩으로 쌓이고 칩마다 역할(대표/보조)을 바꿀 수 있어 한 번에 섞어서 추가한다
  * - 추가 뒤에도 패널은 열린 채 선택만 비워 연속 작업이 가능하다
  * - 키보드: ↑↓ 이동, Enter 체크, Backspace(빈 검색창) 마지막 칩 삭제, Cmd/Ctrl+A 결과 전체 선택
@@ -27,9 +27,9 @@ import {
   PartialTagConnectionError,
   useTastingGroupChangeTagRole,
   useTastingGroupRemoveTag,
-  useUngroupedTastingTags,
+  useTastingTagCatalog,
 } from '@/hooks/useTastingGroups';
-import type { TastingGroupItem, TastingGroupRole, UngroupedTastingTag } from '@/types/api';
+import type { TastingGroupItem, TastingGroupRole, TastingTagCatalogItem } from '@/types/api';
 import { OTHER_ROLE, ROLE_LABEL } from './tasting-group.schema';
 
 interface TastingGroupTagConnectSheetProps {
@@ -39,7 +39,7 @@ interface TastingGroupTagConnectSheetProps {
 }
 
 interface Picked {
-  tag: UngroupedTastingTag;
+  tag: TastingTagCatalogItem;
   role: TastingGroupRole;
 }
 
@@ -57,11 +57,13 @@ export function TastingGroupTagConnectSheet({
   const [highlight, setHighlight] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const { data: results = [], isLoading } = useUngroupedTastingTags(keyword, open);
-  const sorted = useMemo(
-    () => [...results].sort((a, b) => b.alcoholCount - a.alcoholCount),
-    [results]
-  );
+  const { data: results = [], isLoading } = useTastingTagCatalog(open);
+  const sorted = useMemo(() => {
+    const currentIds = new Set(group?.tags.map((tag) => tag.tastingTagId));
+    return results
+      .filter((tag) => !currentIds.has(tag.id) && tag.korName.includes(keyword))
+      .sort((a, b) => b.alcoholCount - a.alcoholCount);
+  }, [results, group?.tags, keyword]);
   const maxCount = sorted[0]?.alcoholCount ?? 0;
   const pickedIds = useMemo(() => new Set(picked.map((item) => item.tag.id)), [picked]);
 
@@ -92,7 +94,7 @@ export function TastingGroupTagConnectSheet({
     onOpenChange(next);
   };
 
-  const togglePick = (tag: UngroupedTastingTag) => {
+  const togglePick = (tag: TastingTagCatalogItem) => {
     if (isMutating) return;
     setPicked((prev) =>
       prev.some((item) => item.tag.id === tag.id)
@@ -163,14 +165,15 @@ export function TastingGroupTagConnectSheet({
             {group ? `${group.name} 태그 연결` : '태그 연결'}
           </SheetTitle>
           <SheetDescription className="text-xs">
-            왼쪽에서 미소속 태그를 골라 추가합니다. 오른쪽에서는 이 그룹에 이미 있는 태그의 역할을
-            바꾸거나 제거합니다. 패널은 추가 뒤에도 열려 있습니다.
+            다른 그룹에 속한 태그도 추가할 수 있습니다. 왼쪽에서 태그를 골라 추가합니다.
+            오른쪽에서는 이 그룹에 이미 있는 태그의 역할을 바꾸거나 제거합니다. 패널은 추가 뒤에도
+            열려 있습니다.
           </SheetDescription>
         </SheetHeader>
 
         <div className="grid min-h-0 flex-1 grid-cols-2 divide-x">
-          {/* 왼쪽: 미소속 태그 */}
-          <section className="flex min-h-0 flex-col" aria-label="미소속 태그">
+          {/* 왼쪽: 추가 가능한 태그 */}
+          <section className="flex min-h-0 flex-col" aria-label="추가 가능한 태그">
             <div className="space-y-2 border-b px-4 py-3">
               {picked.length > 0 && (
                 <div
@@ -222,7 +225,7 @@ export function TastingGroupTagConnectSheet({
                   }}
                   onKeyDown={onSearchKeyDown}
                   placeholder="태그 이름으로 검색"
-                  aria-label="미소속 태그 검색"
+                  aria-label="추가 가능한 태그 검색"
                   aria-activedescendant={
                     sorted[highlight] ? `ungrouped-${sorted[highlight].id}` : undefined
                   }
@@ -267,7 +270,7 @@ export function TastingGroupTagConnectSheet({
             <ul className="min-h-0 flex-1 overflow-auto" role="listbox" aria-multiselectable="true">
               {!isLoading && sorted.length === 0 && (
                 <li className="p-6 text-center text-xs text-muted-foreground">
-                  연결할 수 있는 미소속 태그가 없습니다.
+                  추가 가능한 태그가 없습니다.
                 </li>
               )}
               {sorted.map((tag, index) => {

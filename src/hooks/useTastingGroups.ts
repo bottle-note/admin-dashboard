@@ -15,6 +15,7 @@ import type {
   TastingGroupTagRoleRequest,
   TastingGroupResultResponse,
   UngroupedTastingTag,
+  TastingTagCatalogItem,
 } from '@/types/api';
 
 type MutationOptions<TVariables> = Omit<
@@ -41,6 +42,15 @@ export function useTastingGroupList() {
     tastingGroupKeys.list(),
     () => tastingGroupService.list(),
     { staleTime: 1000 * 60 * 5 }
+  );
+}
+
+/** 연결 후보를 위한 전체 테이스팅 태그 조회 */
+export function useTastingTagCatalog(enabled = true) {
+  return useApiQuery<TastingTagCatalogItem[]>(
+    tastingGroupKeys.catalog(),
+    () => tastingGroupService.allTags(),
+    { enabled, staleTime: 1000 * 60 }
   );
 }
 

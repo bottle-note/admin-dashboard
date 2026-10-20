@@ -14,6 +14,7 @@ import {
   type TastingGroupTagRoleRequest,
   type TastingGroupResultResponse,
   type UngroupedTastingTag,
+  type TastingTagCatalogItem,
   type UngroupedTastingTagParams,
 } from '@/types/api';
 
@@ -25,6 +26,7 @@ const baseKeys = createQueryKeys('tasting-groups');
 
 export const tastingGroupKeys = {
   ...baseKeys,
+  catalog: () => [...baseKeys.all, 'catalog'] as const,
   /** 미소속 태그 조회. 그룹 변경 시 함께 무효화되도록 같은 namespace를 쓴다 */
   ungrouped: (keyword?: string) => [...baseKeys.all, 'ungrouped', keyword ?? ''] as const,
 };
@@ -91,6 +93,12 @@ export const tastingGroupService = {
       .replace(':code', encodeURIComponent(code))
       .replace(':tagId', String(tagId));
     return apiClient.delete<TastingGroupResultResponse>(endpoint);
+  },
+
+  /** 소속 그룹과 관계없이 전체 테이스팅 태그 */
+  allTags: async (): Promise<TastingTagCatalogItem[]> => {
+    const response = await apiClient.get<TastingTagCatalogItem[]>(TastingGroupApi.allTags.endpoint);
+    return response.data ?? [];
   },
 
   /** 어느 그룹에도 속하지 않은 테이스팅 태그 */
