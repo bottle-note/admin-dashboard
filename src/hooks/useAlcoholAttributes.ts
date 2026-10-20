@@ -88,3 +88,11 @@ export function useAttributeGroupUpdate() {
 export function useAttributeGroupDelete() {
   return useApiMutation(service.deleteGroup, mutationOptions);
 }
+
+export function useAttributeFacets(params: AlcoholCompoundSearchParams, enabled = true) {
+  return useApiQuery(keys.facets(params), ({ signal }) => service.facets(params, signal), {
+    enabled,
+    showErrorToast: false,
+    retry: false,
+  });
+}

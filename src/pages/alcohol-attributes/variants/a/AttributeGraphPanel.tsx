@@ -1,5 +1,10 @@
+import { AttributeRefinementCandidates } from './AttributeRefinementCandidates';
+import { displayValue } from './attribute-model';
+import { searchOperators } from './attribute-search';
+import type { AttributeSearchCondition } from '@/types/api/alcohol-attribute.api';
+import { useAttributeDefinitions } from '@/hooks/useAlcoholAttributes';
 import { AttributeGroupFilter } from './AttributeGroupFilter';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { useAttributedAlcohols, useCompoundAlcoholSearch } from '@/hooks/useAlcoholAttributes';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -11,8 +16,16 @@ import { readAttributeSearch, readGroupIds, type AttributeSearch } from './attri
 
 export function AttributeGraphPanel() {
   const [params, setParams] = useSearchParams();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const groupIds = readGroupIds(params, 'graph');
   const compound = readAttributeSearch(params, 'graph');
+  const definitions = useAttributeDefinitions();
+  const [history, setHistory] = useState<
+    { before: AttributeSearch; after: string; scope: string }[]
+  >([]);
+  const scope = JSON.stringify([readGroupIds(params, 'graph'), params.get('graphKeyword') ?? '']);
+  const last = history[history.length - 1];
+  const canUndo = last?.scope === scope && last.after === JSON.stringify(compound.value);
   const advanced = !!compound.error || compound.value.conditions.length > 0;
   const requestedSize = Number(params.get('graphSize'));
   const size = [25, 50, 100].includes(requestedSize) ? requestedSize : 25;
@@ -29,6 +42,7 @@ export function AttributeGraphPanel() {
       keyword: keyword || undefined,
       groupIds: groupIds.length ? groupIds : undefined,
       ...compound.value,
+      linkedOnly: true,
       page,
       size,
     },
@@ -41,7 +55,7 @@ export function AttributeGraphPanel() {
       result.set('graphPage', String(next));
       return result;
     });
-  const applySearch = (search: AttributeSearch) =>
+  const writeSearch = (search: AttributeSearch) =>
     setParams((previous) => {
       const next = new URLSearchParams(previous);
       if (search.conditions.length) {
@@ -54,6 +68,25 @@ export function AttributeGraphPanel() {
       next.delete('graphPage');
       return next;
     });
+  const applySearch = (search: AttributeSearch) => {
+    if (!compound.error && JSON.stringify(search) === JSON.stringify(compound.value)) return;
+    setHistory((previous) => [
+      ...(canUndo ? previous : []),
+      { before: compound.value, after: JSON.stringify(search), scope },
+    ]);
+    writeSearch(search);
+  };
+  const addConditions = (conditions: AttributeSearchCondition[]) => {
+    if (compound.error || compound.value.match !== 'AND' || query.isFetching) return;
+    const additions = conditions.filter(
+      (c) =>
+        !compound.value.conditions.some(
+          (existing) => JSON.stringify(existing) === JSON.stringify(c)
+        )
+    );
+    if (compound.value.conditions.length + additions.length > 20) return;
+    applySearch({ match: 'AND', conditions: [...compound.value.conditions, ...additions] });
+  };
   const { alcohols, attributes, mappings } = useMemo(() => {
     const alcohols = (query.data?.items ?? []).map((item) => ({
       id: item.alcoholId,
@@ -105,16 +138,118 @@ export function AttributeGraphPanel() {
         attributes={attributes}
         alcohols={alcohols}
         mappings={mappings}
-        filterControls={
-          <div className="space-y-3">
-            <AttributeGroupFilter prefix="graph" />
-            <AttributeSearchBuilder
-              key={JSON.stringify(compound.value)}
-              value={compound.value}
-              onApply={applySearch}
-              error={compound.error}
-              label="그래프 속성 조건"
+        onNarrow={(attribute, value) =>
+          addConditions([{ key: attribute.key, operator: 'EQ', value }])
+        }
+        narrowDisabled={
+          !!compound.error ||
+          compound.value.match !== 'AND' ||
+          compound.value.conditions.length >= 20 ||
+          query.isFetching
+        }
+        isNarrowed={(key, value) =>
+          compound.value.conditions.some(
+            (c) => c.key === key && c.operator === 'EQ' && c.value === value
+          )
+        }
+        refinementControls={
+          advanced && !compound.error && compound.value.match === 'AND' ? (
+            <AttributeRefinementCandidates
+              key={JSON.stringify([compound.value, keyword, groupIds])}
+              search={{
+                ...compound.value,
+                keyword: keyword || undefined,
+                groupIds,
+                linkedOnly: true,
+              }}
+              onAdd={addConditions}
+              disabled={query.isFetching || compound.value.conditions.length >= 20}
             />
+          ) : undefined
+        }
+        filterControls={
+          <div className="space-y-2">
+            <div
+              className="space-y-2 rounded-md bg-teal-50/50 px-2 py-1"
+              aria-label="그래프 탐색 조건"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold text-teal-900">
+                  {compound.value.match === 'AND'
+                    ? '모두 만족하는 위스키'
+                    : '하나라도 만족하는 위스키'}{' '}
+                  · {query.isFetching ? '조회 중' : `${query.data?.meta.totalElements ?? 0}개`}
+                </p>
+                <div className="ml-auto flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    aria-expanded={filtersOpen || !!compound.error}
+                    aria-controls="graph-filter-editor"
+                    onClick={() => setFiltersOpen(!filtersOpen)}
+                  >
+                    {filtersOpen ? '필터 접기' : '필터 편집'} · 그룹 {groupIds.length || '전체'} ·
+                    조건 {compound.value.conditions.length}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={!canUndo || query.isFetching}
+                    onClick={() => {
+                      if (canUndo && last) {
+                        writeSearch(last.before);
+                        setHistory((previous) => previous.slice(0, -1));
+                      }
+                    }}
+                  >
+                    한 단계 되돌리기
+                  </Button>
+                </div>
+              </div>
+              <div className="flex max-h-16 flex-wrap gap-1 overflow-y-auto">
+                {compound.value.conditions.map((condition, index) => {
+                  const attribute = definitions.data?.find((a) => a.key === condition.key);
+                  const label = `${attribute?.displayName ?? condition.key} ${condition.operator === 'EQ' ? '=' : searchOperators[condition.operator]}${condition.value === undefined ? '' : ` ${attribute ? displayValue({ ...attribute, unit: attribute.unit ?? '', description: attribute.description ?? '' }, condition.value) : condition.value}`}`;
+                  return (
+                    <button
+                      key={`${index}-${condition.key}`}
+                      aria-label={`${label} 조건 제거`}
+                      disabled={query.isFetching}
+                      className="max-w-full break-words rounded-full border border-teal-200 bg-white px-3 py-1 text-left text-xs text-teal-900 hover:bg-teal-100 disabled:opacity-50"
+                      onClick={() =>
+                        applySearch({
+                          ...compound.value,
+                          conditions: compound.value.conditions.filter((_, i) => i !== index),
+                        })
+                      }
+                    >
+                      {label} <span aria-hidden="true">×</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {(compound.value.match === 'OR' || compound.value.conditions.length >= 20) && (
+                <p className="text-xs text-slate-500">
+                  {compound.value.match === 'OR'
+                    ? '하나씩 좁히려면 아래 조건 조합을 모두 만족으로 변경하세요.'
+                    : '조건은 최대 20개입니다. 기존 조건을 제거하면 더 추가할 수 있습니다.'}
+                </p>
+              )}
+            </div>
+            <div
+              id="graph-filter-editor"
+              hidden={!filtersOpen && !compound.error}
+              className="max-h-64 space-y-2 overflow-y-auto rounded-md border p-2"
+            >
+              <AttributeGroupFilter prefix="graph" />
+              <AttributeSearchBuilder
+                key={JSON.stringify(compound.value)}
+                value={compound.value}
+                onApply={applySearch}
+                error={compound.error}
+                label="그래프 속성 조건"
+              />
+            </div>
           </div>
         }
         serverFilter={{

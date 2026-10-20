@@ -135,3 +135,8 @@ export interface AttributeGroupRequest {
   description: string | null;
   displayOrder: number;
 }
+
+export interface AttributeFacets {
+  items: { attribute: AlcoholAttribute; value: string; alcoholCount: number }[];
+  hasNext: boolean;
+}

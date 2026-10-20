@@ -17,6 +17,8 @@ import type {
   AttributeSummary,
 } from '@/types/api/alcohol-attribute.api';
 
+import type { AttributeFacets } from '@/types/api/alcohol-attribute.api';
+
 const base = '/admin/api/v1/alcohols/attributes';
 const groupBase = '/admin/api/v1/alcohols/attribute-groups';
 const all = ['alcohol-attributes'] as const;
@@ -27,6 +29,7 @@ export const alcoholAttributeKeys = {
   list: (params: AttributeSearchParams) => [...all, 'list', params] as const,
   alcohols: (params: AttributedAlcoholSearchParams) => [...all, 'alcohols', params] as const,
   compound: (params: AlcoholCompoundSearchParams) => [...all, 'compound', params] as const,
+  facets: (params: AlcoholCompoundSearchParams) => [...all, 'facets', params] as const,
   summary: (alcoholIds: number[]) => [...all, 'summary', alcoholIds] as const,
 };
 
@@ -71,6 +74,14 @@ export const alcoholAttributeService = {
       AttributePageMeta
     >(`${base}/alcohols/search`, params, { signal });
     return { items: data, meta };
+  },
+  async facets(params: AlcoholCompoundSearchParams, signal?: AbortSignal) {
+    const { data } = await apiClient.postWithMeta<AttributeFacets, AlcoholCompoundSearchParams>(
+      `${base}/alcohols/facets`,
+      params,
+      { signal }
+    );
+    return data;
   },
   async summary(alcoholIds: number[], signal?: AbortSignal) {
     const { data } = await apiClient.get<AttributeSummary[]>(`${base}/summary`, {

@@ -29,8 +29,16 @@ export function AttributeRelationshipGraph({
   mappings,
   serverFilter,
   filterControls,
+  refinementControls,
+  onNarrow,
+  narrowDisabled,
+  isNarrowed,
 }: {
   filterControls?: ReactNode;
+  refinementControls?: ReactNode;
+  onNarrow?: (attribute: Attribute, value: string) => void;
+  narrowDisabled?: boolean;
+  isNarrowed?: (key: string, value: string) => boolean;
   attributes: Attribute[];
   alcohols: AlcoholNode[];
   mappings: Mapping[];
@@ -168,7 +176,7 @@ export function AttributeRelationshipGraph({
     <div
       ref={panelRef}
       className={`grid min-w-0 items-start gap-3 bg-white [&:fullscreen]:overflow-auto ${
-        (selectedGroup || selectedAlcohol) && detailsOpen
+        (selectedGroup || selectedAlcohol || refinementControls) && detailsOpen
           ? 'lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]'
           : 'grid-cols-1'
       }`}
@@ -179,7 +187,7 @@ export function AttributeRelationshipGraph({
             <Network className="h-4 w-4 text-teal-800" />
             <h2 className="font-semibold">속성과 위스키의 관계</h2>
             <span className="ml-auto text-xs text-slate-500">조회 전용</span>
-            {(selectedGroup || selectedAlcohol) && (
+            {(selectedGroup || selectedAlcohol || refinementControls) && (
               <Button
                 size="sm"
                 variant="outline"
@@ -202,13 +210,9 @@ export function AttributeRelationshipGraph({
             </Button>
           </div>
 
-          <div
-            role="group"
-            aria-label="관계 그래프 필터"
-            className="grid gap-2 rounded-md bg-slate-50 p-2"
-          >
+          <div role="group" aria-label="관계 그래프 필터" className="min-w-0">
             <label className="min-w-0 space-y-1 text-[11px] text-slate-600">
-              위스키 검색
+              <span className="sr-only">위스키 검색</span>
               <div className="relative">
                 <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" />
                 <Input
@@ -294,7 +298,7 @@ export function AttributeRelationshipGraph({
           · 연결 {connections.length}개
         </p>
       </div>
-      {(selectedGroup || selectedAlcohol) && detailsOpen && (
+      {(selectedGroup || selectedAlcohol || refinementControls) && detailsOpen && (
         <aside
           aria-label="그래프 상세"
           className="min-w-0 rounded-lg border bg-white p-3 lg:sticky lg:top-3"
@@ -310,11 +314,27 @@ export function AttributeRelationshipGraph({
                   <p className="mt-2 break-all font-mono text-lg font-semibold text-teal-900">
                     {displayValue(selectedGroup.attribute, selectedGroup.value)}
                   </p>
+                  {onNarrow && (
+                    <Button
+                      className="mt-3 w-full"
+                      size="sm"
+                      disabled={
+                        narrowDisabled ||
+                        isNarrowed?.(selectedGroup.attribute.key, selectedGroup.value)
+                      }
+                      onClick={() => onNarrow(selectedGroup.attribute, selectedGroup.value)}
+                    >
+                      {isNarrowed?.(selectedGroup.attribute.key, selectedGroup.value)
+                        ? '이미 적용한 조건'
+                        : '이 값으로 좁히기'}
+                    </Button>
+                  )}
                   <p className="mt-2 whitespace-pre-wrap text-xs text-slate-500">
                     {selectedGroup.attribute.description}
                   </p>
                 </>
               )}
+              {refinementControls}
               <h4 className="mb-2 mt-3 border-t pt-3 text-xs font-semibold">
                 {selectedGroup ? '이 값에 연결된 위스키' : '연결된 속성 값'} {connections.length}개
               </h4>
@@ -352,6 +372,7 @@ export function AttributeRelationshipGraph({
               술병이나 속성 값을 선택하세요. 필터를 바꾸기 전까지 전체 표시 범위는 유지됩니다.
             </p>
           )}
+          {!selectedGroup && !selectedAlcohol && refinementControls}
         </aside>
       )}
     </div>

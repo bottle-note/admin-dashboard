@@ -36,6 +36,9 @@ beforeEach(() => {
     value: initialAttributes.find((a) => a.id === m.attributeId)!.value,
   }));
   server.use(
+    http.post(`${base}/alcohols/facets`, () =>
+      HttpResponse.json(wrap({ items: [], hasNext: false }))
+    ),
     http.get('/admin/api/v1/alcohols/attribute-groups', () =>
       HttpResponse.json(wrap([{ id: 1, name: '바텐더 노트', description: null, displayOrder: 0 }]))
     ),
@@ -144,6 +147,8 @@ describe('속성 관리 통합 화면', () => {
       );
       const user = await renderPage();
       await user.click(screen.getByRole('tab', { name: tab }));
+      if (tab === '관계 그래프')
+        await user.click(screen.getByRole('button', { name: /^필터 편집/ }));
       await user.click(screen.getByRole('button', { name: /^속성 선택/ }));
       await user.click(await screen.findByRole('checkbox', { name: '검색 속성 10만 원 이상' }));
       await user.click(screen.getByRole('checkbox', { name: '검색 속성 선물용' }));
@@ -731,6 +736,7 @@ it.each(['graph', 'mappings'])('%s 검색 URL을 복원하고 이전 조건으�
     </>
   );
   await user.click(screen.getByRole('button', { name: '저장된 검색 열기' }));
+  if (tab === 'graph') await user.click(screen.getByRole('button', { name: /^필터 편집/ }));
   await waitFor(() =>
     expect(posts[posts.length - 1]).toMatchObject({
       match: 'OR',
@@ -793,6 +799,7 @@ it('그래프 조건 초기화는 최초의 연결된 위스키 조회로 돌아
   );
   const user = await renderPage();
   await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
+  await user.click(screen.getByRole('button', { name: /^필터 편집/ }));
   await screen.findByRole('button', { name: `위스키: ${alcohols[0]!.name}` });
   await user.click(screen.getByRole('button', { name: /^속성 선택/ }));
   await user.click(await screen.findByRole('checkbox', { name: '검색 속성 선물용' }));
@@ -821,6 +828,7 @@ it('복합 조건의 빈 결과는 등록된 데이터가 없다고 안내하지
 it('전체화면에서도 속성 선택 팝오버는 전체화면 요소 안에 표시한다', async () => {
   const user = await renderPage();
   await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
+  await user.click(screen.getByRole('button', { name: /^필터 편집/ }));
   const button = screen.getByRole('button', { name: '전체화면' });
   const panel = button.closest('.grid')!;
   Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: panel });
@@ -863,6 +871,7 @@ it('연결 목록과 그래프에서 여러 그룹을 반복 쿼리와 복합 �
   await user.click(screen.getByRole('button', { name: '검색 적용' }));
   await waitFor(() => expect(posts[posts.length - 1]?.groupIds).toEqual([1, 2]));
   await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
+  await user.click(screen.getByRole('button', { name: /^필터 편집/ }));
   await user.click(await screen.findByRole('checkbox', { name: '그래프 검색 그룹 바텐더 노트' }));
   await user.click(screen.getByRole('checkbox', { name: '그래프 검색 그룹 시음 기록' }));
   await waitFor(() => expect(reads[reads.length - 1]?.getAll('groupIds')).toEqual(['1', '2']));
