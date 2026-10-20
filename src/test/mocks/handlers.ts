@@ -802,6 +802,7 @@ export const tastingGroupHandlers = [
 ];
 
 export const handlers = [
+  http.get('/admin/api/v1/alcohols/attribute-groups', () => HttpResponse.json(wrapApiResponse([]))),
   ...tastingTagHandlers,
   ...tastingGroupHandlers,
   ...bannerHandlers,

@@ -73,3 +73,14 @@ export function conditionError(
     ? valueError(attribute.datatype, condition.value ?? '')
     : undefined;
 }
+
+export function readGroupIds(params: URLSearchParams, prefix = '') {
+  return [
+    ...new Set(
+      params
+        .getAll(`${prefix}groupIds`)
+        .map(Number)
+        .filter((id) => Number.isSafeInteger(id) && id > 0)
+    ),
+  ].slice(0, 100);
+}

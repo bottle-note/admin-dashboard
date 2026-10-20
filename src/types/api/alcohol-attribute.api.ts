@@ -15,6 +15,7 @@ export interface AttributeAudit {
   lastModifyPrincipal: AttributePrincipal | null;
 }
 export interface AlcoholAttribute extends AttributeAudit {
+  groupId: number | null;
   id: number;
   key: string;
   displayName: string;
@@ -49,11 +50,13 @@ export interface AttributePageParams {
   size?: number;
 }
 export interface AttributeSearchParams extends AttributePageParams {
+  groupIds?: number[];
   keyword?: string;
   type?: AttributeType;
   alcoholIds?: number[];
 }
 export interface AttributedAlcoholSearchParams extends AttributePageParams {
+  groupIds?: number[];
   keyword?: string;
   type?: AttributeType;
   key?: string;
@@ -62,6 +65,7 @@ export interface AttributedAlcoholSearchParams extends AttributePageParams {
   operator?: AttributeOperator;
 }
 export interface AttributeUpdateRequest {
+  groupId?: number | null;
   displayName: string;
   type: AttributeType;
   datatype: AttributeDatatype;
@@ -112,9 +116,22 @@ export interface AttributeSearchCondition {
   value?: string;
 }
 export interface AlcoholCompoundSearchParams extends AttributePageParams {
+  groupIds?: number[];
   keyword?: string;
   match?: 'AND' | 'OR';
   conditions: AttributeSearchCondition[];
   type?: AttributeType;
   linkedOnly?: boolean;
+}
+
+export interface AttributeGroup extends AttributeAudit {
+  id: number;
+  name: string;
+  description: string | null;
+  displayOrder: number;
+}
+export interface AttributeGroupRequest {
+  name: string;
+  description: string | null;
+  displayOrder: number;
 }

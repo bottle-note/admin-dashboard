@@ -72,3 +72,19 @@ export function useCompoundAlcoholSearch(params: AlcoholCompoundSearchParams, en
     { enabled }
   );
 }
+
+export function useAttributeGroups() {
+  return useApiQuery(keys.groups, ({ signal }) => service.groups(signal));
+}
+export function useAttributeDefinitions() {
+  return useApiQuery(keys.definitions, ({ signal }) => service.definitions(signal));
+}
+export function useAttributeGroupCreate() {
+  return useApiMutation(service.createGroup, mutationOptions);
+}
+export function useAttributeGroupUpdate() {
+  return useApiMutation(service.updateGroup, mutationOptions);
+}
+export function useAttributeGroupDelete() {
+  return useApiMutation(service.deleteGroup, mutationOptions);
+}

@@ -1,3 +1,4 @@
+import { AttributeGroupFilter } from './AttributeGroupFilter';
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import { useAttributedAlcohols, useCompoundAlcoholSearch } from '@/hooks/useAlcoholAttributes';
@@ -6,10 +7,11 @@ import { getErrorMessage } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import { AttributeRelationshipGraph } from './AttributeRelationshipGraph';
 import { AttributeSearchBuilder } from './AttributeSearchBuilder';
-import { readAttributeSearch, type AttributeSearch } from './attribute-search';
+import { readAttributeSearch, readGroupIds, type AttributeSearch } from './attribute-search';
 
 export function AttributeGraphPanel() {
   const [params, setParams] = useSearchParams();
+  const groupIds = readGroupIds(params, 'graph');
   const compound = readAttributeSearch(params, 'graph');
   const advanced = !!compound.error || compound.value.conditions.length > 0;
   const requestedSize = Number(params.get('graphSize'));
@@ -19,11 +21,17 @@ export function AttributeGraphPanel() {
   const rawPage = Number(params.get('graphPage'));
   const page = Number.isSafeInteger(rawPage) && rawPage >= 0 ? rawPage : 0;
   const legacyQuery = useAttributedAlcohols(
-    { keyword: keyword || undefined, page, size },
+    { keyword: keyword || undefined, groupIds: groupIds.length ? groupIds : undefined, page, size },
     !advanced
   );
   const compoundQuery = useCompoundAlcoholSearch(
-    { keyword: keyword || undefined, ...compound.value, page, size },
+    {
+      keyword: keyword || undefined,
+      groupIds: groupIds.length ? groupIds : undefined,
+      ...compound.value,
+      page,
+      size,
+    },
     advanced && !compound.error
   );
   const query = advanced ? compoundQuery : legacyQuery;
@@ -98,13 +106,16 @@ export function AttributeGraphPanel() {
         alcohols={alcohols}
         mappings={mappings}
         filterControls={
-          <AttributeSearchBuilder
-            key={JSON.stringify(compound.value)}
-            value={compound.value}
-            onApply={applySearch}
-            error={compound.error}
-            label="그래프 속성 조건"
-          />
+          <div className="space-y-3">
+            <AttributeGroupFilter prefix="graph" />
+            <AttributeSearchBuilder
+              key={JSON.stringify(compound.value)}
+              value={compound.value}
+              onApply={applySearch}
+              error={compound.error}
+              label="그래프 속성 조건"
+            />
+          </div>
         }
         serverFilter={{
           keyword: input,

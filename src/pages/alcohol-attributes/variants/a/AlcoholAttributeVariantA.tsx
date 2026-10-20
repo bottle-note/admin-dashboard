@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { AttributeGroupsPanel } from './AttributeGroupsPanel';
+import { AttributeGroupFilter } from './AttributeGroupFilter';
 import { AttributeSearchBuilder } from './AttributeSearchBuilder';
-import { readAttributeSearch, type AttributeSearch } from './attribute-search';
+import { readAttributeSearch, readGroupIds, type AttributeSearch } from './attribute-search';
 import { useSearchParams } from 'react-router';
 import {
   ArrowRight,
@@ -67,6 +69,7 @@ import type { AttributeType } from '@/types/api/alcohol-attribute.api';
 
 const tabs = [
   { value: 'attributes', label: '속성관리' },
+  { value: 'groups', label: '속성 그룹' },
   { value: 'mappings', label: '속성 연결' },
   { value: 'graph', label: '관계 그래프' },
 ] as const;
@@ -78,11 +81,14 @@ const toggle = (items: number[], id: number) =>
 export function AlcoholAttributeVariantA() {
   const [params, setParams] = useSearchParams();
   const tab =
-    params.get('tab') === 'graph'
-      ? 'graph'
-      : params.get('tab') === 'mappings'
-        ? 'mappings'
-        : 'attributes';
+    params.get('tab') === 'groups'
+      ? 'groups'
+      : params.get('tab') === 'graph'
+        ? 'graph'
+        : params.get('tab') === 'mappings'
+          ? 'mappings'
+          : 'attributes';
+  const groupIds = readGroupIds(params);
   const compound = readAttributeSearch(params);
   const advanced = params.has('conditions');
   const keyword = params.get('q') ?? '';
@@ -95,7 +101,8 @@ export function AlcoholAttributeVariantA() {
     !!attributeKey ||
     !!filterValue ||
     !!missingKey ||
-    type !== 'ALL';
+    type !== 'ALL' ||
+    groupIds.length > 0;
   const rawPage = Number(params.get('page'));
   const page = Number.isSafeInteger(rawPage) && rawPage >= 0 ? rawPage : 0;
   const [selectedAttributes, setSelectedAttributeIds] = useState<number[]>([]);
@@ -131,6 +138,7 @@ export function AlcoholAttributeVariantA() {
     {
       keyword: keyword || undefined,
       type: type in TYPE_LABELS ? (type as AttributeType) : undefined,
+      groupIds: groupIds.length ? groupIds : undefined,
       page,
       size: 20,
     },
@@ -145,6 +153,7 @@ export function AlcoholAttributeVariantA() {
     {
       keyword: keyword || undefined,
       type: type in TYPE_LABELS ? (type as AttributeType) : undefined,
+      groupIds: groupIds.length ? groupIds : undefined,
       key: attributeKey || undefined,
       value: filterValue.trim() || undefined,
       operator: filterOperator,
@@ -159,6 +168,7 @@ export function AlcoholAttributeVariantA() {
       keyword: keyword || undefined,
       ...compound.value,
       type: type in TYPE_LABELS ? (type as AttributeType) : undefined,
+      groupIds: groupIds.length ? groupIds : undefined,
       linkedOnly: params.get('linkedOnly') === 'true',
       page,
       size: 20,
@@ -226,6 +236,7 @@ export function AlcoholAttributeVariantA() {
     datatype: item.datatype,
     unit: item.unit ?? '',
     description: item.description ?? '',
+    groupId: item.groupId ?? null,
   });
   const active =
     (dictionary.data?.items.map(toAttribute) ?? []).find((item) => item.id === activeAttribute) ??
@@ -510,11 +521,13 @@ export function AlcoholAttributeVariantA() {
           tools={
             <span className="flex items-center gap-1.5 text-xs text-slate-500">
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              {tab === 'graph'
-                ? '술별 값과 연결 조회'
-                : tab === 'attributes'
-                  ? '이름 · 분류 · 값 형식'
-                  : '위스키 선택 · 값 입력'}
+              {tab === 'groups'
+                ? '그룹 구성 · 속성 배정'
+                : tab === 'graph'
+                  ? '술별 값과 연결 조회'
+                  : tab === 'attributes'
+                    ? '이름 · 분류 · 값 형식'
+                    : '위스키 선택 · 값 입력'}
             </span>
           }
         />
@@ -525,7 +538,9 @@ export function AlcoholAttributeVariantA() {
         aria-labelledby={`tab-${tab}`}
         className="min-w-0"
       >
-        {queryError ? (
+        {tab === 'groups' ? (
+          <AttributeGroupsPanel />
+        ) : queryError ? (
           <div role="alert" className="rounded border p-6">
             {getErrorMessage(queryError)}
             <Button
@@ -624,6 +639,7 @@ export function AlcoholAttributeVariantA() {
                                 next.delete('operator');
                                 next.delete('missingKey');
                                 next.delete('type');
+                                next.delete('groupIds');
                               }
                               return next;
                             },
@@ -637,6 +653,7 @@ export function AlcoholAttributeVariantA() {
                 )}
                 {(keyword ||
                   type !== 'ALL' ||
+                  groupIds.length > 0 ||
                   (tab === 'mappings' && (linkedOnly || advanced))) && (
                   <Button
                     size="icon"
@@ -646,6 +663,7 @@ export function AlcoholAttributeVariantA() {
                       setParams(
                         (previous) => {
                           const next = new URLSearchParams(previous);
+                          next.delete('groupIds');
                           next.delete('conditions');
                           next.delete('match');
                           next.delete('q');
@@ -665,6 +683,9 @@ export function AlcoholAttributeVariantA() {
                     <X />
                   </Button>
                 )}
+              </div>
+              <div className="border-b p-3">
+                <AttributeGroupFilter />
               </div>
               {tab === 'mappings' && (
                 <div className="border-b p-3">
@@ -1331,7 +1352,9 @@ export function AlcoholAttributeVariantA() {
         className="flex items-start gap-2 rounded-md border bg-white px-3 py-2.5 text-xs leading-relaxed text-slate-600"
       >
         <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal-700" />
-        {notice}
+        {tab === 'groups'
+          ? '그룹 변경은 서버에 저장됩니다. 연결 목록과 그래프에서 여러 그룹을 선택해 검색할 수 있습니다.'
+          : notice}
       </div>
       <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
         <CircleHelp className="h-3.5 w-3.5" />

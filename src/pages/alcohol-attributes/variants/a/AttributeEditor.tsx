@@ -1,3 +1,4 @@
+import { useAttributeGroups } from '@/hooks/useAlcoholAttributes';
 import { useState } from 'react';
 import {
   Dialog,
@@ -17,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { type Attribute, TYPE_LABELS } from './attribute-model';
 
 const schema = z.object({
+  groupId: z.string().optional(),
   key: z
     .string()
     .trim()
@@ -43,6 +45,7 @@ export function AttributeEditor({
   onSave: (attribute: Attribute) => Promise<string | undefined>;
   onCancel: () => void;
 }) {
+  const groups = useAttributeGroups();
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [preview, setPreview] = useState<Attribute | null>(null);
@@ -50,12 +53,26 @@ export function AttributeEditor({
     register,
     handleSubmit,
     formState: { errors, isDirty },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: attribute });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      ...attribute,
+      groupId: attribute.groupId == null ? '' : String(attribute.groupId),
+    },
+  });
   return (
     <form
       className="flex flex-col [&_button]:h-7 [&_button]:text-xs [&_input]:h-7 [&_input]:text-xs [&_input]:md:text-xs"
       onSubmit={handleSubmit((values) => {
-        setPreview({ ...values, id: attribute.id });
+        setPreview({
+          ...values,
+          groupId: groups.isSuccess
+            ? values.groupId
+              ? Number(values.groupId)
+              : null
+            : attribute.groupId,
+          id: attribute.id,
+        });
       })}
     >
       <div className="border-b p-3">
@@ -94,6 +111,26 @@ export function AttributeEditor({
               ? '등록한 키는 변경할 수 없습니다.'
               : '영문 소문자·숫자·밑줄을 사용합니다.'}
           </span>
+        </label>
+        <label className="block space-y-1 text-xs font-medium">
+          속성 그룹
+          <select {...register('groupId')} className={selectClass} disabled={!groups.isSuccess}>
+            <option value="">미분류</option>
+            {attribute.groupId != null &&
+              !groups.data?.some((group) => group.id === attribute.groupId) && (
+                <option value={attribute.groupId}>기존 그룹 #{attribute.groupId}</option>
+              )}
+            {groups.data?.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </select>
+          {groups.error && (
+            <span role="alert" className="text-red-700">
+              그룹을 불러오지 못했습니다. 기존 그룹은 유지됩니다.
+            </span>
+          )}
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="space-y-1 text-xs font-medium">
@@ -231,10 +268,16 @@ export function AttributeEditor({
                         ['datatype', '값 형식'],
                         ['unit', '단위'],
                         ['description', '설명'],
+                        ['groupId', '속성 그룹'],
                       ] as const
                     ).map(([field, label]) => {
                       const format = (item: Attribute) =>
-                        field === 'type' ? TYPE_LABELS[item.type] : item[field] || '없음';
+                        field === 'type'
+                          ? TYPE_LABELS[item.type]
+                          : field === 'groupId'
+                            ? (groups.data?.find((group) => group.id === item.groupId)?.name ??
+                              (item.groupId ? `그룹 #${item.groupId}` : '미분류'))
+                            : item[field] || '없음';
                       const changed = !attribute.id || attribute[field] !== preview[field];
                       return (
                         <tr key={field} className={`border-t ${changed ? 'bg-teal-50' : ''}`}>

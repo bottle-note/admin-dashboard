@@ -1,6 +1,8 @@
 import { apiClient } from '@/lib/api-client';
 import type {
   AlcoholAttribute,
+  AttributeGroup,
+  AttributeGroupRequest,
   AlcoholCompoundSearchParams,
   AttributeMapping,
   AttributedAlcohol,
@@ -16,9 +18,12 @@ import type {
 } from '@/types/api/alcohol-attribute.api';
 
 const base = '/admin/api/v1/alcohols/attributes';
+const groupBase = '/admin/api/v1/alcohols/attribute-groups';
 const all = ['alcohol-attributes'] as const;
 export const alcoholAttributeKeys = {
   all,
+  groups: [...all, 'groups'] as const,
+  definitions: [...all, 'definitions'] as const,
   list: (params: AttributeSearchParams) => [...all, 'list', params] as const,
   alcohols: (params: AttributedAlcoholSearchParams) => [...all, 'alcohols', params] as const,
   compound: (params: AlcoholCompoundSearchParams) => [...all, 'compound', params] as const,
@@ -26,6 +31,24 @@ export const alcoholAttributeKeys = {
 };
 
 export const alcoholAttributeService = {
+  async groups(signal?: AbortSignal) {
+    const { data } = await apiClient.get<AttributeGroup[]>(groupBase, { signal });
+    return data;
+  },
+  createGroup: (data: AttributeGroupRequest) => apiClient.post<AttributeGroup>(groupBase, data),
+  updateGroup: ({ id, data }: { id: number; data: AttributeGroupRequest }) =>
+    apiClient.put<AttributeGroup>(`${groupBase}/${id}`, data),
+  deleteGroup: (id: number) => apiClient.delete<AttributeResult>(`${groupBase}/${id}`),
+  async definitions(signal?: AbortSignal) {
+    const items: AlcoholAttribute[] = [];
+    let page = 0;
+    while (true) {
+      const result = await alcoholAttributeService.list({ page, size: 100 }, signal);
+      items.push(...result.items);
+      if (!result.meta.hasNext) return items;
+      page += 1;
+    }
+  },
   async list(params: AttributeSearchParams, signal?: AbortSignal) {
     const { data, meta } = await apiClient.get<AlcoholAttribute[], AttributePageMeta>(base, {
       params,
@@ -37,7 +60,7 @@ export const alcoholAttributeService = {
   async alcohols(params: AttributedAlcoholSearchParams, signal?: AbortSignal) {
     const { data, meta } = await apiClient.get<AttributedAlcohol[], AttributePageMeta>(
       `${base}/alcohols`,
-      { params, signal }
+      { params, signal, paramsSerializer: { indexes: null } }
     );
     return { items: data, meta };
   },

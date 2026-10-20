@@ -9,6 +9,7 @@ export const TYPE_LABELS = {
 
 export type AttributeType = keyof typeof TYPE_LABELS;
 export type Attribute = {
+  groupId?: number | null;
   id: number;
   key: string;
   displayName: string;

@@ -36,6 +36,9 @@ beforeEach(() => {
     value: initialAttributes.find((a) => a.id === m.attributeId)!.value,
   }));
   server.use(
+    http.get('/admin/api/v1/alcohols/attribute-groups', () =>
+      HttpResponse.json(wrap([{ id: 1, name: '바텐더 노트', description: null, displayOrder: 0 }]))
+    ),
     http.get(base, ({ request }) => {
       const q = new URL(request.url).searchParams.get('keyword') ?? '';
       return HttpResponse.json(
@@ -552,9 +555,12 @@ describe('속성 관리 통합 화면', () => {
     expect(within(details).getByRole('button', { name: '겨울 추천 후보' })).toBeInTheDocument();
   });
 
-  it('키보드로 세 번째 탭까지 이동하고 매핑이 없는 노드는 제외한다', async () => {
+  it('키보드로 속성 그룹과 관계 그래프 탭까지 이동하고 매핑이 없는 노드는 제외한다', async () => {
     const user = await renderPage();
     screen.getByRole('tab', { name: '속성관리' }).focus();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: '속성 그룹' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByRole('heading', { name: '바텐더 노트' })).toBeInTheDocument();
     await user.keyboard('{ArrowRight}{ArrowRight}');
     expect(screen.getByRole('tab', { name: '관계 그래프' })).toHaveAttribute(
       'aria-selected',
@@ -825,4 +831,39 @@ it('전체화면에서도 속성 선택 팝오버는 전체화면 요소 안에 
   } finally {
     Reflect.deleteProperty(document, 'fullscreenElement');
   }
+});
+
+it('연결 목록과 그래프에서 여러 그룹을 반복 쿼리와 복합 검색 배열로 보낸다', async () => {
+  const reads: URLSearchParams[] = [];
+  const posts: Record<string, unknown>[] = [];
+  server.use(
+    http.get('/admin/api/v1/alcohols/attribute-groups', () =>
+      HttpResponse.json(
+        wrap([
+          { id: 1, name: '바텐더 노트', description: null, displayOrder: 0 },
+          { id: 2, name: '시음 기록', description: null, displayOrder: 1 },
+        ])
+      )
+    ),
+    http.get(`${base}/alcohols`, ({ request }) => {
+      reads.push(new URL(request.url).searchParams);
+      return HttpResponse.json(wrap([]));
+    }),
+    http.post(`${base}/alcohols/search`, async ({ request }) => {
+      posts.push((await request.json()) as Record<string, unknown>);
+      return HttpResponse.json(wrap([]));
+    })
+  );
+  const user = await renderPage();
+  await user.click(screen.getByRole('tab', { name: '속성 연결' }));
+  await user.click(await screen.findByRole('checkbox', { name: '검색 그룹 바텐더 노트' }));
+  await user.click(screen.getByRole('checkbox', { name: '검색 그룹 시음 기록' }));
+  await waitFor(() => expect(reads[reads.length - 1]?.getAll('groupIds')).toEqual(['1', '2']));
+  // 빈 조건 적용으로도 복합 검색 경로를 사용하며 그룹 필터는 유지한다.
+  await user.click(screen.getByRole('button', { name: '검색 적용' }));
+  await waitFor(() => expect(posts[posts.length - 1]?.groupIds).toEqual([1, 2]));
+  await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
+  await user.click(await screen.findByRole('checkbox', { name: '그래프 검색 그룹 바텐더 노트' }));
+  await user.click(screen.getByRole('checkbox', { name: '그래프 검색 그룹 시음 기록' }));
+  await waitFor(() => expect(reads[reads.length - 1]?.getAll('groupIds')).toEqual(['1', '2']));
 });

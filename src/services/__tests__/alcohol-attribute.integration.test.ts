@@ -21,6 +21,7 @@ const audit = {
 const attribute = (id: number): AlcoholAttribute => ({
   ...audit,
   id,
+  groupId: null,
   key: `attribute_${id}`,
   displayName: `속성 ${id}`,
   type: 'IDENTITY',
@@ -328,4 +329,56 @@ describe('페이지 조회 범위', () => {
     expect(second.items[0]?.alcoholId).toBe(101);
     expect(reads).toEqual([0, 1]);
   });
+});
+
+it.each(['list', 'alcohols'] as const)(
+  '%s는 여러 그룹 ID를 반복 쿼리로 전송한다',
+  async (method) => {
+    let query: URLSearchParams | undefined;
+    server.use(
+      http.get(method === 'list' ? base : `${base}/alcohols`, ({ request }) => {
+        query = new URL(request.url).searchParams;
+        return HttpResponse.json(pageResponse([], 0, 20));
+      })
+    );
+    await service[method]({ groupIds: [1, 2], page: 0, size: 20 });
+    expect(query?.getAll('groupIds')).toEqual(['1', '2']);
+    expect(query?.has('groupIds[]')).toBe(false);
+  }
+);
+
+it('그룹 변경에서 생략된 groupId와 명시적인 null을 구분한다', async () => {
+  const bodies: Record<string, unknown>[] = [];
+  server.use(
+    http.put(`${base}/1`, async ({ request }) => {
+      bodies.push((await request.json()) as Record<string, unknown>);
+      return HttpResponse.json(wrapApiResponse({ targetId: 1 }));
+    })
+  );
+  const data: AttributeUpdateRequest = { displayName: '속성', type: 'KEYWORD', datatype: 'STRING' };
+  await service.update(1, data);
+  await service.update(1, { ...data, groupId: null });
+  expect(bodies[0]).not.toHaveProperty('groupId');
+  expect(bodies[1]).toHaveProperty('groupId', null);
+});
+
+it('그룹 관리용 속성 목록은 마지막 페이지까지 조회한다', async () => {
+  const pages: number[] = [];
+  server.use(
+    http.get(base, ({ request }) => {
+      const page = Number(new URL(request.url).searchParams.get('page'));
+      pages.push(page);
+      return HttpResponse.json(
+        wrapApiResponse([attribute(page + 1)], {
+          page,
+          size: 100,
+          totalElements: 101,
+          totalPages: 2,
+          hasNext: page === 0,
+        })
+      );
+    })
+  );
+  expect((await service.definitions()).map((item) => item.id)).toEqual([1, 2]);
+  expect(pages).toEqual([0, 1]);
 });
