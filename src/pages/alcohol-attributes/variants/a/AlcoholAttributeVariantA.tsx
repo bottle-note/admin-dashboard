@@ -252,6 +252,7 @@ export function AlcoholAttributeVariantA() {
     displayName: item.displayName,
     type: item.type,
     datatype: item.datatype,
+    allowMultipleValues: item.allowMultipleValues,
     allowedValues: item.allowedValues,
     pattern: item.pattern,
     unit: item.unit ?? '',
@@ -384,6 +385,7 @@ export function AlcoholAttributeVariantA() {
   );
   const newPairs = pairs.filter(
     (pair) =>
+      attributes.find((attribute) => attribute.id === pair.attributeId)?.allowMultipleValues ||
       !mappings.some(
         (mapping) =>
           mapping.alcoholId === pair.alcoholId && mapping.attributeId === pair.attributeId
@@ -882,6 +884,11 @@ export function AlcoholAttributeVariantA() {
                             >
                               <span className="block whitespace-nowrap font-semibold text-slate-800">
                                 {attribute.displayName}
+                                {attribute.allowMultipleValues && (
+                                  <span className="ml-2 inline-block rounded border border-teal-200 px-1.5 py-0.5 text-[10px] font-medium text-teal-800">
+                                    여러 값
+                                  </span>
+                                )}
                               </span>
                               <span className="mt-1 block font-mono text-[10px] text-slate-400">
                                 {attribute.key}
@@ -1135,7 +1142,7 @@ export function AlcoholAttributeVariantA() {
                                   size="icon"
                                   variant="ghost"
                                   className="h-6 w-6 shrink-0 text-slate-400 hover:text-red-700"
-                                  aria-label={`${alcohols.find((alcohol) => alcohol.id === mapping.alcoholId)?.name} 연결 해제`}
+                                  aria-label={`${alcohols.find((alcohol) => alcohol.id === mapping.alcoholId)?.name}${active.allowMultipleValues ? ` · ${mapping.value}` : ''} 연결 해제`}
                                   onClick={() =>
                                     setConfirmation({ kind: 'unlink', id: mapping.id })
                                   }
@@ -1294,7 +1301,7 @@ export function AlcoholAttributeVariantA() {
                   )}
                   <div className="space-y-3 border-b bg-teal-50/50 p-3">
                     <div className="flex items-center justify-between text-xs">
-                      <span>새로 연결</span>
+                      <span>값 입력 대상</span>
                       <strong className="font-mono text-teal-800">
                         {selectionReady ? `${newPairs.length}쌍` : '확인 중'}
                       </strong>
@@ -1320,7 +1327,8 @@ export function AlcoholAttributeVariantA() {
                       </p>
                     )}
                     <p className="text-[10px] leading-relaxed text-slate-500">
-                      위스키는 최대 500개까지 선택합니다. 중복 연결은 건너뛰며 기존 값은 유지합니다.
+                      위스키는 최대 500개까지 선택합니다. 여러 값 허용 속성은 기존 값을 유지하며 새
+                      값을 추가합니다. 동일한 값은 건너뜁니다.
                     </p>
                   </div>
                   <div className="p-3">
@@ -1358,7 +1366,7 @@ export function AlcoholAttributeVariantA() {
                               size="icon"
                               variant="ghost"
                               className="h-7 w-7 text-slate-400 hover:text-red-700"
-                              aria-label={`${attributes.find((attribute) => attribute.id === mapping.attributeId)?.displayName} 연결 해제`}
+                              aria-label={`${attributes.find((attribute) => attribute.id === mapping.attributeId)?.displayName}${attributes.find((attribute) => attribute.id === mapping.attributeId)?.allowMultipleValues ? ` · ${mapping.value}` : ''} 연결 해제`}
                               onClick={() => setConfirmation({ kind: 'unlink', id: mapping.id })}
                             >
                               <Unlink className="!h-3.5 !w-3.5" />
@@ -1429,7 +1437,7 @@ export function AlcoholAttributeVariantA() {
                 ? `속성 ${confirmation.ids.length}개와 이 속성의 모든 연결을 삭제합니다. 위스키는 삭제되지 않습니다.`
                 : confirmation?.kind === 'unlink'
                   ? '이 위스키와 속성 사이의 연결만 해제합니다. 속성은 공통 사전에 유지됩니다.'
-                  : `선택한 위스키 ${selectedAlcohols.length}개에 속성 ${selectedAttributes.length}개를 연결합니다. 새 연결 ${newPairs.length}개를 추가하고 중복 ${pairs.length - newPairs.length}개는 건너뜁니다.`}
+                  : `선택한 위스키 ${selectedAlcohols.length}개에 속성 ${selectedAttributes.length}개를 연결합니다. ${newPairs.length}쌍에 추가할 값을 입력하세요. 기존 단일 값 연결 ${pairs.length - newPairs.length}쌍은 유지합니다. 동일한 값은 저장 시 건너뜁니다.`}
             </DialogDescription>
           </DialogHeader>
           {confirmation?.kind === 'connect' && (
@@ -1450,10 +1458,13 @@ export function AlcoholAttributeVariantA() {
                       selectedAlcoholNames[pair.alcoholId] ??
                       alcohols.find((item) => item.id === pair.alcoholId)?.name ??
                       '이름 확인 필요';
-                    const existing = mappings.find(
+                    const existingMappings = mappings.filter(
                       (item) =>
                         item.alcoholId === pair.alcoholId && item.attributeId === pair.attributeId
                     );
+                    const existing = !attribute.allowMultipleValues
+                      ? existingMappings[0]
+                      : undefined;
                     return (
                       <tr
                         key={key}
@@ -1473,6 +1484,19 @@ export function AlcoholAttributeVariantA() {
                           </span>
                         </td>
                         <td className="px-3 py-2">
+                          {attribute.allowMultipleValues && existingMappings.length > 0 && (
+                            <p className="mb-2 break-words text-[11px] text-slate-500">
+                              현재 연결:{' '}
+                              {existingMappings
+                                .map((mapping) => displayValue(attribute, mapping.value))
+                                .join(' · ')}
+                            </p>
+                          )}
+                          {attribute.allowMultipleValues && (
+                            <p className="mb-1 text-[11px] text-teal-800">
+                              기존 값을 유지하고 새 값을 추가합니다.
+                            </p>
+                          )}
                           {existing ? (
                             <div>
                               <span>{displayValue(attribute, existing.value)}</span>

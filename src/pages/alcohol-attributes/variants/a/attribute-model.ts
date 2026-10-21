@@ -9,6 +9,7 @@ export const TYPE_LABELS = {
 
 export type AttributeType = keyof typeof TYPE_LABELS;
 export type Attribute = {
+  allowMultipleValues?: boolean;
   allowedValues?: string[] | null;
   pattern?: string | null;
   groupId?: number | null;

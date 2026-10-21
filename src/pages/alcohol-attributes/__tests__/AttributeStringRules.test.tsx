@@ -247,3 +247,36 @@ it('선택 항목 삭제 후 다음 입력 또는 항목 추가 버튼으로 포
   await user.keyboard('{Enter}');
   expect(screen.getByRole('button', { name: '항목 추가' })).toHaveFocus();
 });
+
+it('복수 값 허용을 변경해 저장하고 단일 값 전환 충돌을 표시한다', async () => {
+  const save = vi
+    .fn()
+    .mockResolvedValue('여러 값이 연결된 위스키가 있어 단일 값으로 변경할 수 없습니다.');
+  render(
+    <AttributeEditor
+      attribute={{ ...attribute, allowMultipleValues: true }}
+      linkedCount={1}
+      onSave={save}
+      onCancel={() => {}}
+    />
+  );
+  const user = userEvent.setup();
+  expect(screen.getByRole('checkbox', { name: '여러 값 연결 허용' })).toBeChecked();
+  await user.click(screen.getByRole('checkbox', { name: '여러 값 연결 허용' }));
+  await user.click(screen.getByRole('button', { name: '변경 내용 확인' }));
+  await user.click(screen.getByRole('button', { name: '변경 저장' }));
+  expect(save).toHaveBeenCalledWith(expect.objectContaining({ allowMultipleValues: false }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('단일 값으로 변경할 수 없습니다');
+});
+
+it('기존 설정이 없는 새 속성도 복수 값 허용을 선택할 수 있다', async () => {
+  const save = vi.fn().mockResolvedValue(undefined);
+  render(
+    <AttributeEditor attribute={attribute} linkedCount={0} onSave={save} onCancel={() => {}} />
+  );
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('checkbox', { name: '여러 값 연결 허용' }));
+  await user.click(screen.getByRole('button', { name: '변경 내용 확인' }));
+  await user.click(screen.getByRole('button', { name: '변경 저장' }));
+  expect(save).toHaveBeenCalledWith(expect.objectContaining({ allowMultipleValues: true }));
+});

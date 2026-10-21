@@ -15,6 +15,8 @@ export interface AttributeAudit {
   lastModifyPrincipal: AttributePrincipal | null;
 }
 export interface AlcoholAttribute extends AttributeAudit {
+  // Absent while the previous API version is deployed.
+  allowMultipleValues?: boolean;
   allowedValues: string[] | null;
   pattern: string | null;
   groupId: number | null;
@@ -67,6 +69,7 @@ export interface AttributedAlcoholSearchParams extends AttributePageParams {
   operator?: AttributeOperator;
 }
 export interface AttributeUpdateRequest {
+  allowMultipleValues?: boolean;
   allowedValues?: string[] | null;
   pattern?: string | null;
   groupId?: number | null;

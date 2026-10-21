@@ -21,6 +21,7 @@ import { type Attribute, TYPE_LABELS } from './attribute-model';
 
 const schema = z
   .object({
+    allowMultipleValues: z.boolean(),
     patternError: z.string(),
     inputMode: z.enum(['free', 'list']),
     allowedValues: z.array(z.string()),
@@ -96,6 +97,7 @@ export function AttributeEditor({
     resolver: zodResolver(schema),
     defaultValues: {
       ...attribute,
+      allowMultipleValues: attribute.allowMultipleValues ?? false,
       patternError: '',
       inputMode: attribute.allowedValues?.length ? 'list' : 'free',
       allowedValues: attribute.allowedValues ?? [],
@@ -253,6 +255,25 @@ export function AttributeEditor({
             maxLength={500}
           />
         </label>
+        <div className="space-y-1 rounded-md border p-3">
+          <label className="flex items-center gap-2 text-xs font-medium">
+            <input
+              type="checkbox"
+              {...register('allowMultipleValues')}
+              className="!h-4 w-4 shrink-0 accent-teal-700"
+            />
+            여러 값 연결 허용
+          </label>
+          <p className="text-xs leading-relaxed text-slate-500">
+            한 위스키에 서로 다른 답변을 함께 연결할 수 있습니다. 같은 값은 중복 저장하지 않습니다.
+          </p>
+        </div>
+        {attribute.allowMultipleValues && !watch('allowMultipleValues') && (
+          <p className="text-xs leading-relaxed text-amber-700">
+            해제하려면 각 위스키에 연결된 값을 하나만 남겨야 합니다. 여러 값이 남아 있으면 저장할 수
+            없습니다.
+          </p>
+        )}
         {watch('datatype') === 'STRING' && (
           <StringInputRules
             mode={watch('inputMode')}
@@ -333,6 +354,7 @@ export function AttributeEditor({
                         ['key', '고유 키'],
                         ['type', '분류'],
                         ['datatype', '값 형식'],
+                        ['allowMultipleValues', '여러 값 연결'],
                         ['unit', '단위'],
                         ['description', '설명'],
                         ['allowedValues', '선택 항목'],
@@ -341,16 +363,20 @@ export function AttributeEditor({
                       ] as const
                     ).map(([field, label]) => {
                       const format = (item: Attribute) =>
-                        field === 'type'
-                          ? TYPE_LABELS[item.type]
-                          : field === 'groupId'
-                            ? (groups.data?.find((group) => group.id === item.groupId)?.name ??
-                              (item.groupId ? `그룹 #${item.groupId}` : '미분류'))
-                            : field === 'pattern'
-                              ? inputFormatLabel(item.pattern)
-                              : field === 'allowedValues'
-                                ? item.allowedValues?.join('\n') || '제한 없음'
-                                : item[field] || '없음';
+                        field === 'allowMultipleValues'
+                          ? item.allowMultipleValues
+                            ? '허용'
+                            : '허용하지 않음'
+                          : field === 'type'
+                            ? TYPE_LABELS[item.type]
+                            : field === 'groupId'
+                              ? (groups.data?.find((group) => group.id === item.groupId)?.name ??
+                                (item.groupId ? `그룹 #${item.groupId}` : '미분류'))
+                              : field === 'pattern'
+                                ? inputFormatLabel(item.pattern)
+                                : field === 'allowedValues'
+                                  ? item.allowedValues?.join('\n') || '제한 없음'
+                                  : item[field] || '없음';
                       const changed = !attribute.id || attribute[field] !== preview[field];
                       return (
                         <tr key={field} className={`border-t ${changed ? 'bg-teal-50' : ''}`}>

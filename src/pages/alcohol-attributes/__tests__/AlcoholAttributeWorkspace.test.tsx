@@ -907,3 +907,127 @@ it('서버 문자 규칙을 편집기에 복원하고 수정 요청으로 전달
   await waitFor(() => expect(attributes[0]?.allowedValues).toEqual(['좋음', '보통', '아쉬움']));
   expect(attributes[0]?.pattern).toBe('.+');
 });
+
+it('복수 값 속성은 기존 연결이 있어도 새 값을 추가하고 기존 값도 표시한다', async () => {
+  attributes = attributes.map((a) => (a.id === 101 ? { ...a, allowMultipleValues: true } : a));
+  const requestBody = vi.fn();
+  server.use(
+    http.post(`${base}/mappings/batch`, async ({ request }) => {
+      requestBody(await request.json());
+      return HttpResponse.json(wrap({ added: 1, skipped: 0, createdIds: [9999] }));
+    })
+  );
+  const user = await renderPage();
+  await user.click(screen.getByRole('tab', { name: '속성 연결' }));
+  await user.click(screen.getByRole('checkbox', { name: `${alcohols[0]!.name} 선택` }));
+  await user.click(screen.getByRole('checkbox', { name: /선물용/ }));
+  await user.click(screen.getByRole('button', { name: '1쌍 연결 검토' }));
+  const dialog = within(screen.getByRole('dialog'));
+  expect(dialog.getByText(/현재 연결: gift/)).toBeVisible();
+  await user.type(dialog.getByRole('textbox'), 'another gift');
+  await user.click(dialog.getByRole('button', { name: '연결 적용' }));
+  await waitFor(() =>
+    expect(requestBody).toHaveBeenCalledWith({
+      items: [{ alcoholId: alcohols[0]!.id, attributeId: 101, value: 'another gift' }],
+    })
+  );
+});
+
+it('복수 값 두 개를 각각 표시하고 선택한 매핑만 수정·해제한다', async () => {
+  attributes = attributes.map((a) => (a.id === 101 ? { ...a, allowMultipleValues: true } : a));
+  const alcoholId = alcohols[0]!.id;
+  mappings.push({ id: 9999, alcoholId, attributeId: 101, value: 'second gift' });
+  server.use(
+    http.put(`${base}/mappings/9999`, async ({ request }) => {
+      expect(await request.json()).toEqual({ value: 'updated gift' });
+      mappings = mappings.map((m) => (m.id === 9999 ? { ...m, value: 'updated gift' } : m));
+      return HttpResponse.json(wrap(mappings.find((m) => m.id === 9999)));
+    })
+  );
+  const user = await renderPage();
+  await user.click(screen.getByRole('tab', { name: '속성 연결' }));
+  expect(await screen.findByRole('form', { name: '선물용 · gift 값 편집' })).toBeVisible();
+  const editor = within(screen.getByRole('form', { name: '선물용 · second gift 값 편집' }));
+  await user.clear(editor.getByRole('textbox'));
+  await user.type(editor.getByRole('textbox'), 'updated gift');
+  await user.click(editor.getByRole('button', { name: '값 저장' }));
+  await screen.findByRole('form', { name: '선물용 · updated gift 값 편집' });
+  await user.click(screen.getByRole('button', { name: '선물용 · updated gift 연결 해제' }));
+  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '연결 해제' }));
+  await waitFor(() => expect(mappings.some((m) => m.id === 9999)).toBe(false));
+  expect(mappings.find((m) => m.alcoholId === alcoholId && m.attributeId === 101)?.value).toBe(
+    'gift'
+  );
+});
+
+it('검색 결과가 없어도 새 속성의 복수 값 설정을 활성화한다', async () => {
+  const user = await renderPage();
+  await user.type(screen.getByRole('textbox', { name: '속성 검색' }), '없는속성검색');
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: '선물용 gift' })).not.toBeInTheDocument()
+  );
+  await user.click(screen.getByRole('button', { name: '속성 만들기' }));
+  expect(screen.getByRole('checkbox', { name: '여러 값 연결 허용' })).toBeEnabled();
+});
+
+it('단일 값 전환이 409로 거절되면 오류를 표시하고 기존 설정을 유지한다', async () => {
+  attributes = attributes.map((a) => (a.id === 101 ? { ...a, allowMultipleValues: true } : a));
+  const updateRequest = vi.fn();
+  server.use(
+    http.put(`${base}/101`, async ({ request }) => {
+      updateRequest(await request.json());
+      return HttpResponse.json(
+        {
+          success: false,
+          code: 409,
+          errors: [
+            {
+              code: 'ALCOHOL_ATTRIBUTE_MULTIPLE_VALUES_IN_USE',
+              message: '여러 값이 연결된 위스키가 있어 단일 값으로 변경할 수 없습니다.',
+            },
+          ],
+        },
+        { status: 409 }
+      );
+    })
+  );
+  const user = await renderPage();
+  await user.click(screen.getByRole('checkbox', { name: '여러 값 연결 허용' }));
+  await user.click(screen.getByRole('button', { name: '변경 내용 확인' }));
+  await user.click(screen.getByRole('button', { name: '변경 저장' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('단일 값으로 변경할 수 없습니다');
+  expect(updateRequest).toHaveBeenCalledWith(
+    expect.objectContaining({ allowMultipleValues: false })
+  );
+  expect(attributes.find((a) => a.id === 101)?.allowMultipleValues).toBe(true);
+  expect(screen.queryByText(/변경을 저장했습니다/)).not.toBeInTheDocument();
+});
+
+it('값 수정이 중복으로 거절되면 두 기존 연결을 보존하고 재입력할 수 있다', async () => {
+  attributes = attributes.map((a) => (a.id === 101 ? { ...a, allowMultipleValues: true } : a));
+  mappings.push({ id: 9999, alcoholId: alcohols[0]!.id, attributeId: 101, value: 'second gift' });
+  server.use(
+    http.put(`${base}/mappings/9999`, () =>
+      HttpResponse.json(
+        {
+          success: false,
+          code: 409,
+          errors: [
+            { code: 'ALCOHOL_ATTRIBUTE_MAPPING_DUPLICATE', message: '이미 연결된 값입니다.' },
+          ],
+        },
+        { status: 409 }
+      )
+    )
+  );
+  const user = await renderPage();
+  await user.click(screen.getByRole('tab', { name: '속성 연결' }));
+  const editor = within(await screen.findByRole('form', { name: '선물용 · second gift 값 편집' }));
+  await user.clear(editor.getByRole('textbox'));
+  await user.type(editor.getByRole('textbox'), 'gift');
+  await user.click(editor.getByRole('button', { name: '값 저장' }));
+  expect(await editor.findByRole('alert')).toHaveTextContent('이미 연결된 값입니다');
+  expect(mappings.find((m) => m.id === 9999)?.value).toBe('second gift');
+  expect(screen.getByRole('form', { name: '선물용 · gift 값 편집' })).toBeVisible();
+  expect(editor.getByRole('textbox')).toBeEnabled();
+});

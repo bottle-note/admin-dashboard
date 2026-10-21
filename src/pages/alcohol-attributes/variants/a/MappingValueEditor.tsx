@@ -37,6 +37,7 @@ export function MappingValueEditor({
   });
   return (
     <form
+      aria-label={`${attribute.displayName} · ${mapping.value} 값 편집`}
       className="min-w-0 flex-1 space-y-2"
       onSubmit={handleSubmit(async ({ value }) => {
         setError(undefined);
