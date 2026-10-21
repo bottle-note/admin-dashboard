@@ -1,0 +1,141 @@
+.attribute-workspace {
+  --primary: 211 100% 46%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 211 100% 46%;
+  --accent: 210 25% 96%;
+  --border: 214 20% 88%;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #202632;
+}
+.attribute-workspace .text-xs {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.attribute-workspace [class~='text-[11px]'],
+.attribute-workspace [class~='text-[10px]'] {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.attribute-workspace :is(button, input, select, textarea) {
+  font-size: 14px;
+}
+.attribute-workspace :is(input, select) {
+  min-height: 36px;
+  border-radius: 8px;
+}
+.attribute-workspace :is(button, input, select, textarea):focus-visible {
+  outline-color: #007aff;
+}
+.attribute-workspace [class~='bg-teal-800'] {
+  background-color: #0075eb;
+}
+.attribute-workspace [class~='bg-teal-800']:hover {
+  background-color: #0065cc;
+}
+.attribute-workspace
+  :is([class~='text-teal-800'], [class~='text-teal-700'], [class~='text-teal-900']) {
+  color: #1763ad;
+}
+.attribute-workspace [class~='bg-teal-50'] {
+  background-color: #edf4fc;
+}
+.attribute-workspace button[aria-pressed='true'] {
+  border-color: #c8daf0;
+}
+.attribute-workspace [role='tab'] {
+  padding: 14px 18px;
+  font-size: 14px;
+}
+.attribute-workspace table th {
+  background: #f7f8fa;
+  font-weight: 500;
+  color: #616b78;
+}
+.attribute-workspace table :is(td, th) {
+  padding: 14px 16px;
+}
+.attribute-workspace table tr:hover td {
+  background-color: #f7f9fc;
+}
+.attribute-search-field {
+  position: relative;
+  width: min(100%, 360px);
+  min-width: 180px;
+}
+.attribute-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #e2e6ed;
+}
+.attribute-toolbar h2 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.attribute-toolbar .attribute-search-field {
+  margin-left: auto;
+}
+.attribute-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: #fafbfc;
+  border-bottom: 1px solid #e2e6ed;
+}
+.attribute-token {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border-radius: 8px;
+  background: #eef1f5;
+  color: #303c4b;
+}
+.attribute-token > button {
+  padding: 7px 10px;
+}
+.attribute-token > button:hover {
+  background: #e3e8ef;
+}
+.attribute-token > button:focus-visible {
+  outline: 2px solid #007aff;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.attribute-token button {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.attribute-workspace .attribute-condition-form {
+  display: grid;
+  gap: 16px;
+}
+.attribute-condition-form label {
+  display: grid;
+  gap: 6px;
+  color: #5c6674;
+}
+.attribute-condition-form :is(input, select) {
+  width: 100%;
+  height: 40px;
+}
+@media (max-width: 700px) {
+  .attribute-toolbar,
+  .attribute-filterbar {
+    padding: 12px;
+  }
+  .attribute-toolbar .attribute-search-field {
+    order: 2;
+    width: 100%;
+    margin: 0;
+  }
+  .attribute-workspace [role='tab'] {
+    padding: 12px 10px;
+  }
+}

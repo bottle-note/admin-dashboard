@@ -1,9 +1,10 @@
+import { AttributeSearchField } from './AttributeSearchField';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Folder, FolderOpen, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Folder, FolderOpen, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -57,7 +58,7 @@ function GroupEditor({
         if (!open && !isSubmitting) onClose();
       }}
     >
-      <DialogContent>
+      <DialogContent className="attribute-workspace">
         <DialogHeader>
           <DialogTitle>{group.id ? '그룹 편집' : '그룹 만들기'}</DialogTitle>
           <DialogDescription>
@@ -226,7 +227,7 @@ export function AttributeGroupsPanel() {
           {notice}
         </p>
       )}
-      <div className="grid min-w-0 items-start gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="grid min-w-0 items-start gap-5 md:grid-cols-[240px_minmax(0,1fr)]">
         <nav aria-label="속성 그룹 목록" className="overflow-hidden rounded-lg border bg-white">
           <div className="flex justify-between border-b p-4 font-semibold">
             <span>속성 그룹</span>
@@ -239,7 +240,7 @@ export function AttributeGroupsPanel() {
                 disabled={pending}
                 aria-pressed={active.id === group.id}
                 onClick={() => selectGroup(group.id)}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-3 text-left text-sm text-slate-600 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-teal-700 disabled:opacity-50 aria-pressed:bg-teal-50 aria-pressed:text-teal-900"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-3 text-left text-sm text-slate-600 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-teal-700 disabled:opacity-50 aria-pressed:bg-blue-50 aria-pressed:text-blue-800"
               >
                 {active.id === group.id ? (
                   <FolderOpen className="h-4 w-4 shrink-0" />
@@ -265,7 +266,7 @@ export function AttributeGroupsPanel() {
           aria-label="그룹 속성 관리"
           className="min-w-0 overflow-hidden rounded-lg border bg-white"
         >
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b p-5">
+          <div className="attribute-toolbar justify-between">
             <div className="min-w-0">
               <p className="text-xs text-teal-700">속성 그룹</p>
               <h2 className="mt-1 break-words text-lg font-semibold">{active.name}</h2>
@@ -299,21 +300,17 @@ export function AttributeGroupsPanel() {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-3 border-b p-3">
-            <div className="relative min-w-0 flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-              <Input
-                aria-label="그룹 안에서 속성 검색"
-                value={search}
-                disabled={pending}
-                onChange={(event) => {
-                  setParam('groupSearch', event.target.value);
-                  setSelected([]);
-                }}
-                placeholder="속성 이름 또는 키 검색"
-                className="pl-9"
-              />
-            </div>
+          <div className="attribute-toolbar">
+            <AttributeSearchField
+              label="그룹 안에서 속성 검색"
+              placeholder="이 그룹의 속성 이름 또는 키 검색"
+              value={search}
+              disabled={pending}
+              onChange={(value) => {
+                setParam('groupSearch', value);
+                setSelected([]);
+              }}
+            />
             <span className="shrink-0 text-xs text-slate-500">{members.length}개 속성</span>
           </div>
           {selected.length > 0 && (
@@ -446,7 +443,7 @@ export function AttributeGroupsPanel() {
             if (!open && !remove.isPending) setDeleting(false);
           }}
         >
-          <DialogContent>
+          <DialogContent className="attribute-workspace">
             <DialogHeader>
               <DialogTitle>그룹을 삭제할까요?</DialogTitle>
               <DialogDescription>

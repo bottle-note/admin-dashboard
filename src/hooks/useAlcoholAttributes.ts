@@ -96,3 +96,14 @@ export function useAttributeFacets(params: AlcoholCompoundSearchParams, enabled 
     retry: false,
   });
 }
+
+export function useAttributeGraph(
+  params: Omit<AlcoholCompoundSearchParams, 'page' | 'size'>,
+  enabled = true
+) {
+  return useApiQuery(keys.graph(params), ({ signal }) => service.graph(params, signal), {
+    enabled,
+    retry: false,
+    showErrorToast: false,
+  });
+}

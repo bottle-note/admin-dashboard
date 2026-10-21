@@ -24,6 +24,8 @@ export function RelationshipCanvas({
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 }) {
+  const initialDataRef = useRef(data);
+  const updateRef = useRef<((next: GraphData) => void) | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<Graph | null>(null);
   const selectRef = useRef(onSelect);
@@ -48,9 +50,8 @@ export function RelationshipCanvas({
     if (!container) return;
     let disposed = false;
     let ready = false;
-    const labels = new Map(
-      (data.nodes ?? []).map((node) => [node.id, String(node.style?.labelText ?? '')])
-    );
+    let currentData: GraphData = initialDataRef.current;
+    const labels = new Map<string, string>();
     const isEmphasized = (id: string) => id === selectedRef.current || id === hoverRef.current;
     const showDetail = (id: string) =>
       isEmphasized(id) || (graphRef.current?.getZoom() ?? 1) >= 0.85;
@@ -60,7 +61,7 @@ export function RelationshipCanvas({
       padding: 24,
       animation: false,
       zoomRange: [0.05, 3],
-      data,
+      data: { nodes: [], edges: [] },
       layout: {
         type: 'd3-force',
         // Keep simulation ticks connected to the renderer when dragging reheats it.
@@ -186,7 +187,10 @@ export function RelationshipCanvas({
         if (disposed) return;
         // Apply emphasis in one render; never flash the normal graph first.
         void graph
-          .setElementState(relationshipStates(data, selectedRef.current, hoverRef.current), false)
+          .setElementState(
+            relationshipStates(currentData, selectedRef.current, hoverRef.current),
+            false
+          )
           .catch((cause: unknown) => console.error('Attribute graph emphasis failed', cause));
       });
     };
@@ -232,49 +236,85 @@ export function RelationshipCanvas({
       setZoom(graph.getZoom());
       sync();
     });
-    const timer = window.setTimeout(() => {
-      Promise.all(
-        (data.nodes ?? []).map(async (node) => {
-          if (node.type !== 'image' || typeof node.style?.src !== 'string') return node;
-          // CDN 이미지에는 CORS 헤더가 없어 기본 anonymous 로더 대신 이미지 요소를 전달한다.
-          const source = node.style.src;
-          const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-            const element = new Image();
-            element.onload = () => resolve(element);
-            element.onerror = () => {
-              if (element.getAttribute('src') === '/images/whisky-node.svg')
-                reject(new Error('술병 이미지를 불러오지 못했습니다.'));
-              else element.src = '/images/whisky-node.svg';
-            };
-            element.src = source;
-          });
-          return { ...node, style: { ...node.style, src: img } };
-        })
-      )
-        .then(async (nodes) => {
+    const images = new Map<string, Promise<HTMLImageElement>>();
+    const loadImage = (source: string) => {
+      const cached = images.get(source);
+      if (cached) return cached;
+      const pending = new Promise<HTMLImageElement>((resolve, reject) => {
+        const element = new Image();
+        element.onload = () => resolve(element);
+        element.onerror = () => {
+          if (element.getAttribute('src') === '/images/whisky-node.svg') {
+            images.delete(source);
+            reject(new Error('술병 이미지를 불러오지 못했습니다.'));
+          } else element.src = '/images/whisky-node.svg';
+        };
+        element.src = source;
+      });
+      images.set(source, pending);
+      return pending;
+    };
+    let pendingData: GraphData | null = null;
+    let rendering = false;
+    let hasRendered = false;
+    const update = async () => {
+      if (rendering || disposed) return;
+      rendering = true;
+      ready = false;
+      try {
+        while (pendingData && !disposed) {
+          const next = pendingData;
+          pendingData = null;
+          const previous = new Map(
+            (hasRendered ? graph.getNodeData() : []).map((node) => [node.id, node])
+          );
+          const nodes = await Promise.all(
+            (next.nodes ?? []).map(async (node) => {
+              const position = previous.get(node.id)?.style;
+              const style = { ...node.style };
+              if (position) {
+                style.x = position.x;
+                style.y = position.y;
+              }
+              if (node.type === 'image' && typeof style.src === 'string')
+                style.src = await loadImage(style.src);
+              return { ...node, style };
+            })
+          );
           if (disposed) return;
-          graph.setData({ ...data, nodes });
+          // Coalesce rapid requests; never replace the canvas or reset its viewport.
+          if (pendingData) continue;
+          currentData = next;
+          labels.clear();
+          for (const node of next.nodes ?? [])
+            labels.set(node.id, String(node.style?.labelText ?? ''));
+          graph.setData({ ...next, nodes });
           await graph.render();
-        })
-        .then(async () => {
           if (disposed) return;
-          await fit(graph);
+          if (!hasRendered) await fit(graph);
           if (disposed) return;
-          ready = true;
+          hasRendered = true;
           setError(null);
           setZoom(graph.getZoom());
           container.querySelectorAll('canvas').forEach((canvas) => {
             canvas.tabIndex = -1;
           });
-          sync();
-        })
-        .catch((cause: unknown) => {
-          if (!disposed) {
-            console.error('Attribute graph render failed', cause);
-            setError('그래프를 표시하지 못했습니다. 아래 노드 목록에서 관계를 조회할 수 있습니다.');
-          }
-        });
-    }, 0);
+        }
+        ready = true;
+        sync();
+      } catch (cause) {
+        if (!disposed) {
+          console.error('Attribute graph render failed', cause);
+          setError('그래프를 표시하지 못했습니다. 조건을 좁히거나 다시 조회해 주세요.');
+        }
+      } finally {
+        rendering = false;
+      }
+    };
+    updateRef.current = (next) => {
+      pendingData = next;
+      void update();
+    };
     const observer = new ResizeObserver(() => {
       if (!disposed && ready) {
         graph.resize();
@@ -284,7 +324,8 @@ export function RelationshipCanvas({
     observer.observe(container);
     return () => {
       disposed = true;
-      window.clearTimeout(timer);
+      updateRef.current = null;
+      pendingData = null;
       window.clearTimeout(hoverTimer);
       window.cancelAnimationFrame(frame);
       observer.disconnect();
@@ -294,6 +335,9 @@ export function RelationshipCanvas({
       graphRef.current = null;
       graph.destroy();
     };
+  }, []);
+  useEffect(() => {
+    updateRef.current?.(data);
   }, [data]);
   useEffect(() => {
     selectedRef.current = selectedId;

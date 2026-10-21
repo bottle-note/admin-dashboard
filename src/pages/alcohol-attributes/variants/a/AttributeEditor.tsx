@@ -241,7 +241,7 @@ export function AttributeEditor({
           if (!open && !saving) setPreview(null);
         }}
       >
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="attribute-workspace max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{attribute.id ? '공통 속성 변경 확인' : '새 속성 등록 확인'}</DialogTitle>
             <DialogDescription>

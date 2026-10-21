@@ -14,6 +14,8 @@ const engine = vi.hoisted(() => ({
   destroy: vi.fn(),
   draw: vi.fn(async () => {}),
   states: vi.fn(async () => {}),
+  renderGraph: vi.fn(async () => {}),
+  setData: vi.fn(),
 }));
 vi.mock('@antv/g6', () => ({
   NodeEvent: { CLICK: 'click', POINTER_ENTER: 'enter', POINTER_LEAVE: 'leave' },
@@ -37,8 +39,13 @@ vi.mock('@antv/g6', () => ({
     async fitCenter() {}
     draw = engine.draw;
     setElementState = engine.states;
-    setData() {}
-    async render() {}
+    setData = engine.setData;
+    async render() {
+      await engine.renderGraph();
+    }
+    getNodeData() {
+      return [{ id: 'value', style: { x: 100, y: 200 } }];
+    }
     resize() {}
     destroy = engine.destroy;
   },
@@ -118,4 +125,29 @@ describe('관계 그래프 탐색', () => {
     expect(engine.draw).not.toHaveBeenCalled();
     expect(engine.states).toHaveBeenLastCalledWith({ value: ['chosen'] }, false);
   });
+});
+
+it('노드를 추가해도 그래프를 재생성하거나 화면을 다시 맞추지 않고 기존 좌표를 유지한다', async () => {
+  const view = render(<RelationshipCanvas data={data} selectedId={null} onSelect={() => {}} />);
+  await waitFor(() => expect(engine.fit).toHaveBeenCalledTimes(1));
+  view.rerender(
+    <RelationshipCanvas
+      data={{ nodes: [node, { id: 'new', type: 'rect' }], edges: [] }}
+      selectedId={null}
+      onSelect={() => {}}
+    />
+  );
+  await waitFor(() => expect(engine.renderGraph).toHaveBeenCalledTimes(2));
+  expect(engine.destroy).not.toHaveBeenCalled();
+  expect(engine.fit).toHaveBeenCalledTimes(1);
+  expect(engine.setData).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      nodes: expect.arrayContaining([
+        expect.objectContaining({
+          id: 'value',
+          style: expect.objectContaining({ x: 100, y: 200 }),
+        }),
+      ]),
+    })
+  );
 });

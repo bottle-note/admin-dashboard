@@ -134,7 +134,7 @@ export function AttributeSearchBuilder({
             <PopoverPrimitive.Content
               align="start"
               sideOffset={4}
-              className="z-50 w-80 max-w-[calc(100vw-32px)] space-y-2 rounded-md border bg-popover p-3 text-popover-foreground shadow-md outline-none"
+              className="attribute-workspace z-50 w-80 max-w-[calc(100vw-32px)] space-y-2 rounded-md border bg-popover p-3 text-popover-foreground shadow-md outline-none"
             >
               <Input
                 aria-label="검색 조건 속성 찾기"

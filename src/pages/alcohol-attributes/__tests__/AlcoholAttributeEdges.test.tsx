@@ -15,12 +15,19 @@ import { initialAttributes, alcohols } from './fixtures';
 
 // Inspect the actual canvas input without requiring a browser or a rendering engine.
 const canvas = vi.hoisted(() => ({ data: null as GraphData | null }));
-vi.mock('../variants/a/RelationshipCanvas', () => ({
-  RelationshipCanvas: ({ data }: { data: GraphData }) => {
-    canvas.data = data;
-    return null;
-  },
-}));
+vi.mock('../variants/a/RelationshipCanvas', async () => {
+  const { RelationshipCanvas: Canvas } = await import('@/test/mocks/relationship-canvas');
+  return {
+    RelationshipCanvas: (props: {
+      data: GraphData;
+      selectedId?: string | null;
+      onSelect: (id: string | null) => void;
+    }) => {
+      canvas.data = props.data;
+      return <Canvas {...props} />;
+    },
+  };
+});
 
 const base = '/admin/api/v1/alcohols/attributes';
 const wrap = (data: unknown, page = 0, hasNext = false) => ({
@@ -382,7 +389,6 @@ describe('그래프 관계 데이터', () => {
   it('위스키 상세에서 속성을 따라가면 그 속성에 연결된 다른 위스키도 그래프에 표시한다', async () => {
     const user = userEvent.setup();
     render(<GraphView attributes={attributes} alcohols={graphAlcohols()} mappings={mappings} />);
-    await user.click(screen.getByText('노드 목록으로 탐색'));
     await user.click(screen.getByRole('button', { name: `위스키: ${alcohols[0]!.name}` }));
     const details = within(screen.getByRole('complementary', { name: '그래프 상세' }));
     await user.click(details.getByRole('button', { name: '선물용' }));
@@ -423,7 +429,6 @@ describe('값 기준 그래프와 서버 검색 조건', () => {
     expect(edges[0]!.target).not.toBe(edges[2]!.target);
     expect(edges[0]!.target).not.toBe(edges[3]!.target);
     expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(3);
-    await user.click(screen.getByText('노드 목록으로 탐색'));
     await user.click(screen.getByRole('button', { name: '속성: 병 참고 가격 · 33,000 원' }));
     const panel = within(screen.getByRole('complementary', { name: '그래프 상세' }));
     expect(panel.getByRole('button', { name: alcohols[0]!.name })).toBeInTheDocument();
@@ -467,11 +472,11 @@ describe('값 기준 그래프와 서버 검색 조건', () => {
     );
     await user.type(screen.getByRole('textbox', { name: '그래프 검색' }), '서버 검색');
     expect(onFilterChange).toHaveBeenLastCalledWith({ keyword: '서버 검색', key: '', value: '' });
-    expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(100);
-    expect(canvas.data!.edges).toHaveLength(100);
+    expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(25);
+    expect(canvas.data!.edges).toHaveLength(25);
     await user.clear(screen.getByRole('textbox', { name: '그래프 검색' }));
     expect(onFilterChange).toHaveBeenLastCalledWith({ keyword: '', key: '', value: '' });
-    expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(100);
+    expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(25);
     for (const edge of canvas.data!.edges!) {
       expect(canvas.data!.nodes!.some((n) => n.id === edge.source)).toBe(true);
       expect(canvas.data!.nodes!.some((n) => n.id === edge.target)).toBe(true);
@@ -479,7 +484,7 @@ describe('값 기준 그래프와 서버 검색 조건', () => {
   });
 });
 
-it('간선을 500개로 제한하고 서버 검색 결과와 미연결 위스키를 표시한다', () => {
+it('간선을 800개로 제한하고 서버 검색 결과와 미연결 위스키를 표시한다', async () => {
   const definitions = Array.from({ length: 10 }, (_, i) => ({
     ...initialAttributes[0]!,
     id: i + 1,
@@ -498,7 +503,9 @@ it('간선을 500개로 제한하고 서버 검색 결과와 미연결 위스키
   const { rerender } = render(
     <GraphView attributes={definitions} alcohols={products} mappings={links} />
   );
-  expect(canvas.data!.edges).toHaveLength(500);
+  for (let i = 0; i < 3; i++)
+    await userEvent.click(screen.getByRole('button', { name: '25개 더 보기' }));
+  expect(canvas.data!.edges).toHaveLength(800);
   expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(100);
   expect(new Set(canvas.data!.edges!.map((edge) => edge.source)).size).toBe(100);
   rerender(
@@ -514,4 +521,51 @@ it('간선을 500개로 제한하고 서버 검색 결과와 미연결 위스키
   expect(canvas.data!.edges).toHaveLength(0);
   expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(2);
   expect(screen.queryByText('표시할 연결이 없습니다.')).not.toBeInTheDocument();
+});
+
+it('25개씩 기존 노드를 유지하며 최대 100개까지 열고 검색 결과 변경 시 초기화한다', async () => {
+  const products = Array.from({ length: 337 }, (_, i) => ({ ...alcohols[0]!, id: i + 1 }));
+  const definition = initialAttributes[0]!;
+  const links = products.map((a) => ({
+    id: a.id,
+    alcoholId: a.id,
+    attributeId: definition.id,
+    value: 'same',
+  }));
+  const { rerender } = render(
+    <GraphView attributes={[definition]} alcohols={products} mappings={links} />
+  );
+  for (const count of [25, 50, 75]) {
+    const before = canvas.data!.nodes!.map((node) => node.id);
+    expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(count);
+    await userEvent.click(screen.getByRole('button', { name: '25개 더 보기' }));
+    expect(canvas.data!.nodes!.map((node) => node.id)).toEqual(expect.arrayContaining(before));
+  }
+  expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(100);
+  expect(canvas.data!.edges).toHaveLength(100);
+  expect(screen.queryByRole('button', { name: '25개 더 보기' })).not.toBeInTheDocument();
+  expect(screen.getByText('전체 결과 337개')).toBeInTheDocument();
+  expect(screen.getByText(/샘플 표시/)).toBeInTheDocument();
+  rerender(
+    <GraphView
+      attributes={[definition]}
+      alcohols={products.slice(0, 4)}
+      mappings={links.slice(0, 4)}
+    />
+  );
+  expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(4);
+  expect(canvas.data!.edges).toHaveLength(4);
+  expect(screen.getByText(/모든 결과 표시/)).toBeInTheDocument();
+  rerender(
+    <GraphView
+      attributes={[definition]}
+      alcohols={products.slice(0, 60)}
+      mappings={links.slice(0, 60)}
+    />
+  );
+  expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(25);
+  await userEvent.click(screen.getByRole('button', { name: '25개 더 보기' }));
+  await userEvent.click(screen.getByRole('button', { name: '10개 더 보기' }));
+  expect(canvas.data!.nodes!.filter((n) => n.type === 'image')).toHaveLength(60);
+  expect(screen.getByText(/모든 결과 표시/)).toBeInTheDocument();
 });

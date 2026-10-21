@@ -1,3 +1,7 @@
+import { AttributeConditionTokens } from './AttributeConditionTokens';
+import './attribute-workspace.css';
+import { AttributeSearchField } from './AttributeSearchField';
+import { GraphFilterPopover } from './GraphFilterPopover';
 import { useState } from 'react';
 import { AttributeGroupsPanel } from './AttributeGroupsPanel';
 import { AttributeGroupFilter } from './AttributeGroupFilter';
@@ -487,15 +491,14 @@ export function AlcoholAttributeVariantA() {
   const partlySelected = visibleIds.some((id) => selected.includes(id));
 
   return (
-    <div className="flex min-w-0 flex-col gap-3 text-xs text-slate-800 [&_button]:text-xs [&_input]:text-xs [&_td]:text-xs [&_th]:text-xs">
-      <header className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white px-4 py-3">
+    <div className="attribute-workspace flex min-w-0 flex-col gap-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 bg-white px-1 py-3">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight">위스키 속성 관리</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">위스키 속성 관리</h1>
           <p className="mt-1 text-xs text-slate-500">
             속성은 공통으로 정의하고, 값은 위스키마다 입력합니다.
           </p>
         </div>
-        <p className="text-xs text-slate-500">목록과 연결 정보는 현재 조회 범위만 불러옵니다.</p>
       </header>
       <div
         onKeyDown={(event) => {
@@ -561,7 +564,7 @@ export function AlcoholAttributeVariantA() {
         ) : (
           <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
             <div className="min-w-0 overflow-hidden rounded-lg border bg-white">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b p-3">
+              <div className="attribute-toolbar">
                 <div className="flex items-center gap-2">
                   <ListFilter className="h-4 w-4 text-teal-800" />
                   <h2 className="text-sm font-semibold">
@@ -573,6 +576,12 @@ export function AlcoholAttributeVariantA() {
                       : visibleIds.length}
                   </Badge>
                 </div>
+                <AttributeSearchField
+                  label={tab === 'attributes' ? '속성 검색' : '위스키 검색'}
+                  placeholder={tab === 'attributes' ? '속성 이름 또는 키 검색' : '위스키 이름 검색'}
+                  value={keyword}
+                  onChange={(value) => updateParam('q', value)}
+                />
                 {tab === 'attributes' ? (
                   <Button
                     size="sm"
@@ -593,19 +602,7 @@ export function AlcoholAttributeVariantA() {
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-2 border-b bg-slate-50/70 p-3">
-                <div className="relative min-w-44 flex-1">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                  <Input
-                    aria-label={tab === 'attributes' ? '속성 검색' : '위스키 검색'}
-                    value={keyword}
-                    onChange={(event) => updateParam('q', event.target.value)}
-                    placeholder={
-                      tab === 'attributes' ? '속성 이름 또는 키 검색' : '위스키 이름 검색'
-                    }
-                    className="bg-white pl-9 text-xs"
-                  />
-                </div>
+              <div className="attribute-filterbar">
                 {
                   <select
                     aria-label="분류 필터"
@@ -651,6 +648,22 @@ export function AlcoholAttributeVariantA() {
                     </label>
                   </>
                 )}
+                <GraphFilterPopover
+                  label={groupIds.length ? `검색 그룹 ${groupIds.length}개` : '모든 그룹'}
+                >
+                  <AttributeGroupFilter />
+                </GraphFilterPopover>
+                {tab === 'mappings' && (
+                  <GraphFilterPopover label="상세 조건">
+                    <AttributeSearchBuilder
+                      key={JSON.stringify(initialSearch)}
+                      value={initialSearch}
+                      onApply={applySearch}
+                      error={compound.error}
+                      label="연결 목록 속성 조건"
+                    />
+                  </GraphFilterPopover>
+                )}
                 {(keyword ||
                   type !== 'ALL' ||
                   groupIds.length > 0 ||
@@ -684,41 +697,24 @@ export function AlcoholAttributeVariantA() {
                   </Button>
                 )}
               </div>
-              <div className="border-b p-3">
-                <AttributeGroupFilter />
-              </div>
-              {tab === 'mappings' && (
-                <div className="border-b p-3">
-                  <AttributeSearchBuilder
-                    key={JSON.stringify(initialSearch)}
-                    value={initialSearch}
-                    onApply={applySearch}
-                    error={compound.error}
-                    label="연결 목록 속성 조건"
-                  />
+              {tab === 'mappings' && compound.error && (
+                <div role="alert" className="flex items-center gap-3 px-5 py-3 text-red-700">
+                  {compound.error}
+                  <Button
+                    variant="outline"
+                    onClick={() => applySearch({ match: 'AND', conditions: [] })}
+                  >
+                    조건 초기화
+                  </Button>
                 </div>
               )}
-              {tab === 'attributes' && (
-                <div className="flex flex-wrap gap-1.5 border-b px-3 py-2">
-                  {(
-                    [
-                      ['ALL', '전체'],
-                      ['KEYWORD', '키워드'],
-                      ['PRICE', '가격'],
-                      ['POPULARITY', '대중성'],
-                      ['NOTE', '메모'],
-                    ] as const
-                  ).map(([value, label]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      aria-pressed={type === value}
-                      onClick={() => updateParam('type', value)}
-                      className={`rounded px-2.5 py-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 ${type === value ? 'bg-slate-800 font-medium text-white' : 'text-slate-500 hover:bg-slate-100'}`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+              {tab === 'mappings' && initialSearch.conditions.length > 0 && (
+                <div className="border-b px-5 py-3">
+                  <AttributeConditionTokens
+                    search={initialSearch}
+                    onChange={applySearch}
+                    disabled={pending}
+                  />
                 </div>
               )}
               <div
@@ -1140,17 +1136,17 @@ export function AlcoholAttributeVariantA() {
                 )
               ) : (
                 <>
-                  <div className="border-b bg-slate-800 p-3 text-white">
+                  <div className="border-b bg-slate-50 p-4 text-slate-900">
                     <div className="mb-2 flex items-center justify-between">
                       <h2 className="flex items-center gap-2 text-sm font-semibold">
                         <Link2 className="h-4 w-4" />
                         일괄 연결 작업
                       </h2>
-                      <span className="rounded bg-white/10 px-2 py-0.5 font-mono text-[10px]">
+                      <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
                         최대 500쌍
                       </span>
                     </div>
-                    <p className="text-xs leading-relaxed text-slate-300">
+                    <p className="text-xs leading-relaxed text-slate-500">
                       위스키와 속성을 고른 뒤 검토 화면에서 각각의 값을 입력하세요.
                     </p>
                   </div>
@@ -1346,20 +1342,24 @@ export function AlcoholAttributeVariantA() {
           </div>
         )}
       </section>
-      <div
-        role="status"
-        aria-live="polite"
-        className="flex items-start gap-2 rounded-md border bg-white px-3 py-2.5 text-xs leading-relaxed text-slate-600"
-      >
-        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal-700" />
-        {tab === 'groups'
-          ? '그룹 변경은 서버에 저장됩니다. 연결 목록과 그래프에서 여러 그룹을 선택해 검색할 수 있습니다.'
-          : notice}
-      </div>
-      <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
-        <CircleHelp className="h-3.5 w-3.5" />
-        속성 이름·분류·단위는 공통입니다. 값 변경은 선택한 위스키의 연결에만 적용됩니다.
-      </p>
+      {tab !== 'graph' && (
+        <>
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-start gap-2 rounded-md border bg-white px-3 py-2.5 text-xs leading-relaxed text-slate-600"
+          >
+            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal-700" />
+            {tab === 'groups'
+              ? '그룹 변경은 서버에 저장됩니다. 연결 목록과 그래프에서 여러 그룹을 선택해 검색할 수 있습니다.'
+              : notice}
+          </div>
+          <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
+            <CircleHelp className="h-3.5 w-3.5" />
+            속성 이름·분류·단위는 공통입니다. 값 변경은 선택한 위스키의 연결에만 적용됩니다.
+          </p>
+        </>
+      )}
       <Dialog
         open={confirmation !== null}
         onOpenChange={(open) => {
@@ -1372,8 +1372,8 @@ export function AlcoholAttributeVariantA() {
         <DialogContent
           className={
             confirmation?.kind === 'connect'
-              ? 'max-h-[90vh] w-[94vw] overflow-y-auto sm:max-w-5xl'
-              : undefined
+              ? 'attribute-workspace max-h-[90vh] w-[94vw] overflow-y-auto sm:max-w-5xl'
+              : 'attribute-workspace'
           }
         >
           <DialogHeader>

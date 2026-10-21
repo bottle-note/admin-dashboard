@@ -382,3 +382,58 @@ it('그룹 관리용 속성 목록은 마지막 페이지까지 조회한다', a
   expect((await service.definitions()).map((item) => item.id)).toEqual([1, 2]);
   expect(pages).toEqual([0, 1]);
 });
+
+it('그래프는 모든 페이지를 같은 조건으로 조회하고 마지막 페이지까지 합친다', async () => {
+  const requests: Record<string, unknown>[] = [];
+  server.use(
+    http.post(`${base}/alcohols/search`, async ({ request }) => {
+      const body = (await request.json()) as Record<string, unknown>;
+      requests.push(body);
+      return HttpResponse.json({
+        success: true,
+        data: [alcohol(Number(body.page) + 1)],
+        meta: {
+          page: body.page,
+          size: 100,
+          totalElements: 2,
+          totalPages: 2,
+          hasNext: body.page === 0,
+        },
+      });
+    })
+  );
+  const conditions = [{ key: 'attribute_1', operator: 'GTE' as const, value: '30000' }];
+  const result = await service.graph({
+    match: 'AND',
+    conditions,
+    groupIds: [3],
+    keyword: '위스키',
+  });
+  expect(result.items.map((a) => a.alcoholId)).toEqual([1, 2]);
+  expect(requests).toEqual(
+    [0, 1].map((page) => ({
+      match: 'AND',
+      conditions,
+      groupIds: [3],
+      keyword: '위스키',
+      linkedOnly: true,
+      page,
+      size: 100,
+    }))
+  );
+});
+
+it('전체 그래프 조회 중 실패하면 앞 페이지만 성공한 결과로 반환하지 않는다', async () => {
+  server.use(
+    http.get(`${base}/alcohols`, ({ request }) =>
+      Number(new URL(request.url).searchParams.get('page')) === 0
+        ? HttpResponse.json({
+            success: true,
+            data: [alcohol(1)],
+            meta: { page: 0, size: 100, totalElements: 2, totalPages: 2, hasNext: true },
+          })
+        : HttpResponse.json({ message: 'failed' }, { status: 500 })
+    )
+  );
+  await expect(service.graph({ conditions: [] })).rejects.toBeDefined();
+});

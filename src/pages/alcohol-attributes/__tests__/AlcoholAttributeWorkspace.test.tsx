@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router';
 import { AlcoholAttributeVariantA } from '../variants/a/AlcoholAttributeVariantA';
 
 // Canvas rendering is verified in Orca; jsdom covers the shared state and accessible node controls.
-vi.mock('../variants/a/RelationshipCanvas', () => ({ RelationshipCanvas: () => null }));
+vi.mock('../variants/a/RelationshipCanvas', () => import('@/test/mocks/relationship-canvas'));
 
 async function renderPage() {
   render(<AlcoholAttributeVariantA />);
@@ -148,7 +148,9 @@ describe('속성 관리 통합 화면', () => {
       const user = await renderPage();
       await user.click(screen.getByRole('tab', { name: tab }));
       if (tab === '관계 그래프')
-        await user.click(screen.getByRole('button', { name: /^필터 편집/ }));
+        await user.click(screen.getByRole('button', { name: '상세 조건' }));
+      if (!screen.queryByRole('button', { name: /^속성 선택/ }))
+        await user.click(screen.getByRole('button', { name: '상세 조건' }));
       await user.click(screen.getByRole('button', { name: /^속성 선택/ }));
       await user.click(await screen.findByRole('checkbox', { name: '검색 속성 10만 원 이상' }));
       await user.click(screen.getByRole('checkbox', { name: '검색 속성 선물용' }));
@@ -182,7 +184,6 @@ describe('속성 관리 통합 화면', () => {
     const user = await renderPage();
     await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
     expect(screen.queryByRole('complementary', { name: '그래프 상세' })).not.toBeInTheDocument();
-    await user.click(screen.getByText('노드 목록으로 탐색'));
     await user.click(screen.getByRole('button', { name: '속성: 선물용 · gift' }));
     expect(screen.getByRole('complementary', { name: '그래프 상세' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '상세 접기' }));
@@ -249,27 +250,32 @@ describe('속성 관리 통합 화면', () => {
     expect(screen.getByRole('button', { name: '1쌍 연결 검토' })).toBeDisabled();
   });
 
-  it('그래프는 기본 한 페이지 25개만 요청하고 검색은 샘플 밖의 술도 서버에서 찾는다', async () => {
+  it('그래프는 모든 페이지를 조회하고 검색은 전체 결과에 적용한다', async () => {
     const reads: URLSearchParams[] = [];
     server.use(
       http.get(`${base}/alcohols`, ({ request }) => {
         const params = new URL(request.url).searchParams;
         reads.push(params);
         const filtered = params.get('keyword') === '멀리 있는 술';
+        const page = Number(params.get('page') ?? 0);
         return HttpResponse.json({
           ...wrap([
             {
-              alcoholId: filtered ? 3000 : 1,
-              korName: filtered ? '멀리 있는 술' : '첫 페이지 술',
+              alcoholId: filtered ? 3000 : page + 1,
+              korName: filtered ? '멀리 있는 술' : page === 0 ? '첫 페이지 술' : '마지막 페이지 술',
               engName: null,
               korCategory: null,
               imageUrl: null,
               attributes: [
-                { mappingId: filtered ? 3000 : 1, value: 'true', attribute: attributes[0]! },
+                { mappingId: filtered ? 3000 : page + 1, value: 'true', attribute: attributes[0]! },
               ],
             },
           ]),
-          meta: { ...wrap([]).meta, hasNext: !filtered, totalElements: filtered ? 1 : 3000 },
+          meta: {
+            ...wrap([]).meta,
+            hasNext: !filtered && page === 0,
+            totalElements: filtered ? 1 : 2,
+          },
         });
       })
     );
@@ -277,8 +283,9 @@ describe('속성 관리 통합 화면', () => {
     reads.length = 0;
     await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
     await screen.findByRole('button', { name: '위스키: 첫 페이지 술' });
-    expect(reads).toHaveLength(1);
-    expect(reads[0]!.get('size')).toBe('25');
+    expect(reads).toHaveLength(2);
+    expect(screen.getByRole('button', { name: '위스키: 마지막 페이지 술' })).toBeInTheDocument();
+    expect(reads[0]!.get('size')).toBe('100');
     expect(reads[0]!.get('page')).toBe('0');
     await user.type(screen.getByRole('textbox', { name: '그래프 검색' }), '멀리 있는 술');
     expect(await screen.findByRole('button', { name: '위스키: 멀리 있는 술' })).toBeInTheDocument();
@@ -430,7 +437,6 @@ describe('속성 관리 통합 화면', () => {
       before.filter((m) => m.id !== changedId)
     );
     await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
-    await user.click(screen.getByText('노드 목록으로 탐색'));
     await user.click(screen.getByRole('button', { name: '속성: 선물용 · updated' }));
     expect(
       within(screen.getByRole('complementary', { name: '그래프 상세' })).getAllByText('updated')
@@ -517,7 +523,6 @@ describe('속성 관리 통합 화면', () => {
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '변경 저장' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
-    await user.click(screen.getByText('노드 목록으로 탐색'));
     await user.click(screen.getByRole('button', { name: '속성: 선물 추천 · gift' }));
     const details = screen.getByRole('complementary', { name: '그래프 상세' });
     expect(within(details).getByText('선물 추천')).toBeInTheDocument();
@@ -533,7 +538,6 @@ describe('속성 관리 통합 화면', () => {
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '연결 해제' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
-    await user.click(screen.getByText('노드 목록으로 탐색'));
     await user.click(screen.getByRole('button', { name: '속성: 선물용 · gift' }));
     expect(
       within(screen.getByRole('complementary', { name: '그래프 상세' })).queryByText(name)
@@ -553,7 +557,6 @@ describe('속성 관리 통합 화면', () => {
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '연결 적용' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
-    await user.click(screen.getByText('노드 목록으로 탐색'));
     await user.click(screen.getByRole('button', { name: '속성: 겨울 추천 후보 · winter' }));
     const details = screen.getByRole('complementary', { name: '그래프 상세' });
     await user.click(within(details).getByRole('button', { name: '히비키 재패니즈 하모니' }));
@@ -571,7 +574,6 @@ describe('속성 관리 통합 화면', () => {
       'aria-selected',
       'true'
     );
-    await user.click(screen.getByText('노드 목록으로 탐색'));
     expect(
       screen.queryByRole('button', { name: '속성: 겨울 추천 후보 · winter' })
     ).not.toBeInTheDocument();
@@ -623,6 +625,8 @@ it('연결 여부와 여러 속성으로 검색할 때 페이지를 초기화하
   await waitFor(() => expect(requests[requests.length - 1]?.get('page')).toBe('0'));
   await user.click(screen.getByRole('button', { name: '다음' }));
   await waitFor(() => expect(requests[requests.length - 1]?.get('page')).toBe('1'));
+  if (!screen.queryByRole('button', { name: '속성 선택' }))
+    await user.click(screen.getByRole('button', { name: '상세 조건' }));
   await user.click(screen.getByRole('button', { name: '속성 선택' }));
   await user.click(await screen.findByRole('checkbox', { name: '검색 속성 선물용' }));
   await user.keyboard('{Escape}');
@@ -667,6 +671,8 @@ it('분류와 숫자 비교 및 제외 조건을 전송하고 값 누락과 문�
   const user = await renderPage();
   await user.click(screen.getByRole('tab', { name: '속성 연결' }));
   await user.selectOptions(screen.getByRole('combobox', { name: '분류 필터' }), 'PRICE');
+  if (!screen.queryByRole('button', { name: '속성 선택' }))
+    await user.click(screen.getByRole('button', { name: '상세 조건' }));
   await user.click(screen.getByRole('button', { name: '속성 선택' }));
   await user.click(await screen.findByRole('checkbox', { name: '검색 속성 10만 원 이상' }));
   await user.click(screen.getByRole('checkbox', { name: '검색 속성 선물용' }));
@@ -736,7 +742,7 @@ it.each(['graph', 'mappings'])('%s 검색 URL을 복원하고 이전 조건으�
     </>
   );
   await user.click(screen.getByRole('button', { name: '저장된 검색 열기' }));
-  if (tab === 'graph') await user.click(screen.getByRole('button', { name: /^필터 편집/ }));
+  await user.click(screen.getByRole('button', { name: '상세 조건' }));
   await waitFor(() =>
     expect(posts[posts.length - 1]).toMatchObject({
       match: 'OR',
@@ -751,6 +757,7 @@ it.each(['graph', 'mappings'])('%s 검색 URL을 복원하고 이전 조건으�
   await user.click(screen.getByRole('button', { name: '검색 적용' }));
   await waitFor(() => expect(posts[posts.length - 1]?.match).toBe('AND'));
   await user.click(screen.getByRole('button', { name: '이전 검색' }));
+  await user.click(screen.getByRole('button', { name: '상세 조건' }));
   await waitFor(() =>
     expect(screen.getByRole('combobox', { name: '조건 결합 방식' })).toHaveValue('OR')
   );
@@ -799,8 +806,10 @@ it('그래프 조건 초기화는 최초의 연결된 위스키 조회로 돌아
   );
   const user = await renderPage();
   await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
-  await user.click(screen.getByRole('button', { name: /^필터 편집/ }));
+  await user.click(screen.getByRole('button', { name: '상세 조건' }));
   await screen.findByRole('button', { name: `위스키: ${alcohols[0]!.name}` });
+  if (!screen.queryByRole('button', { name: /^속성 선택/ }))
+    await user.click(screen.getByRole('button', { name: '상세 조건' }));
   await user.click(screen.getByRole('button', { name: /^속성 선택/ }));
   await user.click(await screen.findByRole('checkbox', { name: '검색 속성 선물용' }));
   await user.keyboard('{Escape}');
@@ -817,6 +826,8 @@ it('복합 조건의 빈 결과는 등록된 데이터가 없다고 안내하지
   server.use(http.post(`${base}/alcohols/search`, () => HttpResponse.json(wrap([]))));
   const user = await renderPage();
   await user.click(screen.getByRole('tab', { name: '속성 연결' }));
+  if (!screen.queryByRole('button', { name: /^속성 선택/ }))
+    await user.click(screen.getByRole('button', { name: '상세 조건' }));
   await user.click(screen.getByRole('button', { name: /^속성 선택/ }));
   await user.click(await screen.findByRole('checkbox', { name: '검색 속성 선물용' }));
   await user.keyboard('{Escape}');
@@ -828,14 +839,17 @@ it('복합 조건의 빈 결과는 등록된 데이터가 없다고 안내하지
 it('전체화면에서도 속성 선택 팝오버는 전체화면 요소 안에 표시한다', async () => {
   const user = await renderPage();
   await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
-  await user.click(screen.getByRole('button', { name: /^필터 편집/ }));
   const button = screen.getByRole('button', { name: '전체화면' });
   const panel = button.closest('.grid')!;
   Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: panel });
   try {
+    await user.click(screen.getByRole('button', { name: '상세 조건' }));
+    if (!screen.queryByRole('button', { name: /^속성 선택/ }))
+      await user.click(screen.getByRole('button', { name: '상세 조건' }));
     await user.click(screen.getByRole('button', { name: /^속성 선택/ }));
-    const dialog = await screen.findByRole('dialog');
-    expect(panel.contains(dialog)).toBe(true);
+    const dialogs = await screen.findAllByRole('dialog');
+    expect(dialogs).toHaveLength(2);
+    dialogs.forEach((dialog) => expect(panel.contains(dialog)).toBe(true));
   } finally {
     Reflect.deleteProperty(document, 'fullscreenElement');
   }
@@ -864,14 +878,17 @@ it('연결 목록과 그래프에서 여러 그룹을 반복 쿼리와 복합 �
   );
   const user = await renderPage();
   await user.click(screen.getByRole('tab', { name: '속성 연결' }));
+  await user.click(screen.getByRole('button', { name: '모든 그룹' }));
   await user.click(await screen.findByRole('checkbox', { name: '검색 그룹 바텐더 노트' }));
   await user.click(screen.getByRole('checkbox', { name: '검색 그룹 시음 기록' }));
   await waitFor(() => expect(reads[reads.length - 1]?.getAll('groupIds')).toEqual(['1', '2']));
+  await user.keyboard('{Escape}');
+  await user.click(screen.getByRole('button', { name: '상세 조건' }));
   // 빈 조건 적용으로도 복합 검색 경로를 사용하며 그룹 필터는 유지한다.
   await user.click(screen.getByRole('button', { name: '검색 적용' }));
   await waitFor(() => expect(posts[posts.length - 1]?.groupIds).toEqual([1, 2]));
   await user.click(screen.getByRole('tab', { name: '관계 그래프' }));
-  await user.click(screen.getByRole('button', { name: /^필터 편집/ }));
+  await user.click(screen.getByRole('button', { name: '모든 그룹' }));
   await user.click(await screen.findByRole('checkbox', { name: '그래프 검색 그룹 바텐더 노트' }));
   await user.click(screen.getByRole('checkbox', { name: '그래프 검색 그룹 시음 기록' }));
   await waitFor(() => expect(reads[reads.length - 1]?.getAll('groupIds')).toEqual(['1', '2']));

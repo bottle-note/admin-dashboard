@@ -29,6 +29,8 @@ export const alcoholAttributeKeys = {
   list: (params: AttributeSearchParams) => [...all, 'list', params] as const,
   alcohols: (params: AttributedAlcoholSearchParams) => [...all, 'alcohols', params] as const,
   compound: (params: AlcoholCompoundSearchParams) => [...all, 'compound', params] as const,
+  graph: (params: Omit<AlcoholCompoundSearchParams, 'page' | 'size'>) =>
+    [...all, 'graph', params] as const,
   facets: (params: AlcoholCompoundSearchParams) => [...all, 'facets', params] as const,
   summary: (alcoholIds: number[]) => [...all, 'summary', alcoholIds] as const,
 };
@@ -74,6 +76,26 @@ export const alcoholAttributeService = {
       AttributePageMeta
     >(`${base}/alcohols/search`, params, { signal });
     return { items: data, meta };
+  },
+  async graph(params: Omit<AlcoholCompoundSearchParams, 'page' | 'size'>, signal?: AbortSignal) {
+    const items = new Map<number, AttributedAlcohol>();
+    for (let page = 0; ; page += 1) {
+      signal?.throwIfAborted();
+      const result = params.conditions.length
+        ? await alcoholAttributeService.searchAlcohols(
+            { ...params, linkedOnly: true, page, size: 100 },
+            signal
+          )
+        : await alcoholAttributeService.alcohols(
+            { keyword: params.keyword, groupIds: params.groupIds, page, size: 100 },
+            signal
+          );
+      const previousSize = items.size;
+      result.items.forEach((item) => items.set(item.alcoholId, item));
+      if (!result.meta.hasNext) return { items: [...items.values()], total: items.size };
+      if (items.size === previousSize)
+        throw new Error('전체 검색 결과를 불러오지 못했습니다. 다시 조회해 주세요.');
+    }
   },
   async facets(params: AlcoholCompoundSearchParams, signal?: AbortSignal) {
     const { data } = await apiClient.postWithMeta<AttributeFacets, AlcoholCompoundSearchParams>(

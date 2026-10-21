@@ -1,12 +1,14 @@
+import { AttributeSearchField } from './AttributeSearchField';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { GraphData } from '@antv/g6';
-import { Network, Search } from 'lucide-react';
+import { Network } from 'lucide-react';
 import { RelationshipCanvas } from './RelationshipCanvas';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { displayValue, type Attribute, type Mapping, type AlcoholNode } from './attribute-model';
 
-const MAPPING_LIMIT = 500;
+const MAPPING_LIMIT = 800;
+const ALCOHOL_LIMIT = 100;
+const REVEAL_STEP = 25;
 const attributeColors = {
   PRICE: { fill: '#fff4e5', stroke: '#e7c694', text: '#87551c', marker: '₩' },
   POPULARITY: { fill: '#f1edff', stroke: '#c9bcef', text: '#65509a', marker: '★' },
@@ -29,12 +31,14 @@ export function AttributeRelationshipGraph({
   mappings,
   serverFilter,
   filterControls,
+  searchActions,
   refinementControls,
   onNarrow,
   narrowDisabled,
   isNarrowed,
 }: {
   filterControls?: ReactNode;
+  searchActions?: ReactNode;
   refinementControls?: ReactNode;
   onNarrow?: (attribute: Attribute, value: string) => void;
   narrowDisabled?: boolean;
@@ -48,12 +52,15 @@ export function AttributeRelationshipGraph({
     value: string;
     total?: number;
     loading: boolean;
+    error?: boolean;
     onChange: (filters: { keyword: string; key: string; value: string }) => void;
   };
 }) {
+  const [reveal, setReveal] = useState({ alcohols, count: REVEAL_STEP });
+  if (reveal.alcohols !== alcohols) setReveal({ alcohols, count: REVEAL_STEP });
+  const revealCount = reveal.alcohols === alcohols ? reveal.count : REVEAL_STEP;
   const [selection, setSelection] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(true);
-  const [listOpen, setListOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenError, setFullscreenError] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -83,14 +90,20 @@ export function AttributeRelationshipGraph({
     );
     // 복합 조건은 서버에서 술을 선별하며 그래프에는 반환된 전체 관계를 표시한다.
     const filtered = valid;
-    const candidates = [...filtered].sort((a, b) => a.id - b.id);
+    const sampledAlcohols = sample(alcohols, ALCOHOL_LIMIT);
+    const visibleAlcohols = sampledAlcohols.slice(0, revealCount);
+    const sampledAlcoholIds = new Set(sampledAlcohols.map((a) => a.id));
+    const visibleAlcoholIds = new Set(visibleAlcohols.map((a) => a.id));
+    const candidates = filtered
+      .filter((m) => sampledAlcoholIds.has(m.alcoholId))
+      .sort((a, b) => a.id - b.id);
     // Give each sampled whisky at least one edge before sampling the remaining edges.
     const firstByAlcohol = new Map<number, Mapping>();
     for (const m of candidates)
       if (!firstByAlcohol.has(m.alcoholId)) firstByAlcohol.set(m.alcoholId, m);
     const first = [...firstByAlcohol.values()];
     const firstIds = new Set(first.map((m) => m.id));
-    const visible =
+    const sampledMappings =
       candidates.length <= MAPPING_LIMIT
         ? candidates
         : [
@@ -100,6 +113,7 @@ export function AttributeRelationshipGraph({
               MAPPING_LIMIT - first.length
             ),
           ].sort((a, b) => a.id - b.id);
+    const visible = sampledMappings.filter((m) => visibleAlcoholIds.has(m.alcoholId));
     const groups = new Map<string, { id: string; attribute: Attribute; value: string }>();
     for (const m of visible)
       groups.set(valueId(m), {
@@ -107,7 +121,6 @@ export function AttributeRelationshipGraph({
         attribute: attributeById.get(m.attributeId)!,
         value: m.value,
       });
-    const visibleAlcohols = alcohols;
     const data: GraphData = {
       nodes: [
         ...visibleAlcohols.map((a) => ({
@@ -161,7 +174,7 @@ export function AttributeRelationshipGraph({
       groups,
       data,
     };
-  }, [attributes, alcohols, mappings]);
+  }, [attributes, alcohols, mappings, revealCount]);
   const selectedGroup = selection ? model.groups.get(selection) : undefined;
   const selectedAlcohol = selection?.startsWith('alcohol-')
     ? model.visibleAlcohols.find((a) => `alcohol-${a.id}` === selection)
@@ -171,7 +184,8 @@ export function AttributeRelationshipGraph({
       ? valueId(m) === selectedGroup.id
       : selectedAlcohol && m.alcoholId === selectedAlcohol.id
   );
-  const sampled = model.visible.length < model.filtered.length;
+  const sampled =
+    model.visible.length < model.filtered.length || model.visibleAlcohols.length < alcohols.length;
   return (
     <div
       ref={panelRef}
@@ -182,11 +196,19 @@ export function AttributeRelationshipGraph({
       }`}
     >
       <div className="min-w-0 overflow-hidden rounded-lg border bg-white">
-        <div className="space-y-2 border-b p-3">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="border-b">
+          <div className="attribute-toolbar">
             <Network className="h-4 w-4 text-teal-800" />
             <h2 className="font-semibold">속성과 위스키의 관계</h2>
-            <span className="ml-auto text-xs text-slate-500">조회 전용</span>
+            <AttributeSearchField
+              label="그래프 검색"
+              placeholder="위스키 이름 검색"
+              value={serverFilter.keyword}
+              onChange={(keyword) => {
+                serverFilter.onChange({ ...serverFilter, keyword });
+                selectNode(null);
+              }}
+            />
             {(selectedGroup || selectedAlcohol || refinementControls) && (
               <Button
                 size="sm"
@@ -197,50 +219,53 @@ export function AttributeRelationshipGraph({
                 {detailsOpen ? '상세 접기' : '상세 보기'}
               </Button>
             )}
-            <Button
-              size="sm"
-              variant="outline"
-              aria-expanded={listOpen}
-              onClick={() => setListOpen(!listOpen)}
-            >
-              {listOpen ? '목록 접기' : '목록으로 탐색'}
-            </Button>
             <Button size="sm" variant="outline" onClick={() => void toggleFullscreen()}>
               {fullscreen ? '전체화면 닫기' : '전체화면'}
             </Button>
           </div>
 
-          <div role="group" aria-label="관계 그래프 필터" className="min-w-0">
-            <label className="min-w-0 space-y-1 text-[11px] text-slate-600">
-              <span className="sr-only">위스키 검색</span>
-              <div className="relative">
-                <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" />
-                <Input
-                  aria-label="그래프 검색"
-                  value={serverFilter.keyword}
-                  onChange={(e) => {
-                    serverFilter.onChange({ ...serverFilter, keyword: e.target.value });
-                    selectNode(null);
-                  }}
-                  placeholder="전체 위스키에서 검색"
-                  className="h-8 bg-white pl-7 text-xs"
-                />
-              </div>
-            </label>
+          <div role="group" aria-label="관계 그래프 필터" className="attribute-filterbar">
+            {searchActions}
+            {filterControls}
           </div>
-          {filterControls}
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <p className="text-xs text-slate-600">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3">
+            <p className="text-sm font-semibold text-slate-800">
               {serverFilter.loading
                 ? '서버에서 관계를 조회 중입니다.'
-                : `검색 결과 위스키 ${serverFilter.total ?? 0}개 · 현재 페이지 ${alcohols.length}개`}
+                : serverFilter.error
+                  ? '조회 실패'
+                  : `전체 결과 ${serverFilter.total ?? 0}개`}
             </p>
-            <p role="status" className={`text-xs ${sampled ? 'text-amber-800' : 'text-slate-500'}`}>
-              표시: 위스키 {model.visibleAlcohols.length}개 · 속성 값 {model.groups.size}개 · 연결{' '}
-              {model.visible.length}개
-              {sampled && ' · 현재 페이지에서 최대 500개 연결을 표시합니다.'}
+            <p
+              hidden={serverFilter.loading || serverFilter.error}
+              role="status"
+              className="text-sm text-slate-500"
+            >
+              위스키 {model.visibleAlcohols.length}개 표시
+              {sampled ? ' · 샘플 표시 (최대 100개)' : ' · 모든 결과 표시'}
+              <span className="sr-only">
+                {' '}
+                · 속성 값 {model.groups.size}개 · 연결 {model.visible.length}개
+              </span>
             </p>
+            {!serverFilter.loading &&
+              !serverFilter.error &&
+              revealCount < Math.min(alcohols.length, ALCOHOL_LIMIT) && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setReveal({
+                      alcohols,
+                      count: Math.min(revealCount + REVEAL_STEP, ALCOHOL_LIMIT),
+                    })
+                  }
+                >
+                  {Math.min(REVEAL_STEP, Math.min(alcohols.length, ALCOHOL_LIMIT) - revealCount)}개
+                  더 보기
+                </Button>
+              )}
           </div>
           {fullscreenError && (
             <p role="alert" className="text-xs text-red-700">
@@ -248,40 +273,16 @@ export function AttributeRelationshipGraph({
             </p>
           )}
         </div>
-        <details
-          open={listOpen}
-          onToggle={(event) => setListOpen(event.currentTarget.open)}
-          className="border-t p-3 text-xs"
-        >
-          <summary className="cursor-pointer text-slate-600">노드 목록으로 탐색</summary>
-          <div className="mt-2 flex max-h-48 flex-wrap gap-2 overflow-auto">
-            {[...model.groups.values()].map((g) => (
-              <button
-                key={g.id}
-                aria-pressed={selection === g.id}
-                aria-label={`속성: ${g.attribute.displayName} · ${displayValue(g.attribute, g.value)}`}
-                className="rounded border px-2 py-1 text-left focus-visible:ring-2 focus-visible:ring-teal-700 aria-pressed:border-teal-700 aria-pressed:bg-teal-50 aria-pressed:text-teal-900"
-                onClick={() => selectNode(g.id)}
-              >
-                {g.attribute.displayName} · {displayValue(g.attribute, g.value)}
-              </button>
-            ))}
-            {model.visibleAlcohols.map((a) => (
-              <button
-                key={a.id}
-                aria-pressed={selection === `alcohol-${a.id}`}
-                aria-label={`위스키: ${a.name}`}
-                className="rounded border px-2 py-1 focus-visible:ring-2 focus-visible:ring-teal-700 aria-pressed:border-teal-700 aria-pressed:bg-teal-50 aria-pressed:text-teal-900"
-                onClick={() => selectNode(`alcohol-${a.id}`)}
-              >
-                {a.name}
-              </button>
-            ))}
-          </div>
-        </details>
+
         <div className="overflow-hidden bg-slate-50/60 p-2">
           {!model.visibleAlcohols.length ? (
-            <p className="p-10 text-center text-xs text-slate-500">표시할 연결이 없습니다.</p>
+            <p className="flex min-h-[440px] items-center justify-center text-xs text-slate-500">
+              {serverFilter.loading
+                ? '전체 검색 결과를 불러오는 중입니다.'
+                : serverFilter.error
+                  ? '검색 결과를 표시할 수 없습니다.'
+                  : '표시할 연결이 없습니다.'}
+            </p>
           ) : (
             <RelationshipCanvas
               data={model.data}
@@ -339,7 +340,7 @@ export function AttributeRelationshipGraph({
                 {selectedGroup ? '이 값에 연결된 위스키' : '연결된 속성 값'} {connections.length}개
               </h4>
               <p className="mb-2 text-[11px] text-slate-500">
-                현재 조회 범위 기준 · 최대 100건 표시
+                전체 검색 결과 기준 · 연결 목록은 최대 100건 표시
               </p>
               <div className="max-h-[45vh] space-y-2 overflow-y-auto">
                 {connections.slice(0, 100).map((m) => {
