@@ -15,6 +15,8 @@ const definition = (id: number, key: string, displayName: string) => ({
   unit: null,
   description: null,
   groupId: null,
+  allowedValues: null,
+  pattern: null,
 });
 const eligible = definition(1, 'eligible', '바 추천 대상 여부');
 const beginner = definition(2, 'beginner', '입문 추천 여부');

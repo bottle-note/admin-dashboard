@@ -1,3 +1,4 @@
+import { AttributeValueInput } from './AttributeValueInput';
 import { useEffect, useState } from 'react';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { useQueries } from '@tanstack/react-query';
@@ -271,7 +272,12 @@ export function AttributeSearchBuilder({
                       <option value="false">아니오</option>
                     </select>
                   ) : (
-                    <Input
+                    <AttributeValueInput
+                      allowedValues={
+                        attribute?.datatype === 'STRING' && condition.operator !== 'CONTAINS'
+                          ? attribute.allowedValues
+                          : null
+                      }
                       aria-label={`조건 ${index + 1} 값`}
                       className="h-9 w-40 text-xs"
                       maxLength={255}

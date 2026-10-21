@@ -9,6 +9,8 @@ export const TYPE_LABELS = {
 
 export type AttributeType = keyof typeof TYPE_LABELS;
 export type Attribute = {
+  allowedValues?: string[] | null;
+  pattern?: string | null;
   groupId?: number | null;
   id: number;
   key: string;
@@ -64,4 +66,15 @@ export function valueError(datatype: Attribute['datatype'], raw: string): string
     return '정수부 15자리, 소수점 6자리 이내로 입력하세요.';
   if (datatype === 'BOOLEAN' && !['true', 'false'].includes(value))
     return 'true 또는 false를 입력하세요.';
+}
+
+export function mappingValueError(attribute: Attribute, raw: string) {
+  return (
+    valueError(attribute.datatype, raw) ||
+    (attribute.datatype === 'STRING' &&
+    attribute.allowedValues?.length &&
+    !attribute.allowedValues.includes(raw.trim())
+      ? '허용값 목록에서 선택하세요.'
+      : undefined)
+  );
 }

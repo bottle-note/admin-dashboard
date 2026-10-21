@@ -1,11 +1,12 @@
+import { inputFormatLabel } from './string-input-rules';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { AttributeValueInput } from './AttributeValueInput';
 import { getErrorMessage } from '@/lib/api-error';
-import { displayValue, valueError, type Attribute, type Mapping } from './attribute-model';
+import { displayValue, mappingValueError, type Attribute, type Mapping } from './attribute-model';
 
 export function MappingValueEditor({
   attribute,
@@ -22,7 +23,7 @@ export function MappingValueEditor({
       .string()
       .trim()
       .superRefine((value, context) => {
-        const message = valueError(attribute.datatype, value);
+        const message = mappingValueError(attribute, value);
         if (message) context.addIssue({ code: 'custom', message });
       }),
   });
@@ -48,13 +49,19 @@ export function MappingValueEditor({
     >
       <label className="block text-xs font-medium">
         {attribute.displayName} 값
-        <Input
+        <AttributeValueInput
+          allowedValues={attribute.datatype === 'STRING' ? attribute.allowedValues : null}
           {...register('value')}
           aria-label={`${attribute.displayName} 값`}
           className="mt-1.5 h-8 bg-slate-50 font-mono"
           disabled={isSubmitting}
         />
       </label>
+      {attribute.pattern && (
+        <p className="break-all text-xs text-slate-500">
+          입력 형식: {inputFormatLabel(attribute.pattern)}
+        </p>
+      )}
       <div className="flex items-center justify-between gap-2 text-xs">
         <span className="min-w-0 break-all text-slate-500">
           현재: {displayValue(attribute, mapping.value)}

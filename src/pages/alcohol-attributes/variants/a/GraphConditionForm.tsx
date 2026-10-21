@@ -1,3 +1,4 @@
+import { AttributeValueInput } from './AttributeValueInput';
 import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -157,7 +158,12 @@ export function GraphConditionForm({
                   <option value="false">아니오</option>
                 </select>
               ) : (
-                <Input
+                <AttributeValueInput
+                  allowedValues={
+                    attribute.datatype === 'STRING' && operator !== 'CONTAINS'
+                      ? attribute.allowedValues
+                      : null
+                  }
                   aria-label={operator === 'BETWEEN' ? '최솟값' : '추가 조건 값'}
                   className="h-8 w-32 bg-white text-xs"
                   inputMode={numeric ? 'decimal' : 'text'}

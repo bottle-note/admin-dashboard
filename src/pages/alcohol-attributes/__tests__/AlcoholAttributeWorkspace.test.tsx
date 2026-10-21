@@ -893,3 +893,17 @@ it('연결 목록과 그래프에서 여러 그룹을 반복 쿼리와 복합 �
   await user.click(screen.getByRole('checkbox', { name: '그래프 검색 그룹 시음 기록' }));
   await waitFor(() => expect(reads[reads.length - 1]?.getAll('groupIds')).toEqual(['1', '2']));
 });
+
+it('서버 문자 규칙을 편집기에 복원하고 수정 요청으로 전달한다', async () => {
+  attributes[0] = { ...attributes[0]!, allowedValues: ['좋음', '보통'], pattern: '.+' };
+  const user = await renderPage();
+  expect(screen.getByLabelText('선택 항목 1')).toHaveValue('좋음');
+  expect(screen.getByLabelText('선택 항목 2')).toHaveValue('보통');
+  expect(screen.getByText('기존 맞춤 형식 유지')).toBeVisible();
+  await user.click(screen.getByRole('button', { name: '항목 추가' }));
+  await user.type(screen.getByLabelText('선택 항목 3'), '아쉬움');
+  await user.click(screen.getByRole('button', { name: '변경 내용 확인' }));
+  await user.click(screen.getByRole('button', { name: '변경 저장' }));
+  await waitFor(() => expect(attributes[0]?.allowedValues).toEqual(['좋음', '보통', '아쉬움']));
+  expect(attributes[0]?.pattern).toBe('.+');
+});

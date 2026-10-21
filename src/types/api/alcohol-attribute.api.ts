@@ -15,6 +15,8 @@ export interface AttributeAudit {
   lastModifyPrincipal: AttributePrincipal | null;
 }
 export interface AlcoholAttribute extends AttributeAudit {
+  allowedValues: string[] | null;
+  pattern: string | null;
   groupId: number | null;
   id: number;
   key: string;
@@ -65,6 +67,8 @@ export interface AttributedAlcoholSearchParams extends AttributePageParams {
   operator?: AttributeOperator;
 }
 export interface AttributeUpdateRequest {
+  allowedValues?: string[] | null;
+  pattern?: string | null;
   groupId?: number | null;
   displayName: string;
   type: AttributeType;

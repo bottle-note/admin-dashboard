@@ -19,6 +19,8 @@ const audit = {
   lastModifyPrincipal: null,
 };
 const attribute = (id: number): AlcoholAttribute => ({
+  allowedValues: null,
+  pattern: null,
   ...audit,
   id,
   groupId: null,
@@ -436,4 +438,23 @@ it('전체 그래프 조회 중 실패하면 앞 페이지만 성공한 결과�
     )
   );
   await expect(service.graph({ conditions: [] })).rejects.toBeDefined();
+});
+
+it('문자 규칙 수정은 생략과 null 및 설정값을 구분해 전송한다', async () => {
+  const bodies: unknown[] = [];
+  server.use(
+    http.put(`${base}/1`, async ({ request }) => {
+      bodies.push(await request.json());
+      return HttpResponse.json(wrapApiResponse({ targetId: 1 }));
+    })
+  );
+  const data: AttributeUpdateRequest = { displayName: '평가', type: 'KEYWORD', datatype: 'STRING' };
+  await service.update(1, data);
+  await service.update(1, { ...data, allowedValues: ['좋음', '보통'], pattern: '.+' });
+  await service.update(1, { ...data, allowedValues: null, pattern: null });
+  expect(bodies).toEqual([
+    data,
+    { ...data, allowedValues: ['좋음', '보통'], pattern: '.+' },
+    { ...data, allowedValues: null, pattern: null },
+  ]);
 });

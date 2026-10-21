@@ -1,3 +1,4 @@
+import { AttributeValueInput } from './AttributeValueInput';
 import { AttributeConditionTokens } from './AttributeConditionTokens';
 import './attribute-workspace.css';
 import { AttributeSearchField } from './AttributeSearchField';
@@ -50,6 +51,7 @@ import { AttributeEditor } from './AttributeEditor';
 import {
   displayValue,
   valueError,
+  mappingValueError,
   emptyAttribute,
   TYPE_LABELS,
   type Attribute,
@@ -238,6 +240,8 @@ export function AlcoholAttributeVariantA() {
     displayName: item.displayName,
     type: item.type,
     datatype: item.datatype,
+    allowedValues: item.allowedValues,
+    pattern: item.pattern,
     unit: item.unit ?? '',
     description: item.description ?? '',
     groupId: item.groupId ?? null,
@@ -462,7 +466,7 @@ export function AlcoholAttributeVariantA() {
         for (const item of items) {
           const attribute = attributes.find((a) => a.id === item.attributeId);
           if (!attribute) throw new Error('속성을 다시 조회해 주세요.');
-          const error = valueError(attribute.datatype, item.value);
+          const error = mappingValueError(attribute, item.value);
           if (error) throw new Error(`${attribute.displayName}: ${error}`);
         }
         const result = items.length ? await link.mutateAsync(items) : { added: 0, skipped: 0 };
@@ -1441,7 +1445,10 @@ export function AlcoholAttributeVariantA() {
                               </span>
                             </div>
                           ) : (
-                            <Input
+                            <AttributeValueInput
+                              allowedValues={
+                                attribute.datatype === 'STRING' ? attribute.allowedValues : null
+                              }
                               aria-label={`${name} · ${attribute.displayName} 값`}
                               value={pairValues[key] ?? ''}
                               disabled={pending}

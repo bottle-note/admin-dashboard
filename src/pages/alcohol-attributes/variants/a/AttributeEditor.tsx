@@ -1,3 +1,5 @@
+import { StringInputRules } from './StringInputRules';
+import { parseInputPattern, inputFormatLabel } from './string-input-rules';
 import { useAttributeGroups } from '@/hooks/useAlcoholAttributes';
 import { useState } from 'react';
 import {
@@ -17,18 +19,53 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { type Attribute, TYPE_LABELS } from './attribute-model';
 
-const schema = z.object({
-  groupId: z.string().optional(),
-  key: z
-    .string()
-    .trim()
-    .regex(/^[a-z][a-z0-9_]{0,63}$/, '소문자로 시작하는 영문·숫자·밑줄 64자 이내로 입력하세요.'),
-  displayName: z.string().trim().min(1, '속성 이름을 입력하세요.').max(100),
-  type: z.enum(['KEYWORD', 'PRICE', 'POPULARITY', 'FLAG', 'IDENTITY', 'NOTE']),
-  datatype: z.enum(['STRING', 'INT', 'DOUBLE', 'BOOLEAN']),
-  unit: z.string().trim().max(20),
-  description: z.string().trim().max(500),
-});
+const schema = z
+  .object({
+    patternError: z.string(),
+    inputMode: z.enum(['free', 'list']),
+    allowedValues: z.array(z.string()),
+    pattern: z.string().max(500, '입력 패턴은 500자 이내로 입력하세요.'),
+    groupId: z.string().optional(),
+    key: z
+      .string()
+      .trim()
+      .regex(/^[a-z][a-z0-9_]{0,63}$/, '소문자로 시작하는 영문·숫자·밑줄 64자 이내로 입력하세요.'),
+    displayName: z.string().trim().min(1, '속성 이름을 입력하세요.').max(100),
+    type: z.enum(['KEYWORD', 'PRICE', 'POPULARITY', 'FLAG', 'IDENTITY', 'NOTE']),
+    datatype: z.enum(['STRING', 'INT', 'DOUBLE', 'BOOLEAN']),
+    unit: z.string().trim().max(20),
+    description: z.string().trim().max(500),
+  })
+  .superRefine((values, ctx) => {
+    if (values.datatype !== 'STRING') return;
+    if (values.patternError)
+      ctx.addIssue({ code: 'custom', path: ['patternError'], message: values.patternError });
+    if (values.inputMode !== 'list') return;
+    const items = values.allowedValues.map((value) => value.trim());
+    if (!items.length || items.length > 100 || items.some((value) => !value || value.length > 255))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['allowedValues'],
+        message: '선택 항목을 1개 이상 입력하세요. 항목당 255자, 최대 100개까지 추가할 수 있어요.',
+      });
+    if (new Set(items).size !== items.length)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['allowedValues'],
+        message: '중복된 선택 항목이 있어요. 다른 값으로 바꾸거나 삭제하세요.',
+      });
+    // Only our fixed presets are checked locally; arbitrary Java patterns stay server-validated.
+    if (
+      values.pattern &&
+      parseInputPattern(values.pattern) !== null &&
+      items.some((value) => !new RegExp(`^(?:${values.pattern})$`).test(value))
+    )
+      ctx.addIssue({
+        code: 'custom',
+        path: ['allowedValues'],
+        message: '선택 항목 중 입력 형식에 맞지 않는 값이 있어요. 항목이나 입력 형식을 바꿔주세요.',
+      });
+  });
 
 type FormValues = z.infer<typeof schema>;
 const selectClass =
@@ -51,29 +88,42 @@ export function AttributeEditor({
   const [preview, setPreview] = useState<Attribute | null>(null);
   const {
     register,
+    watch,
+    setValue,
     handleSubmit,
     formState: { errors, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       ...attribute,
+      patternError: '',
+      inputMode: attribute.allowedValues?.length ? 'list' : 'free',
+      allowedValues: attribute.allowedValues ?? [],
+      pattern: attribute.pattern ?? '',
       groupId: attribute.groupId == null ? '' : String(attribute.groupId),
     },
   });
   return (
     <form
       className="flex flex-col [&_button]:h-7 [&_button]:text-xs [&_input]:h-7 [&_input]:text-xs [&_input]:md:text-xs"
-      onSubmit={handleSubmit((values) => {
-        setPreview({
-          ...values,
-          groupId: groups.isSuccess
-            ? values.groupId
-              ? Number(values.groupId)
-              : null
-            : attribute.groupId,
-          id: attribute.id,
-        });
-      })}
+      onSubmit={handleSubmit(
+        ({ inputMode, allowedValues, patternError: _patternError, ...values }) => {
+          setPreview({
+            ...values,
+            allowedValues:
+              values.datatype === 'STRING' && inputMode === 'list'
+                ? allowedValues.map((value) => value.trim())
+                : null,
+            pattern: values.datatype === 'STRING' ? values.pattern || null : null,
+            groupId: groups.isSuccess
+              ? values.groupId
+                ? Number(values.groupId)
+                : null
+              : attribute.groupId,
+            id: attribute.id,
+          });
+        }
+      )}
     >
       <div className="border-b p-3">
         <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
@@ -201,6 +251,21 @@ export function AttributeEditor({
             maxLength={500}
           />
         </label>
+        {watch('datatype') === 'STRING' && (
+          <StringInputRules
+            mode={watch('inputMode')}
+            values={watch('allowedValues')}
+            pattern={watch('pattern')}
+            onModeChange={(mode) => setValue('inputMode', mode, { shouldDirty: true })}
+            onValuesChange={(values) =>
+              setValue('allowedValues', values, { shouldDirty: true, shouldValidate: true })
+            }
+            onPatternError={(error) => setValue('patternError', error, { shouldValidate: true })}
+            onPatternChange={(pattern) =>
+              setValue('pattern', pattern, { shouldDirty: true, shouldValidate: true })
+            }
+          />
+        )}
         {attribute.id > 0 && (linkedCount === undefined || linkedCount > 0) && (
           <div className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -268,6 +333,8 @@ export function AttributeEditor({
                         ['datatype', '값 형식'],
                         ['unit', '단위'],
                         ['description', '설명'],
+                        ['allowedValues', '선택 항목'],
+                        ['pattern', '입력 형식'],
                         ['groupId', '속성 그룹'],
                       ] as const
                     ).map(([field, label]) => {
@@ -277,7 +344,11 @@ export function AttributeEditor({
                           : field === 'groupId'
                             ? (groups.data?.find((group) => group.id === item.groupId)?.name ??
                               (item.groupId ? `그룹 #${item.groupId}` : '미분류'))
-                            : item[field] || '없음';
+                            : field === 'pattern'
+                              ? inputFormatLabel(item.pattern)
+                              : field === 'allowedValues'
+                                ? item.allowedValues?.join('\n') || '제한 없음'
+                                : item[field] || '없음';
                       const changed = !attribute.id || attribute[field] !== preview[field];
                       return (
                         <tr key={field} className={`border-t ${changed ? 'bg-teal-50' : ''}`}>
