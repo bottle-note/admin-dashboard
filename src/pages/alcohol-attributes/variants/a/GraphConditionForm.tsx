@@ -11,6 +11,7 @@ import {
   conditionError,
   requiresSearchValue,
   searchOperators,
+  searchValueForOperator,
 } from './attribute-search';
 
 const schema = z.object({
@@ -130,7 +131,20 @@ export function GraphConditionForm({
                 aria-label="추가 조건 연산자"
                 value={operator}
                 className={selectClass}
-                {...form.register('operator')}
+                {...form.register('operator', {
+                  onChange: (event) => {
+                    if (event.target.value !== 'BETWEEN')
+                      form.setValue(
+                        'value',
+                        searchValueForOperator(
+                          event.target.value,
+                          form.getValues('value'),
+                          attribute
+                        ) ?? ''
+                      );
+                    setError('');
+                  },
+                })}
               >
                 {allowedOperators(attribute.datatype).map((op) => (
                   <option key={op} value={op}>

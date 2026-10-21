@@ -199,3 +199,51 @@ it('문자를 모두 해제하면 이전 유효한 규칙으로 저장하지 않
     screen.getAllByText('공백 외에 허용할 문자를 하나 이상 선택하세요.').length
   ).toBeGreaterThan(0);
 });
+
+it('자료형을 바꿨다 돌아오면 복원된 규칙의 이전 오류를 해제한다', async () => {
+  const user = userEvent.setup();
+  render(
+    <AttributeEditor
+      attribute={{ ...attribute, allowedValues: null, pattern: '[a-z]{1,255}' }}
+      linkedCount={0}
+      onSave={vi.fn()}
+      onCancel={() => {}}
+    />
+  );
+  await user.clear(screen.getByLabelText('최소 글자 수'));
+  await user.type(screen.getByLabelText('최소 글자 수'), '0');
+  await user.selectOptions(screen.getByLabelText('값 형식'), 'INT');
+  await user.selectOptions(screen.getByLabelText('값 형식'), 'STRING');
+  expect(screen.getByLabelText('최소 글자 수')).toHaveValue(1);
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  await user.type(screen.getByLabelText(/속성 이름/), ' 수정');
+  await user.click(screen.getByRole('button', { name: '변경 내용 확인' }));
+  expect(screen.getByRole('dialog')).toBeVisible();
+});
+it('입력해 보기의 Enter는 저장 확인을 열지 않는다', async () => {
+  const user = userEvent.setup();
+  render(
+    <AttributeEditor
+      attribute={{ ...attribute, allowedValues: null, pattern: '[a-z]+' }}
+      linkedCount={0}
+      onSave={vi.fn()}
+      onCancel={() => {}}
+    />
+  );
+  await user.type(screen.getByLabelText(/속성 이름/), ' 수정');
+  await user.type(screen.getByLabelText('입력해 보기'), 'taste{Enter}');
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('입력해 보기')).toHaveFocus();
+});
+it('선택 항목 삭제 후 다음 입력 또는 항목 추가 버튼으로 포커스를 옮긴다', async () => {
+  const user = userEvent.setup();
+  render(
+    <AttributeEditor attribute={attribute} linkedCount={0} onSave={vi.fn()} onCancel={() => {}} />
+  );
+  screen.getByRole('button', { name: '선택 항목 1 삭제' }).focus();
+  await user.keyboard('{Enter}');
+  expect(screen.getByLabelText('선택 항목 1')).toHaveFocus();
+  screen.getByRole('button', { name: '선택 항목 1 삭제' }).focus();
+  await user.keyboard('{Enter}');
+  expect(screen.getByRole('button', { name: '항목 추가' })).toHaveFocus();
+});

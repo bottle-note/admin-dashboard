@@ -196,7 +196,9 @@ export function AttributeEditor({
           <label className="space-y-1 text-xs font-medium">
             값 형식
             <select
-              {...register('datatype')}
+              {...register('datatype', {
+                onChange: () => setValue('patternError', '', { shouldValidate: true }),
+              })}
               className={selectClass}
               aria-disabled={linkedCount === undefined || linkedCount > 0}
             >

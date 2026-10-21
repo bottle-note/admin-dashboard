@@ -22,10 +22,18 @@ export function StringInputRules({
   onPatternError: (error: string) => void;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const deletedIndex = useRef<number | null>(null);
   const previousLength = useRef(values.length);
   useEffect(() => {
     if (values.length > previousLength.current)
       listRef.current?.querySelector<HTMLInputElement>('li:last-child input')?.focus();
+    if (deletedIndex.current !== null && values.length < previousLength.current) {
+      const inputs = listRef.current?.querySelectorAll<HTMLInputElement>('li input');
+      const target = inputs?.[Math.min(deletedIndex.current, values.length - 1)];
+      (target ?? addButtonRef.current)?.focus();
+      deletedIndex.current = null;
+    }
     previousLength.current = values.length;
   }, [values.length]);
   return (
@@ -87,7 +95,10 @@ export function StringInputRules({
                     size="icon"
                     className="!h-9 w-9 shrink-0 text-slate-400 hover:text-red-600"
                     aria-label={`선택 항목 ${index + 1} 삭제`}
-                    onClick={() => onValuesChange(values.filter((_, i) => i !== index))}
+                    onClick={() => {
+                      deletedIndex.current = index;
+                      onValuesChange(values.filter((_, i) => i !== index));
+                    }}
                   >
                     <X aria-hidden="true" className="h-4 w-4" />
                   </Button>
@@ -103,6 +114,7 @@ export function StringInputRules({
             type="button"
             variant="ghost"
             className="!h-9 w-full justify-start text-blue-600"
+            ref={addButtonRef}
             disabled={values.length >= 100}
             onClick={() => onValuesChange([...values, ''])}
           >

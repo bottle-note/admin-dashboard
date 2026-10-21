@@ -174,6 +174,10 @@ export function CharacterRuleBuilder({
               입력해 보기
               <Input
                 aria-label="입력해 보기"
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.nativeEvent.isComposing)
+                    event.preventDefault();
+                }}
                 value={sample}
                 onChange={(event) => setSample(event.target.value)}
                 placeholder="예: tasting_note_01"

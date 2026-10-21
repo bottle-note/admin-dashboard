@@ -64,11 +64,16 @@ export function allowedOperators(datatype: Attribute['datatype']): AttributeSear
 }
 export function conditionError(
   condition: AttributeSearchCondition,
-  attribute?: Pick<Attribute, 'datatype'>
+  attribute?: Pick<Attribute, 'datatype' | 'allowedValues'>
 ) {
   if (!attribute) return '속성 정보를 확인할 수 없습니다.';
   if (!allowedOperators(attribute.datatype).includes(condition.operator))
     return '이 속성에 사용할 수 없는 연산자입니다.';
+  if (
+    searchValueForOperator(condition.operator, condition.value, attribute) === '' &&
+    condition.value
+  )
+    return '허용값 목록에서 선택하세요.';
   return requiresSearchValue(condition.operator)
     ? valueError(attribute.datatype, condition.value ?? '')
     : undefined;
@@ -83,4 +88,20 @@ export function readGroupIds(params: URLSearchParams, prefix = '') {
         .filter((id) => Number.isSafeInteger(id) && id > 0)
     ),
   ].slice(0, 100);
+}
+
+export function searchValueForOperator(
+  operator: AttributeSearchOperator,
+  value: string | undefined,
+  attribute?: Pick<Attribute, 'datatype' | 'allowedValues'>
+) {
+  if (!requiresSearchValue(operator)) return undefined;
+  if (
+    attribute?.datatype === 'STRING' &&
+    attribute.allowedValues?.length &&
+    (operator === 'EQ' || operator === 'NE') &&
+    !attribute.allowedValues.includes(value ?? '')
+  )
+    return '';
+  return value ?? '';
 }

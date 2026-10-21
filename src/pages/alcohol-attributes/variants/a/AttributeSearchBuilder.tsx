@@ -20,6 +20,7 @@ import {
   emptySearch,
   requiresSearchValue,
   searchOperators,
+  searchValueForOperator,
   type AttributeSearch,
 } from './attribute-search';
 
@@ -247,7 +248,7 @@ export function AttributeSearchBuilder({
                     const operator = event.target.value as AttributeSearchOperator;
                     update(index, {
                       operator,
-                      value: requiresSearchValue(operator) ? (condition.value ?? '') : undefined,
+                      value: searchValueForOperator(operator, condition.value, attribute),
                     });
                   }}
                 >
