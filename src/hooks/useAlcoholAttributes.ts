@@ -1,3 +1,4 @@
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { adminAlcoholService } from '@/services/admin-alcohol.service';
 import { useApiQuery } from './useApiQuery';
 import { useApiMutation } from './useApiMutation';
@@ -7,6 +8,7 @@ import {
 } from '@/services/alcohol-attribute.service';
 import type {
   AttributeSearchParams,
+  ScenarioCandidateRequest,
   AlcoholCompoundSearchParams,
   AttributedAlcoholSearchParams,
   AttributeUpdateRequest,
@@ -105,5 +107,31 @@ export function useAttributeGraph(
     enabled,
     retry: false,
     showErrorToast: false,
+  });
+}
+
+export function useScenarioCandidates(
+  groupId: number,
+  params: ScenarioCandidateRequest,
+  enabled = true
+) {
+  return useInfiniteQuery({
+    queryKey: keys.candidates(groupId, params),
+    initialPageParam: 0,
+    queryFn: ({ pageParam, signal }) =>
+      service.candidates(
+        groupId,
+        {
+          ...params,
+          page: pageParam,
+          size: 25,
+          nextQuestion: pageParam === 0 ? params.nextQuestion : undefined,
+        },
+        signal
+      ),
+    getNextPageParam: (last) => (last.meta.hasNext ? last.meta.page + 1 : undefined),
+    enabled,
+    staleTime: 60_000,
+    retry: false,
   });
 }

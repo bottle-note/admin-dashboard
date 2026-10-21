@@ -45,6 +45,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { AttributeScenarioPanel } from './AttributeScenarioPanel';
 import { AttributeGraphPanel } from './AttributeGraphPanel';
 import { MappingValueEditor } from './MappingValueEditor';
 import { AttributeEditor } from './AttributeEditor';
@@ -79,6 +80,7 @@ const tabs = [
   { value: 'groups', label: '속성 그룹' },
   { value: 'mappings', label: '속성 연결' },
   { value: 'graph', label: '관계 그래프' },
+  { value: 'scenario', label: '시나리오' },
 ] as const;
 const selectClass =
   'h-9 rounded-md border bg-white px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700';
@@ -98,13 +100,15 @@ const toggle = (items: number[], id: number) =>
 export function AlcoholAttributeVariantA() {
   const [params, setParams] = useSearchParams();
   const tab =
-    params.get('tab') === 'groups'
-      ? 'groups'
-      : params.get('tab') === 'graph'
-        ? 'graph'
-        : params.get('tab') === 'mappings'
-          ? 'mappings'
-          : 'attributes';
+    params.get('tab') === 'scenario'
+      ? 'scenario'
+      : params.get('tab') === 'groups'
+        ? 'groups'
+        : params.get('tab') === 'graph'
+          ? 'graph'
+          : params.get('tab') === 'mappings'
+            ? 'mappings'
+            : 'attributes';
   const groupIds = readGroupIds(params);
   const attributeGroups = useAttributeGroups();
   const compound = readAttributeSearch(params);
@@ -542,13 +546,15 @@ export function AlcoholAttributeVariantA() {
           tools={
             <span className="flex items-center gap-1.5 text-xs text-slate-500">
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              {tab === 'groups'
-                ? '그룹 구성 · 속성 배정'
-                : tab === 'graph'
-                  ? '술별 값과 연결 조회'
-                  : tab === 'attributes'
-                    ? '이름 · 분류 · 값 형식'
-                    : '위스키 선택 · 값 입력'}
+              {tab === 'scenario'
+                ? '그룹 선택 · 시나리오 탐색'
+                : tab === 'groups'
+                  ? '그룹 구성 · 속성 배정'
+                  : tab === 'graph'
+                    ? '술별 값과 연결 조회'
+                    : tab === 'attributes'
+                      ? '이름 · 분류 · 값 형식'
+                      : '위스키 선택 · 값 입력'}
             </span>
           }
         />
@@ -559,7 +565,9 @@ export function AlcoholAttributeVariantA() {
         aria-labelledby={`tab-${tab}`}
         className="min-w-0"
       >
-        {tab === 'groups' ? (
+        {tab === 'scenario' ? (
+          <AttributeScenarioPanel />
+        ) : tab === 'groups' ? (
           <AttributeGroupsPanel />
         ) : queryError ? (
           <div role="alert" className="rounded border p-6">
@@ -1390,7 +1398,7 @@ export function AlcoholAttributeVariantA() {
           </div>
         )}
       </section>
-      {tab !== 'graph' && (
+      {tab !== 'graph' && tab !== 'scenario' && (
         <>
           <div
             role="status"

@@ -147,3 +147,74 @@ export interface AttributeFacets {
   items: { attribute: AlcoholAttribute; value: string; alcoholCount: number }[];
   hasNext: boolean;
 }
+
+export interface ScenarioCandidateRequest {
+  include?: { attributeId: number; operator: AttributeSearchOperator; value?: string }[];
+  exclude?: { attributeId: number; operator: AttributeSearchOperator; value?: string }[];
+  categoryGroups?: import('./alcohol.api').AlcoholCategory[];
+  abvFrom?: number;
+  abvTo?: number;
+  tastingGroupCodes?: string[];
+  nextQuestion?: {
+    source: 'ATTRIBUTE' | 'CATEGORY' | 'ABV' | 'TASTING_GROUP';
+    attributeId?: number;
+    ranges?: { key: string; from?: number; to?: number }[];
+  };
+  page?: number;
+  size?: number;
+}
+export interface ScenarioCandidate {
+  alcoholId: number;
+  korName: string;
+  engName: string | null;
+  imageUrl: string | null;
+  type: import('./alcohol.api').AlcoholType;
+  categoryGroup: import('./alcohol.api').AlcoholCategory;
+  korCategory: string | null;
+  engCategory: string | null;
+  abvRaw: string | null;
+  abv: number | null;
+  age: string | null;
+  cask: string | null;
+  volume: string | null;
+  region: { id: number; korName: string | null; engName: string | null } | null;
+  distillery: { id: number; korName: string | null; engName: string | null } | null;
+  tastingTags: {
+    id: number;
+    korName: string | null;
+    engName: string | null;
+    parentId: number | null;
+  }[];
+  tastingGroupCodes: string[];
+  attributes: { attributeId: number; values: string[] }[];
+}
+export interface ScenarioCandidates {
+  group: { id: number; name: string };
+  attributeDefinitions: {
+    attributeId: number;
+    key: string;
+    displayName: string;
+    type: AttributeType;
+    datatype: AttributeDatatype;
+    unit: string | null;
+    allowMultipleValues: boolean;
+    allowedValues: string[] | null;
+  }[];
+  items: ScenarioCandidate[];
+  totalCount: number;
+  facets: {
+    source: NonNullable<ScenarioCandidateRequest['nextQuestion']>['source'];
+    attributeId: number | null;
+    options: {
+      value: string;
+      label: string;
+      from: number | null;
+      to: number | null;
+      count: number;
+    }[];
+    hasMoreOptions: boolean;
+    missingCount: number;
+    min: number | null;
+    max: number | null;
+  } | null;
+}

@@ -1,6 +1,8 @@
 import { apiClient } from '@/lib/api-client';
 import type {
   AlcoholAttribute,
+  ScenarioCandidateRequest,
+  ScenarioCandidates,
   AttributeGroup,
   AttributeGroupRequest,
   AlcoholCompoundSearchParams,
@@ -24,6 +26,8 @@ const groupBase = '/admin/api/v1/alcohols/attribute-groups';
 const all = ['alcohol-attributes'] as const;
 export const alcoholAttributeKeys = {
   all,
+  candidates: (groupId: number, params: ScenarioCandidateRequest) =>
+    [...all, 'scenario-candidates', groupId, params] as const,
   groups: [...all, 'groups'] as const,
   definitions: [...all, 'definitions'] as const,
   list: (params: AttributeSearchParams) => [...all, 'list', params] as const,
@@ -36,6 +40,14 @@ export const alcoholAttributeKeys = {
 };
 
 export const alcoholAttributeService = {
+  async candidates(groupId: number, params: ScenarioCandidateRequest, signal?: AbortSignal) {
+    const { data, meta } = await apiClient.postWithMeta<
+      ScenarioCandidates,
+      ScenarioCandidateRequest,
+      AttributePageMeta
+    >(`/admin/api/v1/attribute/groups/${groupId}/candidates`, params, { signal });
+    return { ...data, meta };
+  },
   async groups(signal?: AbortSignal) {
     const { data } = await apiClient.get<AttributeGroup[]>(groupBase, { signal });
     return data;
