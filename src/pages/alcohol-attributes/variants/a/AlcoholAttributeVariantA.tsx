@@ -59,6 +59,7 @@ import {
 
 import {
   useAlcoholAttributes,
+  useAttributeGroups,
   useAttributeSummary,
   useAttributeAlcoholLookup,
   useAttributedAlcohols,
@@ -81,6 +82,16 @@ const tabs = [
 ] as const;
 const selectClass =
   'h-9 rounded-md border bg-white px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700';
+const groupColors = [
+  'border-teal-300 text-teal-800',
+  'border-blue-300 text-blue-800',
+  'border-violet-300 text-violet-800',
+  'border-amber-300 text-amber-800',
+  'border-rose-300 text-rose-800',
+  'border-cyan-300 text-cyan-800',
+  'border-orange-300 text-orange-800',
+  'border-indigo-300 text-indigo-800',
+] as const;
 const toggle = (items: number[], id: number) =>
   items.includes(id) ? items.filter((item) => item !== id) : [...items, id];
 
@@ -95,6 +106,7 @@ export function AlcoholAttributeVariantA() {
           ? 'mappings'
           : 'attributes';
   const groupIds = readGroupIds(params);
+  const attributeGroups = useAttributeGroups();
   const compound = readAttributeSearch(params);
   const advanced = params.has('conditions');
   const keyword = params.get('q') ?? '';
@@ -820,6 +832,7 @@ export function AlcoholAttributeVariantA() {
                     </TableHead>
                     {tab === 'attributes' ? (
                       <>
+                        <TableHead>소속 그룹</TableHead>
                         <TableHead>분류</TableHead>
                         <TableHead>값 형식 · 단위</TableHead>
                       </>
@@ -874,6 +887,29 @@ export function AlcoholAttributeVariantA() {
                                 {attribute.key}
                               </span>
                             </button>
+                          </TableCell>
+                          <TableCell className="text-[11px] text-slate-600">
+                            <span
+                              className={`inline-block max-w-48 truncate rounded-md border bg-white px-2 py-0.5 align-middle font-medium ${
+                                attribute.groupId == null
+                                  ? 'border-slate-200 text-slate-500'
+                                  : groupColors[attribute.groupId % groupColors.length]
+                              }`}
+                              title={
+                                attributeGroups.data?.find(
+                                  (group) => group.id === attribute.groupId
+                                )?.name
+                              }
+                            >
+                              {attribute.groupId == null
+                                ? '미분류'
+                                : (attributeGroups.data?.find(
+                                    (group) => group.id === attribute.groupId
+                                  )?.name ??
+                                  (attributeGroups.isPending
+                                    ? '그룹 조회 중'
+                                    : '그룹 정보 확인 불가'))}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <span
@@ -985,7 +1021,7 @@ export function AlcoholAttributeVariantA() {
                       })}
                   {!visibleIds.length && (tab !== 'mappings' || alcoholQuery.isSuccess) && (
                     <TableRow>
-                      <TableCell colSpan={6}>
+                      <TableCell colSpan={tab === 'attributes' ? 6 : 5}>
                         <div className="flex flex-col items-center gap-2 py-12 text-slate-500">
                           <Filter className="h-6 w-6 text-slate-300" />
                           <p className="font-medium">
