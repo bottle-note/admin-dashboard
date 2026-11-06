@@ -11,6 +11,8 @@ import {
   useAlcoholScenarioPreview,
   useAlcoholScenarioUpdate,
   useAlcoholScenarioPublish,
+  useAlcoholScenarioDraftCreate,
+  useAlcoholScenarioDraftDelete,
 } from '@/hooks/useAlcoholScenarios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -239,6 +241,23 @@ function ScenarioSession({
     versions.find((v) => v.id === requested) ??
     [...versions].reverse().find((v) => v.status === 'DRAFT') ??
     versions[versions.length - 1];
+  const createDraft = useAlcoholScenarioDraftCreate(groupId, scenario.id);
+  const deleteDraft = useAlcoholScenarioDraftDelete(groupId, scenario.id);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const current = detail.data?.scenario ?? scenario;
+  const hasDraft = versions.some((v) => v.status === 'DRAFT');
+  function selectVersion(id: number | null) {
+    setLocalVersion(id);
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (id === null) next.delete('scenarioVersionId');
+        else next.set('scenarioVersionId', String(id));
+        return next;
+      },
+      { replace: true }
+    );
+  }
   if (!active && !detail.data) return null;
   if (detail.isPending)
     return (
@@ -260,32 +279,87 @@ function ScenarioSession({
           <span className="text-sm text-slate-500">{scenario.title}</span>
           {detail.data && <ScenarioCodeField groupId={groupId} scenario={detail.data.scenario} />}
         </div>
-        <label className="flex items-center gap-2 text-sm">
-          버전
-          <select
-            aria-label="시나리오 버전"
-            className="rounded-md border bg-white px-3 py-2"
-            value={selected?.id ?? ''}
-            onChange={(e) => {
-              setLocalVersion(Number(e.target.value));
-              setParams(
-                (previous) => {
-                  const next = new URLSearchParams(previous);
-                  next.set('scenarioVersionId', e.target.value);
-                  return next;
-                },
-                { replace: true }
-              );
-            }}
-          >
-            {versions.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.versionNo} · {v.status === 'DRAFT' ? '초안' : '게시됨'}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 text-sm">
+            버전
+            <select
+              aria-label="시나리오 버전"
+              className="rounded-md border bg-white px-3 py-2"
+              value={selected?.id ?? ''}
+              onChange={(e) => selectVersion(Number(e.target.value))}
+            >
+              {versions.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.versionNo} ·{' '}
+                  {v.status === 'DRAFT'
+                    ? '초안'
+                    : v.id === current.activeVersionId
+                      ? '게시됨 (앱 적용 중)'
+                      : '게시됨'}
+                </option>
+              ))}
+            </select>
+          </label>
+          {selected?.status === 'PUBLISHED' && !hasDraft && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={createDraft.isPending}
+              onClick={() =>
+                createDraft.mutate(
+                  {
+                    expectedScenarioLockVersion: current.lockVersion,
+                    sourceVersionId: selected.id,
+                  },
+                  { onSuccess: (data) => selectVersion(data.version.id) }
+                )
+              }
+            >
+              {createDraft.isPending ? '만드는 중…' : '이 버전으로 새 초안'}
+            </Button>
+          )}
+          {selected?.status === 'DRAFT' && versions.length > 1 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-red-700"
+              disabled={deleteDraft.isPending}
+              onClick={() => setConfirmingDelete(true)}
+            >
+              초안 삭제
+            </Button>
+          )}
+        </div>
       </div>
+      <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>초안을 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              저장한 질문과 분기가 함께 삭제되며 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteDraft.isPending}
+              onClick={() => {
+                if (selected?.status !== 'DRAFT') return;
+                deleteDraft.mutate(
+                  {
+                    versionId: selected.id,
+                    expectedScenarioLockVersion: current.lockVersion,
+                    expectedLockVersion: selected.lockVersion,
+                  },
+                  { onSuccess: () => selectVersion(null) }
+                );
+              }}
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {versions.map((v) => (
         <ScenarioVersion
           key={v.id}

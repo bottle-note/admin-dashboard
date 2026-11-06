@@ -699,3 +699,70 @@ it('초안을 확정하면 두 revision으로 게시하고 읽기 전용으로 �
   expect(screen.queryByRole('button', { name: '질문 설정' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '초안 확정' })).not.toBeInTheDocument();
 });
+
+function mockVersionHistory() {
+  const published = {
+    ...version,
+    id: 51,
+    status: 'PUBLISHED' as const,
+    publishedAt: audit.createAt,
+  };
+  let versions: (typeof version | typeof published)[] = [published];
+  const drafts: unknown[] = [];
+  const deletes: Record<string, string>[] = [];
+  items = [{ ...scenario(), activeVersionId: 51, lockVersion: 3 }];
+  server.use(
+    http.get(`${base}/:scenarioId`, () =>
+      HttpResponse.json(wrap({ scenario: items[0], versions }))
+    ),
+    http.get(`${base}/:scenarioId/versions/:versionId`, ({ params }) =>
+      HttpResponse.json(
+        wrap({
+          version: versions.find((v) => v.id === Number(params.versionId)),
+          definition: sevenStages(),
+        })
+      )
+    ),
+    http.post(`${base}/:scenarioId/versions`, async ({ request }) => {
+      drafts.push(await request.json());
+      const draft = { ...version, id: 52, versionNo: 2 };
+      versions = [...versions, draft];
+      items = [{ ...items[0]!, lockVersion: items[0]!.lockVersion + 1 }];
+      return HttpResponse.json(wrap({ version: draft, definition: sevenStages() }));
+    }),
+    http.delete(`${base}/:scenarioId/versions/:versionId`, ({ request, params }) => {
+      deletes.push(Object.fromEntries(new URL(request.url).searchParams));
+      versions = versions.filter((v) => v.id !== Number(params.versionId));
+      return HttpResponse.json(wrap({ id: Number(params.versionId) }));
+    })
+  );
+  return { drafts, deletes };
+}
+
+it('게시본을 복제해 새 초안을 만들고, 초안을 삭제하면 게시본으로 돌아간다', async () => {
+  const { drafts, deletes } = mockVersionHistory();
+  const user = await open();
+  const select = await screen.findByLabelText('시나리오 버전');
+  expect(
+    within(select).getByRole('option', { name: '1 · 게시됨 (앱 적용 중)' })
+  ).toBeInTheDocument();
+  expect(await screen.findByText('게시된 버전은 읽기 전용입니다.')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '초안 삭제' })).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: '이 버전으로 새 초안' }));
+  await waitFor(() => expect(select).toHaveDisplayValue('2 · 초안'));
+  expect(drafts).toEqual([{ expectedScenarioLockVersion: 3, sourceVersionId: 51 }]);
+  expect(await screen.findByRole('button', { name: '질문 설정' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '이 버전으로 새 초안' })).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: '초안 삭제' }));
+  await user.click(await screen.findByRole('button', { name: '삭제' }));
+  await waitFor(() => expect(select).toHaveDisplayValue('1 · 게시됨 (앱 적용 중)'));
+  expect(deletes).toEqual([{ expectedScenarioLockVersion: '4', expectedLockVersion: '0' }]);
+});
+
+it('게시본이 없는 첫 초안은 삭제할 수 없다', async () => {
+  await openGraph();
+  expect(screen.getByRole('button', { name: '초안 확정' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '초안 삭제' })).not.toBeInTheDocument();
+});

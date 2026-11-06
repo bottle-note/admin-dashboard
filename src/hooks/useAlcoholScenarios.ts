@@ -124,3 +124,53 @@ export function useAlcoholScenarioPublish(groupId: number, scenarioId: number, v
     }
   );
 }
+export function useAlcoholScenarioDraftCreate(groupId: number, scenarioId: number) {
+  const client = useQueryClient();
+  return useApiMutation(
+    (data: { expectedScenarioLockVersion: number; sourceVersionId: number }) =>
+      service.createDraft(groupId, scenarioId, data),
+    {
+      retry: false,
+      successMessage: '새 초안을 만들었습니다.',
+      onSuccess: async (data) => {
+        client.setQueryData(
+          alcoholScenarioKeys.version(groupId, scenarioId, data.version.id),
+          data
+        );
+        await client.invalidateQueries({
+          queryKey: alcoholScenarioKeys.detail(groupId, scenarioId),
+          exact: true,
+        });
+      },
+    }
+  );
+}
+export function useAlcoholScenarioDraftDelete(groupId: number, scenarioId: number) {
+  const client = useQueryClient();
+  return useApiMutation(
+    ({
+      versionId,
+      ...params
+    }: {
+      versionId: number;
+      expectedScenarioLockVersion: number;
+      expectedLockVersion: number;
+    }) => service.deleteDraft(groupId, scenarioId, versionId, params),
+    {
+      retry: false,
+      successMessage: '초안을 삭제했습니다.',
+      onSuccess: async (_, { versionId }) => {
+        client.removeQueries({
+          queryKey: alcoholScenarioKeys.version(groupId, scenarioId, versionId),
+        });
+        await Promise.all([
+          client.invalidateQueries({
+            queryKey: alcoholScenarioKeys.detail(groupId, scenarioId),
+            exact: true,
+          }),
+          client.invalidateQueries({ queryKey: alcoholScenarioKeys.list(groupId), exact: true }),
+        ]);
+      },
+    }
+  );
+}
