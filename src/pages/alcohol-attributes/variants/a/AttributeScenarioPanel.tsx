@@ -9,8 +9,21 @@ import {
   useAlcoholScenarioVersion,
   useAlcoholScenarioSave,
   useAlcoholScenarioPreview,
+  useAlcoholScenarioUpdate,
+  useAlcoholScenarioPublish,
 } from '@/hooks/useAlcoholScenarios';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { TabBar } from '@/components/common/TabBar';
 import { CATEGORY_GROUP_LABELS } from '@/types/api';
 import type {
@@ -243,7 +256,10 @@ function ScenarioSession({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-        <span className="text-sm text-slate-500">{scenario.title}</span>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm text-slate-500">{scenario.title}</span>
+          {detail.data && <ScenarioCodeField groupId={groupId} scenario={detail.data.scenario} />}
+        </div>
         <label className="flex items-center gap-2 text-sm">
           버전
           <select
@@ -275,6 +291,7 @@ function ScenarioSession({
           key={v.id}
           groupId={groupId}
           scenarioId={scenario.id}
+          scenarioLockVersion={detail.data?.scenario.lockVersion ?? scenario.lockVersion}
           versionId={v.id}
           active={active && selected?.id === v.id}
         />
@@ -284,14 +301,96 @@ function ScenarioSession({
   );
 }
 
+const codeSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(1, '코드를 입력하세요.')
+    .max(64, '코드는 64자 이하로 입력하세요.')
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, '영문 소문자, 숫자, 하이픈(-)만 사용할 수 있습니다.'),
+});
+
+function ScenarioCodeField({ groupId, scenario }: { groupId: number; scenario: AlcoholScenario }) {
+  const update = useAlcoholScenarioUpdate(groupId, scenario.id);
+  const [pending, setPending] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<z.input<typeof codeSchema>, unknown, z.output<typeof codeSchema>>({
+    resolver: zodResolver(codeSchema),
+    defaultValues: { code: '' },
+  });
+  if (scenario.code)
+    return (
+      <span className="rounded-md bg-slate-100 px-2 py-1 font-mono text-xs text-slate-600">
+        코드 {scenario.code}
+      </span>
+    );
+  const error = errors.code?.message ?? update.error?.message;
+  return (
+    <form
+      className="flex flex-col gap-1"
+      onSubmit={(e) => void handleSubmit(({ code }) => setPending(code))(e)}
+    >
+      <div className="flex items-center gap-2">
+        <Input
+          aria-label="시나리오 코드"
+          aria-invalid={!!error}
+          placeholder="예: bartender-note"
+          className="h-8 w-56 font-mono text-sm"
+          {...register('code', { onChange: () => update.reset() })}
+        />
+        <Button type="submit" size="sm" variant="outline" disabled={update.isPending}>
+          {update.isPending ? '지정 중…' : '코드 지정'}
+        </Button>
+      </div>
+      {error && (
+        <p role="alert" className="text-xs text-red-700">
+          {error}
+        </p>
+      )}
+      <AlertDialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>코드를 지정할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-mono">{pending}</span> 코드는 지정한 뒤 변경할 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pending === null) return;
+                update.mutate({
+                  expectedLockVersion: scenario.lockVersion,
+                  title: scenario.title,
+                  enabled: scenario.enabled,
+                  code: pending,
+                });
+                setPending(null);
+              }}
+            >
+              지정
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </form>
+  );
+}
+
 function ScenarioVersion({
   groupId,
   scenarioId,
+  scenarioLockVersion,
   versionId,
   active,
 }: {
   groupId: number;
   scenarioId: number;
+  scenarioLockVersion: number;
   versionId: number;
   active: boolean;
 }) {
@@ -307,6 +406,7 @@ function ScenarioVersion({
         <ScenarioWorkspace
           groupId={groupId}
           scenarioId={scenarioId}
+          scenarioLockVersion={scenarioLockVersion}
           data={query.data}
           active={active}
         />
@@ -318,16 +418,20 @@ function ScenarioVersion({
 function ScenarioWorkspace({
   groupId,
   scenarioId,
+  scenarioLockVersion,
   data,
   active,
 }: {
   groupId: number;
   scenarioId: number;
+  scenarioLockVersion: number;
   data: ScenarioVersionDetail;
   active: boolean;
 }) {
   const definitions = useAttributeDefinitions();
   const save = useAlcoholScenarioSave(groupId, scenarioId, data.version.id);
+  const publish = useAlcoholScenarioPublish(groupId, scenarioId, data.version.id);
+  const [confirming, setConfirming] = useState(false);
   const [editing, setEditing] = useState(data.definition.questions.length === 0);
   const [snapshot, setSnapshot] = useState(data.definition);
   const [editingRevision, setEditingRevision] = useState(data.version.lockVersion);
@@ -421,6 +525,15 @@ function ScenarioWorkspace({
                 질문 설정
               </Button>
             )}
+            {!editing && version.status === 'DRAFT' && (
+              <Button
+                size="sm"
+                disabled={!definition.questions.length || publish.isPending}
+                onClick={() => setConfirming(true)}
+              >
+                초안 확정
+              </Button>
+            )}
             <Button
               size="sm"
               variant="ghost"
@@ -430,6 +543,30 @@ function ScenarioWorkspace({
               처음부터
             </Button>
           </div>
+          <AlertDialog open={confirming} onOpenChange={setConfirming}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>초안을 확정할까요?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  확정하면 이 버전이 게시되고, 이후에는 수정할 수 없습니다.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>취소</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={publish.isPending}
+                  onClick={() =>
+                    publish.mutate({
+                      expectedScenarioLockVersion: scenarioLockVersion,
+                      expectedLockVersion: version.lockVersion,
+                    })
+                  }
+                >
+                  {publish.isPending ? '확정 중…' : '확정'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </header>
         <div className="p-4 sm:p-6">
           {version.status === 'PUBLISHED' && (

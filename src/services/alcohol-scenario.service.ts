@@ -20,6 +20,13 @@ export const alcoholScenarioService = {
   create(groupId: number, data: { title: string; slot: number }) {
     return apiClient.post<ScenarioDetail>(base(groupId), data);
   },
+  update(
+    groupId: number,
+    scenarioId: number,
+    data: { expectedLockVersion: number; title: string; enabled: boolean; code?: string }
+  ) {
+    return apiClient.put<AlcoholScenario>(`${base(groupId)}/${scenarioId}`, data);
+  },
   async detail(groupId: number, scenarioId: number, signal?: AbortSignal) {
     return (await apiClient.get<ScenarioDetail>(`${base(groupId)}/${scenarioId}`, { signal })).data;
   },
@@ -37,6 +44,17 @@ export const alcoholScenarioService = {
     data: { expectedLockVersion: number; definition: ScenarioDefinition }
   ) {
     return apiClient.put<ScenarioVersionDetail>(versionPath(groupId, scenarioId, versionId), data);
+  },
+  publish(
+    groupId: number,
+    scenarioId: number,
+    versionId: number,
+    data: { expectedScenarioLockVersion: number; expectedLockVersion: number }
+  ) {
+    return apiClient.post<ScenarioDetail>(
+      `${versionPath(groupId, scenarioId, versionId)}/publish`,
+      data
+    );
   },
   preview(
     groupId: number,

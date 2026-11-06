@@ -43,9 +43,10 @@ const scenario = (id = 31, slot = 1) => ({
   id,
   groupId: 7,
   slot,
+  code: null as string | null,
   title: `시나리오 ${slot}`,
   enabled: true,
-  activeVersionId: null,
+  activeVersionId: null as number | null,
   lockVersion: 0,
 });
 const version = {
@@ -70,6 +71,9 @@ let previews: ScenarioPreviewRequest[];
 let failSave: boolean;
 let failPage: boolean;
 let slowChoice: boolean;
+let codeWrites: unknown[];
+let publishes: unknown[];
+let codeTaken: boolean;
 
 function sevenStages(): ScenarioDefinition {
   const qs = [1, 2, 3, 41, 42, 43, 5, 6, 7].map((id) => ({
@@ -129,7 +133,45 @@ beforeEach(() => {
   failSave = false;
   failPage = false;
   slowChoice = false;
+  codeWrites = [];
+  publishes = [];
+  codeTaken = false;
   server.use(
+    http.put(`${base}/:scenarioId`, async ({ request, params }) => {
+      const body = (await request.json()) as { code: string };
+      codeWrites.push(body);
+      if (codeTaken)
+        return HttpResponse.json(
+          {
+            success: false,
+            code: 409,
+            errors: [{ message: '시나리오 코드가 이미 사용 중입니다.' }],
+          },
+          { status: 409 }
+        );
+      items = items.map((i) =>
+        i.id === Number(params.scenarioId)
+          ? { ...i, code: body.code, lockVersion: i.lockVersion + 1 }
+          : i
+      );
+      return HttpResponse.json(wrap(items.find((i) => i.id === Number(params.scenarioId))));
+    }),
+    http.post(`${base}/:scenarioId/versions/:versionId/publish`, async ({ request, params }) => {
+      publishes.push(await request.json());
+      const id = Number(params.scenarioId);
+      saved = { ...saved, version: { ...saved.version, status: 'PUBLISHED' } };
+      items = items.map((i) =>
+        i.id === id
+          ? { ...i, activeVersionId: Number(params.versionId), lockVersion: i.lockVersion + 1 }
+          : i
+      );
+      return HttpResponse.json(
+        wrap({
+          scenario: items.find((i) => i.id === id),
+          versions: [{ ...saved.version, id: id + 20 }],
+        })
+      );
+    }),
     http.get('/admin/api/v1/alcohols/attribute-groups', () =>
       HttpResponse.json(
         wrap([
@@ -617,4 +659,43 @@ it('추천 근거는 선택한 값만 표시하고 가격 단위를 붙인다', 
   expect(within(result).queryByText('경험: 경험 있음')).not.toBeInTheDocument();
   expect(within(result).queryByText('잔 참고 가격: 20,000원')).not.toBeInTheDocument();
   expect(within(result).getByText('적용한 답변')).toBeInTheDocument();
+});
+
+it('형식에 맞지 않는 코드는 요청하지 않고, 확인 후 지정한 코드는 읽기 전용으로 보여준다', async () => {
+  const user = await openGraph();
+  const input = screen.getByLabelText('시나리오 코드');
+  await user.type(input, 'Bartender Note');
+  await user.click(screen.getByRole('button', { name: '코드 지정' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    '영문 소문자, 숫자, 하이픈(-)만 사용할 수 있습니다.'
+  );
+  await user.clear(input);
+  await user.type(input, '  bartender-note ');
+  await user.click(screen.getByRole('button', { name: '코드 지정' }));
+  await user.click(await screen.findByRole('button', { name: '지정' }));
+  expect(await screen.findByText('코드 bartender-note')).toBeInTheDocument();
+  expect(codeWrites).toEqual([
+    { expectedLockVersion: 0, title: '시나리오 1', enabled: true, code: 'bartender-note' },
+  ]);
+  expect(screen.queryByLabelText('시나리오 코드')).not.toBeInTheDocument();
+});
+
+it('중복 코드는 입력칸 아래에 서버 메시지를 보여주고 입력값을 유지한다', async () => {
+  const user = await openGraph();
+  codeTaken = true;
+  await user.type(screen.getByLabelText('시나리오 코드'), 'bartender-note');
+  await user.click(screen.getByRole('button', { name: '코드 지정' }));
+  await user.click(await screen.findByRole('button', { name: '지정' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('시나리오 코드가 이미 사용 중입니다.');
+  expect(screen.getByLabelText('시나리오 코드')).toHaveValue('bartender-note');
+});
+
+it('초안을 확정하면 두 revision으로 게시하고 읽기 전용으로 바뀐다', async () => {
+  const user = await openGraph();
+  await user.click(screen.getByRole('button', { name: '초안 확정' }));
+  await user.click(await screen.findByRole('button', { name: '확정' }));
+  expect(await screen.findByText('게시된 버전은 읽기 전용입니다.')).toBeInTheDocument();
+  expect(publishes).toEqual([{ expectedScenarioLockVersion: 0, expectedLockVersion: 0 }]);
+  expect(screen.queryByRole('button', { name: '질문 설정' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '초안 확정' })).not.toBeInTheDocument();
 });

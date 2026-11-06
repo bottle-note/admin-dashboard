@@ -11,6 +11,7 @@ export interface AlcoholScenario extends AttributeAudit {
   id: number;
   groupId: number;
   slot: number;
+  code: string | null;
   title: string;
   enabled: boolean;
   activeVersionId: number | null;

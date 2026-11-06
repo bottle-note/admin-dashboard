@@ -44,6 +44,22 @@ export function useAlcoholScenarioCreate(groupId: number) {
     retry: false,
   });
 }
+export function useAlcoholScenarioUpdate(groupId: number, scenarioId: number) {
+  return useApiMutation(
+    (data: { expectedLockVersion: number; title: string; enabled: boolean; code?: string }) =>
+      service.update(groupId, scenarioId, data),
+    {
+      retry: false,
+      // 중복·충돌 메시지는 입력칸 아래에 보여준다.
+      showErrorToast: false,
+      successMessage: '시나리오 코드를 지정했습니다.',
+      invalidateKeys: [
+        alcoholScenarioKeys.list(groupId),
+        alcoholScenarioKeys.detail(groupId, scenarioId),
+      ],
+    }
+  );
+}
 export function useAlcoholScenarioSave(groupId: number, scenarioId: number, versionId: number) {
   const client = useQueryClient();
   return useApiMutation(
@@ -86,4 +102,25 @@ export function useAlcoholScenarioPreview(
     staleTime: request.viewQuestionId === undefined ? 0 : 30_000,
     retry: false,
   });
+}
+export function useAlcoholScenarioPublish(groupId: number, scenarioId: number, versionId: number) {
+  const client = useQueryClient();
+  return useApiMutation(
+    (data: { expectedScenarioLockVersion: number; expectedLockVersion: number }) =>
+      service.publish(groupId, scenarioId, versionId, data),
+    {
+      retry: false,
+      successMessage: '초안을 확정했습니다.',
+      onSuccess: async (data) => {
+        client.setQueryData(alcoholScenarioKeys.detail(groupId, scenarioId), data);
+        await Promise.all([
+          client.invalidateQueries({ queryKey: alcoholScenarioKeys.list(groupId), exact: true }),
+          client.invalidateQueries({
+            queryKey: alcoholScenarioKeys.version(groupId, scenarioId, versionId),
+            exact: true,
+          }),
+        ]);
+      },
+    }
+  );
 }
