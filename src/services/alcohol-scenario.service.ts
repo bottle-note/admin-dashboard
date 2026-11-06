@@ -45,6 +45,23 @@ export const alcoholScenarioService = {
   ) {
     return apiClient.put<ScenarioVersionDetail>(versionPath(groupId, scenarioId, versionId), data);
   },
+  createDraft(
+    groupId: number,
+    scenarioId: number,
+    data: { expectedScenarioLockVersion: number; sourceVersionId: number }
+  ) {
+    return apiClient.post<ScenarioVersionDetail>(`${base(groupId)}/${scenarioId}/versions`, data);
+  },
+  deleteDraft(
+    groupId: number,
+    scenarioId: number,
+    versionId: number,
+    params: { expectedScenarioLockVersion: number; expectedLockVersion: number }
+  ) {
+    return apiClient.delete<{ id: number }>(versionPath(groupId, scenarioId, versionId), {
+      params,
+    });
+  },
   publish(
     groupId: number,
     scenarioId: number,
