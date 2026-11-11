@@ -276,7 +276,7 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
     });
     await importerInput.focus();
     expect((await initialImporterResponse).ok()).toBe(true);
-    await expect(page.getByRole('button', { name: /수입사 선택/ }).first()).toBeVisible();
+    await expect(page.getByRole('option', { name: /수입사 선택/ }).first()).toBeVisible();
 
     const importerResponse = page.waitForResponse((response) =>
       response.url().includes('/v1/mfds/importers?keyword=')
@@ -284,7 +284,7 @@ test.describe('식약처 수입 신고 데이터 검토', () => {
     await importerInput.fill('빔산토리');
     expect((await importerResponse).ok()).toBe(true);
 
-    const importerOption = page.getByRole('button', { name: /빔산토리.*수입사 선택/ }).first();
+    const importerOption = page.getByRole('option', { name: /빔산토리.*수입사 선택/ }).first();
     const declarationResponse = page.waitForResponse(
       (response) =>
         response.url().includes('/v1/mfds/declarations?') && response.url().includes('importerId=')

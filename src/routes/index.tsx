@@ -15,6 +15,7 @@ import { AlcoholStatisticsPage } from '@/pages/statistics/AlcoholStatistics';
 import { WhiskyListPage } from '@/pages/whisky/WhiskyList';
 import { WhiskyDetailPage } from '@/pages/whisky/WhiskyDetail';
 import { WhiskyExcelBulkPage } from '@/pages/whisky/WhiskyExcelBulkPage';
+import { WhiskyMergePage } from '@/pages/whisky/WhiskyMerge';
 import { TastingTagListPage } from '@/pages/tasting-tags/TastingTagList';
 import { TastingTagDetailPage } from '@/pages/tasting-tags/TastingTagDetail';
 import { TastingGroupListPage } from '@/pages/tasting-groups/TastingGroupList';
@@ -133,6 +134,14 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
               <WhiskyExcelBulkPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="whisky/merge"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <WhiskyMergePage />
             </RoleProtectedRoute>
           }
         />

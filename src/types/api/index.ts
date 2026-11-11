@@ -4,6 +4,7 @@
 
 export * from './common';
 export * from './alcohol.api';
+export * from './alcohol-merge.api';
 export * from './help.api';
 export * from './tasting-tag.api';
 export * from './tasting-group.api';

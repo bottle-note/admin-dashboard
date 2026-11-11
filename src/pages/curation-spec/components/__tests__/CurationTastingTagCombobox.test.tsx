@@ -38,8 +38,8 @@ describe('CurationTastingTagCombobox', () => {
     fireEvent.click(screen.getByRole('combobox', { name: '테이스팅 태그' }));
 
     expect(await screen.findByRole('button', { name: '추가' })).toBeDisabled();
-    expect(await screen.findByRole('button', { name: '바닐라 태그 선택' })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: '과일 태그 선택' })).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: '바닐라 태그 선택' })).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: '과일 태그 선택' })).toBeInTheDocument();
   });
 
   it('아래 공간이 부족하고 위 공간이 더 넓으면 드롭다운을 위쪽에 표시한다', async () => {
@@ -69,7 +69,7 @@ describe('CurationTastingTagCombobox', () => {
     fireEvent.click(trigger);
     fireEvent.change(trigger, { target: { value: '과' } });
 
-    const dropdownItem = await screen.findByRole('button', { name: '과일 태그 선택' });
+    const dropdownItem = await screen.findByRole('option', { name: '과일 태그 선택' });
     const dropdown = dropdownItem.closest('.fixed');
     const scrollContainer = dropdownItem.closest('.overflow-y-auto');
 
@@ -147,7 +147,7 @@ describe('CurationTastingTagCombobox', () => {
       target: { value: '과' },
     });
 
-    expect(await screen.findByRole('button', { name: '과일 태그 선택' })).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: '과일 태그 선택' })).toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: '추가' }));
 
     expect(onCreate).toHaveBeenCalledWith('과');
@@ -186,7 +186,7 @@ describe('CurationTastingTagCombobox', () => {
     });
 
     expect(await screen.findByText('검색 결과가 없습니다')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '바닐라 태그 선택' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: '바닐라 태그 선택' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '추가' })).toBeDisabled();
   });
 });

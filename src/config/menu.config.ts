@@ -21,6 +21,7 @@ import {
   FileSearch,
   Shapes,
   SlidersHorizontal,
+  Merge,
 } from 'lucide-react';
 import type { MenuGroup } from '@/types/menu';
 
@@ -100,6 +101,12 @@ export const menuConfig: MenuGroup[] = [
                 label: '속성 관리',
                 icon: SlidersHorizontal,
                 path: '/alcohol-attributes',
+              },
+              {
+                id: 'whisky-merge',
+                label: '위스키 병합',
+                icon: Merge,
+                path: '/whisky/merge',
               },
             ],
           },

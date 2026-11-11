@@ -32,14 +32,16 @@ export function AlcoholSearchSelect({
   const [isOpen, setIsOpen] = useState(false);
   const debouncedKeyword = useDebouncedValue(keyword.trim(), 300);
   const canSearch = debouncedKeyword.length >= 1;
+  const waitingForKeyword = keyword.trim() !== debouncedKeyword;
   const query = useAdminAlcoholLookupInfinite(
     canSearch ? { keyword: debouncedKeyword, size: 10 } : undefined,
     { enabled: canSearch }
   );
   const fetchedItems = useMemo(() => flattenAdminAlcoholLookupPages(query.data), [query.data]);
   const items = useMemo(
-    () => fetchedItems.filter((item) => !excludeIds.includes(item.alcoholId)),
-    [excludeIds, fetchedItems]
+    () =>
+      waitingForKeyword ? [] : fetchedItems.filter((item) => !excludeIds.includes(item.alcoholId)),
+    [excludeIds, fetchedItems, waitingForKeyword]
   );
 
   return (
@@ -57,7 +59,9 @@ export function AlcoholSearchSelect({
             {item.imageUrl ? (
               <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
             ) : (
-              <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No</div>
+              <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                No
+              </div>
             )}
           </div>
           <div className="min-w-0 flex-1">
@@ -77,16 +81,20 @@ export function AlcoholSearchSelect({
       leftElement={<Search className="h-4 w-4 text-muted-foreground" />}
       rightElement={
         keyword ? (
-          <button type="button" aria-label={`${selectionLabel} 검색어 지우기`} onClick={() => setKeyword('')}>
+          <button
+            type="button"
+            aria-label={`${selectionLabel} 검색어 지우기`}
+            onClick={() => setKeyword('')}
+          >
             <X className="h-4 w-4 text-muted-foreground" />
           </button>
         ) : undefined
       }
-      isLoading={query.isLoading}
+      isLoading={waitingForKeyword || query.isLoading}
       isError={query.isError}
       onRetry={() => void query.refetch()}
       isFetchingNextPage={query.isFetchingNextPage}
-      hasNextPage={query.hasNextPage}
+      hasNextPage={!waitingForKeyword && query.hasNextPage}
       onLoadMore={query.fetchNextPage}
       idleMessage="한 글자 이상 입력하면 검색 결과가 표시됩니다."
       showOnFocus

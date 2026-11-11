@@ -3,7 +3,7 @@
  * 패널은 호출하는 쪽에서 `id="panel-{value}"`, `aria-labelledby="tab-{value}"`로 연결한다.
  */
 
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 
 export interface TabBarItem<T extends string> {
   value: T;
@@ -26,12 +26,26 @@ export function TabBar<T extends string>({
   ariaLabel,
   tools,
 }: TabBarProps<T>) {
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const keyboardFocusTarget = useRef<T | null>(null);
+
+  // 이전 패널이 제거된 뒤 초점을 옮겨 폼의 지연된 오류 focus와 경쟁하지 않는다.
+  useLayoutEffect(() => {
+    if (keyboardFocusTarget.current !== value) return;
+    keyboardFocusTarget.current = null;
+    const index = tabs.findIndex((tab) => tab.value === value);
+    tabRefs.current[index]?.focus();
+  }, [tabs, value]);
+
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b">
       <div role="tablist" aria-label={ariaLabel} className="flex gap-1">
-        {tabs.map((tab) => (
+        {tabs.map((tab, index) => (
           <button
             key={tab.value}
+            ref={(element) => {
+              tabRefs.current[index] = element;
+            }}
             type="button"
             role="tab"
             id={`tab-${tab.value}`}
@@ -43,7 +57,39 @@ export function TabBar<T extends string>({
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
-            onClick={() => onChange(tab.value)}
+            onClick={() => {
+              keyboardFocusTarget.current = null;
+              onChange(tab.value);
+            }}
+            onKeyDown={(event) => {
+              if (event.altKey || event.ctrlKey || event.metaKey) return;
+              let nextIndex: number;
+              switch (event.key) {
+                case 'ArrowRight':
+                  nextIndex = (index + 1) % tabs.length;
+                  break;
+                case 'ArrowLeft':
+                  nextIndex = (index - 1 + tabs.length) % tabs.length;
+                  break;
+                case 'Home':
+                  nextIndex = 0;
+                  break;
+                case 'End':
+                  nextIndex = tabs.length - 1;
+                  break;
+                default:
+                  return;
+              }
+              const next = tabs[nextIndex];
+              if (!next) return;
+              event.preventDefault();
+              if (next.value === value) {
+                tabRefs.current[nextIndex]?.focus();
+                return;
+              }
+              keyboardFocusTarget.current = next.value;
+              onChange(next.value);
+            }}
           >
             {tab.label}
           </button>

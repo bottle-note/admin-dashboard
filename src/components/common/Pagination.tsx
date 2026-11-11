@@ -58,16 +58,18 @@ export function Pagination({
   onPageSizeChange,
 }: PaginationProps) {
   const isPageBased = currentPage !== undefined && totalPages !== undefined;
+  const outOfRange =
+    isPageBased && (totalPages === 0 || currentPage >= totalPages || currentPage < 0);
 
   // 현재 표시 범위 계산
   const startItem = isPageBased ? currentPage * pageSize + 1 : 1;
   const endItem = isPageBased
-    ? Math.min((currentPage + 1) * pageSize, totalElements ?? 0)
+    ? Math.min(currentPage * pageSize + currentItemCount, totalElements ?? 0)
     : currentItemCount;
 
   const handlePrevious = () => {
     if (isPageBased && onPageChange && currentPage > 0) {
-      onPageChange(currentPage - 1);
+      onPageChange(Math.min(currentPage - 1, Math.max(totalPages - 1, 0)));
     } else if (onPreviousPage) {
       onPreviousPage();
     }
@@ -84,10 +86,10 @@ export function Pagination({
   const canGoPrevious = isPageBased ? currentPage > 0 : (hasPrevious ?? false);
 
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-4">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
         <p className="text-sm text-muted-foreground">
-          {totalElements !== undefined && isPageBased ? (
+          {totalElements !== undefined && isPageBased && currentItemCount > 0 && !outOfRange ? (
             <>
               총 {totalElements.toLocaleString()}개 중 {startItem.toLocaleString()}-
               {endItem.toLocaleString()}개 표시
@@ -101,7 +103,7 @@ export function Pagination({
           )}
         </p>
         <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
-          <SelectTrigger className="w-[100px]">
+          <SelectTrigger aria-label="페이지 크기" className="w-[100px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -113,11 +115,16 @@ export function Pagination({
           </SelectContent>
         </Select>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {isPageBased && (
           <span className="text-sm text-muted-foreground">
-            {currentPage + 1} / {totalPages} 페이지
+            {outOfRange ? '요청한 페이지가 없습니다.' : `${currentPage + 1} / ${totalPages} 페이지`}
           </span>
+        )}
+        {outOfRange && totalPages! > 0 && onPageChange && (
+          <Button variant="outline" size="sm" onClick={() => onPageChange(totalPages! - 1)}>
+            마지막 페이지로
+          </Button>
         )}
         <Button variant="outline" size="sm" onClick={handlePrevious} disabled={!canGoPrevious}>
           <ChevronLeft className="h-4 w-4" />

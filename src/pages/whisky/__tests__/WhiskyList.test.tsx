@@ -100,7 +100,7 @@ describe('위스키 목록 지역·정렬', () => {
 
     await user.click(screen.getByRole('combobox', { name: '지역 검색' }));
     await user.type(screen.getByRole('combobox', { name: '지역 검색' }), '스코틀랜드');
-    await user.click(await screen.findByRole('button', { name: '스코틀랜드 지역 선택' }));
+    await user.click(await screen.findByRole('option', { name: '스코틀랜드 지역 선택' }));
     await waitFor(() => expect(latest(requests).get('regionId')).toBe('1'));
     expect(latest(requests).get('page')).toBe('0');
     expect(screen.getByTestId('location')).toHaveTextContent('regionId=1');

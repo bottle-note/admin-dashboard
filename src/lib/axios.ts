@@ -83,6 +83,9 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // 대기열에 들어간 요청도 갱신 후 한 번만 재전송한다.
+    originalRequest._retry = true;
+
     // 이미 리프레시 중이면 큐에 추가
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
@@ -96,7 +99,6 @@ api.interceptors.response.use(
       });
     }
 
-    originalRequest._retry = true;
     isRefreshing = true;
 
     const refreshToken = useAuthStore.getState().refreshToken;

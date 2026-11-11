@@ -300,7 +300,7 @@ test.describe('통계 시계열', () => {
 
     const searchResults = page
       .getByTestId('alcohol-statistics-search-results')
-      .getByRole('button', { name: /주류 선택$/ });
+      .getByRole('option', { name: /주류 선택$/ });
     await expect(searchResults.first()).toBeVisible();
 
     const interestResponse = page.waitForResponse(
@@ -316,7 +316,7 @@ test.describe('통계 시계열', () => {
     await expect(page.getByText('조회 지표', { exact: true })).toBeVisible();
     await expect(page.locator('.recharts-bar')).toHaveCount(1);
     await searchInput.focus();
-    await expect(searchResults.first()).toHaveAttribute('aria-pressed', 'true');
+    await expect(searchResults.first()).toHaveAttribute('aria-selected', 'true');
     await expect(page).toHaveURL(/keyword=/);
     const interestData = (await interest.json()).data;
     const summary = page.getByTestId('alcohol-observation-summary');
@@ -439,7 +439,7 @@ test.describe('통계 시계열', () => {
     await expect(page).toHaveURL(/mode=compare/);
     const comparisonResults = page
       .getByTestId('alcohol-statistics-search-results')
-      .getByRole('button', { name: /주류 선택$/ });
+      .getByRole('option', { name: /주류 선택$/ });
     for (let count = 2; count <= 3; count += 1) {
       await page.getByRole('combobox', { name: '주류 검색' }).fill('글렌');
       await expect(comparisonResults.first()).toBeVisible();
@@ -450,7 +450,7 @@ test.describe('통계 시계열', () => {
       );
       await page
         .getByTestId('alcohol-statistics-search-results')
-        .locator('button[aria-pressed="false"]')
+        .locator('[role="option"][aria-selected="false"]')
         .first()
         .click();
       expect((await compareResponse).status()).toBe(200);
@@ -462,7 +462,7 @@ test.describe('통계 시계열', () => {
     await expect(
       page
         .getByTestId('alcohol-statistics-search-results')
-        .locator('button[aria-pressed="false"]')
+        .locator('[role="option"][aria-selected="false"]')
         .first()
     ).toBeDisabled();
     await page.getByRole('combobox', { name: '비교 지표' }).click();
