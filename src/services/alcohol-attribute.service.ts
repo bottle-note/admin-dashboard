@@ -17,6 +17,7 @@ import type {
   AttributeMappingResult,
   AttributeResult,
   AttributeSummary,
+  AttributeEnums,
 } from '@/types/api/alcohol-attribute.api';
 
 import type { AttributeFacets } from '@/types/api/alcohol-attribute.api';
@@ -30,6 +31,7 @@ export const alcoholAttributeKeys = {
     [...all, 'scenario-candidates', groupId, params] as const,
   groups: [...all, 'groups'] as const,
   definitions: [...all, 'definitions'] as const,
+  enums: [...all, 'enums'] as const,
   list: (params: AttributeSearchParams) => [...all, 'list', params] as const,
   alcohols: (params: AttributedAlcoholSearchParams) => [...all, 'alcohols', params] as const,
   compound: (params: AlcoholCompoundSearchParams) => [...all, 'compound', params] as const,
@@ -56,6 +58,10 @@ export const alcoholAttributeService = {
   updateGroup: ({ id, data }: { id: number; data: AttributeGroupRequest }) =>
     apiClient.put<AttributeGroup>(`${groupBase}/${id}`, data),
   deleteGroup: (id: number) => apiClient.delete<AttributeResult>(`${groupBase}/${id}`),
+  async enums(signal?: AbortSignal) {
+    const { data } = await apiClient.get<AttributeEnums>(`${base}/enums`, { signal });
+    return data;
+  },
   async definitions(signal?: AbortSignal) {
     const items: AlcoholAttribute[] = [];
     let page = 0;

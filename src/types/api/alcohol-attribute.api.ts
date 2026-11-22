@@ -92,6 +92,18 @@ export interface AttributeMappingResult {
   skipped: number;
   createdIds: number[];
 }
+export interface AttributeEnumItem<TCode extends string = string> {
+  code: TCode;
+  korName: string;
+  engName: string;
+  description: string;
+}
+export interface AttributeEnums {
+  types: AttributeEnumItem<AttributeType>[];
+  datatypes: AttributeEnumItem<AttributeDatatype>[];
+  providers: AttributeEnumItem[];
+  operators: AttributeEnumItem[];
+}
 export interface AttributeResult {
   code: string;
   message: string;

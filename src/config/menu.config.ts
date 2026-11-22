@@ -178,6 +178,25 @@ export const menuConfig: MenuGroup[] = [
     ],
   },
   {
+    id: 'attributes',
+    items: [
+      {
+        id: 'attribute-menu',
+        label: '속성',
+        icon: SlidersHorizontal,
+        roles: ['ROOT_ADMIN'],
+        children: [
+          {
+            id: 'attribute-list',
+            label: '속성 목록',
+            icon: List,
+            path: '/attributes',
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: 'mfds',
     items: [
       {
