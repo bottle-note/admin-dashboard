@@ -20,6 +20,8 @@ import { TastingTagListPage } from '@/pages/tasting-tags/TastingTagList';
 import { TastingTagDetailPage } from '@/pages/tasting-tags/TastingTagDetail';
 import { TastingGroupListPage } from '@/pages/tasting-groups/TastingGroupList';
 import { AlcoholAttributeVariantA } from '@/pages/alcohol-attributes/variants/a/AlcoholAttributeVariantA';
+import { AttributeListPage } from '@/pages/alcohol-attributes/AttributeList';
+import { AttributeDetailPage } from '@/pages/alcohol-attributes/AttributeDetail';
 import { BannerListPage } from '@/pages/banners/BannerList';
 import { BannerDetailPage } from '@/pages/banners/BannerDetail';
 import { BannerCreatePage } from '@/pages/banners/BannerCreate';
@@ -204,6 +206,31 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute roles={['ROOT_ADMIN']}>
               <Navigate to="/alcohol-attributes" replace />
+            </RoleProtectedRoute>
+          }
+        />
+
+        <Route
+          path="attributes"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <AttributeListPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="attributes/new"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <AttributeDetailPage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="attributes/:id"
+          element={
+            <RoleProtectedRoute roles={['ROOT_ADMIN']}>
+              <AttributeDetailPage />
             </RoleProtectedRoute>
           }
         />

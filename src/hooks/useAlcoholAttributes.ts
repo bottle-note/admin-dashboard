@@ -78,6 +78,9 @@ export function useCompoundAlcoholSearch(params: AlcoholCompoundSearchParams, en
 export function useAttributeGroups() {
   return useApiQuery(keys.groups, ({ signal }) => service.groups(signal));
 }
+export function useAttributeEnums() {
+  return useApiQuery(keys.enums, ({ signal }) => service.enums(signal), { staleTime: Infinity });
+}
 export function useAttributeDefinitions() {
   return useApiQuery(keys.definitions, ({ signal }) => service.definitions(signal));
 }
